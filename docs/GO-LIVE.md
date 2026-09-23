@@ -1,5 +1,13 @@
 # Go-live checklist
 
+## Status (23 Sep 2026)
+- **Live:** https://merta-deal.vercel.app — Vercel project `merta-deal`, production deploy, public.
+- **Blocked on:** a Supabase project. Until one is connected the site serves `/setup`, which lists
+  every missing variable rather than pretending the app works.
+- `aether-schoolos` was paused on 23 Sep 2026 to free a free-plan slot (data intact, restorable from
+  the Supabase dashboard at any time).
+- `vercel.json` runs both crons **daily**, not every 5 minutes — see [CRONS.md](CRONS.md).
+
 ## A. Supabase project
 1. Create a project in region **ap-south-1** (Mumbai). The free plan allows 2 active projects per org — pause or upgrade if the limit is hit.
 2. Apply migrations + seed: `SUPABASE_DB_URL=... ./scripts/db-remote-apply.sh --seed` (or paste each `supabase/migrations/*.sql` into the SQL editor in order, then `supabase/seed.sql`).
