@@ -1,0 +1,64 @@
+{
+  "name": "merta-deal",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "gen:types": "tsx scripts/gen-types.ts",
+    "db:local:reset": "bash scripts/db-local-reset.sh",
+    "db:local:test": "psql -h /tmp -d merta_deal -f scripts/test-lifecycle.sql",
+    "push:keys": "node -e \"const w=require('web-push');const k=w.generateVAPIDKeys();console.log('NEXT_PUBLIC_VAPID_PUBLIC_KEY='+k.publicKey);console.log('VAPID_PRIVATE_KEY='+k.privateKey)\"",
+    "icons": "node scripts/make-icons.mjs",
+    "dev:harness": "bash scripts/dev-harness.sh start",
+    "dev:harness:stop": "bash scripts/dev-harness.sh stop",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.127.0",
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.116.0",
+    "@vis.gl/react-google-maps": "1.10.1",
+    "clsx": "2.1.1",
+    "lucide-react": "1.47.0",
+    "next": "16.3.5",
+    "qrcode": "^1.5.4",
+    "razorpay": "2.9.8",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "tailwind-merge": "3.7.0",
+    "web-push": "3.6.7",
+    "zod": "4.6.5",
+    "zustand": "5.0.15"
+  },
+  "devDependencies": {
+    "@imgly/background-removal-node": "1.4.5",
+    "@tailwindcss/postcss": "^4",
+    "@types/google.maps": "^3.66.3",
+    "@types/node": "^20",
+    "@types/pg": "^8.23.1",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.4",
+    "dotenv": "^16.6.1",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.5",
+    "pg": "^8.23.0",
+    "sharp": "0.35.4",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.15",
+    "typescript": "^5"
+  },
+  "packageManager": "pnpm@10.33.3",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "onnxruntime-node",
+      "sharp",
+      "esbuild"
+    ]
+  }
+}

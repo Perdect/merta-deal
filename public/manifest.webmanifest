@@ -1,0 +1,25 @@
+{
+  "name": "Merta Deal — Merta Ki Shopping, Ab Online",
+  "short_name": "Merta Deal",
+  "description": "Groceries from Merta City's kirana stores, delivered in 30–60 minutes.",
+  "id": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F7F7F4",
+  "theme_color": "#0B6E4F",
+  "lang": "en-IN",
+  "categories": ["shopping", "food"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Search groceries", "url": "/search", "description": "Find atta, dal, milk, snacks" },
+    { "name": "My orders", "url": "/orders", "description": "Track your deliveries" },
+    { "name": "Cart", "url": "/cart" }
+  ]
+}

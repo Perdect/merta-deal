@@ -1,0 +1,7 @@
+# Local-only working files — never part of a deployment.
+.image-pipeline/
+supabase/local/
+scripts/product-images/
+.next/
+node_modules/
+*.tsbuildinfo

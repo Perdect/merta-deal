@@ -1,0 +1,126 @@
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+const inr = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
+const inrPrecise = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** ₹1,234 (whole rupees) or ₹1,234.50 when paise matter */
+export function formatINR(value: number | string | null | undefined, opts: { precise?: boolean } = {}) {
+  const n = Number(value ?? 0);
+  if (Number.isNaN(n)) return "₹0";
+  if (opts.precise || Math.round(n) !== n) return inrPrecise.format(n);
+  return inr.format(n);
+}
+
+export function formatNumber(value: number | string | null | undefined) {
+  return new Intl.NumberFormat("en-IN").format(Number(value ?? 0));
+}
+
+export function formatDate(value: string | Date | null | undefined, opts: Intl.DateTimeFormatOptions = { day: "numeric", month: "short", year: "numeric" }) {
+  if (!value) return "";
+  return new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", ...opts }).format(new Date(value));
+}
+
+export function formatDateTime(value: string | Date | null | undefined) {
+  return formatDate(value, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true });
+}
+
+export function formatTime(value: string | Date | null | undefined) {
+  return formatDate(value, { hour: "numeric", minute: "2-digit", hour12: true });
+}
+
+export function timeAgo(value: string | Date | null | undefined) {
+  if (!value) return "";
+  const diff = (Date.now() - new Date(value).getTime()) / 1000;
+  if (diff < 60) return "just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} hr ago`;
+  if (diff < 86400 * 7) return `${Math.floor(diff / 86400)} d ago`;
+  return formatDate(value);
+}
+
+export function minutesUntil(value: string | Date | null | undefined) {
+  if (!value) return null;
+  return Math.round((new Date(value).getTime() - Date.now()) / 60000);
+}
+
+export function discountPct(mrp: number, price: number) {
+  if (!mrp || mrp <= 0 || price >= mrp) return 0;
+  return Math.round(((mrp - price) / mrp) * 100);
+}
+
+export function slugify(text: string) {
+  return text.toLowerCase().normalize("NFKD").replace(/[^\w\s-]/g, "").trim().replace(/[\s_-]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+export function initials(name: string | null | undefined) {
+  if (!name) return "MD";
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("");
+}
+
+export function maskPhone(phone: string | null | undefined) {
+  if (!phone) return "";
+  const d = phone.replace(/\D/g, "").slice(-10);
+  return d.length === 10 ? `${d.slice(0, 2)}XXXXX${d.slice(7)}` : phone;
+}
+
+export function isValidIndianMobile(phone: string) {
+  return /^[6-9]\d{9}$/.test(phone.replace(/\D/g, "").slice(-10));
+}
+
+export function isValidPincode(p: string) {
+  return /^[1-9][0-9]{5}$/.test(p);
+}
+
+/** Straight-line distance in km (haversine) — labelled as an estimate in the UI. */
+export function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.asin(Math.sqrt(a));
+}
+
+/** Parses Postgres error text like `MIN_ORDER: Minimum order amount is ₹99` into a friendly message. */
+export function friendlyError(err: unknown): string {
+  const raw = typeof err === "string" ? err : err instanceof Error ? err.message : (err as { message?: string })?.message ?? "Something went wrong";
+  const map: Record<string, string> = {
+    AUTH_REQUIRED: "Please sign in to continue.",
+    CART_EMPTY: "Your cart is empty.",
+    ITEM_UNAVAILABLE: "This item is no longer available.",
+    OUT_OF_STOCK: "This item is out of stock.",
+    STORE_UNAVAILABLE: "This store is not accepting orders right now.",
+    STORE_CLOSED: "This store is closed right now. You can schedule the delivery for later.",
+    ADDRESS_NOT_FOUND: "Please select a delivery address.",
+    INSUFFICIENT_WALLET: "Your wallet balance is not enough for this order.",
+    EXPRESS_UNAVAILABLE: "Express delivery is not available in your area yet.",
+    INVALID_SLOT: "Please choose a valid delivery slot.",
+    COD_DISABLED: "Cash on Delivery is currently disabled.",
+    FORBIDDEN: "You are not allowed to do that.",
+    OFFER_EXPIRED: "This delivery request has expired.",
+    ALREADY_ON_DELIVERY: "Finish your current delivery before accepting another.",
+    RIDER_NOT_ACTIVE: "Your rider account is pending approval.",
+    NOT_A_RIDER: "This account is not registered as a delivery partner.",
+    PRICE_ABOVE_MRP: "Selling price cannot be higher than MRP.",
+    NEGATIVE_STOCK: "Stock cannot go below zero.",
+    ORDER_NOT_DELIVERED: "You can review an order after it is delivered.",
+  };
+  for (const [code, msg] of Object.entries(map)) {
+    if (raw.startsWith(code)) return msg;
+  }
+  const m = raw.match(/^[A-Z_]+:\s*(.+)$/);
+  if (m) return m[1];
+  return raw;
+}
+
+export function clamp(n: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, n));
+}
+
+export function pluralize(n: number, one: string, many = one + "s") {
+  return `${n} ${n === 1 ? one : many}`;
+}

@@ -1,0 +1,42 @@
+"use client";
+import { create } from "zustand";
+import type { CartSummary } from "@/types/app";
+
+/**
+ * Client mirror of the server cart. The database is the source of truth (cart_summary RPC);
+ * this store caches the last summary and tracks in-flight quantity updates for snappy UI.
+ */
+type CartState = {
+  summary: CartSummary | null;
+  loading: boolean;
+  pending: Record<string, number>; // inventory_id -> optimistic qty
+  setSummary: (s: CartSummary | null) => void;
+  setLoading: (v: boolean) => void;
+  setPending: (inventoryId: string, qty: number | null) => void;
+  qtyFor: (inventoryId: string) => number;
+  totalCount: () => number;
+};
+
+export const useCartStore = create<CartState>((set, get) => ({
+  summary: null,
+  loading: false,
+  pending: {},
+  setSummary: (summary) => set({ summary }),
+  setLoading: (loading) => set({ loading }),
+  setPending: (inventoryId, qty) => set((s) => {
+    const pending = { ...s.pending };
+    if (qty == null) delete pending[inventoryId]; else pending[inventoryId] = qty;
+    return { pending };
+  }),
+  qtyFor: (inventoryId) => {
+    const p = get().pending[inventoryId];
+    if (typeof p === "number") return p;
+    return get().summary?.items.find((i) => i.inventory_id === inventoryId)?.quantity ?? 0;
+  },
+  totalCount: () => {
+    const s = get().summary;
+    if (!s) return 0;
+    const pending = get().pending;
+    return s.items.reduce((acc, i) => acc + (typeof pending[i.inventory_id] === "number" ? pending[i.inventory_id] : i.quantity), 0) + Object.entries(pending).filter(([id]) => !s.items.some((i) => i.inventory_id === id)).reduce((a, [, q]) => a + q, 0);
+  },
+}));
