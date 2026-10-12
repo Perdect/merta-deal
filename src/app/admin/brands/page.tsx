@@ -1,16 +1,39 @@
 import type { Metadata } from "next";
-import { getAllBrands, getBrandProductCounts } from "@/lib/data/admin";
+import { spGet, spPage, type SP } from "@/lib/data/admin";
+import { listCatalogueBrands } from "@/lib/data/admin-catalogue";
 import { BrandManager } from "@/components/admin/brand-manager";
-import { PageHeader } from "@/components/ui/misc";
+import { AdminPageHeader, ErrorBlock, ListToolbar, StatusTabs, ListPagination } from "@/components/admin/kit";
 
 export const metadata: Metadata = { title: "Brands" };
 
-export default async function AdminBrandsPage() {
-  const [brands, counts] = await Promise.all([getAllBrands(), getBrandProductCounts()]);
+const TABS = [
+  { value: "", label: "All" },
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+];
+
+export default async function AdminBrandsPage({ searchParams }: { searchParams: Promise<SP> }) {
+  const sp = await searchParams;
+  const status = TABS.some((t) => t.value === spGet(sp, "status")) ? spGet(sp, "status") : "";
+  const q = spGet(sp, "q");
+  const { items, total, page, pageSize, error, counts } = await listCatalogueBrands({ q, status, page: spPage(sp) });
+  const qs = new URLSearchParams(Object.entries(sp).flatMap(([k, v]) => (typeof v === "string" ? [[k, v]] : []))).toString();
+
+  if (error) {
+    return (
+      <>
+        <AdminPageHeader title="Brands" />
+        <ErrorBlock title="Couldn't load brands" description={`${error}. Your search is kept; try again.`} retryHref={`/admin/brands${qs ? `?${qs}` : ""}`} />
+      </>
+    );
+  }
+
   return (
-    <div className="space-y-4">
-      <PageHeader title="Brands" subtitle={`${brands.length} brands`} className="px-0" />
-      <BrandManager brands={brands} counts={counts} />
-    </div>
+    <BrandManager rows={items} filtered={Boolean(q || status)}
+      toolbar={<>
+        <StatusTabs items={TABS.map((t) => ({ ...t, count: counts[t.value] ?? null }))} />
+        <ListToolbar searchPlaceholder="Brand name or slug" />
+      </>}
+      footer={<ListPagination page={page} pageSize={pageSize} total={total} />} />
   );
 }

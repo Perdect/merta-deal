@@ -1,46 +1,118 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Banknote } from "lucide-react";
-import { listPayouts, getPayoutTotals, getStoreOptions, spGet, spPage, type SP } from "@/lib/data/admin";
-import { ListToolbar, ListPagination } from "@/components/admin/list-controls";
-import { GeneratePayouts, PayoutStatusButton } from "@/components/admin/payment-actions";
-import { PAYOUT_STATUS_OPTIONS, PAYOUT_STATUS_TONE } from "@/components/admin/constants";
-import { PageHeader, Table } from "@/components/ui/misc";
-import { Badge } from "@/components/ui/badge";
-import { Stat } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/states";
-import { formatINR, formatDate, formatDateTime } from "@/lib/utils";
+import { AlertTriangle, Banknote, CheckCircle2, Clock, Loader, SearchX } from "lucide-react";
+import { getPayoutTotals, getStoreOptions, spGet, spPage, type SP, type PayoutRow } from "@/lib/data/admin";
+import { listPayoutsAdmin, countPayouts, getPayoutAdmin, PAYOUT_TABS } from "@/lib/data/admin-care";
+import { AdminPageHeader, MetricCard, DataTable, CellStack, RowLink, EmptyBlock, ErrorBlock, DetailList, ListToolbar, StatusTabs, ListPagination, QuickView, StatusText, rupees, rupeesRounded } from "@/components/admin/kit";
+import { GeneratePayouts, PayoutActions, type PayoutSummary } from "@/components/admin/payment-actions";
+import { hrefWith } from "@/components/admin/care/shared";
+import { formatDate, formatDateTime, formatNumber } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Payouts" };
 
+const TAB_LABEL: Record<string, string> = { "": "All", pending: "Pending", processing: "Processing", paid: "Paid", failed: "Failed" };
+const day = (d: string) => formatDate(`${d}T00:00:00+05:30`, { day: "numeric", month: "short" });
+
+function payTo(p: PayoutRow): string | null {
+  const s = p.store;
+  if (s?.bank_account_number) return [s.bank_account_name, `A/c ${s.bank_account_number}`, s.bank_ifsc].filter(Boolean).join(" · ");
+  if (s?.upi_id) return `UPI ${s.upi_id}`;
+  return null;
+}
+const summary = (p: PayoutRow): PayoutSummary => ({ id: p.id, status: p.status, net_amount: Number(p.net_amount), reference_no: p.reference_no, store: p.store?.name ?? "Store", period_start: p.period_start, period_end: p.period_end, payTo: payTo(p) });
+
 export default async function AdminPayoutsPage({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
-  const [{ items, total, page, pageSize }, totals, stores] = await Promise.all([
-    listPayouts({ store: spGet(sp, "store"), status: spGet(sp, "status"), page: spPage(sp) }), getPayoutTotals(), getStoreOptions(),
+  const status = (PAYOUT_TABS as readonly string[]).includes(spGet(sp, "status")) ? spGet(sp, "status") : "";
+  const store = spGet(sp, "store");
+  const viewId = spGet(sp, "view");
+  const validView = /^[0-9a-f-]{36}$/.test(viewId);
+  const [list, totals, counts, stores, view] = await Promise.all([
+    listPayoutsAdmin({ store, status, page: spPage(sp) }), getPayoutTotals(), countPayouts(store), getStoreOptions(),
+    validView ? getPayoutAdmin(viewId) : Promise.resolve(null),
   ]);
+  const viewHref = (id: string) => hrefWith("/admin/payouts", sp, { view: id });
+  const t = (k: string) => totals[k] ?? { count: 0, amount: 0 };
+  const n = (k: string) => `${formatNumber(t(k).count)} ${t(k).count === 1 ? "payout" : "payouts"}`;
+
   return (
-    <div className="space-y-4">
-      <PageHeader title="Payouts" subtitle="Weekly settlements to stores" className="px-0" action={<GeneratePayouts />} />
-      <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat label="Pending" value={formatINR(totals.pending?.amount ?? 0)} hint={`${totals.pending?.count ?? 0} payouts`} tone="saffron" />
-        <Stat label="Processing" value={formatINR(totals.processing?.amount ?? 0)} hint={`${totals.processing?.count ?? 0} payouts`} />
-        <Stat label="Paid" value={formatINR(totals.paid?.amount ?? 0)} hint={`${totals.paid?.count ?? 0} payouts`} tone="success" />
-        <Stat label="Failed" value={formatINR(totals.failed?.amount ?? 0)} hint={`${totals.failed?.count ?? 0} payouts`} tone={totals.failed?.count ? "danger" : "neutral"} />
+    <>
+      <AdminPageHeader title="Payouts" description="Settlements to stores for delivered orders. Generate them for a period, transfer the money, then mark each one paid." actions={<GeneratePayouts />} />
+
+      <section aria-label="Totals" className="mb-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <MetricCard label="Pending" period="All time" value={rupeesRounded(t("pending").amount)} icon={Clock} hint={n("pending")} tone={t("pending").count ? "attention" : "default"} href="/admin/payouts?status=pending" />
+        <MetricCard label="Processing" period="All time" value={rupeesRounded(t("processing").amount)} icon={Loader} hint={n("processing")} href="/admin/payouts?status=processing" />
+        <MetricCard label="Paid" period="All time" value={rupeesRounded(t("paid").amount)} icon={CheckCircle2} hint={n("paid")} href="/admin/payouts?status=paid" />
+        <MetricCard label="Failed" period="All time" value={rupeesRounded(t("failed").amount)} icon={AlertTriangle} hint={n("failed")} tone={t("failed").count ? "attention" : "default"} href="/admin/payouts?status=failed" />
       </section>
-      <ListToolbar searchKey={null} filters={[{ key: "store", label: "Stores", options: stores.map((s) => ({ value: s.id, label: s.name })) }, { key: "status", label: "Statuses", options: PAYOUT_STATUS_OPTIONS }]} />
-      {items.length === 0 ? <EmptyState icon={<Banknote className="h-7 w-7" />} title="No payouts yet" description="Generate weekly payouts to settle delivered orders with stores." action={<GeneratePayouts />} /> : (
-        <Table rows={items as unknown as Record<string, unknown>[]} columns={[
-          { key: "store", header: "Store", render: (r) => { const p = r as unknown as (typeof items)[number]; return <Link href={`/admin/stores/${p.store_id}`} className="block"><span className="font-semibold text-brand-700">{p.store?.name ?? "Store"}</span><span className="block text-xs text-ink-3">{p.store?.bank_account_number ? `${p.store.bank_account_name ?? ""} · ${p.store.bank_account_number} · ${p.store.bank_ifsc ?? ""}` : p.store?.upi_id ? `UPI ${p.store.upi_id}` : "No bank details on file"}</span></Link>; } },
-          { key: "period", header: "Period", render: (r) => <span className="text-xs tabular">{formatDate(r.period_start as string)} – {formatDate(r.period_end as string)}<span className="block text-ink-3">{r.order_count as number} orders</span></span> },
-          { key: "gross_sales", header: "Gross", className: "text-right", render: (r) => <span className="tabular">{formatINR(r.gross_sales as number)}</span> },
-          { key: "commission_amount", header: "Commission", className: "text-right", render: (r) => <span className="tabular text-ink-3">− {formatINR(r.commission_amount as number)}</span> },
-          { key: "adjustments", header: "Adjust.", className: "text-right", render: (r) => <span className="tabular text-ink-3">{Number(r.adjustments) ? formatINR(r.adjustments as number) : "—"}</span> },
-          { key: "net_amount", header: "Net", className: "text-right", render: (r) => <span className="tabular font-bold">{formatINR(r.net_amount as number, { precise: true })}</span> },
-          { key: "status", header: "Status", render: (r) => <span className="inline-flex flex-col gap-0.5"><Badge tone={PAYOUT_STATUS_TONE[r.status as string]}>{String(r.status)}</Badge>{r.reference_no ? <span className="font-mono text-[10px] text-ink-3">{String(r.reference_no)}</span> : null}{r.paid_at ? <span className="text-[10px] text-ink-4">{formatDateTime(r.paid_at as string)}</span> : null}</span> },
-          { key: "actions", header: "", render: (r) => <PayoutStatusButton payoutId={r.id as string} status={r.status as never} amount={Number(r.net_amount)} reference={(r.reference_no as string | null) ?? null} /> },
+
+      <StatusTabs items={PAYOUT_TABS.map((s) => ({ value: s, label: TAB_LABEL[s], count: counts[s] ?? null }))} />
+      <ListToolbar searchKey={null} filters={stores.length ? [{ key: "store", label: "Store", options: stores.map((s) => ({ value: s.id, label: s.name })) }] : []} />
+
+      {list.error ? <ErrorBlock title="Couldn't load payouts" description="The database didn't respond. Your filters are kept; try again." retryHref={hrefWith("/admin/payouts", sp, { view: null })} /> : (
+      <DataTable caption="Payouts" rows={list.items} rowKey={(p) => p.id} selectedKey={validView ? viewId : null}
+        empty={status || store
+          ? <EmptyBlock icon={SearchX} title="No payouts match" description="Try another tab or remove the store filter." />
+          : <EmptyBlock icon={Banknote} title="No payouts yet" description="Generate payouts to settle delivered orders with stores." action={<GeneratePayouts />} />}
+        columns={[
+          { key: "store", header: "Store", render: (p) => <CellStack primary={p.store?.name ?? "Store"} secondary={payTo(p) ?? "No bank or UPI details on file"} href={viewHref(p.id)} scroll={false} /> },
+          { key: "period", header: "Period", hideBelow: "sm", render: (p) => <span className="whitespace-nowrap text-xs text-ink-2">{day(p.period_start)} – {day(p.period_end)}<span className="block text-ink-4">{formatNumber(p.order_count)} {p.order_count === 1 ? "order" : "orders"}</span></span> },
+          { key: "gross", header: "Gross sales", align: "right", hideBelow: "lg", render: (p) => <span className="tabular text-ink-2">{rupees(p.gross_sales)}</span> },
+          { key: "commission", header: "Commission", align: "right", hideBelow: "lg", render: (p) => <span className="tabular text-ink-3">− {rupees(p.commission_amount)}</span> },
+          { key: "adjust", header: "Adjustments", align: "right", hideBelow: "xl", render: (p) => <span className="tabular text-ink-3">{Number(p.adjustments) ? rupees(p.adjustments) : "—"}</span> },
+          { key: "net", header: "Net payout", align: "right", render: (p) => <span className="font-semibold tabular text-ink">{rupees(p.net_amount)}</span> },
+          { key: "status", header: "Status", render: (p) => <span className="flex flex-col items-start gap-0.5"><StatusText value={p.status} />{p.reference_no ? <span className="hidden max-w-[140px] truncate font-mono text-[10px] text-ink-3 sm:block" title={p.reference_no}>{p.reference_no}</span> : null}</span> },
+          { key: "act", header: <span className="sr-only">Actions</span>, align: "right", render: (p) => (
+            <span className="inline-flex items-center gap-1.5">
+              <span className="hidden md:inline-flex"><PayoutActions payout={summary(p)} compact /></span>
+              <RowLink href={viewHref(p.id)} scroll={false} label={`View payout to ${p.store?.name ?? "store"}`} />
+            </span>
+          ) },
         ]} />
       )}
-      <ListPagination page={page} pageSize={pageSize} total={total} />
-    </div>
+      <ListPagination page={list.page} pageSize={list.pageSize} total={list.total} />
+
+      {validView ? (
+        view ? (
+          <QuickView title={`Payout to ${view.store?.name ?? "store"}`} description={`${day(view.period_start)} – ${day(view.period_end)} · created ${formatDateTime(view.created_at)}`} fullHref={`/admin/stores/${view.store_id}`} fullLabel="Open store"
+            footer={<PayoutActions payout={summary(view)} />}>
+            <div className="space-y-5">
+              <section>
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-3">Amount</h3>
+                <DetailList items={[
+                  { label: "Status", value: <StatusText value={view.status} /> },
+                  { label: "Orders", value: formatNumber(view.order_count) },
+                  { label: "Gross sales", value: rupees(view.gross_sales) },
+                  { label: "Commission", value: `− ${rupees(view.commission_amount)}` },
+                  { label: "Adjustments", value: Number(view.adjustments) ? rupees(view.adjustments) : "—" },
+                  { label: "Net payout", value: rupees(view.net_amount), strong: true },
+                ]} />
+              </section>
+              <section>
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-3">Pay to</h3>
+                <DetailList items={[
+                  { label: "Account name", value: view.store?.bank_account_name ?? "—" },
+                  { label: "Account number", value: view.store?.bank_account_number ? <span className="font-mono">{view.store.bank_account_number}</span> : "—" },
+                  { label: "IFSC", value: view.store?.bank_ifsc ? <span className="font-mono">{view.store.bank_ifsc}</span> : "—" },
+                  { label: "UPI", value: view.store?.upi_id ? <span className="font-mono">{view.store.upi_id}</span> : "—" },
+                ]} />
+                {!payTo(view) ? <p className="mt-2 text-xs text-danger">No bank or UPI details on file. <Link href={`/admin/stores/${view.store_id}`} className="font-semibold underline">Open the store</Link> to check before paying.</p> : null}
+              </section>
+              <section>
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-3">Record</h3>
+                <DetailList items={[
+                  { label: "Reference", value: view.reference_no ? <span className="break-all font-mono text-xs">{view.reference_no}</span> : "—" },
+                  { label: "Paid at", value: view.paid_at ? formatDateTime(view.paid_at) : "—" },
+                  { label: "Note", value: view.note ?? "—" },
+                  { label: "Last updated", value: formatDateTime(view.updated_at) },
+                ]} />
+              </section>
+            </div>
+          </QuickView>
+        ) : (
+          <QuickView title="Payout not found"><EmptyBlock title="This payout could not be loaded" description="It may have been removed, or the link is out of date." /></QuickView>
+        )
+      ) : null}
+    </>
   );
 }

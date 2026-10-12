@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/states";
 import { toast } from "@/components/ui/toast";
 
-/** Sign in with mobile number + password. OTP login appears only when the project has an SMS provider. */
+/** Sign in with mobile number + 6-digit PIN. OTP login appears only when the project has an SMS provider. */
 export function LoginForm({ next, phoneEnabled, guestEnabled, confirmed }: { next?: string; phoneEnabled: boolean; guestEnabled: boolean; confirmed?: boolean }) {
   const router = useRouter();
   const [state, formAction, pending] = React.useActionState<AuthResult | null, FormData>(signInAction, null);
@@ -36,18 +36,18 @@ export function LoginForm({ next, phoneEnabled, guestEnabled, confirmed }: { nex
           <Input label="Mobile number" inputMode="numeric" leftIcon={<span className="text-sm font-semibold text-ink-3">+91</span>} value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))} placeholder="10-digit mobile" disabled={otpSent} className="pl-12" />
           {otpSent ? <Input label="Enter OTP" inputMode="numeric" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="6-digit code" autoFocus /> : null}
           {otpSent ? <Button fullWidth size="lg" loading={busy} onClick={verify}>Verify & continue</Button> : <Button fullWidth size="lg" loading={busy} onClick={sendOtp} disabled={mobile.length !== 10}>Send OTP</Button>}
-          <button type="button" className="w-full text-center text-xs font-semibold text-brand-700" onClick={() => { setOtpMode(false); setOtpSent(false); setOtp(""); }}>Use password instead</button>
+          <button type="button" className="w-full text-center text-xs font-semibold text-brand-700" onClick={() => { setOtpMode(false); setOtpSent(false); setOtp(""); }}>Use PIN instead</button>
         </div>
       ) : (
         <form action={formAction} className="mt-5 space-y-4">
           <input type="hidden" name="next" value={next ?? ""} />
           <Input name="mobile" type="tel" inputMode="numeric" label="Mobile number" autoComplete="tel-national" required maxLength={10} value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))} leftIcon={<span className="text-sm font-semibold text-ink-3">+91</span>} className="pl-12" error={fieldErr("mobile")} placeholder="10-digit mobile number" />
-          <Input name="password" type={showPw ? "text" : "password"} label="Password" autoComplete="current-password" required leftIcon={<Lock className="h-4 w-4" />} error={fieldErr("password")}
-            rightSlot={<button type="button" onClick={() => setShowPw((v) => !v)} aria-label={showPw ? "Hide password" : "Show password"} className="flex h-8 w-8 items-center justify-center rounded-full text-ink-3 hover:bg-surface-2">{showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>} />
+          <Input name="password" type={showPw ? "text" : "password"} label="6-digit PIN" inputMode="numeric" maxLength={6} pattern="[0-9]{6}" placeholder="6 digits" autoComplete="current-password" required onInput={(e) => { const t = e.currentTarget; t.value = t.value.replace(/\D/g, "").slice(0, 6); }} leftIcon={<Lock className="h-4 w-4" />} error={fieldErr("password")}
+            rightSlot={<button type="button" onClick={() => setShowPw((v) => !v)} aria-label={showPw ? "Hide PIN" : "Show PIN"} className="flex h-8 w-8 items-center justify-center rounded-full text-ink-3 hover:bg-surface-2">{showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>} />
           {state && !state.ok && !state.fieldErrors ? <Alert tone="danger">{state.error}</Alert> : null}
           <Button type="submit" fullWidth size="lg" loading={pending}><Smartphone className="h-4 w-4" /> Sign in</Button>
           <p className="flex justify-between text-xs">
-            <Link href="/forgot-password" className="font-semibold text-brand-700">Forgot password?</Link>
+            <Link href="/forgot-password" className="font-semibold text-brand-700">Forgot PIN?</Link>
             {phoneEnabled ? <button type="button" onClick={() => setOtpMode(true)} className="font-semibold text-brand-700">Sign in with OTP</button> : null}
           </p>
         </form>
@@ -62,7 +62,6 @@ export function LoginForm({ next, phoneEnabled, guestEnabled, confirmed }: { nex
       ) : null}
 
       <p className="mt-6 text-center text-sm text-ink-3">New to Merta Deal? <Link href={`/register${next ? `?next=${encodeURIComponent(next)}` : ""}`} className="font-semibold text-brand-700">Create account</Link></p>
-      <p className="mt-2 text-center text-xs text-ink-3"><Link href="/register?role=store_owner" className="hover:underline">Register a kirana store</Link> · <Link href="/register?role=rider" className="hover:underline">Become a rider</Link></p>
     </div>
   );
 }

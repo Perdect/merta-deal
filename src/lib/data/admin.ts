@@ -12,7 +12,9 @@ export const PAGE_SIZE = 25;
 /** Calls an RPC that is not yet in the generated `Database["public"]["Functions"]` (see 0009_admin.sql). Run `pnpm gen:types` to type them. */
 export async function adminRpc<T>(fn: string, args: Record<string, unknown> = {}): Promise<{ data: T | null; error: { message: string } | null }> {
   const supabase = await createClient();
-  const rpc = supabase.rpc as unknown as (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { message: string } | null }>;
+  // Bound to the client: `rpc` reads `this.rest`, so a detached reference throws
+  // "Cannot read properties of undefined (reading 'rest')" and takes the whole page down.
+  const rpc = supabase.rpc.bind(supabase) as unknown as (fn: string, args: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { message: string } | null }>;
   const r = await rpc(fn, args);
   return { data: (r.data as T) ?? null, error: r.error };
 }
@@ -95,7 +97,9 @@ export type UserOrderRow = Pick<Tables<"orders">, "id" | "order_number" | "statu
 
 export const getUserDetail = cache(async (id: string) => {
   const supabase = await createClient();
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", id).maybeSingle();
+  const { data: profile, error } = await supabase.from("profiles").select("*").eq("id", id).maybeSingle();
+  // A failed query surfaces the route error screen (with Try again); only a missing row is "not found".
+  if (error) throw new Error(`Could not load this user: ${error.message}`);
   if (!profile) return null;
   const [stats, orders, wallet, rider, stores] = await Promise.all([
     adminRpc<UserStats>("admin_user_stats", { p_user_id: id }),
@@ -136,7 +140,8 @@ export type StoreCommission = Tables<"store_commissions">;
 
 export const getStoreDetail = cache(async (id: string) => {
   const supabase = await createClient();
-  const { data: store } = await supabase.from("stores").select("*").eq("id", id).maybeSingle();
+  const { data: store, error } = await supabase.from("stores").select("*").eq("id", id).maybeSingle();
+  if (error) throw new Error(`Could not load this store: ${error.message}`);
   if (!store) return null;
   const [stats, docs, commissions, zones, owner, staff, recentOrders] = await Promise.all([
     adminRpc<StoreStatsAdmin>("admin_store_stats", { p_store_id: id }),
@@ -192,7 +197,8 @@ export type ProductOfferRow = Tables<"inventory"> & { store: { id: string; name:
 
 export const getProductAdmin = cache(async (id: string) => {
   const supabase = await createClient();
-  const { data: product } = await supabase.from("products").select("*").eq("id", id).maybeSingle();
+  const { data: product, error } = await supabase.from("products").select("*").eq("id", id).maybeSingle();
+  if (error) throw new Error(`Could not load this product: ${error.message}`);
   if (!product) return null;
   const [offers, creator] = await Promise.all([
     supabase.from("inventory").select("*, store:stores(id, name, area, status)").eq("product_id", id).order("selling_price"),
@@ -235,23 +241,53 @@ export const getBrandProductCounts = cache(async (): Promise<Record<string, numb
  * Orders
  * ---------------------------------------------------------------------------------------------- */
 
-export type OrderListRow = Pick<Tables<"orders">, "id" | "order_number" | "status" | "payment_method" | "payment_status" | "total" | "item_count" | "delivery_type" | "created_at" | "promised_at" | "delivered_at" | "address_snapshot"> & { store: { id: string; name: string } | null; customer: { full_name: string | null; phone: string | null } | null };
+export type OrderListRow = Pick<Tables<"orders">, "id" | "order_number" | "short_code" | "status" | "payment_method" | "payment_status" | "total" | "item_count" | "delivery_type" | "created_at" | "promised_at" | "delivered_at" | "address_snapshot"> & { store: { id: string; name: string } | null; customer: { full_name: string | null; phone: string | null } | null };
 
-export const listOrders = cache(async (opts: { q?: string; status?: string; payment?: string; method?: string; store?: string; from?: string; to?: string; page?: number }): Promise<Paged<OrderListRow>> => {
-  const supabase = await createClient();
-  const page = opts.page ?? 1;
-  let q = supabase.from("orders").select("id, order_number, status, payment_method, payment_status, total, item_count, delivery_type, created_at, promised_at, delivered_at, address_snapshot, store:stores(id, name), customer:profiles!orders_user_id_fkey(full_name, phone)", { count: "exact" }).order("created_at", { ascending: false }).range(...pageRange(page));
-  if (opts.status === "active") q = q.in("status", ["placed", "store_confirmed", "preparing", "ready_for_pickup", "rider_assigned", "out_for_delivery"]);
-  else if (opts.status) q = q.eq("status", opts.status as Enums<"order_status">);
+export type OrderFilters = { q?: string; status?: string; payment?: string; method?: string; store?: string; from?: string; to?: string; late?: string; delivery?: string };
+
+/** Status tabs map to one or more raw statuses; a raw status value is also accepted. */
+export const ORDER_STATUS_GROUPS: Record<string, Enums<"order_status">[]> = {
+  active: ["placed", "store_confirmed", "preparing", "ready_for_pickup", "rider_assigned", "out_for_delivery"],
+  new: ["placed"],
+  packing: ["store_confirmed", "preparing"],
+  ready: ["ready_for_pickup"],
+  on_the_way: ["rider_assigned", "out_for_delivery"],
+  done: ["delivered", "completed"],
+  cancelled_all: ["cancelled", "rejected"],
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function applyOrderFilters<Q extends { in: any; eq: any; gte: any; lt: any; or: any }>(query: Q, opts: OrderFilters, withStatus = true): Q {
+  let q = query;
+  if (withStatus && opts.status) q = ORDER_STATUS_GROUPS[opts.status] ? q.in("status", ORDER_STATUS_GROUPS[opts.status]) : q.eq("status", opts.status as Enums<"order_status">);
+  if (opts.late === "1") q = q.in("status", ORDER_STATUS_GROUPS.active).lt("promised_at", new Date().toISOString());
   if (opts.payment) q = q.eq("payment_status", opts.payment as Enums<"payment_status">);
   if (opts.method) q = q.eq("payment_method", opts.method as Enums<"payment_method">);
+  if (opts.delivery) q = q.eq("delivery_type", opts.delivery);
   if (opts.store) q = q.eq("store_id", opts.store);
   if (opts.from) q = q.gte("created_at", new Date(`${opts.from}T00:00:00+05:30`).toISOString());
   if (opts.to) q = q.lt("created_at", new Date(new Date(`${opts.to}T00:00:00+05:30`).getTime() + 86400000).toISOString());
   if (opts.q) { const like = safeLike(opts.q); q = q.or(`order_number.ilike.${like},short_code.ilike.${like},address_snapshot->>phone.ilike.${like},address_snapshot->>full_name.ilike.${like}`); }
-  const { data, count, error } = await q;
+  return q;
+}
+
+export const listOrders = cache(async (opts: OrderFilters & { page?: number }): Promise<Paged<OrderListRow>> => {
+  const supabase = await createClient();
+  const page = opts.page ?? 1;
+  const base = supabase.from("orders").select("id, order_number, short_code, status, payment_method, payment_status, total, item_count, delivery_type, created_at, promised_at, delivered_at, address_snapshot, store:stores(id, name), customer:profiles!orders_user_id_fkey(full_name, phone)", { count: "exact" }).order("created_at", { ascending: false }).range(...pageRange(page));
+  const { data, count, error } = await applyOrderFilters(base, opts);
   if (error) console.error("listOrders", error.message);
   return { items: (data ?? []) as unknown as OrderListRow[], total: count ?? 0, page, pageSize: PAGE_SIZE };
+});
+
+/** Head-only counts for each status tab, honouring the search and the other filters. */
+export const countOrdersByTab = cache(async (opts: OrderFilters, tabs: string[]): Promise<Record<string, number>> => {
+  const supabase = await createClient();
+  const res = await Promise.all(tabs.map((t) => {
+    const q = applyOrderFilters(supabase.from("orders").select("id", { count: "exact", head: true }), { ...opts, status: t || undefined });
+    return q.then((r: { count: number | null }) => [t, r.count ?? 0] as const);
+  }));
+  return Object.fromEntries(res);
 });
 
 export const getOrderAdmin = cache(async (id: string): Promise<OrderTracking | null> => {
@@ -327,7 +363,8 @@ export type RiderAssignmentRow = Tables<"delivery_assignments"> & { order: { id:
 
 export const getRiderDetail = cache(async (id: string) => {
   const supabase = await createClient();
-  const { data: rider } = await supabase.from("delivery_partners").select("*, user:profiles(full_name, phone, email, avatar_url, is_active, created_at)").eq("id", id).maybeSingle();
+  const { data: rider, error } = await supabase.from("delivery_partners").select("*, user:profiles(full_name, phone, email, avatar_url, is_active, created_at)").eq("id", id).maybeSingle();
+  if (error) throw new Error(`Could not load this rider: ${error.message}`);
   if (!rider) return null;
   const [assignments, reviews] = await Promise.all([
     supabase.from("delivery_assignments").select("*, order:orders(id, order_number, status, total, store:stores(name))").eq("rider_id", id).order("created_at", { ascending: false }).limit(20),
@@ -490,7 +527,8 @@ export type TicketMessage = Tables<"support_messages"> & { sender: { full_name: 
 
 export const getTicketAdmin = cache(async (id: string) => {
   const supabase = await createClient();
-  const { data: ticket } = await supabase.from("support_tickets").select("*, user:profiles!support_tickets_user_id_fkey(full_name, phone, email), assignee:profiles!support_tickets_assigned_to_fkey(full_name), order:orders(order_number)").eq("id", id).maybeSingle();
+  const { data: ticket, error } = await supabase.from("support_tickets").select("*, user:profiles!support_tickets_user_id_fkey(full_name, phone, email), assignee:profiles!support_tickets_assigned_to_fkey(full_name), order:orders(order_number)").eq("id", id).maybeSingle();
+  if (error) throw new Error(`Could not load this ticket: ${error.message}`);
   if (!ticket) return null;
   const { data: messages } = await supabase.from("support_messages").select("*, sender:profiles(full_name, role)").eq("ticket_id", id).order("created_at");
   return { ticket: ticket as unknown as TicketRow, messages: (messages ?? []) as unknown as TicketMessage[] };

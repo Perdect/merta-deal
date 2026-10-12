@@ -7,15 +7,30 @@ import { parseListingParams } from "@/lib/listing-params";
 import { ProductListing } from "@/components/shop/product-listing";
 import { PageHeader } from "@/components/ui/misc";
 import { site } from "@/config/site";
+import { CATEGORY_SEO, LISTING_FILTER_KEYS } from "@/config/seo";
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> };
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
+  const { slug } = await params; const sp = await searchParams;
   const data = await getCategoryBySlug(slug);
-  if (!data) return {};
-  const title = `${data.category.name} online in ${site.city}`;
-  return { title, description: `Buy ${data.category.name.toLowerCase()} from trusted kirana stores in ${site.city}. Fast local delivery, honest prices, Hindi-friendly search.`, alternates: { canonical: `/c/${slug}` }, openGraph: { title, url: `/c/${slug}` } };
+  if (!data) notFound(); // during metadata, so crawlers get a real 404 status, not a soft 404
+  const seo = CATEGORY_SEO[slug];
+  const name = data.category.name;
+  const title = seo?.title ?? `${name} Online in ${site.city}`;
+  const description = seo?.description ?? `Buy ${name.toLowerCase()} online in ${site.city}, Rajasthan${data.category.description ? ` — ${data.category.description.toLowerCase()}` : ""}. Home delivery from ${site.seoName}; pay by UPI or cash on delivery.`;
+  // Filtered/sorted variants are useful to shoppers but duplicate the listing: keep them out of the
+  // index (still followed). Page 2+ is its own indexable page with a self-referencing canonical.
+  const filtered = LISTING_FILTER_KEYS.some((k) => sp[k] != null && sp[k] !== "");
+  const page = Math.max(1, Number(Array.isArray(sp.page) ? sp.page[0] : sp.page) || 1);
+  const canonical = page > 1 && !filtered ? `/c/${slug}?page=${page}` : `/c/${slug}`;
+  return {
+    title: page > 1 ? `${title} – Page ${page}` : title,
+    description,
+    alternates: { canonical },
+    robots: filtered ? { index: false, follow: true } : undefined,
+    openGraph: { type: "website", title, description, url: `/c/${slug}`, images: data.category.image_url ? [{ url: data.category.image_url, alt: name }] : undefined },
+  };
 }
 
 export default async function CategoryPage({ params, searchParams }: Props) {
@@ -25,16 +40,30 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const { category, children, parent } = data;
   const listingParams = parseListingParams(sp, { category: sp.category ? String(sp.category) : slug });
   const [user, result, brands, wished] = await Promise.all([getSessionUser(), searchProducts(listingParams), getBrands(), getWishlistIds()]);
-  const jsonLd = { "@context": "https://schema.org", "@type": "CollectionPage", name: category.name, url: `${site.url}/c/${slug}`, isPartOf: { "@type": "WebSite", name: site.name, url: site.url } };
+  const seo = CATEGORY_SEO[slug];
+  const crumbs = [{ name: "Home", url: `${site.url}/` }, ...(parent ? [{ name: parent.name, url: `${site.url}/c/${parent.slug}` }] : []), { name: category.name, url: `${site.url}/c/${slug}` }];
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      { "@type": "CollectionPage", "@id": `${site.url}/c/${slug}#page`, name: seo?.h1 ?? category.name, url: `${site.url}/c/${slug}`, isPartOf: { "@id": `${site.url}/#website` } },
+      { "@type": "BreadcrumbList", itemListElement: crumbs.map((c, i) => ({ "@type": "ListItem", position: i + 1, name: c.name, item: c.url })) },
+    ],
+  };
 
   return (
     <div className="px-4 pt-1 sm:px-0">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <nav aria-label="Breadcrumb" className="mt-2 text-xs text-ink-3"><Link href="/categories" className="hover:text-brand-700">Categories</Link>{parent ? <> / <Link href={`/c/${parent.slug}`} className="hover:text-brand-700">{parent.name}</Link></> : null} / <span className="text-ink">{category.name}</span></nav>
-      <PageHeader title={category.name} subtitle={category.description ?? `${result.total} products from Merta kirana stores`} className="px-0" />
+      <nav aria-label="Breadcrumb" className="mt-2 text-xs text-ink-3"><Link href="/" className="tap hover:text-brand-700">Home</Link> / {parent ? <><Link href={`/c/${parent.slug}`} className="tap hover:text-brand-700">{parent.name}</Link> / </> : null}<span className="text-ink">{category.name}</span></nav>
+      <PageHeader title={seo?.h1 ?? category.name} subtitle={seo ? undefined : category.description ?? `${result.total} products at Merta Deal`} className="px-0" />
+      {seo ? (
+        <div className="-mt-1 mb-4 max-w-3xl text-sm leading-relaxed text-ink-2">
+          <p>{seo.intro}</p>
+          <p lang="hi" className="mt-1 text-ink-3">{seo.hindi}</p>
+        </div>
+      ) : null}
       {children.length ? (
         <div className="scroll-x -mx-4 mb-3 px-4 sm:mx-0 sm:px-0">
-          {children.map((c) => <Link key={c.id} href={`/c/${c.slug}`} className="rounded-full border border-line-2 bg-card px-3.5 py-2 text-sm font-medium text-ink-2 hover:border-brand-500 hover:text-brand-700">{c.name}</Link>)}
+          {children.map((c) => <Link key={c.id} href={`/c/${c.slug}`} className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-line-2 bg-card px-3.5 text-sm font-medium text-ink-2 hover:border-brand-500 hover:text-brand-700">{c.name}</Link>)}
         </div>
       ) : null}
       <ProductListing result={result} filters={{ brands, categories: children.map((c) => ({ name: c.name, slug: c.slug })) }} signedIn={Boolean(user)} wished={wished} hideCategoryChips />

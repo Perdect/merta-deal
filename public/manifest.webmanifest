@@ -1,14 +1,14 @@
 {
   "name": "Merta Deal — Merta Ki Shopping, Ab Online",
   "short_name": "Merta Deal",
-  "description": "Groceries from Merta City's kirana stores, delivered in 30–60 minutes.",
+  "description": "Groceries from Merta City's kirana stores, delivered in 20–25 minutes.",
   "id": "/",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#F7F7F4",
-  "theme_color": "#0B6E4F",
+  "theme_color": "#329537",
   "lang": "en-IN",
   "categories": ["shopping", "food"],
   "icons": [

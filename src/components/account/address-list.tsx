@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Modal, ConfirmDialog } from "@/components/ui/overlay";
 import { EmptyState } from "@/components/ui/states";
 import { toast } from "@/components/ui/toast";
+import { useLocationStore } from "@/stores/location-store";
+import type { Serviceability } from "@/types/app";
 
 const TYPE_ICON = { home: Home, work: Briefcase, other: MapPin } as const;
 const TYPE_LABEL = { home: "Home", work: "Work", other: "Other" } as const;
@@ -19,10 +21,11 @@ export function formatAddressLine(a: Address) {
 }
 
 /** Saved addresses with add/edit (modal), delete (confirm) and set-default. */
-export function AddressList({ initial, defaultName, defaultPhone }: { initial: Address[]; defaultName?: string | null; defaultPhone?: string | null }) {
+export function AddressList({ initial, defaultName, defaultPhone, openNew = false }: { initial: Address[]; defaultName?: string | null; defaultPhone?: string | null; /** Opened from "Add New Address" in the location picker: show the form straight away. */ openNew?: boolean }) {
   const router = useRouter();
+  const setLocation = useLocationStore((s) => s.setLocation);
   const [items, setItems] = React.useState<Address[]>(initial);
-  const [editing, setEditing] = React.useState<Address | "new" | null>(null);
+  const [editing, setEditing] = React.useState<Address | "new" | null>(openNew ? "new" : null);
   const [deleting, setDeleting] = React.useState<Address | null>(null);
   const [busyId, setBusyId] = React.useState<string | null>(null);
   // Resync when the server sends fresh props (after router.refresh()).
@@ -32,6 +35,14 @@ export function AddressList({ initial, defaultName, defaultPhone }: { initial: A
   const sorted = React.useMemo(() => [...items].sort((a, b) => Number(b.is_default) - Number(a.is_default)), [items]);
 
   const onSaved = (a: Address) => {
+    // A newly added address becomes the delivery location (header ETA, cart and checkout follow it).
+    if (editing === "new") {
+      const q = new URLSearchParams(a.lat != null && a.lng != null ? { lat: String(a.lat), lng: String(a.lng), pincode: a.pincode } : { pincode: a.pincode });
+      fetch(`/api/location/serviceability?${q}`).then((r) => r.json() as Promise<Serviceability>).then((s) => {
+        setLocation({ label: `${a.label || a.type[0].toUpperCase() + a.type.slice(1)} · ${a.area}`, area: a.area, pincode: a.pincode, lat: a.lat, lng: a.lng, serviceable: s.serviceable, zoneName: s.zone_name, etaMin: s.eta_min_minutes, etaMax: s.eta_max_minutes, addressId: a.id });
+        if (!s.serviceable) toast.info("Address saved", s.message ?? "We don't deliver to this pincode yet.");
+      }).catch(() => {});
+    }
     setItems((cur) => {
       const base = a.is_default ? cur.map((x) => ({ ...x, is_default: false })) : cur;
       return base.some((x) => x.id === a.id) ? base.map((x) => (x.id === a.id ? a : x)) : [a, ...base];

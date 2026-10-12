@@ -9,8 +9,9 @@ export function PriceBreakdown({ s, className }: { s: CartSummary; className?: s
     ...(s.coupon_discount > 0 ? [{ label: `Coupon (${s.coupon?.code})`, value: <span className="text-success">− {formatINR(s.coupon_discount)}</span> }] : []),
     { label: "Delivery fee", value: s.delivery_fee === 0 ? <span className="text-success">FREE</span> : formatINR(s.delivery_fee) },
     ...(s.express_fee > 0 ? [{ label: "Express delivery", value: formatINR(s.express_fee) }] : []),
-    { label: "Platform fee", value: formatINR(s.platform_fee) },
-    { label: `GST on fees (${s.tax_rate}%)`, value: formatINR(s.tax, { precise: true }) },
+    // Fees are settings (platform_fee, tax_rate_percent); when switched off they are not listed at ₹0.
+    ...(s.platform_fee > 0 ? [{ label: "Platform fee", value: formatINR(s.platform_fee) }] : []),
+    ...(s.tax > 0 ? [{ label: `GST on fees (${s.tax_rate}%)`, value: formatINR(s.tax, { precise: true }) }] : []),
     { label: "To pay", value: formatINR(s.total, { precise: true }), strong: true },
   ];
   return <KeyValue items={items} className={className} />;

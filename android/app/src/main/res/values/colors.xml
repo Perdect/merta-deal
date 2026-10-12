@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Matches the website: white header, Merta Deal green (#329537) brand. -->
+    <color name="statusBar">#FFFFFF</color>
+    <color name="navigationBar">#FFFFFF</color>
+    <color name="navigationDivider">#E6E6E1</color>
+    <color name="splashBackground">#329537</color>
+    <color name="iconBackground">#329537</color>
+</resources>

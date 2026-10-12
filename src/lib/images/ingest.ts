@@ -11,13 +11,36 @@ export const PAD = 0.08;
 
 export type IngestResult = { webp: Buffer; width: number; height: number; bytes: number; sourceWidth: number; sourceHeight: number };
 
-export async function ingestProductImage(input: Buffer, opts: { trim?: boolean; background?: string } = {}): Promise<IngestResult> {
+/**
+ * Catalogue rule: every product photo is a transparent cutout. Background removal runs locally
+ * (ISNet via @imgly/background-removal-node, a heavy optional dependency). When it is unavailable
+ * in the runtime (e.g. a serverless deploy), the photo is kept framed and `cutout: false` is reported
+ * so the admin knows to run `scripts/product-images` for it.
+ */
+export async function removeBackgroundIfAvailable(png: Buffer): Promise<Buffer | null> {
+  try {
+    const mod = await import("@imgly/background-removal-node");
+    const out = await mod.removeBackground(new Blob([new Uint8Array(png)], { type: "image/png" }), { model: "medium", output: { format: "image/png", quality: 0.9 } });
+    const cut = Buffer.from(await out.arrayBuffer());
+    const stats = await sharp(cut).ensureAlpha().extractChannel(3).stats();
+    const mean = stats.channels[0].mean / 255;
+    if (mean < 0.04 || mean > 0.97) return null; // removed everything or nothing — keep the framed photo
+    return cut;
+  } catch { return null; }
+}
+
+export async function ingestProductImage(input: Buffer, opts: { trim?: boolean; background?: string; cutout?: boolean } = {}): Promise<IngestResult & { cutout: boolean }> {
   const src = sharp(input, { failOn: "none", limitInputPixels: 2e8 }).rotate();
   const meta = await src.metadata();
   if (!meta.width || !meta.height) throw new Error("Unreadable image");
   if (meta.width < 300 || meta.height < 300) throw new Error(`Image is too small (${meta.width}×${meta.height}); use at least 600×600`);
 
-  let body = await src.toBuffer();
+  let body: Buffer = await src.toBuffer();
+  let cutout = false;
+  if (opts.cutout !== false) {
+    const cut = await removeBackgroundIfAvailable(await sharp(body).png().toBuffer());
+    if (cut) { body = cut; cutout = true; opts = { ...opts, background: "transparent" }; }
+  }
   if (opts.trim !== false) {
     try { body = await sharp(body).trim({ threshold: 12 }).toBuffer(); } catch { /* keep untrimmed */ }
   }
@@ -28,7 +51,7 @@ export async function ingestProductImage(input: Buffer, opts: { trim?: boolean; 
     .composite([{ input: fitted, left: Math.round((CANVAS - (fm.width ?? 0)) / 2), top: Math.round((CANVAS - (fm.height ?? 0)) / 2) }])
     .webp({ quality: 86 })
     .toBuffer();
-  return { webp, width: CANVAS, height: CANVAS, bytes: webp.length, sourceWidth: meta.width, sourceHeight: meta.height };
+  return { webp, width: CANVAS, height: CANVAS, bytes: webp.length, sourceWidth: meta.width, sourceHeight: meta.height, cutout };
 }
 
 /** Downloads a supplied image URL with guards: https only, no private hosts, size and type limits. */

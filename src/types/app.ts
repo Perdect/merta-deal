@@ -56,6 +56,7 @@ export type ProductOffer = { inventory_id: string; store_id: string; store_name:
 export type ProductReview = { id: string; rating: number; title: string | null; comment: string | null; created_at: string; user_name: string };
 export type ProductDetail = ProductCard & {
   description: string | null; ingredients: string | null; nutrition: Record<string, number | string> | null; manufacturer: string | null; country_of_origin: string | null;
+  shelf_life?: string | null; seller_name?: string | null; seller_address?: string | null; seller_license?: string | null;
   offers: ProductOffer[]; related: ProductCard[]; frequently_bought: ProductCard[]; reviews: ProductReview[]; in_wishlist: boolean;
 };
 

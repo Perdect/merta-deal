@@ -4,6 +4,7 @@ import { getSessionUser } from "@/lib/supabase/server";
 import { getOrderTracking } from "@/lib/data/orders";
 import { OrderTrackingView } from "@/components/shop/order-tracking-view";
 import { PageHeader } from "@/components/ui/misc";
+import { TrackEvent } from "@/components/shared/track-event";
 
 export const metadata: Metadata = { title: "Track order", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -19,6 +20,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
     <div className="pt-1">
       <PageHeader title="Track order" back="/orders" />
       <OrderTrackingView initial={tracking} placed={sp.placed === "1"} paymentState={sp.payment} />
+      {sp.placed === "1" ? <TrackEvent name="purchase" onceKey={`md-purchase-${tracking.order.id}`} params={{ transaction_id: tracking.order.order_number, value: Number(tracking.order.total), items: tracking.items.map((i) => ({ item_id: i.product_id, item_name: i.product_name, price: Number(i.unit_price), quantity: i.quantity })) }} /> : null}
     </div>
   );
 }

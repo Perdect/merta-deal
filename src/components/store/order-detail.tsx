@@ -88,7 +88,7 @@ export function StoreOrderDetail({ initial }: { initial: OrderTracking }) {
           <KeyValue items={[
             { label: "Items", value: formatINR(o.subtotal) },
             ...(Number(o.coupon_discount) > 0 ? [{ label: `Coupon ${o.coupon_code ?? ""}`, value: `− ${formatINR(o.coupon_discount)}` }] : []),
-            { label: "Delivery fee", value: Number(o.delivery_fee) ? formatINR(o.delivery_fee) : "FREE" }, { label: "Platform fee + GST", value: formatINR(Number(o.platform_fee) + Number(o.tax_amount), { precise: true }) },
+            { label: "Delivery fee", value: Number(o.delivery_fee) ? formatINR(o.delivery_fee) : "FREE" }, ...(Number(o.platform_fee) + Number(o.tax_amount) > 0 ? [{ label: "Platform fee + GST", value: formatINR(Number(o.platform_fee) + Number(o.tax_amount), { precise: true }) }] : []),
             { label: "Customer pays", value: formatINR(o.total, { precise: true }), strong: true },
             { label: `Commission (${Number(o.commission_rate)}%)`, value: `− ${formatINR(o.commission_amount, { precise: true })}` },
             { label: "Your payout", value: formatINR(o.store_payout_amount, { precise: true }), strong: true },

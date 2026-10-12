@@ -36,7 +36,7 @@ export function SectionHeader({ title, subtitle, href, hrefLabel = "See all", cl
         <h2 className="text-lg font-bold text-ink sm:text-xl">{title}</h2>
         {subtitle ? <p className="text-sm text-ink-3">{subtitle}</p> : null}
       </div>
-      {action ?? (href ? <a href={href} className="text-sm font-semibold text-brand-600 hover:underline">{hrefLabel}</a> : null)}
+      {action ?? (href ? <a href={href} className="tap text-sm font-semibold text-brand-600 hover:underline">{hrefLabel}</a> : null)}
     </div>
   );
 }

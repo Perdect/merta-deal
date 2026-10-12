@@ -19,7 +19,7 @@ const ASSIGNABLE = ["store_confirmed", "preparing", "ready_for_pickup"];
 const CANCELLABLE = ["placed", "store_confirmed", "preparing", "ready_for_pickup", "rider_assigned", "out_for_delivery"];
 
 /** Admin controls for one order. Subscribes to realtime so the page refreshes when the store/rider act. */
-export function OrderAdminActions({ tracking: t, riders, razorpayConfigured }: { tracking: OrderTracking; riders: LiveRider[]; razorpayConfigured: boolean }) {
+export function OrderAdminActions({ tracking: t, riders, razorpayConfigured, compact }: { tracking: OrderTracking; riders: LiveRider[]; razorpayConfigured: boolean; /** Single row of buttons (quick-view footer). */ compact?: boolean }) {
   const router = useRouter();
   const o = t.order;
   const [busy, setBusy] = React.useState<string | null>(null);
@@ -48,18 +48,18 @@ export function OrderAdminActions({ tracking: t, riders, razorpayConfigured }: {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between text-xs"><span className="font-semibold uppercase tracking-wide text-ink-3">Admin actions</span><span className={cn("inline-flex items-center gap-1 font-semibold", connected ? "text-success" : "text-ink-4")}>{connected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}{connected ? "Live" : "Polling"}</span></div>
+      <div className="flex items-center justify-between text-xs"><span className="font-semibold text-ink-3">{compact ? "Actions for this order" : "Admin actions"}</span><span className={cn("inline-flex items-center gap-1 font-semibold", connected ? "text-success" : "text-ink-4")}>{connected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}{connected ? "Live updates" : "Refreshing every 20 s"}</span></div>
 
       {o.status === "ready_for_pickup" && !t.assignment ? <Alert tone="warning" title="No rider on this order">Auto-dispatch found nobody within range. Assign a rider manually or re-run dispatch.</Alert> : null}
       {refundPending ? <Alert tone="danger" title="Refund pending">{formatINR(Number(t.payment!.amount))} was paid online and the order is cancelled. Issue the refund below.</Alert> : null}
 
-      <div className="grid gap-2">
+      <div className={cn(compact ? "flex flex-wrap gap-2 [&>button]:h-9 [&>button]:px-3 [&>button]:text-sm" : "grid gap-2")}>
         {canAssign ? <Button variant="primary" onClick={() => setAssignOpen(true)}><Bike className="h-4 w-4" /> Assign rider</Button> : null}
         {o.status === "ready_for_pickup" ? <Button variant="outline" loading={busy === "dispatch"} onClick={() => run("dispatch", async () => { const r = await redispatchAction(o.id); if (r.ok && !r.data.assignmentId) return { ok: false, error: "Still no eligible rider within the dispatch radius (online, active, free, not previously declined)." }; return r; }, "Dispatch offer sent to nearest rider")}><RefreshCw className="h-4 w-4" /> Re-run auto-dispatch</Button> : null}
         {canCancel ? <Button variant="outline" className="text-danger" onClick={() => setCancelOpen(true)}><XCircle className="h-4 w-4" /> Cancel order</Button> : null}
         {refundable ? <Button variant={refundPending ? "danger" : "outline"} onClick={() => setRefundOpen(true)}><RotateCcw className="h-4 w-4" /> Issue refund</Button> : null}
         {refundPending ? <Button variant="ghost" size="sm" onClick={() => setManualOpen(true)}>Mark refunded manually</Button> : null}
-        {!canAssign && !canCancel && !refundable && !refundPending ? <p className="text-xs text-ink-3">No actions available for a {o.status.replace(/_/g, " ")} order.</p> : null}
+        {!canAssign && !canCancel && !refundable && !refundPending ? <p className="text-xs text-ink-3">No actions are available once an order is {o.status.replace(/_/g, " ")}.</p> : null}
       </div>
 
       <Modal open={assignOpen} onClose={() => setAssignOpen(false)} title="Assign a rider" description={`Online riders sorted by distance to ${t.store.name}. The rider gets an offer and must accept.`} size="lg">

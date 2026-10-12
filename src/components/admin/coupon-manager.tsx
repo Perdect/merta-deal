@@ -1,87 +1,173 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, Ticket } from "lucide-react";
-import { Button, IconButton } from "@/components/ui/button";
+import { Pencil, Plus, SearchX, Ticket, Trash2 } from "lucide-react";
+import { AdminPageHeader, DataTable, CellStack, EmptyBlock, ErrorBlock, ListToolbar, StatusTabs, ListPagination, IconAction, StatusPill, rupees, rupeesRounded, type Tone } from "@/components/admin/kit";
 import { Input, Select, Switch, Textarea } from "@/components/ui/input";
-import { Modal, ConfirmDialog } from "@/components/ui/overlay";
-import { Badge } from "@/components/ui/badge";
+import { ConfirmDialog } from "@/components/ui/overlay";
 import { toast } from "@/components/ui/toast";
-import { saveCouponAction, deleteCouponAction, type CouponInput } from "@/lib/actions/admin";
+import { FormPanel, FieldGroup, toLocalInput, fromLocalInput, hasErrors, type Errors } from "@/components/admin/care/form-panel";
+import { btn } from "@/components/admin/care/shared";
+import { saveCouponAction, deleteCouponAction } from "@/lib/actions/admin";
 import type { Coupon } from "@/types/app";
 import type { CouponStats } from "@/lib/data/admin";
-import { formatINR, formatDate, formatDateTime } from "@/lib/utils";
+import { formatDate, formatDateTime, formatNumber } from "@/lib/utils";
 
 type Opt = { id: string; name: string };
-const toLocal = (iso: string | null | undefined) => (iso ? new Date(new Date(iso).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "");
-const blank = (): CouponInput => ({ code: "", title: "", description: "", type: "percentage", value: 10, min_order_amount: 0, max_discount: null, first_order_only: false, store_id: null, category_id: null, usage_limit: null, per_user_limit: 1, starts_at: toLocal(new Date().toISOString()), expires_at: "", is_active: true });
 
-export function CouponManager({ coupons, stats, stores, categories }: { coupons: Coupon[]; stats: CouponStats; stores: Opt[]; categories: Opt[] }) {
+/** Status in words: expiry wins, then the on/off switch, then usage and schedule. */
+export function couponState(c: Pick<Coupon, "is_active" | "starts_at" | "expires_at" | "usage_limit" | "used_count">, now: number): { label: string; tone: Tone; detail?: string } {
+  if (c.expires_at && Date.parse(c.expires_at) <= now) return { label: "Expired", tone: "neutral", detail: `Ended ${formatDate(c.expires_at)}` };
+  if (!c.is_active) return { label: "Inactive", tone: "neutral", detail: "Switched off" };
+  if (c.usage_limit != null && c.used_count >= c.usage_limit) return { label: "Used up", tone: "amber", detail: "Usage limit reached" };
+  if (Date.parse(c.starts_at) > now) return { label: "Scheduled", tone: "blue", detail: `Starts ${formatDate(c.starts_at)}` };
+  return { label: "Active", tone: "green", detail: c.expires_at ? `Until ${formatDate(c.expires_at)}` : "No end date" };
+}
+
+type Form = {
+  code: string; title: string; description: string; type: "percentage" | "fixed"; value: string; min_order_amount: string; max_discount: string;
+  usage_limit: string; per_user_limit: string; store_id: string; category_id: string; starts_at: string; expires_at: string; first_order_only: boolean; is_active: boolean;
+};
+type Key = keyof Form;
+
+const blank = (): Form => ({ code: "", title: "", description: "", type: "percentage", value: "10", min_order_amount: "0", max_discount: "", usage_limit: "", per_user_limit: "1", store_id: "", category_id: "", starts_at: toLocalInput(new Date().toISOString()), expires_at: "", first_order_only: false, is_active: true });
+const fromCoupon = (c: Coupon): Form => ({ code: c.code, title: c.title, description: c.description ?? "", type: c.type, value: String(c.value), min_order_amount: String(c.min_order_amount ?? 0), max_discount: c.max_discount != null ? String(c.max_discount) : "", usage_limit: c.usage_limit != null ? String(c.usage_limit) : "", per_user_limit: String(c.per_user_limit ?? 1), store_id: c.store_id ?? "", category_id: c.category_id ?? "", starts_at: toLocalInput(c.starts_at), expires_at: toLocalInput(c.expires_at), first_order_only: c.first_order_only, is_active: c.is_active });
+
+const num = (s: string) => (s.trim() === "" ? null : Number(s));
+function validate(f: Form): Errors<Key> {
+  const e: Errors<Key> = {};
+  if (!/^[A-Z0-9_-]{3,24}$/.test(f.code)) e.code = "Use 3–24 capital letters, numbers, - or _.";
+  if (f.title.trim().length < 2) e.title = "Enter a title of at least 2 characters.";
+  else if (f.title.trim().length > 100) e.title = "Keep the title under 100 characters.";
+  const v = num(f.value);
+  if (v == null || !Number.isFinite(v) || v <= 0) e.value = "Enter a value above 0.";
+  else if (f.type === "percentage" && v > 100) e.value = "A percentage can't be more than 100.";
+  const min = num(f.min_order_amount);
+  if (min != null && (!Number.isFinite(min) || min < 0)) e.min_order_amount = "Enter 0 or more.";
+  const max = num(f.max_discount);
+  if (max != null && (!Number.isFinite(max) || max <= 0)) e.max_discount = "Leave blank for no cap, or enter more than 0.";
+  const lim = num(f.usage_limit);
+  if (lim != null && (!Number.isInteger(lim) || lim < 1)) e.usage_limit = "Leave blank for unlimited, or enter a whole number of 1 or more.";
+  const per = num(f.per_user_limit);
+  if (per == null || !Number.isInteger(per) || per < 1) e.per_user_limit = "Enter a whole number of 1 or more.";
+  if (!f.starts_at) e.starts_at = "Choose when the coupon starts.";
+  if (f.expires_at && f.starts_at && Date.parse(fromLocalInput(f.expires_at)) <= Date.parse(fromLocalInput(f.starts_at))) e.expires_at = "The expiry must be after the start.";
+  return e;
+}
+
+export function CouponWorkspace({ coupons, stats, stores, categories, counts, total, page, pageSize, nowIso, filtered, error, retryHref }: {
+  coupons: Coupon[]; stats: CouponStats; stores: Opt[]; categories: Opt[]; counts: Record<string, number>; total: number; page: number; pageSize: number;
+  nowIso: string; filtered: boolean; error: boolean; retryHref: string;
+}) {
   const router = useRouter();
-  const [editing, setEditing] = React.useState<{ id: string | null; form: CouponInput } | null>(null);
+  const now = Date.parse(nowIso);
+  const [editing, setEditing] = React.useState<{ id: string | null; initial: Form; form: Form } | null>(null);
+  const [errors, setErrors] = React.useState<Errors<Key>>({});
+  const [serverError, setServerError] = React.useState<string | null>(null);
+  const [saving, setSaving] = React.useState(false);
   const [del, setDel] = React.useState<Coupon | null>(null);
-  const [busy, setBusy] = React.useState(false);
-  const set = <K extends keyof CouponInput>(k: K, v: CouponInput[K]) => setEditing((e) => (e ? { ...e, form: { ...e.form, [k]: v } } : e));
-  const openEdit = (c: Coupon) => setEditing({ id: c.id, form: { code: c.code, title: c.title, description: c.description ?? "", type: c.type, value: c.value, min_order_amount: c.min_order_amount, max_discount: c.max_discount, first_order_only: c.first_order_only, store_id: c.store_id, category_id: c.category_id, usage_limit: c.usage_limit, per_user_limit: c.per_user_limit, starts_at: toLocal(c.starts_at), expires_at: toLocal(c.expires_at), is_active: c.is_active } });
-  const save = async () => { if (!editing) return; setBusy(true); const r = await saveCouponAction(editing.id, editing.form); setBusy(false); if (r.ok) { toast.success(editing.id ? "Coupon saved" : "Coupon created"); setEditing(null); router.refresh(); } else toast.error(r.error); };
-  const remove = async () => { if (!del) return; setBusy(true); const r = await deleteCouponAction(del.id); setBusy(false); if (r.ok) { toast.success("Coupon deleted"); setDel(null); router.refresh(); } else toast.error(r.error); };
+  const [deleting, setDeleting] = React.useState(false);
+
+  const open = (id: string | null, form: Form) => { setEditing({ id, initial: form, form }); setErrors({}); setServerError(null); };
+  const set = <K extends Key>(k: K, v: Form[K]) => { setEditing((e) => (e ? { ...e, form: { ...e.form, [k]: v } } : e)); if (errors[k]) setErrors((x) => ({ ...x, [k]: undefined })); };
+  const dirty = Boolean(editing && JSON.stringify(editing.form) !== JSON.stringify(editing.initial));
+
+  const save = async () => {
+    if (!editing) return;
+    const f = editing.form; const e = validate(f);
+    setErrors(e); setServerError(null);
+    if (hasErrors(e)) return;
+    setSaving(true);
+    const r = await saveCouponAction(editing.id, {
+      code: f.code, title: f.title.trim(), description: f.description.trim() || null, type: f.type, value: Number(f.value), min_order_amount: num(f.min_order_amount) ?? 0,
+      max_discount: num(f.max_discount), first_order_only: f.first_order_only, store_id: f.store_id || null, category_id: f.category_id || null,
+      usage_limit: num(f.usage_limit), per_user_limit: Number(f.per_user_limit), starts_at: fromLocalInput(f.starts_at), expires_at: fromLocalInput(f.expires_at) || null, is_active: f.is_active,
+    });
+    setSaving(false);
+    if (r.ok) { toast.success(editing.id ? `Coupon ${f.code} saved` : `Coupon ${f.code} created`); setEditing(null); router.refresh(); }
+    else { setServerError(r.error); toast.error("Couldn't save the coupon", r.error); }
+  };
+  const remove = async () => {
+    if (!del) return;
+    setDeleting(true); const r = await deleteCouponAction(del.id); setDeleting(false);
+    if (r.ok) { toast.success(`Coupon ${del.code} deleted`); setDel(null); router.refresh(); } else toast.error("Couldn't delete the coupon", r.error);
+  };
+
   const f = editing?.form;
-  const [now] = React.useState(() => Date.now());
+  const scope = (c: Coupon) => [c.first_order_only ? "First order only" : null, c.store_id ? stores.find((s) => s.id === c.store_id)?.name ?? "One store" : null, c.category_id ? categories.find((x) => x.id === c.category_id)?.name ?? "One category" : null].filter(Boolean).join(" · ") || "All orders";
 
   return (
-    <div className="space-y-3">
-      <div className="flex justify-end"><Button size="sm" onClick={() => setEditing({ id: null, form: blank() })}><Plus className="h-4 w-4" /> New coupon</Button></div>
-      {coupons.length === 0 ? <div className="rounded-lg border border-line bg-card py-12 text-center text-sm text-ink-3"><Ticket className="mx-auto mb-2 h-7 w-7 text-ink-4" />No coupons match.</div> : (
-        <ul className="grid gap-3 md:grid-cols-2">
-          {coupons.map((c) => {
-            const s = stats[c.id]; const expired = c.expires_at ? new Date(c.expires_at).getTime() < now : false; const exhausted = c.usage_limit != null && c.used_count >= c.usage_limit;
-            return (
-              <li key={c.id} className="rounded-lg border border-line bg-card p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="font-mono text-base font-bold tracking-wide text-ink">{c.code}</p>
-                    <p className="text-sm font-medium text-ink-2">{c.title}</p>
-                    <p className="mt-1 flex flex-wrap gap-1">{c.is_active && !expired && !exhausted ? <Badge tone="success" size="xs">live</Badge> : <Badge tone="neutral" size="xs">{expired ? "expired" : exhausted ? "exhausted" : "inactive"}</Badge>}{c.first_order_only ? <Badge tone="info" size="xs">first order</Badge> : null}{c.store_id ? <Badge tone="brand" size="xs">{stores.find((x) => x.id === c.store_id)?.name ?? "store"}</Badge> : null}{c.category_id ? <Badge tone="brand" size="xs">{categories.find((x) => x.id === c.category_id)?.name ?? "category"}</Badge> : null}</p>
-                  </div>
-                  <span className="flex gap-0.5"><IconButton label="Edit" className="h-8 w-8" onClick={() => openEdit(c)}><Pencil className="h-4 w-4" /></IconButton><IconButton label="Delete" className="h-8 w-8 text-danger" onClick={() => setDel(c)}><Trash2 className="h-4 w-4" /></IconButton></span>
-                </div>
-                <dl className="mt-3 grid grid-cols-3 gap-2 text-xs">
-                  <div><dt className="text-ink-3">Discount</dt><dd className="font-semibold text-ink">{c.type === "percentage" ? `${c.value}%` : formatINR(c.value)}{c.max_discount ? ` (max ${formatINR(c.max_discount)})` : ""}</dd></div>
-                  <div><dt className="text-ink-3">Min order</dt><dd className="font-semibold text-ink">{formatINR(c.min_order_amount)}</dd></div>
-                  <div><dt className="text-ink-3">Limits</dt><dd className="font-semibold text-ink">{c.usage_limit ?? "∞"} total · {c.per_user_limit}/user</dd></div>
-                  <div><dt className="text-ink-3">Used</dt><dd className="font-semibold text-ink">{c.used_count}{s ? ` (${s.unique_users} users)` : ""}</dd></div>
-                  <div><dt className="text-ink-3">Discount given</dt><dd className="font-semibold text-ink">{formatINR(s?.discount_total ?? 0)}</dd></div>
-                  <div><dt className="text-ink-3">Valid</dt><dd className="font-semibold text-ink">{formatDate(c.starts_at)} → {c.expires_at ? formatDate(c.expires_at) : "no end"}</dd></div>
-                </dl>
-                {s?.last_used_at ? <p className="mt-2 text-[11px] text-ink-4">Last used {formatDateTime(s.last_used_at)}</p> : null}
-              </li>
-            );
-          })}
-        </ul>
-      )}
+    <>
+      <AdminPageHeader title="Coupons" description="Discount codes customers enter at checkout. Usage figures come from orders."
+        actions={<button type="button" className={btn.primary} onClick={() => open(null, blank())}><Plus className="h-4 w-4" aria-hidden />New coupon</button>} />
 
-      <Modal open={Boolean(editing)} onClose={() => setEditing(null)} title={editing?.id ? "Edit coupon" : "New coupon"} size="lg" footer={<div className="flex gap-2"><Button variant="outline" fullWidth onClick={() => setEditing(null)}>Cancel</Button><Button fullWidth loading={busy} onClick={save}>{editing?.id ? "Save" : "Create"}</Button></div>}>
+      <StatusTabs items={[{ value: "", label: "All", count: counts[""] ?? null }, { value: "active", label: "Active", count: counts.active ?? null }, { value: "inactive", label: "Inactive", count: counts.inactive ?? null }, { value: "expired", label: "Expired", count: counts.expired ?? null }]} />
+      <ListToolbar searchPlaceholder="Search code or title" />
+
+      {error ? <ErrorBlock title="Couldn't load coupons" description="The database didn't respond. Your filters are kept; try again." retryHref={retryHref} /> : (
+        <DataTable caption="Coupons" rows={coupons} rowKey={(c) => c.id}
+          empty={filtered
+            ? <EmptyBlock icon={SearchX} title="No coupons match" description="Try another tab or clear the search." />
+            : <EmptyBlock icon={Ticket} title="No coupons yet" description="Create a coupon to offer a discount at checkout." action={<button type="button" className={btn.primary} onClick={() => open(null, blank())}><Plus className="h-4 w-4" aria-hidden />New coupon</button>} />}
+          columns={[
+            { key: "code", header: "Code", render: (c) => <span className="block min-w-0 max-w-[240px]"><button type="button" onClick={() => open(c.id, fromCoupon(c))} className="block truncate font-mono text-sm font-bold tracking-wide text-ink hover:text-brand-700 hover:underline">{c.code}</button><span className="block truncate text-xs text-ink-3">{c.title}</span></span> },
+            { key: "status", header: "Status", render: (c) => { const s = couponState(c, now); return <span className="flex flex-col items-start gap-0.5"><StatusPill tone={s.tone}>{s.label}</StatusPill>{s.detail ? <span className="hidden text-[11px] text-ink-4 sm:block">{s.detail}</span> : null}</span>; } },
+            { key: "discount", header: "Discount", hideBelow: "sm", render: (c) => <CellStack primary={c.type === "percentage" ? `${c.value}% off` : `${rupees(c.value)} off`} secondary={[c.max_discount ? `Max ${rupees(c.max_discount)}` : null, Number(c.min_order_amount) ? `Min order ${rupees(c.min_order_amount)}` : null].filter(Boolean).join(" · ") || "No minimum"} /> },
+            { key: "scope", header: "Applies to", hideBelow: "xl", render: (c) => <span className="text-xs text-ink-2">{scope(c)}</span> },
+            { key: "usage", header: "Used", align: "right", hideBelow: "md", render: (c) => { const s = stats[c.id]; return <span className="block text-right"><span className="tabular font-medium text-ink">{formatNumber(c.used_count)}{c.usage_limit != null ? <span className="text-ink-4"> / {formatNumber(c.usage_limit)}</span> : null}</span><span className="block text-[11px] text-ink-3">{c.per_user_limit} per customer{s ? ` · ${formatNumber(s.unique_users)} customers` : ""}</span></span>; } },
+            { key: "given", header: "Discount given", align: "right", hideBelow: "lg", render: (c) => { const s = stats[c.id]; return <span className="block text-right"><span className="tabular text-ink">{rupeesRounded(s?.discount_total ?? 0)}</span>{s?.last_used_at ? <span className="block text-[11px] text-ink-4" title={formatDateTime(s.last_used_at)}>Last used {formatDate(s.last_used_at)}</span> : null}</span>; } },
+            { key: "valid", header: "Valid", hideBelow: "lg", render: (c) => <span className="whitespace-nowrap text-xs text-ink-3">{formatDate(c.starts_at)} – {c.expires_at ? formatDate(c.expires_at) : "no end"}</span> },
+            { key: "act", header: <span className="sr-only">Actions</span>, align: "right", render: (c) => (
+              <span className="inline-flex items-center gap-0.5">
+                <IconAction label={`Edit ${c.code}`} onClick={() => open(c.id, fromCoupon(c))}><Pencil className="h-4 w-4" strokeWidth={1.9} aria-hidden /></IconAction>
+                <IconAction label={`Delete ${c.code}`} tone="danger" onClick={() => setDel(c)}><Trash2 className="h-4 w-4" strokeWidth={1.9} aria-hidden /></IconAction>
+              </span>
+            ) },
+          ]} />
+      )}
+      <ListPagination page={page} pageSize={pageSize} total={total} />
+
+      <FormPanel open={Boolean(editing)} title={editing?.id ? `Edit ${editing.initial.code}` : "New coupon"} description={editing?.id ? "Changes apply to the next checkout." : "Customers enter the code at checkout."}
+        dirty={dirty} saving={saving} error={serverError} onClose={() => setEditing(null)} onSubmit={save} submitLabel={editing?.id ? "Save changes" : "Create coupon"}>
         {f ? (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Input label="Code" required value={f.code} onChange={(e) => set("code", e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ""))} placeholder="WELCOME50" className="font-mono" />
-            <Input label="Title" required value={f.title} onChange={(e) => set("title", e.target.value)} placeholder="₹50 off your first order" />
-            <div className="sm:col-span-2"><Textarea label="Description" value={f.description ?? ""} onChange={(e) => set("description", e.target.value)} /></div>
-            <Select label="Type" options={[{ value: "percentage", label: "Percentage off" }, { value: "fixed", label: "Fixed ₹ off" }]} value={f.type} onChange={(e) => set("type", e.target.value as "percentage" | "fixed")} />
-            <Input label={f.type === "percentage" ? "Percent off" : "Amount off (₹)"} type="number" min={0} step="0.01" value={f.value as number} onChange={(e) => set("value", Number(e.target.value))} />
-            <Input label="Minimum order (₹)" type="number" min={0} value={(f.min_order_amount as number) ?? 0} onChange={(e) => set("min_order_amount", Number(e.target.value))} />
-            <Input label="Max discount (₹)" type="number" min={0} placeholder="No cap" value={(f.max_discount as number | null) ?? ""} onChange={(e) => set("max_discount", e.target.value === "" ? null : Number(e.target.value))} />
-            <Input label="Total usage limit" type="number" min={1} placeholder="Unlimited" value={(f.usage_limit as number | null) ?? ""} onChange={(e) => set("usage_limit", e.target.value === "" ? null : Number(e.target.value))} />
-            <Input label="Per-user limit" type="number" min={1} value={(f.per_user_limit as number) ?? 1} onChange={(e) => set("per_user_limit", Number(e.target.value))} />
-            <Select label="Store-specific" placeholder="All stores" options={stores.map((s) => ({ value: s.id, label: s.name }))} value={f.store_id ?? ""} onChange={(e) => set("store_id", e.target.value || null)} />
-            <Select label="Category-specific" placeholder="All categories" options={categories.map((c) => ({ value: c.id, label: c.name }))} value={f.category_id ?? ""} onChange={(e) => set("category_id", e.target.value || null)} />
-            <Input label="Starts" type="datetime-local" required value={f.starts_at} onChange={(e) => set("starts_at", e.target.value)} />
-            <Input label="Expires" type="datetime-local" value={f.expires_at ?? ""} onChange={(e) => set("expires_at", e.target.value)} hint="Leave blank for no expiry" />
-            <Switch checked={Boolean(f.first_order_only)} onChange={(v) => set("first_order_only", v)} label="First order only" />
-            <Switch checked={Boolean(f.is_active)} onChange={(v) => set("is_active", v)} label="Active" />
-          </div>
+          <>
+            <FieldGroup title="Code">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Input label="Code" required value={f.code} error={errors.code} onChange={(e) => set("code", e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ""))} placeholder="WELCOME50" className="font-mono" maxLength={24} hint="3–24 characters" />
+                <Input label="Title" required value={f.title} error={errors.title} onChange={(e) => set("title", e.target.value)} placeholder="₹50 off your first order" maxLength={100} />
+              </div>
+              <Textarea label="Description (optional)" value={f.description} onChange={(e) => set("description", e.target.value)} className="min-h-16" maxLength={2000} />
+            </FieldGroup>
+            <FieldGroup title="Discount">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Select label="Type" options={[{ value: "percentage", label: "Percentage off" }, { value: "fixed", label: "Fixed amount off (₹)" }]} value={f.type} onChange={(e) => set("type", e.target.value as Form["type"])} />
+                <Input label={f.type === "percentage" ? "Percent off" : "Amount off (₹)"} required type="number" inputMode="decimal" min={0} step="0.01" value={f.value} error={errors.value} onChange={(e) => set("value", e.target.value)} />
+                <Input label="Minimum order (₹)" type="number" inputMode="decimal" min={0} step="0.01" value={f.min_order_amount} error={errors.min_order_amount} onChange={(e) => set("min_order_amount", e.target.value)} />
+                <Input label="Maximum discount (₹)" type="number" inputMode="decimal" min={0} step="0.01" placeholder="No cap" value={f.max_discount} error={errors.max_discount} onChange={(e) => set("max_discount", e.target.value)} />
+              </div>
+            </FieldGroup>
+            <FieldGroup title="Limits and scope">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Input label="Total uses" type="number" inputMode="numeric" min={1} step={1} placeholder="Unlimited" value={f.usage_limit} error={errors.usage_limit} onChange={(e) => set("usage_limit", e.target.value)} />
+                <Input label="Uses per customer" required type="number" inputMode="numeric" min={1} step={1} value={f.per_user_limit} error={errors.per_user_limit} onChange={(e) => set("per_user_limit", e.target.value)} />
+                <Select label="Store" placeholder="All stores" options={stores.map((s) => ({ value: s.id, label: s.name }))} value={f.store_id} onChange={(e) => set("store_id", e.target.value)} />
+                <Select label="Category" placeholder="All categories" options={categories.map((c) => ({ value: c.id, label: c.name }))} value={f.category_id} onChange={(e) => set("category_id", e.target.value)} />
+              </div>
+              <Switch checked={f.first_order_only} onChange={(v) => set("first_order_only", v)} label="Only on a customer's first order" />
+            </FieldGroup>
+            <FieldGroup title="Schedule">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Input label="Starts" required type="datetime-local" value={f.starts_at} error={errors.starts_at} onChange={(e) => set("starts_at", e.target.value)} />
+                <Input label="Expires" type="datetime-local" value={f.expires_at} error={errors.expires_at} onChange={(e) => set("expires_at", e.target.value)} hint="Leave blank for no expiry" />
+              </div>
+              <Switch checked={f.is_active} onChange={(v) => set("is_active", v)} label={f.is_active ? "Active: customers can use it within the schedule" : "Inactive: customers can't use it"} />
+            </FieldGroup>
+          </>
         ) : null}
-      </Modal>
-      <ConfirmDialog open={Boolean(del)} onClose={() => setDel(null)} tone="danger" title={`Delete ${del?.code}?`} description="Coupons already used on orders cannot be deleted — deactivate them instead." confirmLabel="Delete" loading={busy} onConfirm={remove} />
-    </div>
+      </FormPanel>
+
+      <ConfirmDialog open={Boolean(del)} onClose={() => setDel(null)} tone="danger" title={`Delete coupon ${del?.code ?? ""}?`} loading={deleting} confirmLabel="Delete coupon" onConfirm={remove}
+        description="This permanently removes the code. Coupons already used on orders can't be deleted; switch them to inactive instead." />
+    </>
   );
 }

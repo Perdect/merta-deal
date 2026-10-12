@@ -1,7 +1,16 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
-    { "path": "/api/cron/notifications", "schedule": "0 3 * * *" },
-    { "path": "/api/cron/expire-unpaid", "schedule": "0 3 * * *" }
+    {
+      "path": "/api/cron/notifications",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/expire-unpaid",
+      "schedule": "0 3 * * *"
+    }
+  ],
+  "regions": [
+    "bom1"
   ]
 }

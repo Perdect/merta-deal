@@ -51,9 +51,9 @@ export function QuantityStepper({ value, onChange, min = 0, max = 99, size = "md
   const h = size === "sm" ? "h-8" : "h-9";
   return (
     <div className={cn("inline-flex items-center rounded-sm bg-brand-600 text-white shadow-[0_1px_0_rgb(0_0_0/0.05)]", h, disabled && "opacity-60", className)}>
-      <button type="button" aria-label="Decrease" disabled={disabled || loading || value <= min} onClick={() => onChange(Math.max(min, value - 1))} className={cn("flex items-center justify-center rounded-l-sm transition-colors hover:bg-brand-700 disabled:opacity-50", size === "sm" ? "w-8" : "w-9", h)}><Minus className="h-4 w-4" /></button>
+      <button type="button" aria-label="Decrease" disabled={disabled || loading || value <= min} onClick={() => onChange(Math.max(min, value - 1))} className={cn("tap flex items-center justify-center rounded-l-[inherit] transition-colors hover:bg-brand-700 disabled:opacity-50", size === "sm" ? "w-8" : "w-9", h)}><Minus className="h-4 w-4" /></button>
       <span className={cn("min-w-7 text-center text-sm font-bold tabular", loading && "animate-pulse-soft")}>{value}</span>
-      <button type="button" aria-label="Increase" disabled={disabled || loading || value >= max} onClick={() => onChange(Math.min(max, value + 1))} className={cn("flex items-center justify-center rounded-r-sm transition-colors hover:bg-brand-700 disabled:opacity-50", size === "sm" ? "w-8" : "w-9", h)}><Plus className="h-4 w-4" /></button>
+      <button type="button" aria-label="Increase" disabled={disabled || loading || value >= max} onClick={() => onChange(Math.min(max, value + 1))} className={cn("tap flex items-center justify-center rounded-r-[inherit] transition-colors hover:bg-brand-700 disabled:opacity-50", size === "sm" ? "w-8" : "w-9", h)}><Plus className="h-4 w-4" /></button>
     </div>
   );
 }
@@ -61,22 +61,26 @@ export function QuantityStepper({ value, onChange, min = 0, max = 99, size = "md
 export function Logo({ className, size = "md", light }: { className?: string; size?: "sm" | "md" | "lg"; light?: boolean }) {
   const s = { sm: { box: 26, text: "text-base" }, md: { box: 32, text: "text-lg" }, lg: { box: 44, text: "text-2xl" } }[size];
   return (
-    <Link href="/" className={cn("inline-flex items-center gap-2", className)} aria-label="Merta Deal home">
+    <Link href="/" className={cn("tap inline-flex items-center gap-2", className)} aria-label="Merta Deal home">
       <LogoMark size={s.box} />
       <span className={cn("font-display font-extrabold tracking-tight", s.text, light ? "text-white" : "text-ink")}>
-        Merta<span className={light ? "text-saffron-300" : "text-brand-600"}>Deal</span>
+        Merta<span className={light ? "text-saffron-300" : "text-fresh"}>Deal</span>
       </span>
     </Link>
   );
 }
 
+/** Brand mark: green tile, white cart, saffron bolt (fast local delivery). Keep in sync with src/app/icon.svg. */
 export function LogoMark({ size = 32, className }: { size?: number; className?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" className={className} aria-hidden>
-      <rect width="64" height="64" rx="16" fill="#0B6E4F" />
-      <path d="M15 45V21l8 12 8-12v24" stroke="#fff" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      <path d="M38 45V21h5a12 12 0 0 1 0 24h-5z" stroke="#fff" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      <circle cx="54" cy="12" r="4.5" fill="#F2A93B" />
+      <rect width="64" height="64" rx="16" fill="#329537" />
+      <g transform="translate(0 -2.5)">
+        <path d="M12 18h6l5 22h22l5-16H21" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="26" cy="48" r="3.5" fill="#fff" />
+        <circle cx="42" cy="48" r="3.5" fill="#fff" />
+        <path d="M37 25l-6.5 9h5.5l-3 7.5 7.5-9.5h-5.5z" fill="#F2A93B" />
+      </g>
     </svg>
   );
 }
@@ -111,9 +115,9 @@ export function KeyValue({ items, className }: { items: { label: string; value: 
 export function PageHeader({ title, subtitle, back, action, className }: { title: string; subtitle?: React.ReactNode; back?: string; action?: React.ReactNode; className?: string }) {
   return (
     <div className={cn("flex items-center gap-3 px-4 py-3 sm:px-0", className)}>
-      {back ? <Link href={back} aria-label="Back" className="-ml-2 flex h-10 w-10 items-center justify-center rounded-full text-ink-2 hover:bg-surface-2"><ChevronLeft className="h-6 w-6" /></Link> : null}
+      {back ? <Link href={back} aria-label="Back" className="tap -ml-2 flex h-10 w-10 items-center justify-center rounded-full text-ink-2 hover:bg-surface-2"><ChevronLeft className="h-6 w-6" /></Link> : null}
       <div className="min-w-0 flex-1">
-        <h1 className="truncate text-xl font-bold text-ink sm:text-2xl">{title}</h1>
+        <h1 className="text-balance break-words text-xl font-bold leading-tight text-ink sm:text-2xl">{title}</h1>
         {subtitle ? <p className="text-sm text-ink-3">{subtitle}</p> : null}
       </div>
       {action}

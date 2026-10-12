@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appName">Merta Deal</string>
+    <string name="launcherName">Merta Deal</string>
+    <string name="shortcutSearch">Search</string>
+    <string name="shortcutSearchLong">Search groceries</string>
+    <string name="shortcutOrders">My orders</string>
+    <string name="shortcutOrdersLong">Track my orders</string>
+    <string name="shortcutCart">Cart</string>
+    <string name="shortcutCartLong">Open my cart</string>
+</resources>

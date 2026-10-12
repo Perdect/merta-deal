@@ -1,32 +1,45 @@
 import type { Metadata } from "next";
+import { Megaphone } from "lucide-react";
 import { getSessionUser } from "@/lib/supabase/server";
 import { getAdminNotifications, getRecentBroadcasts } from "@/lib/data/admin";
+import { toBroadcastLog } from "@/lib/data/admin-care";
 import { AdminNotificationList, BroadcastForm } from "@/components/admin/notifications-admin";
-import { PageHeader } from "@/components/ui/misc";
-import { Card, CardHeader, CardBody } from "@/components/ui/card";
-import { formatDateTime } from "@/lib/utils";
+import { AdminPageHeader, Panel, EmptyBlock, ErrorBlock } from "@/components/admin/kit";
+import { formatDateTime, formatNumber, timeAgo } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Notifications" };
 
+const LIMIT = 60;
+const AUDIENCE_LABEL: Record<string, string> = { customers: "All customers", stores: "All stores", riders: "All riders", all: "Everyone", user: "One user" };
+
 export default async function AdminNotificationsPage() {
-  const [user, { items }, broadcasts] = await Promise.all([getSessionUser(), getAdminNotifications(60), getRecentBroadcasts()]);
+  const [user, { items }, raw] = await Promise.all([getSessionUser(), getAdminNotifications(LIMIT), getRecentBroadcasts()]);
+  const broadcasts = raw.map(toBroadcastLog);
   return (
-    <div className="space-y-4">
-      <PageHeader title="Notifications" subtitle="Your inbox, plus broadcasts to customers, stores and riders." className="px-0" />
-      <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
-        <AdminNotificationList userId={user!.id} initial={items} />
+    <>
+      <AdminPageHeader title="Notifications" description="Your inbox, and broadcasts to customers, stores and riders." />
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_400px]">
+        {user ? <AdminNotificationList userId={user.id} initial={items} limit={LIMIT} /> : <ErrorBlock title="Couldn't load your inbox" description="Your session could not be read. Sign in again if this keeps happening." retryHref="/admin/notifications" />}
         <div className="space-y-4">
           <BroadcastForm />
-          <Card>
-            <CardHeader title="Recent broadcasts" />
-            <CardBody>
-              {broadcasts.length === 0 ? <p className="text-sm text-ink-3">No broadcasts sent yet.</p> : (
-                <ul className="divide-y divide-line text-sm">{broadcasts.map((b) => { const d = (b.after_data ?? {}) as { audience?: string; title?: string; recipients?: number; email?: string | null }; return <li key={b.id} className="py-2"><p className="font-semibold text-ink">{d.title}</p><p className="text-xs text-ink-3">{d.audience === "user" ? d.email : d.audience} · {d.recipients} recipients · {formatDateTime(b.created_at)}</p></li>; })}</ul>
-              )}
-            </CardBody>
-          </Card>
+          <Panel title="Recent broadcasts" description="Last 10, from the audit log" flush>
+            {broadcasts.length === 0 ? <EmptyBlock icon={Megaphone} title="No broadcasts sent yet" description="Broadcasts you send appear here with their reach." /> : (
+              <ul className="divide-y divide-line border-t border-line">
+                {broadcasts.map((b) => (
+                  <li key={b.id} className="px-4 py-2.5 sm:px-5">
+                    <p className="truncate text-sm font-medium text-ink">{b.title || "Untitled"}</p>
+                    <p className="text-xs text-ink-3">
+                      {b.audience === "user" ? b.email ?? "One user" : AUDIENCE_LABEL[b.audience] ?? b.audience}
+                      {b.recipients != null ? ` · ${formatNumber(b.recipients)} ${b.recipients === 1 ? "recipient" : "recipients"}` : ""}
+                      {" · "}<span title={formatDateTime(b.created_at)}>{timeAgo(b.created_at)}</span>
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
         </div>
       </div>
-    </div>
+    </>
   );
 }

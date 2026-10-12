@@ -2,11 +2,9 @@ import type { MetadataRoute } from "next";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import { env, isSupabaseConfigured } from "@/lib/env";
-import { seoPages, site } from "@/config/site";
+import { site } from "@/config/site";
 
 export const revalidate = 3600;
-
-const PRODUCT_CAP = 5000;
 
 /**
  * Server-side anon client without request cookies: the sitemap only reads public catalogue rows (RLS allows anon),
@@ -17,32 +15,39 @@ function catalogueClient() {
   return createSupabaseClient<Database>(env.supabaseUrl, env.supabaseAnonKey, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
-/** Sitemap: static routes, SEO landing pages, categories, stores and up to 5000 active products. */
+/**
+ * Only canonical, indexable URLs: no redirects, no noindex pages (search, assistant, track, start),
+ * no private areas, no filter/sort variants. Products come from `v_product_cards`, the same view the
+ * product page renders, so every listed product URL returns 200; categories are listed only when
+ * they are active and have at least one product.
+ */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = site.url.replace(/\/$/, "");
-  const now = new Date();
+  const base = site.url;
   const entries: MetadataRoute.Sitemap = [
-    { url: `${base}/`, lastModified: now, changeFrequency: "hourly", priority: 1 },
-    { url: `${base}/categories`, lastModified: now, changeFrequency: "daily", priority: 0.8 },
-    { url: `${base}/stores`, lastModified: now, changeFrequency: "daily", priority: 0.8 },
-    { url: `${base}/search`, lastModified: now, changeFrequency: "daily", priority: 0.5 },
-    { url: `${base}/assistant`, lastModified: now, changeFrequency: "weekly", priority: 0.6 },
-    { url: `${base}/track`, lastModified: now, changeFrequency: "monthly", priority: 0.3 },
-    { url: `${base}/start`, lastModified: now, changeFrequency: "monthly", priority: 0.4 },
-    ...seoPages.map((p) => ({ url: `${base}/${p.slug}`, lastModified: now, changeFrequency: "weekly" as const, priority: 0.9 })),
+    { url: `${base}/` },
+    { url: `${base}/categories` },
+    { url: `${base}/delivery-area` },
   ];
 
   const supabase = catalogueClient();
   if (!supabase) return entries;
   try {
-    const [categories, stores, products] = await Promise.all([
-      supabase.from("categories").select("slug, updated_at").eq("is_active", true).limit(500),
-      supabase.from("stores").select("slug, updated_at").eq("status", "active").limit(1000),
-      supabase.from("products").select("slug, updated_at").eq("is_active", true).order("updated_at", { ascending: false }).limit(PRODUCT_CAP),
+    const [categories, cards] = await Promise.all([
+      supabase.from("categories").select("id, slug, parent_id, updated_at").eq("is_active", true).limit(500),
+      supabase.from("v_product_cards").select("slug, category_id").limit(5000),
     ]);
-    for (const c of categories.data ?? []) entries.push({ url: `${base}/c/${c.slug}`, lastModified: c.updated_at ? new Date(c.updated_at) : now, changeFrequency: "daily", priority: 0.8 });
-    for (const s of stores.data ?? []) entries.push({ url: `${base}/s/${s.slug}`, lastModified: s.updated_at ? new Date(s.updated_at) : now, changeFrequency: "daily", priority: 0.7 });
-    for (const p of products.data ?? []) entries.push({ url: `${base}/p/${p.slug}`, lastModified: p.updated_at ? new Date(p.updated_at) : now, changeFrequency: "weekly", priority: 0.6 });
+    const cats = categories.data ?? [];
+    const withProducts = new Set<string>();
+    const parentOf = new Map(cats.map((c) => [c.id, c.parent_id]));
+    for (const p of cards.data ?? []) {
+      if (!p.category_id) continue;
+      withProducts.add(p.category_id);
+      const parent = parentOf.get(p.category_id);
+      if (parent) withProducts.add(parent);
+    }
+    for (const c of cats) if (withProducts.has(c.id)) entries.push({ url: `${base}/c/${c.slug}`, lastModified: c.updated_at ? new Date(c.updated_at) : undefined });
+    const { data: products } = await supabase.from("products").select("slug, updated_at").in("slug", (cards.data ?? []).map((p) => p.slug as string).filter(Boolean)).limit(5000);
+    for (const p of products ?? []) entries.push({ url: `${base}/p/${p.slug}`, lastModified: p.updated_at ? new Date(p.updated_at) : undefined });
   } catch (err) {
     // Database unreachable: still serve the static part of the sitemap.
     console.error("sitemap", err instanceof Error ? err.message : err);

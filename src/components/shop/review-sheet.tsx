@@ -31,7 +31,7 @@ export function ReviewSheet({ open, onClose, tracking, onDone }: { open: boolean
   };
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Rate your order" description="Your feedback helps Merta's kirana stores and riders improve." footer={<Button fullWidth loading={busy} onClick={submit}>Submit review</Button>}>
+    <BottomSheet open={open} onClose={onClose} title="Rate your order" description="Your feedback helps Merta Deal and our riders improve." footer={<Button fullWidth loading={busy} onClick={submit}>Submit review</Button>}>
       <div className="space-y-5 pt-2">
         <div><p className="mb-1.5 text-sm font-semibold text-ink">{tracking.store.name}</p><StarPicker value={store} onChange={setStore} /><Textarea className="mt-2" placeholder="How was the packing, freshness and pricing?" value={storeText} onChange={(e) => setStoreText(e.target.value.slice(0, 500))} /></div>
         {hasRider ? <div><p className="mb-1.5 text-sm font-semibold text-ink">Delivery by {tracking.assignment?.rider.name ?? "rider"}</p><StarPicker value={delivery} onChange={setDelivery} /></div> : null}

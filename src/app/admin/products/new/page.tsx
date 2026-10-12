@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
 import { getAllCategories, getAllBrands } from "@/lib/data/admin";
 import { ProductForm } from "@/components/admin/product-form";
-import { PageHeader } from "@/components/ui/misc";
+import { AdminPageHeader } from "@/components/admin/kit";
 
 export const metadata: Metadata = { title: "New product" };
 
 export default async function NewProductPage() {
   const [categories, brands] = await Promise.all([getAllCategories(), getAllBrands()]);
   return (
-    <div className="space-y-4">
-      <PageHeader back="/admin/products" title="New product" subtitle="Adds a SKU to the master catalogue. Stores then list it with their own price and stock." className="px-0" />
+    <>
+      <AdminPageHeader back="/admin/products" title="New product"
+        description="Adds a product to the shared catalogue. After saving, list it at the store with a selling price and stock so customers can buy it." />
       <ProductForm product={null} categories={categories} brands={brands} />
-    </div>
+    </>
   );
 }

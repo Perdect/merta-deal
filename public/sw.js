@@ -1,10 +1,18 @@
 /* Merta Deal service worker: offline shell for navigations, cache-first static assets, web push. */
-const VERSION = "md-v1";
+const VERSION = "md-v3";
 const STATIC_CACHE = `${VERSION}-static`;
 const OFFLINE_URL = "/offline.html";
 
+/* No skipWaiting() at install: UpdatePrompt (silent) posts SKIP_WAITING once the new
+   worker has installed. The page is never reloaded for an update, so unsaved work
+   (a half-filled address form, a cart edit) stays; the next navigation loads the new
+   version. */
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(STATIC_CACHE).then((c) => c.addAll([OFFLINE_URL, "/icon.svg", "/manifest.webmanifest"])).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(STATIC_CACHE).then((c) => c.addAll([OFFLINE_URL, "/icon.svg", "/manifest.webmanifest"])));
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {

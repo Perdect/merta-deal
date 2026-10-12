@@ -7,6 +7,7 @@ import { ProductGrid } from "./product-card";
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/tabs";
 import { Drawer, BottomSheet } from "@/components/ui/overlay";
+import { useMedia } from "@/hooks/use-media";
 import { Checkbox } from "@/components/ui/input";
 import { EmptyState, ProductGridSkeleton } from "@/components/ui/states";
 import { cn } from "@/lib/utils";
@@ -58,7 +59,7 @@ export function ProductListing({ result, filters, signedIn, wished, loadMoreHref
 
   return (
     <div>
-      <div className="sticky top-[128px] z-20 -mx-4 mb-3 flex items-center gap-2 bg-surface/95 px-4 py-2 backdrop-blur sm:static sm:mx-0 sm:bg-transparent sm:px-0 md:top-[64px]">
+      <div className="sticky top-[var(--header-h,114px)] z-20 -mx-4 mb-3 flex items-center gap-2 bg-surface/95 px-4 py-2 backdrop-blur sm:static sm:mx-0 sm:bg-transparent sm:px-0">
         <Button variant="outline" size="sm" onClick={() => setFilterOpen(true)} className={cn(activeCount && "border-brand-600 text-brand-700")}><SlidersHorizontal className="h-4 w-4" /> Filters{activeCount ? ` (${activeCount})` : ""}</Button>
         <Button variant="outline" size="sm" onClick={() => setSortOpen(true)}><ArrowUpDown className="h-4 w-4" /> {SORTS.find((s) => s.value === sort)?.label ?? "Sort"}</Button>
         <div className="scroll-x ml-1 flex-1">
@@ -80,10 +81,10 @@ export function ProductListing({ result, filters, signedIn, wished, loadMoreHref
         </>
       )}
 
-      <Drawer open={filterOpen} onClose={() => setFilterOpen(false)} title="Filters" footer={
-        <div className="flex gap-2"><Button variant="outline" fullWidth onClick={() => { startTransition(() => router.replace(pathname)); setFilterOpen(false); }}>Clear all</Button><Button fullWidth onClick={() => setFilterOpen(false)}>Show {result.total} products</Button></div>
+      <FilterPanel open={filterOpen} onClose={() => setFilterOpen(false)} footer={
+        <div className="flex gap-2"><Button variant="outline" fullWidth onClick={() => { startTransition(() => router.replace(pathname)); setFilterOpen(false); }}>Clear all</Button><Button fullWidth onClick={() => setFilterOpen(false)}>Apply · {result.total} products</Button></div>
       }>
-        <div className="space-y-6 px-4 py-4">
+        <div className="space-y-6 py-4 md:px-4">
           <FilterGroup title="Availability"><Checkbox label="In stock only" checked={sp.get("inStock") === "1"} onChange={(e) => set({ inStock: e.target.checked ? "1" : null })} /><Checkbox label="Local products of Merta" checked={sp.get("local") === "1"} onChange={(e) => set({ local: e.target.checked ? "1" : null })} /></FilterGroup>
           <FilterGroup title="Price">{PRICE_BANDS.map((b) => { const active = sp.get("minPrice") === String(b.min) && (sp.get("maxPrice") ?? "") === (b.max?.toString() ?? ""); return <Checkbox key={b.label} label={b.label} checked={active} onChange={() => set(active ? { minPrice: null, maxPrice: null } : { minPrice: String(b.min), maxPrice: b.max?.toString() ?? null })} />; })}</FilterGroup>
           <FilterGroup title="Discount">{DISCOUNTS.map((d) => <Checkbox key={d} label={`${d}% or more`} checked={sp.get("minDiscount") === String(d)} onChange={() => set({ minDiscount: sp.get("minDiscount") === String(d) ? null : String(d) })} />)}</FilterGroup>
@@ -91,15 +92,23 @@ export function ProductListing({ result, filters, signedIn, wished, loadMoreHref
           {filters.stores?.length ? <FilterGroup title="Store">{filters.stores.map((s) => <Checkbox key={s.id} label={s.name} checked={sp.get("store") === s.id} onChange={() => set({ store: sp.get("store") === s.id ? null : s.id })} />)}</FilterGroup> : null}
           {filters.categories?.length ? <FilterGroup title="Category">{filters.categories.map((c) => <Checkbox key={c.slug} label={c.name} checked={sp.get("category") === c.slug} onChange={() => set({ category: sp.get("category") === c.slug ? null : c.slug })} />)}</FilterGroup> : null}
         </div>
-      </Drawer>
+      </FilterPanel>
 
       <BottomSheet open={sortOpen} onClose={() => setSortOpen(false)} title="Sort by">
         <ul className="divide-y divide-line">
-          {SORTS.map((s) => <li key={s.value}><button type="button" onClick={() => { set({ sort: s.value === "relevance" ? null : s.value }); setSortOpen(false); }} className="flex w-full items-center justify-between py-3 text-left text-sm font-medium text-ink">{s.label}{sort === s.value ? <Check className="h-4 w-4 text-brand-600" /> : null}</button></li>)}
+          {SORTS.map((s) => <li key={s.value}><button type="button" onClick={() => { set({ sort: s.value === "relevance" ? null : s.value }); setSortOpen(false); }} className="flex min-h-12 w-full items-center justify-between py-3 text-left text-sm font-medium text-ink">{s.label}{sort === s.value ? <Check className="h-4 w-4 text-brand-600" /> : null}</button></li>)}
         </ul>
       </BottomSheet>
     </div>
   );
+}
+
+/** Bottom sheet on phones (thumb-reachable Apply), side drawer on tablets and desktop. */
+function FilterPanel({ open, onClose, footer, children }: { open: boolean; onClose: () => void; footer: React.ReactNode; children: React.ReactNode }) {
+  const wide = useMedia("(min-width: 768px)");
+  return wide
+    ? <Drawer open={open} onClose={onClose} title="Filters" footer={footer}>{children}</Drawer>
+    : <BottomSheet open={open} onClose={onClose} title="Filters" footer={footer}>{children}</BottomSheet>;
 }
 
 function FilterGroup({ title, children }: { title: string; children: React.ReactNode }) {

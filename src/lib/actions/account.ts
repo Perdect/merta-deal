@@ -6,14 +6,17 @@ import { friendlyError } from "@/lib/utils";
 import type { ActionResult } from "./cart";
 import type { Enums, Json } from "@/types/database";
 
-export async function updateProfileAction(input: { full_name: string; phone: string; avatar_url?: string | null; preferences?: Record<string, unknown> }): Promise<ActionResult> {
-  const schema = z.object({ full_name: z.string().min(2), phone: z.string().regex(/^[6-9]\d{9}$/), avatar_url: z.string().url().optional().nullable(), preferences: z.record(z.string(), z.unknown()).optional() });
+export async function updateProfileAction(input: { full_name: string; phone: string; avatar_url?: string | null; email?: string | null; preferences?: Record<string, unknown> }): Promise<ActionResult> {
+  // The phone is the sign-in identity: it is only changed through the OTP flow below, never here.
+  const schema = z.object({ full_name: z.string().min(2, "Enter your name"), phone: z.string().regex(/^[6-9]\d{9}$/).or(z.literal("")), avatar_url: z.string().url().optional().nullable(), email: z.string().email("Enter a valid email address").optional().nullable().or(z.literal("")), preferences: z.record(z.string(), z.unknown()).optional() });
   const parsed = schema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Please sign in" };
-  const { error } = await supabase.from("profiles").update({ ...parsed.data, preferences: parsed.data.preferences as Json | undefined }).eq("id", user.id);
+  const { phone, email, ...rest } = parsed.data;
+  const patch = { ...rest, ...(phone ? { phone } : {}), ...(email !== undefined ? { email: email || null } : {}), preferences: parsed.data.preferences as Json | undefined };
+  const { error } = await supabase.from("profiles").update(patch).eq("id", user.id);
   if (error) return { ok: false, error: friendlyError(error) };
   revalidatePath("/account");
   return { ok: true, data: undefined };
@@ -101,5 +104,28 @@ export async function removePushSubscriptionAction(endpoint: string): Promise<Ac
   const supabase = await createClient();
   const { error } = await supabase.from("push_subscriptions").delete().eq("endpoint", endpoint);
   if (error) return { ok: false, error: friendlyError(error) };
+  return { ok: true, data: undefined };
+}
+
+/** Starts a mobile-number change: Supabase sends an OTP to the new number (needs the SMS provider). */
+export async function requestPhoneChangeAction(mobile: string): Promise<ActionResult> {
+  const m = mobile.replace(/\D/g, "").slice(-10);
+  if (!/^[6-9]\d{9}$/.test(m)) return { ok: false, error: "Enter a valid 10-digit mobile number" };
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ phone: `+91${m}` });
+  if (error) return { ok: false, error: /provider|sms|not enabled/i.test(error.message) ? "Changing your number needs SMS verification, which isn't switched on yet. Please contact support and we'll update it for you." : friendlyError(error) };
+  return { ok: true, data: undefined };
+}
+
+/** Confirms the new number with the OTP, then mirrors it on the profile. */
+export async function verifyPhoneChangeAction(mobile: string, token: string): Promise<ActionResult> {
+  const m = mobile.replace(/\D/g, "").slice(-10);
+  if (!/^\d{6}$/.test(token)) return { ok: false, error: "Enter the 6-digit code" };
+  const supabase = await createClient();
+  const { error } = await supabase.auth.verifyOtp({ phone: `+91${m}`, token, type: "phone_change" });
+  if (error) return { ok: false, error: friendlyError(error) };
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) await supabase.from("profiles").update({ phone: m }).eq("id", user.id);
+  revalidatePath("/account");
   return { ok: true, data: undefined };
 }

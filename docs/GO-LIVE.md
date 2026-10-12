@@ -1,7 +1,7 @@
 # Go-live checklist
 
 ## Status (23 Sep 2026)
-- **Live:** https://merta-deal.vercel.app — Vercel project `merta-deal`, production deploy, public.
+- **Live:** https://mertadeal.com (also https://merta-deal.vercel.app) — Vercel project `merta-deal`, production deploy, public.
 - **Blocked on:** a Supabase project. Until one is connected the site serves `/setup`, which lists
   every missing variable rather than pretending the app works.
 - `aether-schoolos` was paused on 23 Sep 2026 to free a free-plan slot (data intact, restorable from
@@ -12,7 +12,13 @@
 1. Create a project in region **ap-south-1** (Mumbai). The free plan allows 2 active projects per org — pause or upgrade if the limit is hit.
 2. Apply migrations + seed: `SUPABASE_DB_URL=... ./scripts/db-remote-apply.sh --seed` (or paste each `supabase/migrations/*.sql` into the SQL editor in order, then `supabase/seed.sql`).
 3. Verify `select rolbypassrls from pg_roles where rolname = 'postgres';` returns `t` (SECURITY DEFINER functions rely on it).
-4. Auth → Providers: enable **Phone** and turn off "Confirm phone" (login is mobile + password; no SMS provider needed). Enable **Anonymous sign-ins** (guest checkout). Optionally add an SMS provider (MSG91/Twilio) and set `NEXT_PUBLIC_PHONE_AUTH_ENABLED=true` for OTP login and password reset by SMS.
+4. Auth → Providers: enable **Phone** with "Enable phone confirmations" **off** (login is mobile + 6-digit PIN; no SMS is ever sent). **The dashboard form refuses to save Phone without Twilio/MSG91 credentials even when confirmations are off**, so without an SMS provider enable it through the Management API instead, using a personal access token from Account → Access Tokens (revoke it afterwards). Scope it to the project and grant **Project → Project Settings: Read-write** — that is what supplies `project_admin_write`, which `PATCH /config/auth` requires; **Auth Config: Read-write alone is read-only for this endpoint** (returns 403):
+   ```bash
+   curl -X PATCH "https://api.supabase.com/v1/projects/<project-ref>/config/auth" \
+     -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" \
+     -d '{"external_phone_enabled": true, "sms_autoconfirm": true}'
+   ```
+   Enable **Anonymous sign-ins** (guest checkout). Optionally add a real SMS provider (MSG91/Twilio) and set `NEXT_PUBLIC_PHONE_AUTH_ENABLED=true` for OTP login and PIN reset by SMS.
 5. Auth → URL configuration: Site URL = your domain; add `https://<domain>/login` and `/account/settings` to redirect URLs.
 6. Storage: buckets are created by `0005_storage.sql`. Confirm they exist.
 7. Realtime: tables are added to `supabase_realtime` by `0004`. Confirm under Database → Replication.

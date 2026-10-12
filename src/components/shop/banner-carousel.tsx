@@ -23,7 +23,7 @@ export function BannerCarousel({ banners }: { banners: Banner[] }) {
     <div className="relative">
       <div ref={ref} className="scroll-x px-4 sm:px-0" onScroll={(e) => { const el = e.currentTarget; const w = (el.children[0] as HTMLElement)?.offsetWidth ?? 1; const i = Math.round(el.scrollLeft / (w + 12)); if (i !== idx && i >= 0 && i < banners.length) setIdx(i); }}>
         {banners.map((b, i) => (
-          <Link key={b.id} href={b.link_url ?? "/categories"} className="relative block w-[88%] overflow-hidden rounded-xl sm:w-[60%] lg:w-[48%]" style={{ backgroundColor: b.bg_color ?? "#0B6E4F", color: b.text_color ?? "#fff" }}>
+          <Link key={b.id} href={b.link_url ?? "/categories"} className="relative block w-[88%] overflow-hidden rounded-xl sm:w-[60%] lg:w-[48%]" style={{ backgroundColor: b.bg_color ?? "#329537", color: b.text_color ?? "#fff" }}>
             {b.image_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={b.image_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-90" loading={i === 0 ? "eager" : "lazy"} />

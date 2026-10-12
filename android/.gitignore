@@ -1,0 +1,13 @@
+.gradle/
+build/
+app/build/
+local.properties
+*.iml
+.idea/
+# Signing secrets never go to git. Back them up somewhere safe (losing them means you can't update the app).
+keystore.properties
+*.jks
+*.keystore
+
+# Built app files (rebuild with ./gradlew assembleRelease bundleRelease)
+release/

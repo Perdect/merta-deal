@@ -2,13 +2,14 @@
 import * as React from "react";
 import Link from "next/link";
 import { APIProvider, Map, AdvancedMarker, InfoWindow, useMap } from "@vis.gl/react-google-maps";
-import { Bike, MapPinOff, Wifi } from "lucide-react";
+import { Bike, MapPinOff } from "lucide-react";
 import { env, isMapsConfigured } from "@/lib/env";
 import { createClient } from "@/lib/supabase/client";
 import type { LiveRider } from "@/lib/data/admin";
 import { site } from "@/config/site";
 import { Avatar } from "@/components/ui/misc";
-import { Badge } from "@/components/ui/badge";
+import { EmptyBlock, StatusPill } from "@/components/admin/kit";
+import { VEHICLE_LABEL } from "@/components/admin/ops/pills";
 import { cn, haversineKm, timeAgo } from "@/lib/utils";
 
 /**
@@ -20,7 +21,7 @@ export function RidersLiveBoard({ initial }: { initial: LiveRider[] }) {
   const [riders, setRiders] = React.useState(initial);
   const [prevInitial, setPrevInitial] = React.useState(initial);
   if (initial !== prevInitial) { setPrevInitial(initial); setRiders(initial); }
-  const [connected, setConnected] = React.useState(false);
+  const [status, setStatus] = React.useState<"connecting" | "live" | "offline">("connecting");
   const [now, setNow] = React.useState(() => Date.now());
   React.useEffect(() => { const t = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(t); }, []);
   React.useEffect(() => {
@@ -35,35 +36,45 @@ export function RidersLiveBoard({ initial }: { initial: LiveRider[] }) {
           const next = [...cur]; next[idx] = { ...next[idx], lat: r.current_lat, lng: r.current_lng, last_location_at: r.last_location_at }; return next;
         });
       })
-      .subscribe((s) => setConnected(s === "SUBSCRIBED"));
+      .subscribe((s) => setStatus(s === "SUBSCRIBED" ? "live" : s === "CHANNEL_ERROR" || s === "TIMED_OUT" || s === "CLOSED" ? "offline" : "connecting"));
     return () => { supabase.removeChannel(ch); };
   }, []);
   const withFix = riders.filter((r) => r.lat != null && r.lng != null);
+  const busy = riders.filter((r) => r.busy).length;
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between text-xs text-ink-3"><span>{riders.length} online · {riders.filter((r) => r.busy).length} on a delivery</span><span className={cn("inline-flex items-center gap-1 font-semibold", connected ? "text-success" : "text-ink-4")}><Wifi className="h-3 w-3" />{connected ? "Live" : "Connecting…"}</span></div>
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-ink-3">
+        <span className="tabular"><span className="font-semibold text-ink">{riders.length}</span> online · <span className="font-semibold text-ink">{busy}</span> on a delivery · <span className="font-semibold text-ink">{riders.length - busy}</span> free</span>
+        <StatusPill tone={status === "live" ? "green" : status === "offline" ? "red" : "neutral"}>{status === "live" ? "Live updates on" : status === "offline" ? "Live updates off — refresh the page" : "Connecting…"}</StatusPill>
+      </div>
       {isMapsConfigured() ? <RidersMap riders={withFix} /> : (
-        <div className="flex items-start gap-3 rounded-lg border border-dashed border-line-2 bg-surface p-4 text-sm">
-          <MapPinOff className="mt-0.5 h-5 w-5 shrink-0 text-ink-3" />
-          <div><p className="font-semibold text-ink">Map view needs a Google Maps key</p><p className="text-xs text-ink-3">Set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to plot all online riders. Positions still stream live into the list below.</p></div>
+        <div className="flex items-start gap-3 rounded-lg border border-dashed border-line-2 bg-surface p-3 text-sm">
+          <MapPinOff className="mt-0.5 h-4 w-4 shrink-0 text-ink-3" aria-hidden />
+          <div><p className="font-medium text-ink">Map view needs a Google Maps key</p><p className="text-xs text-ink-3">Set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to plot online riders. Positions still stream live into the list below.</p></div>
         </div>
       )}
-      <ul className="divide-y divide-line rounded-lg border border-line bg-card px-4">
-        {riders.length === 0 ? <li className="py-8 text-center text-sm text-ink-3">No riders online right now.</li> : riders.map((r) => {
-          const km = r.lat != null && r.lng != null ? haversineKm(r.lat, r.lng, site.center.lat, site.center.lng) : null;
-          const stale = r.last_location_at ? now - new Date(r.last_location_at).getTime() > 5 * 60_000 : true;
-          return (
-            <li key={r.id} className="flex items-center gap-3 py-2.5">
-              <Avatar name={r.name} src={r.avatar_url} size={36} />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-ink"><Link href={`/admin/riders/${r.id}`} className="hover:underline">{r.name ?? "Rider"}</Link> <span className="text-xs font-normal capitalize text-ink-3">{r.vehicle_type}{r.vehicle_number ? ` · ${r.vehicle_number}` : ""}</span></p>
-                <p className="text-xs text-ink-3">{km != null ? `${km.toFixed(1)} km from ${site.city} centre · ` : "No GPS fix · "}<span className={stale ? "text-warning" : ""}>{r.last_location_at ? `GPS ${timeAgo(r.last_location_at)}` : "never"}</span></p>
-              </div>
-              {r.busy && r.current_order ? <Link href={`/admin/orders/${r.current_order.id}`}><Badge tone="info"><Bike className="h-3 w-3" /> {r.current_order.order_number}</Badge></Link> : <Badge tone="success">Free</Badge>}
-            </li>
-          );
-        })}
-      </ul>
+      {riders.length === 0 ? (
+        <EmptyBlock icon={Bike} title="No riders online right now" description="Riders appear here as soon as an approved rider goes online in the rider app." />
+      ) : (
+        <ul className="max-h-80 divide-y divide-line overflow-y-auto rounded-lg border border-line">
+          {riders.map((r) => {
+            const km = r.lat != null && r.lng != null ? haversineKm(r.lat, r.lng, site.center.lat, site.center.lng) : null;
+            const stale = r.last_location_at ? now - new Date(r.last_location_at).getTime() > 5 * 60_000 : true;
+            return (
+              <li key={r.id} className="flex items-center gap-3 px-3 py-2.5">
+                <Avatar name={r.name} src={r.avatar_url} size={32} className="shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-ink"><Link href={`/admin/riders/${r.id}`} className="hover:underline">{r.name ?? "Rider"}</Link> <span className="text-xs font-normal text-ink-3">{VEHICLE_LABEL[r.vehicle_type] ?? r.vehicle_type}{r.vehicle_number ? ` · ${r.vehicle_number}` : ""}</span></p>
+                  <p className="truncate text-xs text-ink-3">{km != null ? `${km.toFixed(1)} km from ${site.city} centre · ` : "No GPS fix · "}<span className={stale ? "font-medium text-[#8a6300]" : ""}>{r.last_location_at ? `GPS ${timeAgo(r.last_location_at)}${stale ? " (stale)" : ""}` : "GPS never reported"}</span></p>
+                </div>
+                {r.busy && r.current_order ? (
+                  <Link href={`/admin/orders/${r.current_order.id}`} className="shrink-0 hover:opacity-80"><StatusPill tone="blue">On {r.current_order.order_number}</StatusPill></Link>
+                ) : <StatusPill tone="green" className="shrink-0">Free</StatusPill>}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }
@@ -73,20 +84,24 @@ function RidersMap({ riders }: { riders: LiveRider[] }) {
   return (
     <APIProvider apiKey={env.mapsKey}>
       <div className="overflow-hidden rounded-lg border border-line">
-        <Map defaultCenter={site.center} defaultZoom={13} mapId="merta-deal-admin-riders" gestureHandling="greedy" disableDefaultUI className="h-72 w-full sm:h-96">
+        <Map defaultCenter={site.center} defaultZoom={13} mapId="merta-deal-admin-riders" gestureHandling="cooperative" disableDefaultUI className="h-64 w-full sm:h-80">
           {riders.map((r) => (
-            <AdvancedMarker key={r.id} position={{ lat: r.lat!, lng: r.lng! }} title={r.name ?? "Rider"} onClick={() => setActive(r.id)}>
-              <span className={cn("flex h-8 w-8 items-center justify-center rounded-full border-2 border-white text-white shadow-float", r.busy ? "bg-info" : "bg-saffron-500")}><Bike className="h-4 w-4" /></span>
+            <AdvancedMarker key={r.id} position={{ lat: r.lat!, lng: r.lng! }} title={`${r.name ?? "Rider"} — ${r.busy ? "on a delivery" : "free"}`} onClick={() => setActive(r.id)}>
+              <span className={cn("flex h-8 w-8 items-center justify-center rounded-full border-2 border-white text-white shadow-float", r.busy ? "bg-info" : "bg-success")}><Bike className="h-4 w-4" aria-hidden /></span>
             </AdvancedMarker>
           ))}
           {riders.filter((r) => r.id === active).map((r) => (
             <InfoWindow key={r.id} position={{ lat: r.lat!, lng: r.lng! }} onCloseClick={() => setActive(null)}>
-              <div className="text-xs"><p className="font-semibold">{r.name}</p><p>{r.vehicle_type} {r.vehicle_number ?? ""}</p><p>{r.busy ? `On ${r.current_order?.order_number}` : "Free"} · GPS {timeAgo(r.last_location_at)}</p></div>
+              <div className="text-xs"><p className="font-semibold">{r.name}</p><p>{VEHICLE_LABEL[r.vehicle_type] ?? r.vehicle_type} {r.vehicle_number ?? ""}</p><p>{r.busy ? `On ${r.current_order?.order_number}` : "Free"} · GPS {timeAgo(r.last_location_at)}</p></div>
             </InfoWindow>
           ))}
           <FitAll riders={riders} />
         </Map>
       </div>
+      <p className="mt-1.5 flex flex-wrap gap-3 text-xs text-ink-3">
+        <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-success" aria-hidden />Free</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-info" aria-hidden />On a delivery</span>
+      </p>
     </APIProvider>
   );
 }

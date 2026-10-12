@@ -17,7 +17,7 @@ export function RiderRegistration({ name }: { name: string | null }) {
   return (
     <div className="flex min-h-dvh flex-col bg-surface">
       <header className="flex h-14 items-center gap-2 border-b border-line bg-card px-4" style={{ paddingTop: "var(--safe-top)" }}>
-        <LogoMark size={30} /><span className="font-display text-base font-extrabold text-ink">Merta<span className="text-brand-600">Deal</span> <span className="text-ink-3">Rider</span></span>
+        <LogoMark size={30} /><span className="font-display text-base font-extrabold text-ink">Merta<span className="text-fresh">Deal</span> <span className="text-ink-3">Rider</span></span>
       </header>
       <main className="mx-auto w-full max-w-lg flex-1 px-4 py-5 safe-bottom">
         <div className="mb-5 flex items-start gap-3">

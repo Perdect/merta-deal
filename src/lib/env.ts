@@ -12,6 +12,8 @@ export const env = {
   vapidPublicKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "",
   phoneAuthEnabled: process.env.NEXT_PUBLIC_PHONE_AUTH_ENABLED === "true",
   anonymousAuthEnabled: process.env.NEXT_PUBLIC_ANONYMOUS_AUTH_ENABLED === "true",
+  /** Google Play listing for the Android app; empty until it is published. */
+  playStoreUrl: process.env.NEXT_PUBLIC_PLAY_STORE_URL ?? "",
 } as const;
 
 export const isSupabaseConfigured = () => Boolean(env.supabaseUrl && env.supabaseAnonKey);

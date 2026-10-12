@@ -145,7 +145,7 @@ export function AssistantChat({ signedIn, aiConfigured, autoVoice, waId }: { sig
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700"><Sparkles className="h-5 w-5" /></span>
               <div>
                 <p className="font-display text-base font-bold text-ink">Batao kya chahiye — list ready ho jayegi</p>
-                <p className="text-sm text-ink-3">Hinglish, Hindi ya English mein likhiye ya boliye. Har item ko Merta ki kirana stores ke asli products se match karte hain.</p>
+                <p className="text-sm text-ink-3">Hinglish, Hindi ya English mein likhiye ya boliye. Har item ko Merta Deal ke asli products se match karte hain.</p>
               </div>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
@@ -202,7 +202,7 @@ export function AssistantChat({ signedIn, aiConfigured, autoVoice, waId }: { sig
         ) : null}
         {speech.listening || speech.interim ? (
           <div className="mb-2 flex items-center gap-2 rounded-md bg-brand-50 px-3 py-2 text-sm text-brand-800">
-            <span className="relative flex h-2.5 w-2.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-danger opacity-75" /><span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-danger" /></span>
+            <span className="relative flex h-2.5 w-2.5"><span className="absolute inline-flex h-full w-full rounded-full bg-danger opacity-75 motion-safe:animate-ping" /><span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-danger" /></span>
             <span className="min-w-0 flex-1 truncate">{speech.interim || "Sun raha hoon… boliye"}</span>
             <span className="text-[11px] text-brand-700">{speech.lang}</span>
           </div>

@@ -1,8 +1,8 @@
 {
   "aashirvaad-shudh-chakki-atta-10-kg": {
-    "file": "/products/aashirvaad-shudh-chakki-atta-10-kg.b9d665f6.webp",
-    "version": "b9d665f6",
-    "variant": "framed",
+    "file": "/products/aashirvaad-shudh-chakki-atta-10-kg.ab289af7.webp",
+    "version": "ab289af7",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Supplied by the retailer",
     "source_url": null,
@@ -13,13 +13,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "supplied pack shot (679×679)",
-    "updated_at": "2026-09-22T17:33:51.065Z"
+    "notes": "supplied pack shot (679×679); background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:39:22.935Z"
   },
   "amul-butter-pasteurised-100-g": {
-    "file": "/products/amul-butter-pasteurised-100-g.9c65c4e9.webp",
-    "version": "9c65c4e9",
-    "variant": "framed",
+    "file": "/products/amul-butter-pasteurised-100-g.bdd8a2f1.webp",
+    "version": "bdd8a2f1",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Flipkart product listing",
     "source_url": "https://www.flipkart.com/food-products/butter/amul~brand/pr?sid=eat,vyv",
@@ -30,13 +30,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Flipkart listing pack shot (832×574), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.066Z"
+    "notes": "Flipkart listing pack shot (832×574), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:39:25.618Z"
   },
   "amul-masti-dahi-400-g": {
-    "file": "/products/amul-masti-dahi-400-g.5c3474c1.webp",
-    "version": "5c3474c1",
-    "variant": "framed",
+    "file": "/products/amul-masti-dahi-400-g.7f508428.webp",
+    "version": "7f508428",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Amul-Masti-Dahi-Cup-400/dp/B07MHP25WP",
@@ -47,13 +47,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1318×1600), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.067Z"
+    "notes": "Amazon listing pack shot (1318×1600), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:39:28.040Z"
   },
   "amul-fresh-paneer-200-g": {
-    "file": "/products/amul-fresh-paneer-200-g.ab519b5d.webp",
-    "version": "ab519b5d",
-    "variant": "framed",
+    "file": "/products/amul-fresh-paneer-200-g.a7209a0e.webp",
+    "version": "a7209a0e",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Amul-Fresh-Paneer-200g/dp/B078KT9RB1",
@@ -64,13 +64,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1600×1186), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.068Z"
+    "notes": "Amazon listing pack shot (1600×1186), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:39:30.689Z"
   },
   "aashirvaad-shudh-chakki-atta-5-kg": {
-    "file": "/products/aashirvaad-shudh-chakki-atta-5-kg.b9d665f6.webp",
-    "version": "b9d665f6",
-    "variant": "framed",
+    "file": "/products/aashirvaad-shudh-chakki-atta-5-kg.ab289af7.webp",
+    "version": "ab289af7",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Supplied by the retailer",
     "source_url": null,
@@ -81,13 +81,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "supplied pack shot (679×679)",
-    "updated_at": "2026-09-22T17:33:51.068Z"
+    "notes": "supplied pack shot (679×679); background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:39:33.384Z"
   },
   "amul-gold-full-cream-milk-500-ml": {
-    "file": "/products/amul-gold-full-cream-milk-500-ml.8c31ff5d.webp",
-    "version": "8c31ff5d",
-    "variant": "framed",
+    "file": "/products/amul-gold-full-cream-milk-500-ml.f7b84569.webp",
+    "version": "f7b84569",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "BigBasket product listing",
     "source_url": "https://www.bigbasket.com/pd/40090893/amul-amul-gold-500-ml-pouch/",
@@ -98,13 +98,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "BigBasket listing pack shot (900×900), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.069Z"
+    "notes": "BigBasket listing pack shot (900×900), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:39:36.508Z"
   },
   "amul-pure-ghee-1-l": {
-    "file": "/products/amul-pure-ghee-1-l.caeecdd6.webp",
-    "version": "caeecdd6",
-    "variant": "framed",
+    "file": "/products/amul-pure-ghee-1-l.edb8faa9.webp",
+    "version": "edb8faa9",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Amul-Pure-Ghee-905g/dp/B08GKFPZP9",
@@ -115,13 +115,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1600×1600), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.070Z"
+    "notes": "Amazon listing pack shot (1600×1600), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:39:39.091Z"
   },
   "bisleri-mineral-water-1-l": {
-    "file": "/products/bisleri-mineral-water-1-l.dcfe6a3d.webp",
-    "version": "dcfe6a3d",
-    "variant": "framed",
+    "file": "/products/bisleri-mineral-water-1-l.839cc1aa.webp",
+    "version": "839cc1aa",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Blinkit product listing",
     "source_url": "https://blinkit.com/prn/bisleri-packaged-water-1-l/prid/318",
@@ -132,13 +132,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Blinkit listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.071Z"
+    "notes": "Blinkit listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:39:41.369Z"
   },
   "bikaji-bikaneri-bhujia-400-g": {
-    "file": "/products/bikaji-bikaneri-bhujia-400-g.0f547ffe.webp",
-    "version": "0f547ffe",
-    "variant": "framed",
+    "file": "/products/bikaji-bikaneri-bhujia-400-g.eb24cd5b.webp",
+    "version": "eb24cd5b",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.desertcart.in/products/218735772-bikaji-aslee-bikaneri-bhujia-snack-and-moong-daal-400-g-each-combo-pack-of-2",
@@ -149,13 +149,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1229×1600), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.072Z"
+    "notes": "Amazon listing pack shot (1229×1600), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:39:44.670Z"
   },
   "britannia-good-day-cashew-cookies-600-g": {
-    "file": "/products/britannia-good-day-cashew-cookies-600-g.33c80c7e.webp",
-    "version": "33c80c7e",
-    "variant": "framed",
+    "file": "/products/britannia-good-day-cashew-cookies-600-g.9e04c64f.webp",
+    "version": "9e04c64f",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Britannia-Good-Cashew-Combi-600g/dp/B01M1RKTRK",
@@ -166,13 +166,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1500×1500), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.073Z"
+    "notes": "Amazon listing pack shot (1500×1500), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:39:47.243Z"
   },
   "britannia-marie-gold-600-g": {
-    "file": "/products/britannia-marie-gold-600-g.195cfcde.webp",
-    "version": "195cfcde",
-    "variant": "framed",
+    "file": "/products/britannia-marie-gold-600-g.cc4ca7cb.webp",
+    "version": "cc4ca7cb",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Blinkit product listing",
     "source_url": "https://blinkit.com/prn/britannia-marie-gold-marie-biscuits/prid/403219",
@@ -183,13 +183,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Blinkit listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.074Z"
+    "notes": "Blinkit listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:39:50.101Z"
   },
   "cadbury-dairy-milk-silk-60-g": {
-    "file": "/products/cadbury-dairy-milk-silk-60-g.3ce2f066.webp",
-    "version": "3ce2f066",
-    "variant": "framed",
+    "file": "/products/cadbury-dairy-milk-silk-60-g.4463bf4b.webp",
+    "version": "4463bf4b",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Cadbury-Dairy-Milk-Silk-Chocolate/dp/B012VGW5ZS",
@@ -200,13 +200,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1500×1500), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.074Z"
+    "notes": "Amazon listing pack shot (1500×1500), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:39:52.262Z"
   },
   "coca-cola-750-ml": {
-    "file": "/products/coca-cola-750-ml.365733e1.webp",
-    "version": "365733e1",
-    "variant": "framed",
+    "file": "/products/coca-cola-750-ml.15e33271.webp",
+    "version": "15e33271",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Coca-Cola-750ml/dp/B004ZXK6FC",
@@ -217,13 +217,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1600×1600), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.075Z"
+    "notes": "Amazon listing pack shot (1600×1600), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:39:54.411Z"
   },
   "dabur-amla-hair-oil-275-ml": {
-    "file": "/products/dabur-amla-hair-oil-275-ml.e8865223.webp",
-    "version": "e8865223",
-    "variant": "framed",
+    "file": "/products/dabur-amla-hair-oil-275-ml.512da435.webp",
+    "version": "512da435",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://bigamart.com/product/dabur-amla-hair-oil-for-natural-hair-growth-and-silky-beautiful-hair-200-ml/",
@@ -234,13 +234,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1600×1600), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.075Z"
+    "notes": "Amazon listing pack shot (1600×1600), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:39:56.768Z"
   },
   "everest-garam-masala-100-g": {
-    "file": "/products/everest-garam-masala-100-g.3867be61.webp",
-    "version": "3867be61",
-    "variant": "framed",
+    "file": "/products/everest-garam-masala-100-g.87ee3dc2.webp",
+    "version": "87ee3dc2",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Flipkart product listing",
     "source_url": "https://www.flipkart.com/everest-garam-masala-100-gram/p/itm650e5147b988c",
@@ -251,13 +251,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Flipkart listing pack shot (600×832), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.076Z"
+    "notes": "Flipkart listing pack shot (600×832), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:39:59.828Z"
   },
   "everest-chhole-masala-100-g": {
-    "file": "/products/everest-chhole-masala-100-g.0f266a2f.webp",
-    "version": "0f266a2f",
-    "variant": "framed",
+    "file": "/products/everest-chhole-masala-100-g.4b6e4572.webp",
+    "version": "4b6e4572",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Blinkit product listing",
     "source_url": "https://blinkit.com/prn/everest-chole-masala/prid/15450",
@@ -268,31 +268,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Blinkit listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.076Z"
-  },
-  "fortune-kachi-ghani-mustard-oil-1-l": {
-    "file": "/products/fortune-kachi-ghani-mustard-oil-1-l.b3ced791.webp",
-    "version": "b3ced791",
-    "variant": "framed",
-    "kind": "packaging",
-    "source": "Open Food Facts",
-    "source_url": "https://world.openfoodfacts.org/product/8906007280952",
-    "license": "CC BY-SA 3.0",
-    "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
-    "attribution": "Open Food Facts contributors",
-    "barcode": "8906007280952",
-    "matched_name": "Fortune premium kachi ghani pure mustard oil",
-    "matched_quantity": "1L",
-    "size_match": "exact",
-    "confidence": null,
-    "notes": "replaced after card-size QA (was judged amateur); candidate #3, 2448×3264",
-    "updated_at": "2026-09-22T16:40:15.474Z"
+    "notes": "Blinkit listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:40:02.436Z"
   },
   "fortune-sunlite-refined-sunflower-oil-1-l": {
-    "file": "/products/fortune-sunlite-refined-sunflower-oil-1-l.473cd174.webp",
-    "version": "473cd174",
-    "variant": "framed",
+    "file": "/products/fortune-sunlite-refined-sunflower-oil-1-l.9b8905ec.webp",
+    "version": "9b8905ec",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Fortune-Sunlite-Refined-Sunflower-Oil/dp/B0140PWG0M",
@@ -303,13 +285,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1084×1600), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.078Z"
+    "notes": "Amazon listing pack shot (1084×1600), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:40:05.150Z"
   },
   "frooti-mango-drink-600-ml": {
-    "file": "/products/frooti-mango-drink-600-ml.a7779904.webp",
-    "version": "a7779904",
-    "variant": "framed",
+    "file": "/products/frooti-mango-drink-600-ml.43d50ee8.webp",
+    "version": "43d50ee8",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Blinkit product listing",
     "source_url": "https://blinkit.com/prn/frooti-mango-drink/prid/103915",
@@ -320,13 +302,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Blinkit listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.078Z"
+    "notes": "Blinkit listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:40:07.425Z"
   },
   "parle-g-original-250-g": {
-    "file": "/products/parle-g-original-250-g.5ec48581.webp",
-    "version": "5ec48581",
-    "variant": "framed",
+    "file": "/products/parle-g-original-250-g.7ab466b2.webp",
+    "version": "7ab466b2",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Open Food Facts",
     "source_url": "https://world.openfoodfacts.org/product/8901719134852",
@@ -338,13 +320,13 @@
     "matched_quantity": "",
     "size_match": "unknown",
     "confidence": null,
-    "notes": "quality-audited",
-    "updated_at": "2026-09-22T17:33:51.079Z"
+    "notes": "quality-audited; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:40:10.195Z"
   },
   "parle-g-gold-biscuits-1-kg": {
-    "file": "/products/parle-g-gold-biscuits-1-kg.46eeee23.webp",
-    "version": "46eeee23",
-    "variant": "framed",
+    "file": "/products/parle-g-gold-biscuits-1-kg.2f65f312.webp",
+    "version": "2f65f312",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.com/Parle-G-Gold-Biscuits-pack-100g/dp/B07H8QV8P1",
@@ -355,13 +337,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1500×1500), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.080Z"
+    "notes": "Amazon listing pack shot (1500×1500), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:40:13.335Z"
   },
   "patanjali-honey-500-g": {
-    "file": "/products/patanjali-honey-500-g.f7b342b7.webp",
-    "version": "f7b342b7",
-    "variant": "framed",
+    "file": "/products/patanjali-honey-500-g.4c262885.webp",
+    "version": "4c262885",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Patanjali-Honey-500g-Jar/dp/B01KTSBQNC",
@@ -372,31 +354,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1500×1500), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.080Z"
-  },
-  "rajdhani-chakki-atta-5-kg": {
-    "file": "/products/rajdhani-chakki-atta-5-kg.d0927991.webp",
-    "version": "d0927991",
-    "variant": "framed",
-    "kind": "packaging",
-    "source": "Open Food Facts",
-    "source_url": "https://world.openfoodfacts.org/product/8906002343102",
-    "license": "CC BY-SA 3.0",
-    "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
-    "attribution": "Open Food Facts contributors",
-    "barcode": "8906002343102",
-    "matched_name": "Chakki Atta",
-    "matched_quantity": "1 kg",
-    "size_match": "different",
-    "confidence": null,
-    "notes": "quality-audited",
-    "updated_at": "2026-09-22T16:40:15.477Z"
+    "notes": "Amazon listing pack shot (1500×1500), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:40:16.138Z"
   },
   "sunfeast-dark-fantasy-choco-fills-300-g": {
-    "file": "/products/sunfeast-dark-fantasy-choco-fills-300-g.f5a73ebc.webp",
-    "version": "f5a73ebc",
-    "variant": "framed",
+    "file": "/products/sunfeast-dark-fantasy-choco-fills-300-g.fb6fd135.webp",
+    "version": "fb6fd135",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Dark-Fantasy-Choco-Fills-300g/dp/B01I17U9ZO",
@@ -407,13 +371,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1600×1600), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.081Z"
+    "notes": "Amazon listing pack shot (1600×1600), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:40:18.581Z"
   },
   "tata-rock-salt-sendha-namak-1-kg": {
-    "file": "/products/tata-rock-salt-sendha-namak-1-kg.47b2837e.webp",
-    "version": "47b2837e",
-    "variant": "framed",
+    "file": "/products/tata-rock-salt-sendha-namak-1-kg.fa591ee1.webp",
+    "version": "fa591ee1",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.desertcart.lk/products/281023968-tata-salt-himalayan-rock-salt-premium-sendha-namak-with-natural-trace-minerals-1-kg-pouch",
@@ -424,13 +388,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.081Z"
+    "notes": "Amazon listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:40:20.985Z"
   },
   "tata-sampann-moong-dal-1-kg": {
-    "file": "/products/tata-sampann-moong-dal-1-kg.191e8168.webp",
-    "version": "191e8168",
-    "variant": "framed",
+    "file": "/products/tata-sampann-moong-dal-1-kg.cd723ad7.webp",
+    "version": "cd723ad7",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Tata-Sampann-Pulses-Moong-Dal/dp/B08D3V154D",
@@ -441,13 +405,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1200×1200), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.082Z"
+    "notes": "Amazon listing pack shot (1200×1200), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:40:23.651Z"
   },
   "amul-cheese-slices-10-slices": {
-    "file": "/products/amul-cheese-slices-10-slices.feacc5ec.webp",
-    "version": "feacc5ec",
-    "variant": "framed",
+    "file": "/products/amul-cheese-slices-10-slices.72c175f4.webp",
+    "version": "72c175f4",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Amul-Cheese-Slices-200g-Pack/dp/B018E0GEAM",
@@ -458,13 +422,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1600×1600), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.084Z"
+    "notes": "Amazon listing pack shot (1600×1600), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:40:26.594Z"
   },
   "amul-butter-pasteurised-500-g": {
-    "file": "/products/amul-butter-pasteurised-500-g.d721eed8.webp",
-    "version": "d721eed8",
-    "variant": "framed",
+    "file": "/products/amul-butter-pasteurised-500-g.d09236da.webp",
+    "version": "d09236da",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Flipkart product listing",
     "source_url": "https://www.oceanproperty.co.th/?q=amul-pasteurised-butter-salted-500g-box-of-20-ee-XY0j1rhZ",
@@ -475,13 +439,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Flipkart listing pack shot (832×574), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.085Z"
+    "notes": "Flipkart listing pack shot (832×574), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:40:29.285Z"
   },
   "amul-cheese-cubes-200-g": {
-    "file": "/products/amul-cheese-cubes-200-g.6c0a1dd1.webp",
-    "version": "6c0a1dd1",
-    "variant": "framed",
+    "file": "/products/amul-cheese-cubes-200-g.da86e5b7.webp",
+    "version": "da86e5b7",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Zepto product listing",
     "source_url": "https://www.zepto.com/pn/amul-processed-cheese-cubes/pvid/a0c46e53-8316-4cc3-b3b3-f589217382f9",
@@ -492,13 +456,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Zepto listing pack shot (940×940), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.087Z"
+    "notes": "Zepto listing pack shot (940×940), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:40:31.693Z"
   },
   "kurkure-masala-munch-90-g": {
-    "file": "/products/kurkure-masala-munch-90-g.dd0de618.webp",
-    "version": "dd0de618",
-    "variant": "framed",
+    "file": "/products/kurkure-masala-munch-90-g.0139f2c5.webp",
+    "version": "0139f2c5",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.de/Kurkure-KURKURE-Masala-Munch/dp/B00TDGD374",
@@ -509,13 +473,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1600×1600), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.090Z"
+    "notes": "Amazon listing pack shot (1600×1600), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:40:34.271Z"
   },
   "lay-s-classic-salted-73-g": {
-    "file": "/products/lay-s-classic-salted-73-g.bc7f1a07.webp",
-    "version": "bc7f1a07",
-    "variant": "framed",
+    "file": "/products/lay-s-classic-salted-73-g.51304fb5.webp",
+    "version": "51304fb5",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Zepto product listing",
     "source_url": "https://www.zepto.com/pn/lays-classic-salted-potato-chips-combo/pvid/dc14dcbc-c4d7-48ff-85be-5535cc0f0afc",
@@ -526,13 +490,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Zepto listing pack shot (940×940), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.092Z"
+    "notes": "Zepto listing pack shot (940×940), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:40:37.075Z"
   },
   "lay-s-magic-masala-73-g": {
-    "file": "/products/lay-s-magic-masala-73-g.1b0899d9.webp",
-    "version": "1b0899d9",
-    "variant": "framed",
+    "file": "/products/lay-s-magic-masala-73-g.6a3ff01d.webp",
+    "version": "6a3ff01d",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Lays-Potato-Chips-Indias-Masala/dp/B08Q95QQQR",
@@ -543,13 +507,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1500×1500), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.093Z"
+    "notes": "Amazon listing pack shot (1500×1500), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:40:39.585Z"
   },
   "maggi-2-minute-masala-noodles-70-g": {
-    "file": "/products/maggi-2-minute-masala-noodles-70-g.7d0dc7ba.webp",
-    "version": "7d0dc7ba",
-    "variant": "framed",
+    "file": "/products/maggi-2-minute-masala-noodles-70-g.c73aceeb.webp",
+    "version": "c73aceeb",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Maggi-Minutes-Noodles-Masala-70/dp/B0192UNUGO",
@@ -560,13 +524,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1600×1600), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.094Z"
+    "notes": "Amazon listing pack shot (1600×1600), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:40:42.150Z"
   },
   "mdh-kitchen-king-masala-100-g": {
-    "file": "/products/mdh-kitchen-king-masala-100-g.91957c8e.webp",
-    "version": "91957c8e",
-    "variant": "framed",
+    "file": "/products/mdh-kitchen-king-masala-100-g.0e0b3bf4.webp",
+    "version": "0e0b3bf4",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.co.uk/MDH-Kitchen-King-Masala-100g/dp/B0BDLR7FCW",
@@ -577,31 +541,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.095Z"
-  },
-  "maggi-2-minute-masala-noodles-pack-of-8": {
-    "file": "/products/maggi-2-minute-masala-noodles-pack-of-8.090df9d0.webp",
-    "version": "090df9d0",
-    "variant": "framed",
-    "kind": "packaging",
-    "source": "Open Food Facts",
-    "source_url": "https://world.openfoodfacts.org/product/8901058023800",
-    "license": "CC BY-SA 3.0",
-    "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
-    "attribution": "Open Food Facts contributors",
-    "barcode": "8901058023800",
-    "matched_name": "Maggi 2-minute noodles Masala",
-    "matched_quantity": "8 x 70g (560g)",
-    "size_match": "different",
-    "confidence": null,
-    "notes": "quality-audited",
-    "updated_at": "2026-09-22T16:40:15.484Z"
+    "notes": "Amazon listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:40:45.196Z"
   },
   "saffola-gold-oil-1-l": {
-    "file": "/products/saffola-gold-oil-1-l.46c12c4d.webp",
-    "version": "46c12c4d",
-    "variant": "framed",
+    "file": "/products/saffola-gold-oil-1-l.dcb86942.webp",
+    "version": "dcb86942",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Saffola-Healthy-Lifestyle-Edible-Pouch/dp/B00L13WLFW",
@@ -612,13 +558,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1500×1500), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.095Z"
+    "notes": "Amazon listing pack shot (1500×1500), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:40:48.557Z"
   },
   "saras-dahi-500-g": {
-    "file": "/products/saras-dahi-500-g.79476eae.webp",
-    "version": "79476eae",
-    "variant": "framed",
+    "file": "/products/saras-dahi-500-g.f5c7ef6a.webp",
+    "version": "f5c7ef6a",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Zepto product listing",
     "source_url": "https://www.zepto.com/pn/saras-dahi-pouch/pvid/90efab2b-b53d-4ffe-82d9-6cac48f83db6",
@@ -629,13 +575,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Zepto listing pack shot (940×671), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.096Z"
+    "notes": "Zepto listing pack shot (940×671), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:40:52.200Z"
   },
   "tata-sampann-toor-dal-arhar-1-kg": {
-    "file": "/products/tata-sampann-toor-dal-arhar-1-kg.213103f1.webp",
-    "version": "213103f1",
-    "variant": "framed",
+    "file": "/products/tata-sampann-toor-dal-arhar-1-kg.636c2d77.webp",
+    "version": "636c2d77",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Tata-Sampann-Pulses-Toor-Dal/dp/B074N7VHV4",
@@ -646,13 +592,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.097Z"
+    "notes": "Amazon listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:40:55.310Z"
   },
   "tata-tea-gold-500-g": {
-    "file": "/products/tata-tea-gold-500-g.911a2291.webp",
-    "version": "911a2291",
-    "variant": "framed",
+    "file": "/products/tata-tea-gold-500-g.6efe127b.webp",
+    "version": "6efe127b",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.com/Tata-Tea-Gold-500-India/dp/B00GLDPBJK",
@@ -663,13 +609,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1600×1600), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.098Z"
+    "notes": "Amazon listing pack shot (1600×1600), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:40:57.802Z"
   },
   "thums-up-750-ml": {
-    "file": "/products/thums-up-750-ml.57829d5c.webp",
-    "version": "57829d5c",
-    "variant": "framed",
+    "file": "/products/thums-up-750-ml.debf4ae0.webp",
+    "version": "debf4ae0",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.com/Thums-Soft-Drink-PET-Bottle/dp/B07BFNG2XM",
@@ -680,13 +626,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1600×1600), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.098Z"
+    "notes": "Amazon listing pack shot (1600×1600), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:40:59.930Z"
   },
   "apple-shimla-1-kg": {
-    "file": "/products/apple-shimla-1-kg.62cc538a.webp",
-    "version": "62cc538a",
-    "variant": "framed",
+    "file": "/products/apple-shimla-1-kg.80530dc9.webp",
+    "version": "80530dc9",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Fresh-Shimla-Apple-1kg/dp/B0BYJ3SVM2",
@@ -697,13 +643,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.099Z"
+    "notes": "Amazon listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:41:02.630Z"
   },
   "banana-kela-1-dozen": {
-    "file": "/products/banana-kela-1-dozen.204dcb06.webp",
-    "version": "204dcb06",
-    "variant": "framed",
+    "file": "/products/banana-kela-1-dozen.e22b678a.webp",
+    "version": "e22b678a",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Blinkit product listing",
     "source_url": "https://blinkit.com/prn/banana-special-offer/prid/534049",
@@ -714,13 +660,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Blinkit listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.101Z"
+    "notes": "Blinkit listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:41:05.150Z"
   },
   "cashew-w320-250-g": {
-    "file": "/products/cashew-w320-250-g.9a985a15.webp",
-    "version": "9a985a15",
-    "variant": "framed",
+    "file": "/products/cashew-w320-250-g.8ef99478.webp",
+    "version": "8ef99478",
+    "variant": "cutout",
     "kind": "commodity",
     "source": "Wikimedia Commons",
     "source_url": "https://commons.wikimedia.org/wiki/File:CASHEW_NUTS.jpg",
@@ -731,13 +677,13 @@
     "matched_quantity": null,
     "size_match": null,
     "confidence": null,
-    "notes": "quality-audited",
-    "updated_at": "2026-09-22T17:33:51.103Z"
+    "notes": "quality-audited; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:41:07.796Z"
   },
   "cauliflower-gobhi-1-pc": {
-    "file": "/products/cauliflower-gobhi-1-pc.28d03c9f.webp",
-    "version": "28d03c9f",
-    "variant": "framed",
+    "file": "/products/cauliflower-gobhi-1-pc.d414809e.webp",
+    "version": "d414809e",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Blinkit product listing",
     "source_url": "https://blinkit.com/prn/cauliflower-organically-grown-by-pluckk/prid/507177",
@@ -748,30 +694,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Blinkit listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.125Z"
-  },
-  "coriander-leaves-dhaniya-patta-100-g": {
-    "file": "/products/coriander-leaves-dhaniya-patta-100-g.6ddf7e2c.webp",
-    "version": "6ddf7e2c",
-    "variant": "framed",
-    "kind": "commodity",
-    "source": "Wikimedia Commons",
-    "source_url": "https://commons.wikimedia.org/wiki/File:Bunches_of_coriander_leaves.jpg",
-    "license": "CC BY-SA 4.0",
-    "attribution": "Kpsudeep",
-    "barcode": null,
-    "matched_name": "Bunches of coriander leaves.jpg",
-    "matched_quantity": null,
-    "size_match": null,
-    "confidence": null,
-    "notes": "quality-audited",
-    "updated_at": "2026-09-22T17:33:51.103Z"
+    "notes": "Blinkit listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:41:10.686Z"
   },
   "desi-gud-chikki-peanut-250-g": {
-    "file": "/products/desi-gud-chikki-peanut-250-g.a096ce92.webp",
-    "version": "a096ce92",
-    "variant": "framed",
+    "file": "/products/desi-gud-chikki-peanut-250-g.23ff51ff.webp",
+    "version": "23ff51ff",
+    "variant": "cutout",
     "kind": "commodity",
     "source": "Wikimedia Commons",
     "source_url": "https://commons.wikimedia.org/wiki/File:Homemade_Chikki.jpg",
@@ -782,13 +711,13 @@
     "matched_quantity": null,
     "size_match": null,
     "confidence": null,
-    "notes": "quality-audited",
-    "updated_at": "2026-09-22T17:33:51.105Z"
+    "notes": "quality-audited; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:41:15.842Z"
   },
   "garbage-bags-medium-30-bags": {
-    "file": "/products/garbage-bags-medium-30-bags.d55d01b1.webp",
-    "version": "d55d01b1",
-    "variant": "framed",
+    "file": "/products/garbage-bags-medium-30-bags.0bd2fa69.webp",
+    "version": "0bd2fa69",
+    "variant": "cutout",
     "kind": "commodity",
     "source": "Wikimedia Commons",
     "source_url": "https://commons.wikimedia.org/wiki/File:Black_garbage_bag.jpg",
@@ -799,13 +728,13 @@
     "matched_quantity": null,
     "size_match": null,
     "confidence": null,
-    "notes": "quality-audited",
-    "updated_at": "2026-09-22T17:33:51.105Z"
+    "notes": "quality-audited; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:41:17.895Z"
   },
   "ginger-adrak-250-g": {
-    "file": "/products/ginger-adrak-250-g.cc84a42e.webp",
-    "version": "cc84a42e",
-    "variant": "framed",
+    "file": "/products/ginger-adrak-250-g.6f9fcfb9.webp",
+    "version": "6f9fcfb9",
+    "variant": "cutout",
     "kind": "commodity",
     "source": "Wikimedia Commons",
     "source_url": "https://commons.wikimedia.org/wiki/File:Ginger_rhizome.jpg",
@@ -816,13 +745,13 @@
     "matched_quantity": null,
     "size_match": null,
     "confidence": null,
-    "notes": "quality-audited",
-    "updated_at": "2026-09-22T17:33:51.105Z"
+    "notes": "quality-audited; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:41:20.081Z"
   },
   "ker-sangri-dried-250-g": {
-    "file": "/products/ker-sangri-dried-250-g.0e174958.webp",
-    "version": "0e174958",
-    "variant": "framed",
+    "file": "/products/ker-sangri-dried-250-g.1f27084e.webp",
+    "version": "1f27084e",
+    "variant": "cutout",
     "kind": "commodity",
     "source": "Wikimedia Commons",
     "source_url": "https://commons.wikimedia.org/wiki/File:Ker_Sangri.jpg",
@@ -833,13 +762,13 @@
     "matched_quantity": null,
     "size_match": null,
     "confidence": null,
-    "notes": "quality-audited",
-    "updated_at": "2026-09-22T17:33:51.107Z"
+    "notes": "quality-audited; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:41:22.931Z"
   },
   "masoor-dal-loose-1-kg": {
-    "file": "/products/masoor-dal-loose-1-kg.494f4d9a.webp",
-    "version": "494f4d9a",
-    "variant": "framed",
+    "file": "/products/masoor-dal-loose-1-kg.bc3673d1.webp",
+    "version": "bc3673d1",
+    "variant": "cutout",
     "kind": "commodity",
     "source": "Wikimedia Commons",
     "source_url": "https://commons.wikimedia.org/wiki/File:Red_lentils_(1).jpg",
@@ -850,13 +779,13 @@
     "matched_quantity": null,
     "size_match": null,
     "confidence": null,
-    "notes": "quality-audited",
-    "updated_at": "2026-09-22T17:33:51.109Z"
+    "notes": "quality-audited; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:41:29.044Z"
   },
   "mathania-red-chilli-powder-250-g": {
-    "file": "/products/mathania-red-chilli-powder-250-g.baa4cceb.webp",
-    "version": "baa4cceb",
-    "variant": "framed",
+    "file": "/products/mathania-red-chilli-powder-250-g.1465f07f.webp",
+    "version": "1465f07f",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "BigBasket product listing",
     "source_url": "https://www.bigbasket.com/pd/40351639/catch-origins-mathania-red-chilli-powder-100-g/",
@@ -867,13 +796,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "BigBasket listing pack shot (900×900), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.111Z"
+    "notes": "BigBasket listing pack shot (900×900), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:41:32.023Z"
   },
   "merta-dairy-desi-ghee-bilona-500-g": {
-    "file": "/products/merta-dairy-desi-ghee-bilona-500-g.4688d4d8.webp",
-    "version": "4688d4d8",
-    "variant": "framed",
+    "file": "/products/merta-dairy-desi-ghee-bilona-500-g.3dc89824.webp",
+    "version": "3dc89824",
+    "variant": "cutout",
     "kind": "commodity",
     "source": "Wikimedia Commons",
     "source_url": "https://commons.wikimedia.org/wiki/File:Butterschmalz-3.jpg",
@@ -884,13 +813,13 @@
     "matched_quantity": null,
     "size_match": null,
     "confidence": null,
-    "notes": "quality-audited",
-    "updated_at": "2026-09-22T17:33:51.111Z"
+    "notes": "quality-audited; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:41:34.449Z"
   },
   "mustard-seeds-rai-200-g": {
-    "file": "/products/mustard-seeds-rai-200-g.ee1d0ee4.webp",
-    "version": "ee1d0ee4",
-    "variant": "framed",
+    "file": "/products/mustard-seeds-rai-200-g.ad91d7ea.webp",
+    "version": "ad91d7ea",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Vedaka-Mustard-Seeds-Small-Whole/dp/B0D154YX7D",
@@ -901,13 +830,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1500×1500), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.113Z"
+    "notes": "Amazon listing pack shot (1500×1500), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:41:37.581Z"
   },
   "nagauri-methi-dana-200-g": {
-    "file": "/products/nagauri-methi-dana-200-g.f4676f15.webp",
-    "version": "f4676f15",
-    "variant": "framed",
+    "file": "/products/nagauri-methi-dana-200-g.9e4580f4.webp",
+    "version": "9e4580f4",
+    "variant": "cutout",
     "kind": "commodity",
     "source": "Wikimedia Commons",
     "source_url": "https://commons.wikimedia.org/wiki/File:Fenugreek_seeds.jpg",
@@ -918,13 +847,13 @@
     "matched_quantity": null,
     "size_match": null,
     "confidence": null,
-    "notes": "quality-audited",
-    "updated_at": "2026-09-22T17:33:51.114Z"
+    "notes": "quality-audited; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:41:40.236Z"
   },
   "onion-pyaz-1-kg": {
-    "file": "/products/onion-pyaz-1-kg.bdfd329d.webp",
-    "version": "bdfd329d",
-    "variant": "framed",
+    "file": "/products/onion-pyaz-1-kg.da103b79.webp",
+    "version": "da103b79",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Fresh-Onion-1kg-Pack/dp/B07BG62MBV",
@@ -935,13 +864,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (550×550), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.115Z"
+    "notes": "Amazon listing pack shot (550×550), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:41:43.208Z"
   },
   "pomegranate-anar-500-g": {
-    "file": "/products/pomegranate-anar-500-g.04c5df83.webp",
-    "version": "04c5df83",
-    "variant": "framed",
+    "file": "/products/pomegranate-anar-500-g.3cdd8b01.webp",
+    "version": "3cdd8b01",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "BigBasket product listing",
     "source_url": "https://www.bigbasket.com/pd/20000709/fresho-pomegranate-500-g/",
@@ -952,13 +881,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "BigBasket listing pack shot (600×600), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.116Z"
+    "notes": "BigBasket listing pack shot (600×600), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:41:46.322Z"
   },
   "rajasthani-mirchi-achar-pickle-500-g": {
-    "file": "/products/rajasthani-mirchi-achar-pickle-500-g.ac7f86d5.webp",
-    "version": "ac7f86d5",
-    "variant": "framed",
+    "file": "/products/rajasthani-mirchi-achar-pickle-500-g.846e309f.webp",
+    "version": "846e309f",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Rajasthani-Swaad-Homemade-Mirchi-Pickle/dp/B08C63NQN7",
@@ -969,13 +898,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1600×1600), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.118Z"
+    "notes": "Amazon listing pack shot (1600×1600), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:41:48.950Z"
   },
   "spinach-palak-250-g": {
-    "file": "/products/spinach-palak-250-g.fa304a64.webp",
-    "version": "fa304a64",
-    "variant": "framed",
+    "file": "/products/spinach-palak-250-g.253a8001.webp",
+    "version": "253a8001",
+    "variant": "cutout",
     "kind": "commodity",
     "source": "Wikimedia Commons",
     "source_url": "https://commons.wikimedia.org/wiki/File:Spinach_Plant_Nourishment_Meal_Fresh_Healthy_Bio.jpg",
@@ -986,13 +915,13 @@
     "matched_quantity": null,
     "size_match": null,
     "confidence": null,
-    "notes": "quality-audited",
-    "updated_at": "2026-09-22T17:33:51.118Z"
+    "notes": "quality-audited; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:41:52.200Z"
   },
   "tomato-tamatar-1-kg": {
-    "file": "/products/tomato-tamatar-1-kg.d6b22046.webp",
-    "version": "d6b22046",
-    "variant": "framed",
+    "file": "/products/tomato-tamatar-1-kg.0d3028ab.webp",
+    "version": "0d3028ab",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Fresh-Organic-Tomato-1kg/dp/B07HN2YCNB",
@@ -1003,13 +932,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1600×1136), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.118Z"
+    "notes": "Amazon listing pack shot (1600×1136), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:41:55.077Z"
   },
   "sugar-sulphurless-5-kg": {
-    "file": "/products/sugar-sulphurless-5-kg.a66bb55f.webp",
-    "version": "a66bb55f",
-    "variant": "framed",
+    "file": "/products/sugar-sulphurless-5-kg.9dc30890.webp",
+    "version": "9dc30890",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Trust-Classic-Sulphur-Less-Sugar/dp/B07H344BR5",
@@ -1020,13 +949,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1552×1600), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.119Z"
+    "notes": "Amazon listing pack shot (1552×1600), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:41:58.047Z"
   },
   "sugar-sulphurless-1-kg": {
-    "file": "/products/sugar-sulphurless-1-kg.f5330755.webp",
-    "version": "f5330755",
-    "variant": "framed",
+    "file": "/products/sugar-sulphurless-1-kg.87ceb7ec.webp",
+    "version": "87ceb7ec",
+    "variant": "cutout",
     "kind": "commodity",
     "source": "Wikimedia Commons",
     "source_url": "https://commons.wikimedia.org/wiki/File:Bowl_of_white_sugar_without_background.jpg",
@@ -1037,13 +966,13 @@
     "matched_quantity": null,
     "size_match": null,
     "confidence": null,
-    "notes": "quality-audited",
-    "updated_at": "2026-09-22T17:33:51.120Z"
+    "notes": "quality-audited; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:42:00.329Z"
   },
   "oreo-vanilla-creme-120-g": {
-    "file": "/products/oreo-vanilla-creme-120-g.fabce42e.webp",
-    "version": "fabce42e",
-    "variant": "framed",
+    "file": "/products/oreo-vanilla-creme-120-g.bbfab337.webp",
+    "version": "bbfab337",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Correct-Cadbury-Oreo-Vanilla-Biscuit/dp/B07994RVLN",
@@ -1054,13 +983,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (500×500), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.122Z"
+    "notes": "Amazon listing pack shot (500×500), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:42:03.298Z"
   },
   "nescafe-classic-coffee-50-g": {
-    "file": "/products/nescafe-classic-coffee-50-g.e5d0389c.webp",
-    "version": "e5d0389c",
-    "variant": "framed",
+    "file": "/products/nescafe-classic-coffee-50-g.600c2483.webp",
+    "version": "600c2483",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Blinkit product listing",
     "source_url": "https://blinkit.com/prn/nescafe-classic-instant-coffee-powder-100-pure-coffee/prid/13966",
@@ -1071,13 +1000,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Blinkit listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.126Z"
+    "notes": "Blinkit listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:42:05.779Z"
   },
   "maida-all-purpose-flour-1-kg": {
-    "file": "/products/maida-all-purpose-flour-1-kg.737ca857.webp",
-    "version": "737ca857",
-    "variant": "framed",
+    "file": "/products/maida-all-purpose-flour-1-kg.02270c73.webp",
+    "version": "02270c73",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Blinkit product listing",
     "source_url": "https://blinkit.com/prn/rajdhani-maida-1-kg/prid/55428",
@@ -1088,13 +1017,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Blinkit listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.127Z"
+    "notes": "Blinkit listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:42:08.914Z"
   },
   "tata-salt-iodised-1-kg": {
-    "file": "/products/tata-salt-iodised-1-kg.48cb64f9.webp",
-    "version": "48cb64f9",
-    "variant": "framed",
+    "file": "/products/tata-salt-iodised-1-kg.832ae277.webp",
+    "version": "832ae277",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Tata-Salt-1kg/dp/B07575FPC3",
@@ -1105,13 +1034,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.128Z"
+    "notes": "Amazon listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:42:12.625Z"
   },
   "colgate-strong-teeth-toothpaste-200-g": {
-    "file": "/products/colgate-strong-teeth-toothpaste-200-g.10ce87f9.webp",
-    "version": "10ce87f9",
-    "variant": "framed",
+    "file": "/products/colgate-strong-teeth-toothpaste-200-g.319e4ac4.webp",
+    "version": "319e4ac4",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Colgate-Toothpaste-Strong-Teeth-Dental/dp/B00DRDZLJW",
@@ -1122,13 +1051,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1600×1600), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.129Z"
+    "notes": "Amazon listing pack shot (1600×1600), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:42:14.893Z"
   },
   "surf-excel-easy-wash-detergent-powder-1-kg": {
-    "file": "/products/surf-excel-easy-wash-detergent-powder-1-kg.da8f31a1.webp",
-    "version": "da8f31a1",
-    "variant": "framed",
+    "file": "/products/surf-excel-easy-wash-detergent-powder-1-kg.d118b92b.webp",
+    "version": "d118b92b",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Surf-Excel-Easy-Detergent-Powder/dp/B078GXS47N",
@@ -1139,13 +1068,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.130Z"
+    "notes": "Amazon listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:42:17.614Z"
   },
   "vim-dishwash-bar-pack-of-3": {
-    "file": "/products/vim-dishwash-bar-pack-of-3.1f07b11d.webp",
-    "version": "1f07b11d",
-    "variant": "framed",
+    "file": "/products/vim-dishwash-bar-pack-of-3.5ff33481.webp",
+    "version": "5ff33481",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Vim-Dishwash-Bar-130g/dp/B00YRE901A",
@@ -1156,13 +1085,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1500×1050), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.130Z"
+    "notes": "Amazon listing pack shot (1500×1050), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:42:20.561Z"
   },
   "aluminium-foil-9-m-9-m": {
-    "file": "/products/aluminium-foil-9-m-9-m.299fd767.webp",
-    "version": "299fd767",
-    "variant": "framed",
+    "file": "/products/aluminium-foil-9-m-9-m.a2813680.webp",
+    "version": "a2813680",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Blinkit product listing",
     "source_url": "https://blinkit.com/prn/ezee-aluminium-foil-9-m/prid/68375",
@@ -1173,13 +1102,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Blinkit listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.131Z"
+    "notes": "Blinkit listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:42:23.307Z"
   },
   "amul-taaza-toned-milk-500-ml": {
-    "file": "/products/amul-taaza-toned-milk-500-ml.5e1ef830.webp",
-    "version": "5e1ef830",
-    "variant": "framed",
+    "file": "/products/amul-taaza-toned-milk-500-ml.06174c91.webp",
+    "version": "06174c91",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "BigBasket product listing",
     "source_url": "https://www.bigbasket.com/pd/40041431/amul-taaza-fresh-toned-milk-500-ml-carton/",
@@ -1190,13 +1119,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "BigBasket listing pack shot (900×900), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.132Z"
+    "notes": "BigBasket listing pack shot (900×900), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:42:26.440Z"
   },
   "bikano-moong-dal-namkeen-400-g": {
-    "file": "/products/bikano-moong-dal-namkeen-400-g.9269fd68.webp",
-    "version": "9269fd68",
-    "variant": "framed",
+    "file": "/products/bikano-moong-dal-namkeen-400-g.4b3288a0.webp",
+    "version": "4b3288a0",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Bikano-Moong-Dal-Plain-400g/dp/B016IYBUR8",
@@ -1207,13 +1136,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.133Z"
+    "notes": "Amazon listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:42:28.940Z"
   },
   "bru-instant-coffee-100-g": {
-    "file": "/products/bru-instant-coffee-100-g.b90198dc.webp",
-    "version": "b90198dc",
-    "variant": "framed",
+    "file": "/products/bru-instant-coffee-100-g.a24e912c.webp",
+    "version": "a24e912c",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "BigBasket product listing",
     "source_url": "https://www.bigbasket.com/pd/290185/bru-gold-instant-coffee-100-pure-authentic-taste-100-g/",
@@ -1224,13 +1153,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "BigBasket listing pack shot (900×900), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.134Z"
+    "notes": "BigBasket listing pack shot (900×900), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:42:31.571Z"
   },
   "cadbury-dairy-milk-23-g": {
-    "file": "/products/cadbury-dairy-milk-23-g.0b462e28.webp",
-    "version": "0b462e28",
-    "variant": "framed",
+    "file": "/products/cadbury-dairy-milk-23-g.5346c5a1.webp",
+    "version": "5346c5a1",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://tiendamia.com/ec/p/amz/b002otoi80/cadbury-dairy-milk-milk-chocolate-candy-bar-3-5-oz",
@@ -1241,13 +1170,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1600×1600), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.135Z"
+    "notes": "Amazon listing pack shot (1600×1600), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:42:33.812Z"
   },
   "chana-dal-loose-1-kg": {
-    "file": "/products/chana-dal-loose-1-kg.d919c20a.webp",
-    "version": "d919c20a",
-    "variant": "framed",
+    "file": "/products/chana-dal-loose-1-kg.9c6da8bc.webp",
+    "version": "9c6da8bc",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Zepto product listing",
     "source_url": "https://www.zepto.com/pn/loose-chana-dal/pvid/4f7def1c-c9db-475d-9b5c-63b4fdacc23e",
@@ -1258,13 +1187,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Zepto listing pack shot (940×940), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.136Z"
+    "notes": "Zepto listing pack shot (940×940), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:42:36.628Z"
   },
   "clinic-plus-strong-long-shampoo-340-ml": {
-    "file": "/products/clinic-plus-strong-long-shampoo-340-ml.ff93534f.webp",
-    "version": "ff93534f",
-    "variant": "framed",
+    "file": "/products/clinic-plus-strong-long-shampoo-340-ml.9d86fdc3.webp",
+    "version": "9d86fdc3",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Clinic-Plus-Strong-Naturals-Shampoo/dp/B00CQ40HH4",
@@ -1275,13 +1204,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.136Z"
+    "notes": "Amazon listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:42:38.713Z"
   },
   "closeup-ever-fresh-red-hot-150-g": {
-    "file": "/products/closeup-ever-fresh-red-hot-150-g.f0691d80.webp",
-    "version": "f0691d80",
-    "variant": "framed",
+    "file": "/products/closeup-ever-fresh-red-hot-150-g.5fc78845.webp",
+    "version": "5fc78845",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "BigBasket product listing",
     "source_url": "https://www.bigbasket.com/pd/266639/close-up-everfresh-anti-germ-gel-toothpaste-red-hot-150-g/",
@@ -1292,13 +1221,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "BigBasket listing pack shot (600×600), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.137Z"
+    "notes": "BigBasket listing pack shot (600×600), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:42:40.966Z"
   },
   "cloves-laung-50-g": {
-    "file": "/products/cloves-laung-50-g.2107d09b.webp",
-    "version": "2107d09b",
-    "variant": "framed",
+    "file": "/products/cloves-laung-50-g.10658505.webp",
+    "version": "10658505",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "BigBasket product listing",
     "source_url": "https://www.bigbasket.com/pd/40351650/catch-laungclove-whole-25-g/",
@@ -1309,13 +1238,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "BigBasket listing pack shot (900×900), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.139Z"
+    "notes": "BigBasket listing pack shot (900×900), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:42:44.123Z"
   },
   "colgate-zigzag-toothbrush-pack-of-4": {
-    "file": "/products/colgate-zigzag-toothbrush-pack-of-4.76933a2b.webp",
-    "version": "76933a2b",
-    "variant": "framed",
+    "file": "/products/colgate-zigzag-toothbrush-pack-of-4.58897050.webp",
+    "version": "58897050",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.co.uk/Colgate-Zigzag-Toothbrush-Interdental-Medium/dp/B0778ZVFSN",
@@ -1326,13 +1255,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1600×1600), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.140Z"
+    "notes": "Amazon listing pack shot (1600×1600), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:42:47.043Z"
   },
   "dabur-chyawanprash-500-g": {
-    "file": "/products/dabur-chyawanprash-500-g.f675aeb3.webp",
-    "version": "f675aeb3",
-    "variant": "framed",
+    "file": "/products/dabur-chyawanprash-500-g.167b6c5f.webp",
+    "version": "167b6c5f",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Blinkit product listing",
     "source_url": "https://blinkit.com/prn/dabur-chyawanprash/prid/987",
@@ -1343,13 +1272,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Blinkit listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.143Z"
+    "notes": "Blinkit listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:42:49.897Z"
   },
   "dettol-original-soap-pack-of-4": {
-    "file": "/products/dettol-original-soap-pack-of-4.52199942.webp",
-    "version": "52199942",
-    "variant": "framed",
+    "file": "/products/dettol-original-soap-pack-of-4.3c312b0c.webp",
+    "version": "3c312b0c",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Dettol-Original-Protection-Bathing-99-99/dp/B0CP9NMV6P",
@@ -1360,13 +1289,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.143Z"
+    "notes": "Amazon listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:42:52.221Z"
   },
   "dhara-groundnut-oil-1-l": {
-    "file": "/products/dhara-groundnut-oil-1-l.1e55006f.webp",
-    "version": "1e55006f",
-    "variant": "framed",
+    "file": "/products/dhara-groundnut-oil-1-l.373ab66d.webp",
+    "version": "373ab66d",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Dhara-Groundnut-Oil-Pouch-1L/dp/B01N174GH7",
@@ -1377,13 +1306,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1056×1500), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.144Z"
+    "notes": "Amazon listing pack shot (1056×1500), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:42:55.305Z"
   },
   "everest-coriander-powder-200-g": {
-    "file": "/products/everest-coriander-powder-200-g.adcc10bf.webp",
-    "version": "adcc10bf",
-    "variant": "framed",
+    "file": "/products/everest-coriander-powder-200-g.5d3f1a6b.webp",
+    "version": "5d3f1a6b",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Everest-Spices-Coriander-Powder-200g/dp/B01KZL4LXK",
@@ -1394,13 +1323,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1500×1500), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.146Z"
+    "notes": "Amazon listing pack shot (1500×1500), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:42:58.090Z"
   },
   "everest-cumin-powder-100-g": {
-    "file": "/products/everest-cumin-powder-100-g.ae3a0dff.webp",
-    "version": "ae3a0dff",
-    "variant": "framed",
+    "file": "/products/everest-cumin-powder-100-g.53455dcf.webp",
+    "version": "53455dcf",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "BigBasket product listing",
     "source_url": "https://www.bigbasket.com/pd/40060778/everest-powder-cumin-100-g/",
@@ -1411,13 +1340,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "BigBasket listing pack shot (900×900), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.147Z"
+    "notes": "BigBasket listing pack shot (900×900), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:43:01.627Z"
   },
   "everest-tikhalal-red-chilli-powder-200-g": {
-    "file": "/products/everest-tikhalal-red-chilli-powder-200-g.8c535594.webp",
-    "version": "8c535594",
-    "variant": "framed",
+    "file": "/products/everest-tikhalal-red-chilli-powder-200-g.0af61aac.webp",
+    "version": "0af61aac",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Everest-Tikhalal-Chilli-Powder-200g/dp/B08C28WDWX",
@@ -1428,13 +1357,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1600×1600), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.150Z"
+    "notes": "Amazon listing pack shot (1600×1600), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:43:04.025Z"
   },
   "everest-turmeric-powder-200-g": {
-    "file": "/products/everest-turmeric-powder-200-g.e18bb00b.webp",
-    "version": "e18bb00b",
-    "variant": "framed",
+    "file": "/products/everest-turmeric-powder-200-g.23878e1b.webp",
+    "version": "23878e1b",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Flipkart product listing",
     "source_url": "https://www.flipkart.com/food-products/spice-powder-and-masala/everest~brand/pr?sid=eat,xgg",
@@ -1445,13 +1374,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Flipkart listing pack shot (626×832), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.152Z"
+    "notes": "Flipkart listing pack shot (626×832), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:43:06.583Z"
   },
   "fortune-chakki-fresh-atta-5-kg": {
-    "file": "/products/fortune-chakki-fresh-atta-5-kg.466e15ff.webp",
-    "version": "466e15ff",
-    "variant": "framed",
+    "file": "/products/fortune-chakki-fresh-atta-5-kg.81120820.webp",
+    "version": "81120820",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Fortune-Chakki-Fresh-Atta-5kg/dp/B07CBKR1L7",
@@ -1462,13 +1391,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1100×1100), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.156Z"
+    "notes": "Amazon listing pack shot (1100×1100), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:43:10.066Z"
   },
   "fortune-everyday-basmati-rice-1-kg": {
-    "file": "/products/fortune-everyday-basmati-rice-1-kg.a36e856f.webp",
-    "version": "a36e856f",
-    "variant": "framed",
+    "file": "/products/fortune-everyday-basmati-rice-1-kg.a2e02aab.webp",
+    "version": "a2e02aab",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Blinkit product listing",
     "source_url": "https://blinkit.com/prn/x/prid/135907",
@@ -1479,13 +1408,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Blinkit listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.159Z"
+    "notes": "Blinkit listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:43:12.693Z"
   },
   "gemini-refined-soyabean-oil-1-l": {
-    "file": "/products/gemini-refined-soyabean-oil-1-l.be966503.webp",
-    "version": "be966503",
-    "variant": "framed",
+    "file": "/products/gemini-refined-soyabean-oil-1-l.1eac563c.webp",
+    "version": "1eac563c",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "BigBasket product listing",
     "source_url": "https://www.bigbasket.com/pd/274152/gemini-refined-soyabean-oil-with-nutri-v-1-l-pouch/",
@@ -1496,13 +1425,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "BigBasket listing pack shot (900×900), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.161Z"
+    "notes": "BigBasket listing pack shot (900×900), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:43:16.004Z"
   },
   "ghadi-detergent-powder-1-kg": {
-    "file": "/products/ghadi-detergent-powder-1-kg.99806a32.webp",
-    "version": "99806a32",
-    "variant": "framed",
+    "file": "/products/ghadi-detergent-powder-1-kg.8122560b.webp",
+    "version": "8122560b",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Ghadi-Detergent-Powder-1000g/dp/B07CKVNZJV",
@@ -1513,13 +1442,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1501×1501), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.163Z"
+    "notes": "Amazon listing pack shot (1501×1501), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:43:19.092Z"
   },
   "gillette-mach3-razor-1-razor": {
-    "file": "/products/gillette-mach3-razor-1-razor.efb7daa8.webp",
-    "version": "efb7daa8",
-    "variant": "framed",
+    "file": "/products/gillette-mach3-razor-1-razor.f4d5553a.webp",
+    "version": "f4d5553a",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.ae/Gillette-Mach3-Mens-Razor-Count/dp/B019P36NCG",
@@ -1530,13 +1459,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1500×1500), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.164Z"
+    "notes": "Amazon listing pack shot (1500×1500), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:43:21.254Z"
   },
   "green-cardamom-elaichi-50-g": {
-    "file": "/products/green-cardamom-elaichi-50-g.6877b920.webp",
-    "version": "6877b920",
-    "variant": "framed",
+    "file": "/products/green-cardamom-elaichi-50-g.20e13cef.webp",
+    "version": "20e13cef",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/catch-Catch-Green-Cardamom-50g/dp/B0CR68CLL3",
@@ -1547,13 +1476,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.165Z"
+    "notes": "Amazon listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:43:24.596Z"
   },
   "green-chilli-hari-mirch-100-g": {
-    "file": "/products/green-chilli-hari-mirch-100-g.6e8a6ba7.webp",
-    "version": "6e8a6ba7",
-    "variant": "framed",
+    "file": "/products/green-chilli-hari-mirch-100-g.ca240477.webp",
+    "version": "ca240477",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Blinkit product listing",
     "source_url": "https://blinkit.com/prn/green-chilli-100-g/prid/3897",
@@ -1564,13 +1493,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Blinkit listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.166Z"
+    "notes": "Blinkit listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:43:26.889Z"
   },
   "green-moong-whole-1-kg": {
-    "file": "/products/green-moong-whole-1-kg.3bf74006.webp",
-    "version": "3bf74006",
-    "variant": "framed",
+    "file": "/products/green-moong-whole-1-kg.8e9332c5.webp",
+    "version": "8e9332c5",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Blinkit product listing",
     "source_url": "https://blinkit.com/prn/rajdhani-whole-moong-sabut/prid/19085",
@@ -1581,13 +1510,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Blinkit listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.167Z"
+    "notes": "Blinkit listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:43:29.506Z"
   },
   "haldiram-s-aloo-bhujia-400-g": {
-    "file": "/products/haldiram-s-aloo-bhujia-400-g.0ae55997.webp",
-    "version": "0ae55997",
-    "variant": "framed",
+    "file": "/products/haldiram-s-aloo-bhujia-400-g.a8b8639d.webp",
+    "version": "a8b8639d",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.com/Haldirams-HALDIRAMS-Bhujia-400G/dp/B012S2KIGS",
@@ -1598,13 +1527,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1224×1600), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.169Z"
+    "notes": "Amazon listing pack shot (1224×1600), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:43:32.742Z"
   },
   "haldiram-s-navrattan-mixture-400-g": {
-    "file": "/products/haldiram-s-navrattan-mixture-400-g.0ceba7e5.webp",
-    "version": "0ceba7e5",
-    "variant": "framed",
+    "file": "/products/haldiram-s-navrattan-mixture-400-g.18375d3e.webp",
+    "version": "18375d3e",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Blinkit product listing",
     "source_url": "https://blinkit.com/prn/haldirams-navratan-mixture-namkeen/prid/17705",
@@ -1615,13 +1544,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Blinkit listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.171Z"
+    "notes": "Blinkit listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:43:35.334Z"
   },
   "happilo-premium-almonds-250-g": {
-    "file": "/products/happilo-premium-almonds-250-g.fdda67b3.webp",
-    "version": "fdda67b3",
-    "variant": "framed",
+    "file": "/products/happilo-premium-almonds-250-g.3d72c57f.webp",
+    "version": "3d72c57f",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Happilo-Natural-Premium-Californian-Almonds/dp/B0992KMQYL",
@@ -1632,13 +1561,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1500×1500), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.173Z"
+    "notes": "Amazon listing pack shot (1500×1500), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:43:37.733Z"
   },
   "harpic-power-plus-toilet-cleaner-1-l": {
-    "file": "/products/harpic-power-plus-toilet-cleaner-1-l.76224e07.webp",
-    "version": "76224e07",
-    "variant": "framed",
+    "file": "/products/harpic-power-plus-toilet-cleaner-1-l.263afbec.webp",
+    "version": "263afbec",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/harpic-powerplus-toilet-cleaner-original/dp/b00nwfvvg2",
@@ -1649,13 +1578,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1500×1500), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.174Z"
+    "notes": "Amazon listing pack shot (1500×1500), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:43:39.886Z"
   },
   "himalaya-baby-powder-200-g": {
-    "file": "/products/himalaya-baby-powder-200-g.e4aade5f.webp",
-    "version": "e4aade5f",
-    "variant": "framed",
+    "file": "/products/himalaya-baby-powder-200-g.5b68654e.webp",
+    "version": "5b68654e",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.co.za/Himalaya-Baby-Powder-200-g/dp/B089MF2FZG",
@@ -1666,13 +1595,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1600×1600), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.174Z"
+    "notes": "Amazon listing pack shot (1600×1600), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:43:41.927Z"
   },
   "india-gate-basmati-rice-classic-5-kg": {
-    "file": "/products/india-gate-basmati-rice-classic-5-kg.94ee8ce1.webp",
-    "version": "94ee8ce1",
-    "variant": "framed",
+    "file": "/products/india-gate-basmati-rice-classic-5-kg.15c45a5d.webp",
+    "version": "15c45a5d",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/India-Gate-Basmati-Rice-Classic/dp/B011PQTBBG",
@@ -1683,13 +1612,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1600×1600), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.176Z"
+    "notes": "Amazon listing pack shot (1600×1600), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:43:44.263Z"
   },
   "johnson-s-baby-wipes-72-wipes": {
-    "file": "/products/johnson-s-baby-wipes-72-wipes.03b9feef.webp",
-    "version": "03b9feef",
-    "variant": "framed",
+    "file": "/products/johnson-s-baby-wipes-72-wipes.3ca98c00.webp",
+    "version": "3ca98c00",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Blinkit product listing",
     "source_url": "https://blinkit.com/prn/johnsons-skincare-baby-wipes/prid/18334",
@@ -1700,13 +1629,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Blinkit listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.177Z"
+    "notes": "Blinkit listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:43:46.444Z"
   },
   "kinley-water-1-l": {
-    "file": "/products/kinley-water-1-l.26cbd772.webp",
-    "version": "26cbd772",
-    "variant": "framed",
+    "file": "/products/kinley-water-1-l.8c68b0e9.webp",
+    "version": "8c68b0e9",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Kinley-Drinking-Water-1L/dp/B075335G66",
@@ -1717,13 +1646,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1500×1500), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.177Z"
+    "notes": "Amazon listing pack shot (1500×1500), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:43:48.482Z"
   },
   "lakme-9to5-compact-9-g": {
-    "file": "/products/lakme-9to5-compact-9-g.8b716d33.webp",
-    "version": "8b716d33",
-    "variant": "framed",
+    "file": "/products/lakme-9to5-compact-9-g.609b75bb.webp",
+    "version": "609b75bb",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.ae/Foundation-Compact-Coverage-Concelas-Blemishes/dp/B0744RQRG8",
@@ -1734,13 +1663,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (970×600), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.178Z"
+    "notes": "Amazon listing pack shot (970×600), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:43:50.783Z"
   },
   "lifebuoy-total-10-soap-pack-of-4": {
-    "file": "/products/lifebuoy-total-10-soap-pack-of-4.bf8819e1.webp",
-    "version": "bf8819e1",
-    "variant": "framed",
+    "file": "/products/lifebuoy-total-10-soap-pack-of-4.7a949ee0.webp",
+    "version": "7a949ee0",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Lifebuoy-Soap-Total-4x125g-Pack/dp/B01JZ6ZO8C",
@@ -1751,13 +1680,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1500×1500), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.179Z"
+    "notes": "Amazon listing pack shot (1500×1500), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:43:53.514Z"
   },
   "mamypoko-pants-extra-absorb-l-44-pants": {
-    "file": "/products/mamypoko-pants-extra-absorb-l-44-pants.6d1fbe75.webp",
-    "version": "6d1fbe75",
-    "variant": "framed",
+    "file": "/products/mamypoko-pants-extra-absorb-l-44-pants.1e534eb3.webp",
+    "version": "1e534eb3",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/MamyPoko-Pants-Extra-Absorb-Diaper/dp/B07TFV8C4C",
@@ -1768,13 +1697,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.179Z"
+    "notes": "Amazon listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:43:56.282Z"
   },
   "mdh-deggi-mirch-100-g": {
-    "file": "/products/mdh-deggi-mirch-100-g.8ecf980a.webp",
-    "version": "8ecf980a",
-    "variant": "framed",
+    "file": "/products/mdh-deggi-mirch-100-g.96de868c.webp",
+    "version": "96de868c",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "BigBasket product listing",
     "source_url": "https://www.bigbasket.com/pd/260799/mdh-powder-deggi-mirch-100-g-carton/",
@@ -1785,13 +1714,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "BigBasket listing pack shot (900×900), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.181Z"
+    "notes": "BigBasket listing pack shot (900×900), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:43:58.649Z"
   },
   "merta-local-chakki-atta-sharbati-5-kg": {
-    "file": "/products/merta-local-chakki-atta-sharbati-5-kg.93133d06.webp",
-    "version": "93133d06",
-    "variant": "framed",
+    "file": "/products/merta-local-chakki-atta-sharbati-5-kg.3003dae1.webp",
+    "version": "3003dae1",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "BigBasket product listing",
     "source_url": "https://www.bigbasket.com/pd/40342016/mill-it-fresh-sharbati-chakki-atta-5-kg/",
@@ -1802,13 +1731,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "BigBasket listing pack shot (900×900), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.183Z"
+    "notes": "BigBasket listing pack shot (900×900), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:44:01.153Z"
   },
   "milton-thermosteel-flask-1-l-1-l": {
-    "file": "/products/milton-thermosteel-flask-1-l-1-l.773473da.webp",
-    "version": "773473da",
-    "variant": "framed",
+    "file": "/products/milton-thermosteel-flask-1-l-1-l.78d130f0.webp",
+    "version": "78d130f0",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "BigBasket product listing",
     "source_url": "https://www.bigbasket.com/pd/40025248/milton-flask-thermosteel-flip-lid-1-l-box/",
@@ -1819,13 +1748,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "BigBasket listing pack shot (900×900), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.185Z"
+    "notes": "BigBasket listing pack shot (900×900), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:44:03.356Z"
   },
   "nestle-cerelac-wheat-apple-300-g": {
-    "file": "/products/nestle-cerelac-wheat-apple-300-g.153547fe.webp",
-    "version": "153547fe",
-    "variant": "framed",
+    "file": "/products/nestle-cerelac-wheat-apple-300-g.2626ad2d.webp",
+    "version": "2626ad2d",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/CERELAC-Refined-Protein-Calcium-Friendly/dp/B0DHS74TJ6",
@@ -1836,13 +1765,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1600×1600), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.187Z"
+    "notes": "Amazon listing pack shot (1600×1600), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:44:06.238Z"
   },
   "nestle-kitkat-4-finger-38-5-g": {
-    "file": "/products/nestle-kitkat-4-finger-38-5-g.1cadd477.webp",
-    "version": "1cadd477",
-    "variant": "framed",
+    "file": "/products/nestle-kitkat-4-finger-38-5-g.6a6e658c.webp",
+    "version": "6a6e658c",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Blinkit product listing",
     "source_url": "https://blinkit.com/prn/nestle-kitkat-4-fingers-wafer-bar/prid/212722",
@@ -1853,13 +1782,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Blinkit listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.189Z"
+    "notes": "Blinkit listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:44:08.810Z"
   },
   "nirma-washing-powder-1-kg": {
-    "file": "/products/nirma-washing-powder-1-kg.e08c19cb.webp",
-    "version": "e08c19cb",
-    "variant": "framed",
+    "file": "/products/nirma-washing-powder-1-kg.37a4823e.webp",
+    "version": "37a4823e",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "BigBasket product listing",
     "source_url": "https://www.bigbasket.com/pd/285686/nirma-detergent-powder-1-kg-pouch/",
@@ -1870,13 +1799,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "BigBasket listing pack shot (900×900), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.190Z"
+    "notes": "BigBasket listing pack shot (900×900), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:44:12.154Z"
   },
   "nivea-soft-moisturising-cream-200-ml": {
-    "file": "/products/nivea-soft-moisturising-cream-200-ml.4215ab4d.webp",
-    "version": "4215ab4d",
-    "variant": "framed",
+    "file": "/products/nivea-soft-moisturising-cream-200-ml.2ade16a4.webp",
+    "version": "2ade16a4",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Blinkit product listing",
     "source_url": "https://blinkit.com/prn/nivea-soft-moisturizing-cream/prid/108101",
@@ -1887,13 +1816,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Blinkit listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.193Z"
+    "notes": "Blinkit listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:44:15.001Z"
   },
   "pantene-hair-fall-control-shampoo-340-ml": {
-    "file": "/products/pantene-hair-fall-control-shampoo-340-ml.483015f8.webp",
-    "version": "483015f8",
-    "variant": "framed",
+    "file": "/products/pantene-hair-fall-control-shampoo-340-ml.fdea20b6.webp",
+    "version": "fdea20b6",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "BigBasket product listing",
     "source_url": "https://www.animalia-life.club/qa/pictures/pantene-hair-fall-control-shampoo",
@@ -1904,13 +1833,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "BigBasket listing pack shot (900×900), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.196Z"
+    "notes": "BigBasket listing pack shot (900×900), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:44:17.038Z"
   },
   "papaya-1-pc-approx-1-kg": {
-    "file": "/products/papaya-1-pc-approx-1-kg.9259c6e2.webp",
-    "version": "9259c6e2",
-    "variant": "framed",
+    "file": "/products/papaya-1-pc-approx-1-kg.f02924fd.webp",
+    "version": "f02924fd",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Fresh-Organic-Papaya-1-Piece/dp/B07CN6NZ9G",
@@ -1921,13 +1850,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1500×1500), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.198Z"
+    "notes": "Amazon listing pack shot (1500×1500), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:44:19.434Z"
   },
   "patanjali-jaggery-gud-1-kg": {
-    "file": "/products/patanjali-jaggery-gud-1-kg.b12b848a.webp",
-    "version": "b12b848a",
-    "variant": "framed",
+    "file": "/products/patanjali-jaggery-gud-1-kg.430cf6eb.webp",
+    "version": "430cf6eb",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Patanjali product listing",
     "source_url": "https://www.patanjaliayurved.net/product/natural-food-products/sugar/patanjali-madhuram-sugar-jaggery-powder/823",
@@ -1938,13 +1867,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Patanjali listing pack shot (1200×1200), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.201Z"
+    "notes": "Patanjali listing pack shot (1200×1200), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:44:22.863Z"
   },
   "pepsi-750-ml": {
-    "file": "/products/pepsi-750-ml.702d84e1.webp",
-    "version": "702d84e1",
-    "variant": "framed",
+    "file": "/products/pepsi-750-ml.a715b8eb.webp",
+    "version": "a715b8eb",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "BigBasket product listing",
     "source_url": "https://www.bigbasket.com/pd/251047/pepsi-soft-drink-750-ml/",
@@ -1955,13 +1884,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "BigBasket listing pack shot (900×900), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.202Z"
+    "notes": "BigBasket listing pack shot (900×900), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:44:24.945Z"
   },
   "potato-aloo-1-kg": {
-    "file": "/products/potato-aloo-1-kg.52bda7a7.webp",
-    "version": "52bda7a7",
-    "variant": "framed",
+    "file": "/products/potato-aloo-1-kg.30c0cac2.webp",
+    "version": "30c0cac2",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Blinkit product listing",
     "source_url": "https://blinkit.com/prn/product/prid/560715",
@@ -1972,13 +1901,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Blinkit listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.204Z"
+    "notes": "Blinkit listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:44:27.230Z"
   },
   "rajdhani-besan-1-kg": {
-    "file": "/products/rajdhani-besan-1-kg.9490ec2c.webp",
-    "version": "9490ec2c",
-    "variant": "framed",
+    "file": "/products/rajdhani-besan-1-kg.8c10618f.webp",
+    "version": "8c10618f",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "BigBasket product listing",
     "source_url": "https://www.bigbasket.com/pd/40093701/rajdhani-besan-gram-flour-1-kg-0/",
@@ -1989,13 +1918,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "BigBasket listing pack shot (900×900), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.208Z"
+    "notes": "BigBasket listing pack shot (900×900), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:44:30.586Z"
   },
   "rajma-chitra-1-kg": {
-    "file": "/products/rajma-chitra-1-kg.cdf3c3da.webp",
-    "version": "cdf3c3da",
-    "variant": "framed",
+    "file": "/products/rajma-chitra-1-kg.2c341e21.webp",
+    "version": "2c341e21",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.in/Rajdhani-Rajma-Chitra-1kg/dp/B01H5DRWZK",
@@ -2006,13 +1935,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1343×1600), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.210Z"
+    "notes": "Amazon listing pack shot (1343×1600), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:44:33.190Z"
   },
   "santoor-sandal-turmeric-soap-pack-of-4": {
-    "file": "/products/santoor-sandal-turmeric-soap-pack-of-4.d16b0d86.webp",
-    "version": "d16b0d86",
-    "variant": "framed",
+    "file": "/products/santoor-sandal-turmeric-soap-pack-of-4.eb024464.webp",
+    "version": "eb024464",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Amazon product listing",
     "source_url": "https://www.amazon.co.uk/Santoor-Sandal-Turmeric-Soap-150g/dp/B00U13NU0S",
@@ -2023,13 +1952,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Amazon listing pack shot (1500×1500), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.212Z"
+    "notes": "Amazon listing pack shot (1500×1500), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:44:35.678Z"
   },
   "saras-desi-ghee-500-ml": {
-    "file": "/products/saras-desi-ghee-500-ml.8a5eed92.webp",
-    "version": "8a5eed92",
-    "variant": "framed",
+    "file": "/products/saras-desi-ghee-500-ml.e2fbc22d.webp",
+    "version": "e2fbc22d",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Blinkit product listing",
     "source_url": "https://blinkit.com/prn/saras-ghee/prid/496317",
@@ -2040,13 +1969,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Blinkit listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.213Z"
+    "notes": "Blinkit listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:44:39.342Z"
   },
   "saras-gold-milk-500-ml": {
-    "file": "/products/saras-gold-milk-500-ml.a9ac7862.webp",
-    "version": "a9ac7862",
-    "variant": "framed",
+    "file": "/products/saras-gold-milk-500-ml.fa7e1adb.webp",
+    "version": "fa7e1adb",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Blinkit product listing",
     "source_url": "https://blinkit.com/prn/saras-gold-full-cream-milk/prid/46256",
@@ -2057,13 +1986,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Blinkit listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.213Z"
+    "notes": "Blinkit listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:44:42.642Z"
   },
   "saras-taaza-toned-milk-1-l": {
-    "file": "/products/saras-taaza-toned-milk-1-l.04638638.webp",
-    "version": "04638638",
-    "variant": "framed",
+    "file": "/products/saras-taaza-toned-milk-1-l.7a1b4929.webp",
+    "version": "7a1b4929",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Blinkit product listing",
     "source_url": "https://blinkit.com/prn/saras-toned-milk/prid/46258",
@@ -2074,13 +2003,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Blinkit listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.215Z"
+    "notes": "Blinkit listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:44:45.843Z"
   },
   "sprite-750-ml": {
-    "file": "/products/sprite-750-ml.74104ac8.webp",
-    "version": "74104ac8",
-    "variant": "framed",
+    "file": "/products/sprite-750-ml.416898c1.webp",
+    "version": "416898c1",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "BigBasket product listing",
     "source_url": "https://www.bigbasket.com/pd/251006/sprite-soft-drink-lime-flavoured-750-ml/",
@@ -2091,13 +2020,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "BigBasket listing pack shot (900×900), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.215Z"
+    "notes": "BigBasket listing pack shot (900×900), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:44:47.891Z"
   },
   "suji-rava-1-kg": {
-    "file": "/products/suji-rava-1-kg.c6cf486c.webp",
-    "version": "c6cf486c",
-    "variant": "framed",
+    "file": "/products/suji-rava-1-kg.c4610f01.webp",
+    "version": "c4610f01",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Blinkit product listing",
     "source_url": "https://blinkit.com/prn/rajdhani-soojirava/prid/12",
@@ -2108,13 +2037,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Blinkit listing pack shot (480×480), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.216Z"
+    "notes": "Blinkit listing pack shot (480×480), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:44:50.976Z"
   },
   "taj-mahal-tea-250-g": {
-    "file": "/products/taj-mahal-tea-250-g.dd4aa953.webp",
-    "version": "dd4aa953",
-    "variant": "framed",
+    "file": "/products/taj-mahal-tea-250-g.a101800b.webp",
+    "version": "a101800b",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "BigBasket product listing",
     "source_url": "https://www.bigbasket.com/pd/266551/taj-mahal-tea-250-g/",
@@ -2125,13 +2054,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "BigBasket listing pack shot (900×900), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.217Z"
+    "notes": "BigBasket listing pack shot (900×900), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:44:53.782Z"
   },
   "uncle-chipps-spicy-treat-55-g": {
-    "file": "/products/uncle-chipps-spicy-treat-55-g.68b7f6d4.webp",
-    "version": "68b7f6d4",
-    "variant": "framed",
+    "file": "/products/uncle-chipps-spicy-treat-55-g.899e2e40.webp",
+    "version": "899e2e40",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Blinkit product listing",
     "source_url": "https://blinkit.com/prn/uncle-chipps-spicy-treat-flavour-potato-chips/prid/11150",
@@ -2142,13 +2071,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Blinkit listing pack shot (1000×1000), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.218Z"
+    "notes": "Blinkit listing pack shot (1000×1000), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:44:56.710Z"
   },
   "whisper-ultra-clean-xl-30-pads": {
-    "file": "/products/whisper-ultra-clean-xl-30-pads.385844bf.webp",
-    "version": "385844bf",
-    "variant": "framed",
+    "file": "/products/whisper-ultra-clean-xl-30-pads.ba59c854.webp",
+    "version": "ba59c854",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "Flipkart product listing",
     "source_url": "https://www.shopsy.in/whisper-ultra-clean-xl-wings-30-pads-pack-sanitary-pad/p/itm4a2e52df35e25",
@@ -2159,13 +2088,13 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "Flipkart listing pack shot (832×530), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.219Z"
+    "notes": "Flipkart listing pack shot (832×530), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:44:59.154Z"
   },
   "whole-black-pepper-kali-mirch-100-g": {
-    "file": "/products/whole-black-pepper-kali-mirch-100-g.04a81b02.webp",
-    "version": "04a81b02",
-    "variant": "framed",
+    "file": "/products/whole-black-pepper-kali-mirch-100-g.0fcd4555.webp",
+    "version": "0fcd4555",
+    "variant": "cutout",
     "kind": "packaging",
     "source": "BigBasket product listing",
     "source_url": "https://www.bigbasket.com/pd/40351649/catch-kali-mirchblack-pepper-whole-50-g/",
@@ -2176,7 +2105,204 @@
     "matched_quantity": null,
     "size_match": "exact",
     "confidence": 1,
-    "notes": "BigBasket listing pack shot (900×900), approved at card size",
-    "updated_at": "2026-09-22T17:33:51.220Z"
+    "notes": "BigBasket listing pack shot (900×900), approved at card size; background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:45:01.658Z"
+  },
+  "garlic-lehsun-250-g": {
+    "kind": "commodity",
+    "source": "Wikimedia Commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Garlic_Bulbs_(Unsplash).jpg",
+    "license": "CC0",
+    "license_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+    "attribution": "Matthew Pilachowski matthewpilachowski",
+    "barcode": null,
+    "matched_name": "Garlic Bulbs (Unsplash).jpg",
+    "matched_quantity": null,
+    "size_match": null,
+    "confidence": null,
+    "file": "/products/garlic-lehsun-250-g.43c16bc2.webp",
+    "version": "43c16bc2",
+    "variant": "cutout",
+    "notes": "background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:45:05.045Z"
+  },
+  "capsicum-shimla-mirch-250-g": {
+    "kind": "commodity",
+    "source": "Wikimedia Commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Green_pepper_20101113.jpg",
+    "license": "Public domain",
+    "license_url": null,
+    "attribution": "Batholith (talk)",
+    "barcode": null,
+    "matched_name": "Green pepper 20101113.jpg",
+    "matched_quantity": null,
+    "size_match": null,
+    "confidence": null,
+    "file": "/products/capsicum-shimla-mirch-250-g.553e6f05.webp",
+    "version": "553e6f05",
+    "variant": "cutout",
+    "notes": "background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:45:07.651Z"
+  },
+  "guava-amrood-500-g": {
+    "kind": "commodity",
+    "source": "Wikimedia Commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Psidium_guajava_(fruit).jpg",
+    "license": "CC BY-SA 3.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+    "attribution": "Hans Hillewaert",
+    "barcode": null,
+    "matched_name": "Psidium guajava (fruit).jpg",
+    "matched_quantity": null,
+    "size_match": null,
+    "confidence": null,
+    "file": "/products/guava-amrood-500-g.b54daf82.webp",
+    "version": "b54daf82",
+    "variant": "cutout",
+    "notes": "background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:45:18.419Z"
+  },
+  "lemon-nimbu-4-pcs": {
+    "kind": "commodity",
+    "source": "Wikimedia Commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Lemon.jpg",
+    "license": "CC BY-SA 2.5",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.5",
+    "attribution": "André Karwath aka Aka",
+    "barcode": null,
+    "matched_name": "Lemon.jpg",
+    "matched_quantity": null,
+    "size_match": null,
+    "confidence": null,
+    "file": "/products/lemon-nimbu-4-pcs.0525fc7e.webp",
+    "version": "0525fc7e",
+    "variant": "cutout",
+    "notes": "background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:45:20.989Z"
+  },
+  "orange-santra-1-kg": {
+    "kind": "commodity",
+    "source": "Wikimedia Commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Orange-Fruit-Pieces.jpg",
+    "license": "CC BY-SA 3.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+    "attribution": "Evan-Amos",
+    "barcode": null,
+    "matched_name": "Orange-Fruit-Pieces.jpg",
+    "matched_quantity": null,
+    "size_match": null,
+    "confidence": null,
+    "file": "/products/orange-santra-1-kg.da8c6d55.webp",
+    "version": "da8c6d55",
+    "variant": "cutout",
+    "notes": "background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:45:23.256Z"
+  },
+  "mint-leaves-pudina-100-g": {
+    "kind": "commodity",
+    "source": "Wikimedia Commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Mint_leaves_raster.jpg",
+    "license": "CC0",
+    "license_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+    "attribution": "Aviavlad",
+    "barcode": null,
+    "matched_name": "Mint leaves raster.jpg",
+    "matched_quantity": null,
+    "size_match": null,
+    "confidence": null,
+    "file": "/products/mint-leaves-pudina-100-g.3f8259c8.webp",
+    "version": "3f8259c8",
+    "variant": "cutout",
+    "notes": "background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:45:28.995Z"
+  },
+  "sweet-lime-mosambi-1-kg": {
+    "kind": "commodity",
+    "source": "Wikimedia Commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Two_limes.jpg",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "attribution": "Rhododendrites",
+    "barcode": null,
+    "matched_name": "Two limes.jpg",
+    "matched_quantity": null,
+    "size_match": null,
+    "confidence": null,
+    "file": "/products/sweet-lime-mosambi-1-kg.e342a2af.webp",
+    "version": "e342a2af",
+    "variant": "cutout",
+    "notes": "background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:45:31.226Z"
+  },
+  "grapes-angoor-500-g": {
+    "kind": "commodity",
+    "source": "Wikimedia Commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Grapes_bunch_green.png",
+    "license": "Public domain",
+    "license_url": null,
+    "attribution": "Χρήστης:Andrikkos",
+    "barcode": null,
+    "matched_name": "Grapes bunch green.png",
+    "matched_quantity": null,
+    "size_match": null,
+    "confidence": null,
+    "file": "/products/grapes-angoor-500-g.501f4e5c.webp",
+    "version": "501f4e5c",
+    "variant": "cutout",
+    "notes": "background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:45:34.131Z"
+  },
+  "tender-coconut-1-pc": {
+    "kind": "commodity",
+    "source": "Wikimedia Commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Tender_coconuts_of_Tamilnadu.jpg",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "attribution": "Thamizhpparithi Maari",
+    "barcode": null,
+    "matched_name": "Tender coconuts of Tamilnadu.jpg",
+    "matched_quantity": null,
+    "size_match": null,
+    "confidence": null,
+    "file": "/products/tender-coconut-1-pc.c8a314af.webp",
+    "version": "c8a314af",
+    "variant": "cutout",
+    "notes": "background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:45:36.572Z"
+  },
+  "custard-apple-sitaphal-500-g": {
+    "kind": "commodity",
+    "source": "Wikimedia Commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Custard_apple_20220722_174717.jpg",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "attribution": "Dr. Satish Upalkar",
+    "barcode": null,
+    "matched_name": "Custard apple 20220722 174717.jpg",
+    "matched_quantity": null,
+    "size_match": null,
+    "confidence": null,
+    "file": "/products/custard-apple-sitaphal-500-g.72324d8b.webp",
+    "version": "72324d8b",
+    "variant": "cutout",
+    "notes": "background removed (ISNet), transparent cutout",
+    "updated_at": "2026-10-10T05:45:41.964Z"
+  },
+  "shyam-filtered-groundnut-oil-15-kg": {
+    "file": "/products/shyam-filtered-groundnut-oil-15-kg.739ca3a6.webp",
+    "version": "739ca3a6",
+    "variant": "cutout",
+    "kind": "packaging",
+    "source": "Supplied by Merta Deal",
+    "source_url": null,
+    "license": "Pack shots supplied by the store owner",
+    "attribution": "Merta Deal",
+    "barcode": null,
+    "matched_name": "Shyam Filtered Groundnut Oil 15 kg tin (front + Hindi pack)",
+    "matched_quantity": "15 kg",
+    "size_match": "exact",
+    "confidence": 1,
+    "notes": "owner-supplied originals at native resolution, lossless; background removed (ISNet); extra: /products/shyam-filtered-groundnut-oil-15-kg-2.9540d2ee.webp (Hindi pack, backdrop colour-keyed)",
+    "updated_at": "2026-10-10T06:14:08.003Z"
   }
 }

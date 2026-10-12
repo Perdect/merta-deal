@@ -97,7 +97,7 @@ export function OrderTrackingView({ initial, placed, paymentState }: { initial: 
           <KeyValue items={[
             { label: "Items", value: formatINR(o.subtotal) },
             ...(Number(o.coupon_discount) > 0 ? [{ label: `Coupon ${o.coupon_code}`, value: `− ${formatINR(o.coupon_discount)}` }] : []),
-            { label: "Delivery", value: Number(o.delivery_fee) ? formatINR(o.delivery_fee) : "FREE" }, { label: "Platform fee", value: formatINR(o.platform_fee) }, { label: "GST on fees", value: formatINR(o.tax_amount, { precise: true }) },
+            { label: "Delivery", value: Number(o.delivery_fee) ? formatINR(o.delivery_fee) : "FREE" }, ...(Number(o.platform_fee) > 0 ? [{ label: "Platform fee", value: formatINR(o.platform_fee) }] : []), ...(Number(o.tax_amount) > 0 ? [{ label: "GST on fees", value: formatINR(o.tax_amount, { precise: true }) }] : []),
             { label: "Total", value: formatINR(o.total, { precise: true }), strong: true },
           ]} />
           <p className="mt-3 text-xs text-ink-3">{PAYMENT_METHOD_LABEL[o.payment_method]} · {PAYMENT_STATUS_LABEL[o.payment_status]}</p>
@@ -105,7 +105,7 @@ export function OrderTrackingView({ initial, placed, paymentState }: { initial: 
         <section className="rounded-lg border border-line bg-card p-4 text-sm">
           <p className="flex items-center gap-2 font-bold text-ink"><StoreIcon className="h-4 w-4 text-brand-600" />{t.store.name}</p><p className="mt-0.5 text-xs text-ink-3">{t.store.address_line1}, {t.store.area}</p>
           <a href={`tel:${t.store.phone}`} className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-brand-700"><Phone className="h-3 w-3" /> Call store</a>
-          <p className="mt-3 flex items-center gap-2 font-bold text-ink"><MapPin className="h-4 w-4 text-info" />Deliver to</p><p className="mt-0.5 text-xs text-ink-3">{addr.full_name} · {addr.phone}<br />{addr.house}, {addr.street}, {addr.area}{addr.landmark ? `, ${addr.landmark}` : ""}, {addr.city} – {addr.pincode}</p>
+          <p className="mt-3 flex items-center gap-2 font-bold text-ink"><MapPin className="h-4 w-4 text-info" />Deliver to</p><p className="mt-0.5 text-xs text-ink-3">{addr.full_name} · {addr.phone}<br />{[addr.house, addr.street, addr.area, addr.landmark, `${addr.city} – ${addr.pincode}`].filter(Boolean).join(", ")}</p>
           {o.delivery_instructions ? <p className="mt-2 rounded-sm bg-surface px-2 py-1.5 text-xs text-ink-2">“{o.delivery_instructions}”</p> : null}
           <p className="mt-3 text-xs text-ink-3">Placed {formatDateTime(o.created_at)}</p>
         </section>

@@ -11,7 +11,7 @@ export function WishlistButton({ productId, initial, className, size = 16 }: { p
   return (
     <button type="button" aria-pressed={wished} aria-label={wished ? "Remove from wishlist" : "Add to wishlist"} disabled={busy}
       onClick={async () => { setBusy(true); setWished(!wished); const r = await toggleWishlistAction(productId); if (!r.ok) { setWished(wished); toast.error(r.error); } setBusy(false); }}
-      className={cn("flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-card transition-transform active:scale-90", className)}>
+      className={cn("tap flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-card transition-transform active:scale-90", className)}>
       <Heart style={{ width: size, height: size }} className={cn(wished ? "fill-danger text-danger" : "text-ink-3")} />
     </button>
   );

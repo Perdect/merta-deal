@@ -24,6 +24,7 @@ export function AddressForm({ initial, onSaved, onCancel, defaultName, defaultPh
 
   const locate = () => {
     if (!navigator.geolocation) { toast.error("Location is not supported on this device"); return; }
+    if (!window.isSecureContext) { toast.error("Location needs a secure (https) connection"); return; }
     setLocating(true);
     navigator.geolocation.getCurrentPosition(async (pos) => {
       set("lat", pos.coords.latitude); set("lng", pos.coords.longitude);
@@ -34,7 +35,10 @@ export function AddressForm({ initial, onSaved, onCancel, defaultName, defaultPh
         else toast.info("Location pinned", d.message ?? "Fill in the address details.");
       } catch { toast.info("Location pinned"); }
       setLocating(false);
-    }, () => { toast.error("Could not get your location. Allow location access and try again."); setLocating(false); }, { enableHighAccuracy: true, timeout: 10000 });
+    }, (err) => {
+      toast.error(err.code === err.PERMISSION_DENIED ? "Location permission is blocked. Allow it in your browser settings." : "Could not get your location. Type the address instead.");
+      setLocating(false);
+    }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 });
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -53,15 +57,16 @@ export function AddressForm({ initial, onSaved, onCancel, defaultName, defaultPh
         ))}
       </div>
       <Button type="button" variant="secondary" fullWidth loading={locating} onClick={locate}><LocateFixed className="h-4 w-4" /> {form.lat ? "Location pinned · Update GPS" : "Use current location (GPS)"}</Button>
+      {/* Only what a rider needs: house, area, receiver and phone. Street and landmark are optional; city and pincode come prefilled. */}
       <div className="grid gap-3 sm:grid-cols-2">
-        <Input label="Full name" required value={form.full_name} onChange={(e) => set("full_name", e.target.value)} error={errors.full_name} autoComplete="name" />
-        <Input label="Mobile number" required inputMode="numeric" value={form.phone} onChange={(e) => set("phone", e.target.value.replace(/\D/g, "").slice(0, 10))} error={errors.phone} autoComplete="tel" />
-        <Input label="House / Flat / Shop no." required value={form.house} onChange={(e) => set("house", e.target.value)} error={errors.house} />
-        <Input label="Street / Colony" required value={form.street} onChange={(e) => set("street", e.target.value)} error={errors.street} />
-        <Input label="Area" required value={form.area} onChange={(e) => set("area", e.target.value)} error={errors.area} placeholder="e.g. Sadar Bazaar" />
-        <Input label="Landmark" value={form.landmark ?? ""} onChange={(e) => set("landmark", e.target.value)} placeholder="Near Ghanti Ghar" />
-        <Input label="City" required value={form.city} onChange={(e) => set("city", e.target.value)} error={errors.city} />
-        <Input label="Pincode" required inputMode="numeric" value={form.pincode} onChange={(e) => set("pincode", e.target.value.replace(/\D/g, "").slice(0, 6))} error={errors.pincode} />
+        <Input label="House / Flat / Shop no." required value={form.house} onChange={(e) => set("house", e.target.value)} error={errors.house} placeholder="e.g. 12, First floor" autoComplete="address-line1" />
+        <Input label="Area / Colony" required value={form.area} onChange={(e) => set("area", e.target.value)} error={errors.area} placeholder="e.g. Sadar Bazaar" autoComplete="address-level3" />
+        <Input label="Street (optional)" value={form.street ?? ""} onChange={(e) => set("street", e.target.value)} error={errors.street} placeholder="e.g. Station Road" autoComplete="address-line2" />
+        <Input label="Landmark (optional)" value={form.landmark ?? ""} onChange={(e) => set("landmark", e.target.value)} placeholder="e.g. Near Ghanti Ghar" />
+        <Input label="Receiver's name" required value={form.full_name} onChange={(e) => set("full_name", e.target.value)} error={errors.full_name} autoComplete="name" />
+        <Input label="Mobile number" required inputMode="numeric" value={form.phone} onChange={(e) => set("phone", e.target.value.replace(/\D/g, "").slice(0, 10))} error={errors.phone} autoComplete="tel-national" placeholder="10-digit number" />
+        <Input label="City" required value={form.city} onChange={(e) => set("city", e.target.value)} error={errors.city} autoComplete="address-level2" />
+        <Input label="Pincode" required inputMode="numeric" value={form.pincode} onChange={(e) => set("pincode", e.target.value.replace(/\D/g, "").slice(0, 6))} error={errors.pincode} autoComplete="postal-code" />
         {form.type === "other" ? <Input label="Label" value={form.label ?? ""} onChange={(e) => set("label", e.target.value)} placeholder="e.g. Mom's house" /> : null}
       </div>
       <Checkbox label="Make this my default address" checked={Boolean(form.is_default)} onChange={(e) => set("is_default", e.target.checked)} />

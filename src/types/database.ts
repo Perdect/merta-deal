@@ -1506,6 +1506,10 @@ export type Database = {
           nutrition: Json | null
           manufacturer: string | null
           country_of_origin: string | null
+          shelf_life: string | null
+          seller_name: string | null
+          seller_address: string | null
+          seller_license: string | null
           weight_value: number
           weight_unit: string
           pack_label: string | null
@@ -1537,6 +1541,10 @@ export type Database = {
           nutrition?: Json | null
           manufacturer?: string | null
           country_of_origin?: string | null
+          shelf_life?: string | null
+          seller_name?: string | null
+          seller_address?: string | null
+          seller_license?: string | null
           weight_value: number
           weight_unit?: string
           pack_label?: string | null
@@ -1568,6 +1576,10 @@ export type Database = {
           nutrition?: Json | null
           manufacturer?: string | null
           country_of_origin?: string | null
+          shelf_life?: string | null
+          seller_name?: string | null
+          seller_address?: string | null
+          seller_license?: string | null
           weight_value?: number
           weight_unit?: string
           pack_label?: string | null
@@ -2935,6 +2947,12 @@ export type Database = {
           p_instructions?: string
           p_scheduled_start?: string
           p_scheduled_end?: string
+        }
+        Returns: Json
+      }
+      merge_guest_cart: {
+        Args: {
+          p_guest_user_id: string
         }
         Returns: Json
       }

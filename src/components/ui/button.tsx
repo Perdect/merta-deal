@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 export type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "danger" | "saffron" | "link";
 export type ButtonSize = "xs" | "sm" | "md" | "lg" | "icon";
 
-const base = "inline-flex items-center justify-center gap-2 font-semibold whitespace-nowrap select-none transition-[background-color,box-shadow,transform,opacity] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 rounded-sm";
+const base = "tap inline-flex items-center justify-center gap-2 font-semibold whitespace-nowrap select-none transition-[background-color,box-shadow,transform,opacity] duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 rounded-sm";
 const variants: Record<ButtonVariant, string> = {
   primary: "bg-brand-600 text-white hover:bg-brand-700 shadow-[0_1px_0_rgb(0_0_0/0.05)]",
   secondary: "bg-brand-50 text-brand-700 hover:bg-brand-100",

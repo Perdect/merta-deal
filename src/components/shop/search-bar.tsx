@@ -1,26 +1,36 @@
 "use client";
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Search, X, Mic, ArrowUpRight, Tag, LayoutGrid, Store } from "lucide-react";
 import { useDebouncedValue } from "@/hooks/use-debounce";
 import type { SearchSuggest } from "@/types/app";
 import { cn, formatINR } from "@/lib/utils";
 import { ProductImage } from "./product-image";
 
-const PLACEHOLDERS = ["Search groceries, masala, milk, snacks...", "Search \"aata\", \"chini\", \"lal mirch\"...", "Search Amul, Parle-G, Fortune oil...", "Search for a kirana store..."];
+/** Zepto-style rotating hint: Search "Groceries" → "Fruits" → "Vegetables" (CSS only, no timers). */
+const HINTS = ["Groceries", "Fruits", "Vegetables"];
 
 export function SearchBar({ className, autoFocus, initial = "", compact }: { className?: string; autoFocus?: boolean; initial?: string; compact?: boolean }) {
   const router = useRouter();
-  const [q, setQ] = React.useState(initial);
+  const pathname = usePathname();
+  const sp = useSearchParams();
+  const urlQ = pathname === "/search" ? sp.get("q") ?? "" : "";
+  const [q, setQ] = React.useState(initial || urlQ);
+  // Keep the box in step with the results page (Back/Forward, new searches from elsewhere).
+  const [prevUrlQ, setPrevUrlQ] = React.useState(urlQ);
+  if (urlQ !== prevUrlQ) { setPrevUrlQ(urlQ); setQ(urlQ); }
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  // The Search tab opens /search with nothing typed: put the cursor in the visible search box.
+  React.useEffect(() => {
+    if (pathname === "/search" && !urlQ && inputRef.current?.offsetParent) inputRef.current.focus({ preventScroll: true });
+  }, [pathname, urlQ]);
   const [open, setOpen] = React.useState(false);
   const [data, setData] = React.useState<SearchSuggest | null>(null);
   const [loading, setLoading] = React.useState(false);
-  const [ph, setPh] = React.useState(0);
   const debounced = useDebouncedValue(q, 220);
   const ref = React.useRef<HTMLDivElement>(null);
 
-  React.useEffect(() => { const t = setInterval(() => setPh((p) => (p + 1) % PLACEHOLDERS.length), 3500); return () => clearInterval(t); }, []);
   const active = debounced.trim().length >= 2;
   React.useEffect(() => {
     if (!active) return;
@@ -46,12 +56,22 @@ export function SearchBar({ className, autoFocus, initial = "", compact }: { cla
     <div ref={ref} className={cn("relative", className)}>
       <form role="search" onSubmit={(e) => { e.preventDefault(); submit(); }} className="relative">
         <Search className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-3" />
-        <input value={q} onChange={(e) => { setQ(e.target.value); setOpen(true); }} onFocus={() => setOpen(true)} autoFocus={autoFocus} type="search" enterKeyHint="search" autoComplete="off"
-          placeholder={PLACEHOLDERS[ph]} aria-label="Search products, brands, categories and stores"
-          className={cn("w-full rounded-md border border-line-2 bg-card pl-11 pr-20 text-[15px] text-ink shadow-card placeholder:text-ink-3 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 [&::-webkit-search-cancel-button]:hidden", compact ? "h-10" : "h-12")} />
+        <input ref={inputRef} value={q} onChange={(e) => { setQ(e.target.value); setOpen(true); }} onFocus={() => setOpen(true)} autoFocus={autoFocus} type="search" enterKeyHint="search" autoComplete="off"
+          placeholder="" aria-label="Search groceries, fruits and vegetables"
+          className={cn("w-full rounded-md border border-line-2 bg-card pl-11 pr-20 text-[15px] text-ink shadow-card placeholder:text-ink-3 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 [&::-webkit-search-cancel-button]:hidden", compact ? "h-11" : "h-12")} />
+        {!q ? (
+          <span aria-hidden className={cn("pointer-events-none absolute left-11 right-20 top-1/2 flex -translate-y-1/2 items-center overflow-hidden whitespace-nowrap text-[15px] leading-6 text-ink-3", compact ? "h-6" : "h-6")}>
+            Search&nbsp;
+            <span className="relative inline-block h-6 overflow-hidden align-top">
+              <span className="flex flex-col motion-safe:animate-[search-hint_7.5s_cubic-bezier(0.65,0,0.35,1)_infinite]">
+                {[...HINTS, HINTS[0]].map((h, i) => <span key={i} className="h-6 font-medium text-ink-2">&ldquo;{h}&rdquo;</span>)}
+              </span>
+            </span>
+          </span>
+        ) : null}
         <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
-          {q ? <button type="button" aria-label="Clear" onClick={() => { setQ(""); setData(null); }} className="flex h-8 w-8 items-center justify-center rounded-full text-ink-3 hover:bg-surface-2"><X className="h-4 w-4" /></button> : null}
-          <Link href="/assistant?mode=voice" aria-label="Voice order" className="flex h-8 w-8 items-center justify-center rounded-full text-brand-600 hover:bg-brand-50"><Mic className="h-4.5 w-4.5" /></Link>
+          {q ? <button type="button" aria-label="Clear search" onClick={() => { setQ(""); setData(null); }} className="tap flex h-8 w-8 items-center justify-center rounded-full text-ink-3 hover:bg-surface-2"><X className="h-4 w-4" /></button> : null}
+          <Link href="/assistant?mode=voice" aria-label="Voice order" className="tap flex h-8 w-8 items-center justify-center rounded-full text-brand-600 hover:bg-brand-50"><Mic className="h-4.5 w-4.5" /></Link>
         </div>
       </form>
 

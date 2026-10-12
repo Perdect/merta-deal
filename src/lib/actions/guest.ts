@@ -1,4 +1,5 @@
 "use server";
+import { friendlyError } from "@/lib/utils";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { env } from "@/lib/env";
@@ -12,7 +13,7 @@ export async function continueAsGuestAction(next?: string): Promise<{ ok: false;
   if (!env.anonymousAuthEnabled) return { ok: false, error: "Guest checkout is not enabled on this deployment yet." };
   const supabase = await createClient();
   const { error } = await supabase.auth.signInAnonymously({ options: { data: { full_name: "Guest", role: "customer" } } });
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: friendlyError(error) };
   redirect(next && next.startsWith("/") ? next : "/");
 }
 
@@ -23,6 +24,6 @@ export async function ensureGuestSessionAction(): Promise<{ ok: true; created: b
   if (user) return { ok: true, created: false };
   if (!env.anonymousAuthEnabled) return { ok: false, error: "Please sign in to add items.", needsLogin: true };
   const { error } = await supabase.auth.signInAnonymously({ options: { data: { full_name: "Guest", role: "customer" } } });
-  if (error) return { ok: false, error: error.message, needsLogin: true };
+  if (error) return { ok: false, error: friendlyError(error), needsLogin: true };
   return { ok: true, created: true };
 }

@@ -19,7 +19,7 @@ export function LiveMap(props: Props) {
     <APIProvider apiKey={env.mapsKey}>
       <div className={cn("overflow-hidden rounded-lg border border-line", props.className)}>
         <Map defaultCenter={props.store} defaultZoom={14} mapId={env.mapsMapId} gestureHandling="greedy" disableDefaultUI className="h-64 w-full sm:h-80">
-          <AdvancedMarker position={props.store} title={props.store.name}><Pin icon={<StoreIcon className="h-4 w-4" />} color="#0B6E4F" /></AdvancedMarker>
+          <AdvancedMarker position={props.store} title={props.store.name}><Pin icon={<StoreIcon className="h-4 w-4" />} color="#329537" /></AdvancedMarker>
           {props.customer ? <AdvancedMarker position={props.customer} title="Delivery address"><Pin icon={<Home className="h-4 w-4" />} color="#2563EB" /></AdvancedMarker> : null}
           {props.rider ? <AdvancedMarker position={{ lat: props.rider.lat, lng: props.rider.lng }} title="Rider"><Pin icon={<Bike className="h-4 w-4" />} color="#F2A93B" pulse /></AdvancedMarker> : null}
           <FitAndTrail store={props.store} customer={props.customer} rider={props.rider} trail={props.trail} showRoute={props.showRoute} />
@@ -53,7 +53,7 @@ function FitAndTrail({ store, customer, rider, trail, showRoute }: Omit<Props, "
     const origin = rider ? { lat: rider.lat, lng: rider.lng } : store;
     const svc = new google.maps.DirectionsService();
     routeRef.current?.setMap(null);
-    routeRef.current = new google.maps.DirectionsRenderer({ map, suppressMarkers: true, polylineOptions: { strokeColor: "#0B6E4F", strokeWeight: 4, strokeOpacity: 0.7 } });
+    routeRef.current = new google.maps.DirectionsRenderer({ map, suppressMarkers: true, polylineOptions: { strokeColor: "#329537", strokeWeight: 4, strokeOpacity: 0.7 } });
     svc.route({ origin, destination: customer, travelMode: google.maps.TravelMode.DRIVING }, (res, status) => { if (status === "OK" && res) routeRef.current?.setDirections(res); });
     return () => routeRef.current?.setMap(null);
   }, [map, showRoute, customer?.lat, customer?.lng, rider?.lat, rider?.lng]); // eslint-disable-line react-hooks/exhaustive-deps

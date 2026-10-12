@@ -1,36 +1,68 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { Users } from "lucide-react";
-import { listUsers, spGet, spPage, type SP } from "@/lib/data/admin";
-import { ListToolbar, ListPagination } from "@/components/admin/list-controls";
-import { PageHeader, Avatar, Table } from "@/components/ui/misc";
-import { Badge } from "@/components/ui/badge";
-import { ROLE_OPTIONS, ROLE_TONE } from "@/components/admin/constants";
-import { EmptyState } from "@/components/ui/states";
-import { formatINR, formatDate } from "@/lib/utils";
+import { SearchX, Users } from "lucide-react";
+import { spGet, spPage, type SP } from "@/lib/data/admin";
+import { listUsersOps, countUsersByRole, listHref, type UserFilters } from "@/lib/data/admin-ops";
+import { AdminPageHeader, DataTable, CellStack, RowLink, EmptyBlock, ErrorBlock, ListToolbar, StatusTabs, ListPagination, rupees } from "@/components/admin/kit";
+import { RolePill, ActivePill, ROLE_LABEL } from "@/components/admin/ops/pills";
+import { Avatar } from "@/components/ui/misc";
+import { formatDate, formatNumber } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Users" };
 
+const TABS = [
+  { value: "", label: "All" },
+  { value: "customer", label: "Customers" },
+  { value: "store_owner", label: "Store owners" },
+  { value: "store_staff", label: "Store staff" },
+  { value: "rider", label: "Riders" },
+  { value: "admins", label: "Admins" },
+];
 
 export default async function AdminUsersPage({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
-  const { items, total, page, pageSize } = await listUsers({ q: spGet(sp, "q"), role: spGet(sp, "role"), active: spGet(sp, "active"), page: spPage(sp) });
+  const filters: UserFilters = { q: spGet(sp, "q"), role: spGet(sp, "role"), active: spGet(sp, "active"), guest: spGet(sp, "guest") };
+  const [list, counts] = await Promise.all([listUsersOps({ ...filters, page: spPage(sp) }), countUsersByRole(filters)]);
+  const { items, total, page, pageSize, error } = list;
+  const here = listHref("/admin/users", sp);
+  const filtered = Boolean(filters.q || filters.active || filters.guest);
+  const rawRole = filters.role && !TABS.some((t) => t.value === filters.role) ? filters.role : "";
+
   return (
-    <div className="space-y-4">
-      <PageHeader title="Users" subtitle={`${total} accounts`} className="px-0" />
-      <ListToolbar searchPlaceholder="Name, phone, email or referral code" filters={[{ key: "role", label: "Roles", options: ROLE_OPTIONS }, { key: "active", label: "Status", placeholder: "Active + inactive", options: [{ value: "1", label: "Active" }, { value: "0", label: "Deactivated" }] }]} />
-      {items.length === 0 ? <EmptyState icon={<Users className="h-7 w-7" />} title="No users match" description="Try a different search or clear the filters." /> : (
-        <Table keyField="id" rows={items as unknown as Record<string, unknown>[]} columns={[
-          { key: "user", header: "User", render: (r) => { const u = r as unknown as (typeof items)[number]; return <Link href={`/admin/users/${u.id}`} className="flex items-center gap-3"><Avatar name={u.full_name} src={u.avatar_url} size={34} /><span className="min-w-0"><span className="block truncate font-semibold text-ink">{u.full_name ?? "—"}{u.is_guest ? <span className="ml-1.5 text-[10px] font-bold uppercase text-ink-4">guest</span> : null}</span><span className="block truncate text-xs text-ink-3">{u.email ?? "no email"}</span></span></Link>; } },
-          { key: "phone", header: "Phone", render: (r) => <span className="tabular">{(r.phone as string) ?? "—"}</span> },
-          { key: "role", header: "Role", render: (r) => <Badge tone={ROLE_TONE[r.role as string] ?? "neutral"}>{String(r.role).replace("_", " ")}</Badge> },
-          { key: "wallet_balance", header: "Wallet", className: "text-right", render: (r) => <span className="tabular">{formatINR(r.wallet_balance as number)}</span> },
-          { key: "reward_points", header: "Points", className: "text-right", render: (r) => <span className="tabular">{r.reward_points as number}</span> },
-          { key: "is_active", header: "Status", render: (r) => (r.is_active ? <Badge tone="success">Active</Badge> : <Badge tone="danger">Deactivated</Badge>) },
-          { key: "created_at", header: "Joined", render: (r) => <span className="text-xs text-ink-3">{formatDate(r.created_at as string)}</span> },
-        ]} />
+    <>
+      <AdminPageHeader title="Users" description="Every account on Merta Deal: customers, store teams, riders and admins. Open a user to change their role, credit their wallet or deactivate them." />
+
+      <StatusTabs param="role" items={TABS.map((t) => ({ ...t, count: counts[t.value] ?? null }))} />
+      {rawRole ? <p className="-mt-1 mb-3 text-xs text-ink-3">Showing role: <span className="font-medium text-ink">{ROLE_LABEL[rawRole as keyof typeof ROLE_LABEL] ?? rawRole}</span></p> : null}
+
+      <ListToolbar searchPlaceholder="Name, phone, email or referral code" filters={[
+        { key: "active", label: "Account status", options: [{ value: "1", label: "Active" }, { value: "0", label: "Deactivated" }] },
+        { key: "guest", label: "Account type", options: [{ value: "0", label: "Registered" }, { value: "1", label: "Guest checkout" }] },
+      ]} />
+
+      {error ? (
+        <ErrorBlock title="Couldn't load users" description="The user list didn't load. Check your connection, then retry." retryHref={here} />
+      ) : (
+        <DataTable caption="Users" rows={items} rowKey={(u) => u.id}
+          empty={filtered || filters.role
+            ? <EmptyBlock icon={SearchX} title="No users match" description="Try another tab, remove a filter chip, or search by phone number or email." />
+            : <EmptyBlock icon={Users} title="No users yet" description="Accounts appear here when people sign up or check out on the customer site." />}
+          columns={[
+            { key: "user", header: "User", render: (u) => (
+              <span className="flex min-w-0 items-center gap-3">
+                <Avatar name={u.full_name} src={u.avatar_url} size={34} className="shrink-0" />
+                <CellStack primary={<>{u.full_name ?? "Unnamed user"}{u.is_guest ? <span className="ml-1.5 text-xs font-normal text-ink-3">(guest)</span> : null}</>} secondary={u.email ?? u.phone ?? "No email"} href={`/admin/users/${u.id}`} />
+              </span>
+            ) },
+            { key: "phone", header: "Phone", hideBelow: "md", render: (u) => (u.phone ? <a href={`tel:${u.phone}`} className="tabular text-ink-2 hover:underline">{u.phone}</a> : <span className="text-ink-4">—</span>) },
+            { key: "role", header: "Role", hideBelow: "sm", render: (u) => <RolePill role={u.role} /> },
+            { key: "wallet", header: "Wallet", align: "right", hideBelow: "lg", render: (u) => <span className="tabular">{rupees(u.wallet_balance)}</span> },
+            { key: "points", header: "Points", align: "right", hideBelow: "xl", render: (u) => <span className="tabular text-ink-3">{formatNumber(u.reward_points)}</span> },
+            { key: "status", header: "Status", render: (u) => <ActivePill active={u.is_active} /> },
+            { key: "joined", header: "Joined", hideBelow: "lg", render: (u) => <span className="whitespace-nowrap text-xs text-ink-3">{formatDate(u.created_at)}</span> },
+            { key: "act", header: <span className="sr-only">Actions</span>, align: "right", render: (u) => <RowLink href={`/admin/users/${u.id}`} label={`Open ${u.full_name ?? "user"}`}>Open</RowLink> },
+          ]} />
       )}
-      <ListPagination page={page} pageSize={pageSize} total={total} />
-    </div>
+      {!error ? <ListPagination page={page} pageSize={pageSize} total={total} /> : null}
+    </>
   );
 }

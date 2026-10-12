@@ -9,7 +9,8 @@ import { cn } from "@/lib/utils";
  * Data contract (mirrors `products.image_url` / `products.images` in the database, keyed by product id):
  *   { image, imageAlt, brand, productName, packSize, fallbackImage }
  *
- * - Real photos render with next/image: `object-contain`, centred, on a light neutral surface, responsive
+ * - Photos are transparent cutouts (background removed in the image pipeline, 8% built-in padding) rendered
+ *   with `object-contain` on a white tile, so every product floats on the same clean surface, responsive
  *   sizes, lazy by default, dimensions reserved by the square container (no layout shift).
  * - When no photo exists (or the file fails to load) a clean neutral tile shows the brand and pack size —
  *   never a generic category icon.
@@ -47,9 +48,9 @@ export function ProductImage({ image, src, imageAlt, alt, brand, productName, pa
 
   if (candidate) {
     return (
-      <div className={cn("relative overflow-hidden bg-[#F8F8F6]", rounded, className)}>
+      <div className={cn("relative overflow-hidden bg-white", rounded, className)}>
         <Image src={candidate} alt={label} fill sizes={sizes} priority={priority} loading={priority ? undefined : "lazy"}
-          className={cn("transition-transform duration-300 ease-out group-hover:scale-[1.04]", fit === "cover" ? "object-cover" : "object-contain p-[7%]")}
+          className={cn("transition-transform duration-300 ease-out group-hover:scale-[1.04]", fit === "cover" ? "object-cover" : "object-contain p-[3%]")}
           onError={() => setFailed(candidate)} />
       </div>
     );

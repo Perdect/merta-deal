@@ -2,20 +2,19 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Lock, UserRound, Store, Bike, ShoppingBasket, Eye, EyeOff } from "lucide-react";
+import { Lock, UserRound, Eye, EyeOff, ShoppingBasket } from "lucide-react";
 import { signUpAction, verifySignupOtpAction, type AuthResult } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/states";
 import { toast } from "@/components/ui/toast";
-import { cn } from "@/lib/utils";
 
-const ROLES = [{ v: "customer", label: "Customer", icon: ShoppingBasket, hint: "Order groceries" }, { v: "store_owner", label: "Kirana store", icon: Store, hint: "Sell on Merta Deal" }, { v: "rider", label: "Delivery partner", icon: Bike, hint: "Earn per delivery" }] as const;
+/** Fields rise in one after another; `motion-safe` keeps them still for reduced-motion users. */
+const rise = (i: number) => ({ className: "motion-safe:animate-rise", style: { animationDelay: `${180 + i * 70}ms` } });
 
-/** Create an account with name + mobile number + password (no email). */
-export function RegisterForm({ next, initialRole }: { next?: string; initialRole?: string }) {
+/** Customer sign-up: name + mobile number + 6-digit PIN (no email). Stores and riders are onboarded by the admin. */
+export function RegisterForm({ next }: { next?: string }) {
   const router = useRouter();
-  const [role, setRole] = React.useState<(typeof ROLES)[number]["v"]>(ROLES.some((r) => r.v === initialRole) ? (initialRole as (typeof ROLES)[number]["v"]) : "customer");
   const [state, formAction, pending] = React.useActionState<AuthResult | null, FormData>(signUpAction, null);
   const [mobile, setMobile] = React.useState(""); const [showPw, setShowPw] = React.useState(false);
   const [otp, setOtp] = React.useState(""); const [busy, setBusy] = React.useState(false);
@@ -35,19 +34,19 @@ export function RegisterForm({ next, initialRole }: { next?: string; initialRole
 
   return (
     <form action={formAction} className="space-y-4">
-      <div><h1 className="text-xl font-bold text-ink">Create your account</h1><p className="mt-1 text-sm text-ink-3">Just your name, mobile number and a password.</p></div>
-      <input type="hidden" name="next" value={next ?? ""} /><input type="hidden" name="role" value={role} />
-      <div className="grid grid-cols-3 gap-2">
-        {ROLES.map(({ v, label, icon: Icon, hint }) => <button key={v} type="button" onClick={() => setRole(v)} className={cn("flex flex-col items-center gap-1 rounded-md border p-2.5 text-center", role === v ? "border-brand-600 bg-brand-50" : "border-line bg-card")}><Icon className={cn("h-5 w-5", role === v ? "text-brand-700" : "text-ink-3")} /><span className="text-xs font-bold text-ink">{label}</span><span className="text-[10px] text-ink-3">{hint}</span></button>)}
+      <div {...rise(0)}>
+        <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-700 motion-safe:animate-pop"><ShoppingBasket className="h-6 w-6" /></span>
+        <h1 className="font-display text-2xl font-extrabold text-ink">Create your account</h1>
+        <p className="mt-1 text-sm text-ink-3">Just your name, mobile number and a 6-digit PIN.</p>
       </div>
-      <Input name="fullName" label="Full name" required autoComplete="name" leftIcon={<UserRound className="h-4 w-4" />} error={err("fullName")} />
-      <Input name="mobile" type="tel" label="Mobile number" required inputMode="numeric" autoComplete="tel-national" maxLength={10} value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))} leftIcon={<span className="text-sm font-semibold text-ink-3">+91</span>} className="pl-12" error={err("mobile")} placeholder="10-digit mobile number" hint="This is your login. We never share it." />
-      <Input name="password" type={showPw ? "text" : "password"} label="Password" required autoComplete="new-password" leftIcon={<Lock className="h-4 w-4" />} error={err("password")} hint="At least 6 characters"
-        rightSlot={<button type="button" onClick={() => setShowPw((v) => !v)} aria-label={showPw ? "Hide password" : "Show password"} className="flex h-8 w-8 items-center justify-center rounded-full text-ink-3 hover:bg-surface-2">{showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>} />
+      <input type="hidden" name="next" value={next ?? ""} />
+      <div {...rise(1)}><Input name="fullName" label="Full name" required autoComplete="name" leftIcon={<UserRound className="h-4 w-4" />} error={err("fullName")} /></div>
+      <div {...rise(2)}><Input name="mobile" type="tel" label="Mobile number" required inputMode="numeric" autoComplete="tel-national" maxLength={10} value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))} leftIcon={<span className="text-sm font-semibold text-ink-3">+91</span>} className="pl-12" error={err("mobile")} placeholder="10-digit mobile number" hint="This is your login. We never share it." /></div>
+      <div {...rise(3)}><Input name="password" type={showPw ? "text" : "password"} label="Choose a 6-digit PIN" inputMode="numeric" maxLength={6} pattern="[0-9]{6}" placeholder="6 digits" required autoComplete="new-password" onInput={(e) => { const t = e.currentTarget; t.value = t.value.replace(/\D/g, "").slice(0, 6); }} leftIcon={<Lock className="h-4 w-4" />} error={err("password")} hint="Exactly 6 digits — you'll use it to sign in."
+        rightSlot={<button type="button" onClick={() => setShowPw((v) => !v)} aria-label={showPw ? "Hide PIN" : "Show PIN"} className="flex h-8 w-8 items-center justify-center rounded-full text-ink-3 hover:bg-surface-2">{showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>} /></div>
       {state && !state.ok && !state.fieldErrors ? <Alert tone="danger">{state.error}</Alert> : null}
-      <Button type="submit" fullWidth size="lg" loading={pending}>{role === "customer" ? "Create account" : role === "store_owner" ? "Register store account" : "Apply as rider"}</Button>
-      {role !== "customer" ? <p className="text-center text-xs text-ink-3">{role === "store_owner" ? "After sign up, complete your store profile & documents. Admin approval takes 1 working day." : "After sign up, complete your vehicle details. You go live after admin verification."}</p> : null}
-      <p className="text-center text-sm text-ink-3">Already have an account? <Link href={`/login${next ? `?next=${encodeURIComponent(next)}` : ""}`} className="font-semibold text-brand-700">Sign in</Link></p>
+      <div {...rise(4)}><Button type="submit" fullWidth size="lg" className="h-13 rounded-xl text-base transition-transform active:scale-[0.98]" loading={pending}>Create account</Button></div>
+      <p className="text-center text-sm text-ink-3 motion-safe:animate-fade-in" style={{ animationDelay: "520ms" }}>Already have an account? <Link href={`/login${next ? `?next=${encodeURIComponent(next)}` : ""}`} className="font-semibold text-brand-700">Sign in</Link></p>
     </form>
   );
 }

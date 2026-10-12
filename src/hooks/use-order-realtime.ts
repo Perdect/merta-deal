@@ -28,9 +28,11 @@ export function useOrderRealtime(orderId: string, assignmentId: string | null, o
         locRef.current?.({ lat: r.lat, lng: r.lng, heading: r.heading, speed_mps: r.speed_mps, accuracy_m: r.accuracy_m, recorded_at: r.recorded_at });
       });
     }
-    ch.subscribe((status) => setConnected(status === "SUBSCRIBED"));
-    // Fallback polling in case realtime is unavailable (e.g. table not in publication yet)
-    const poll = setInterval(() => changeRef.current(), 20000);
+    let live = false;
+    ch.subscribe((status) => { live = status === "SUBSCRIBED"; setConnected(live); });
+    // Fallback polling only while realtime is unavailable (e.g. table not in publication yet);
+    // a live subscription already pushes every change, so polling then is wasted work.
+    const poll = setInterval(() => { if (!live) changeRef.current(); }, 20000);
     return () => { supabase.removeChannel(ch); clearInterval(poll); if (t) clearTimeout(t); };
   }, [orderId, assignmentId]);
   return connected;

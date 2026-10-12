@@ -15,8 +15,13 @@ import type { Enums, Json, TablesInsert, TablesUpdate } from "@/types/database";
 
 const uuid = z.string().uuid("Invalid id");
 const money = z.coerce.number().min(0, "Cannot be negative");
-const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Use a hex colour like #0B6E4F");
-const nullableUrl = z.string().url().nullable().optional().or(z.literal("")).transform((v) => (v ? v : null));
+const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Use a hex colour like #329537");
+/**
+ * An image reference: an absolute http(s) URL (Supabase Storage uploads) or a site path such as
+ * /products/<slug>.<hash>.webp (catalogue photos shipped with the app). Anything else is refused.
+ */
+const imageRef = z.string().trim().max(1000).refine((v) => /^https?:\/\/[^\s]+$/i.test(v) || /^\/[^\s]*$/.test(v), "Enter a valid image URL (https://… or /products/…)");
+const nullableUrl = z.union([imageRef, z.literal("")]).nullable().optional().transform((v) => (v ? v : null));
 const optionalText = z.string().trim().max(2000).optional().nullable().transform((v) => (v ? v : null));
 const optionalDate = z.string().optional().nullable().transform((v) => (v ? new Date(v).toISOString() : null));
 
@@ -172,7 +177,7 @@ const productSchema = z.object({
   pack_label: optionalText,
   mrp: money,
   image_url: nullableUrl,
-  images: z.array(z.string().url()).max(8).default([]),
+  images: z.array(imageRef).max(8).default([]),
   tags: z.array(z.string().trim().min(1).max(40)).max(30).default([]),
   synonyms: z.array(z.string().trim().min(1).max(40)).max(50).default([]),
   nutrition: z.record(z.string(), z.union([z.string(), z.number()])).nullable().optional(),
@@ -575,7 +580,7 @@ export async function deleteCouponAction(id: string): Promise<ActionResult> {
 
 const bannerSchema = z.object({
   title: z.string().trim().min(2).max(120), subtitle: optionalText, cta_label: optionalText, link_url: z.string().trim().max(500).optional().nullable().transform((v) => (v ? v : null)), image_url: nullableUrl,
-  bg_color: hex.default("#0B6E4F"), text_color: hex.default("#FFFFFF"), placement: z.enum(["home_hero", "home_mid", "category", "checkout"]).default("home_hero"), sort_order: z.coerce.number().int().min(0).default(0),
+  bg_color: hex.default("#329537"), text_color: hex.default("#FFFFFF"), placement: z.enum(["home_hero", "home_mid", "category", "checkout"]).default("home_hero"), sort_order: z.coerce.number().int().min(0).default(0),
   starts_at: z.string().min(1).transform((v) => new Date(v).toISOString()), ends_at: optionalDate, is_active: z.boolean().default(true), city_id: z.string().uuid().nullable().optional(),
 });
 export type BannerInput = z.input<typeof bannerSchema>;

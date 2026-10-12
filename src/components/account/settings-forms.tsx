@@ -36,21 +36,21 @@ export function PasswordForm({ highlight }: { highlight?: boolean }) {
   const [busy, setBusy] = React.useState(false);
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); setError(null);
-    if (password.length < 6) { setError("Password must be at least 6 characters"); return; }
-    if (password !== confirm) { setError("Passwords do not match"); return; }
+    if (!/^\d{6}$/.test(password)) { setError("PIN must be exactly 6 digits"); return; }
+    if (password !== confirm) { setError("PINs do not match"); return; }
     setBusy(true);
     const { error: err } = await createClient().auth.updateUser({ password });
     setBusy(false);
     if (err) { setError(err.message); return; }
-    setPassword(""); setConfirm(""); toast.success("Password updated");
+    setPassword(""); setConfirm(""); toast.success("PIN updated");
   };
   return (
-    <SettingsCard icon={<KeyRound className="h-5 w-5" />} title="Change password" description="Use at least 6 characters. You stay signed in on this device.">
-      {highlight ? <Alert tone="info" className="mb-3">Set your new password below to finish the reset.</Alert> : null}
+    <SettingsCard icon={<KeyRound className="h-5 w-5" />} title="Change PIN" description="6 digits. You stay signed in on this device.">
+      {highlight ? <Alert tone="info" className="mb-3">Set your new PIN below to finish the reset.</Alert> : null}
       <form onSubmit={submit} className="space-y-3">
-        <Input label="New password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" />
-        <Input label="Confirm new password" type="password" required minLength={6} value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" error={error ?? undefined} />
-        <Button type="submit" loading={busy}>Update password</Button>
+        <Input label="New 6-digit PIN" type="password" inputMode="numeric" required minLength={6} maxLength={6} pattern="[0-9]{6}" value={password} onChange={(e) => setPassword(e.target.value.replace(/\D/g, "").slice(0, 6))} autoComplete="new-password" />
+        <Input label="Confirm new PIN" type="password" inputMode="numeric" required minLength={6} maxLength={6} pattern="[0-9]{6}" value={confirm} onChange={(e) => setConfirm(e.target.value.replace(/\D/g, "").slice(0, 6))} autoComplete="new-password" error={error ?? undefined} />
+        <Button type="submit" loading={busy}>Update PIN</Button>
       </form>
     </SettingsCard>
   );
@@ -112,11 +112,11 @@ export function SaveAccountForm({ profile }: { profile: Profile }) {
     const errs: Record<string, string> = {};
     if (name.trim().length < 2) errs.name = "Enter your name";
     if (!isValidIndianMobile(phone)) errs.phone = "Enter a valid 10-digit mobile number";
-    if (password.length < 6) errs.password = "Password must be at least 6 characters";
+    if (!/^\d{6}$/.test(password)) errs.password = "PIN must be exactly 6 digits";
     setErrors(errs);
     if (Object.keys(errs).length) return;
     setBusy(true);
-    // Converts the anonymous session into a permanent mobile + password account (phone OTP only when the project requires confirmation).
+    // Converts the anonymous session into a permanent mobile + PIN account (phone OTP only when the project requires confirmation).
     const { error } = await createClient().auth.updateUser({ phone: `+91${phone}`, password, data: { full_name: name.trim(), phone } });
     setBusy(false);
     if (error) { toast.error("Could not save your account", error.message); return; }
@@ -127,18 +127,18 @@ export function SaveAccountForm({ profile }: { profile: Profile }) {
     return (
       <SettingsCard id="save-account" icon={<UserPlus className="h-5 w-5" />} title="Account saved">
         <Alert tone="success" icon={<CheckCircle2 className="h-4 w-4" />} title={`You can now sign in with +91 ${done}`}>
-          Use this mobile number and your password on any device — your orders, addresses and wallet stay with you. If your number needs verification, enter the SMS code on the sign-in page.
+          Use this mobile number and your PIN on any device — your orders, addresses and wallet stay with you. If your number needs verification, enter the SMS code on the sign-in page.
         </Alert>
       </SettingsCard>
     );
   }
   return (
-    <SettingsCard id="save-account" icon={<UserPlus className="h-5 w-5" />} title="Save your account" description="You're browsing as a guest. Add your mobile number and a password so you can sign in again and keep your orders, addresses and wallet.">
+    <SettingsCard id="save-account" icon={<UserPlus className="h-5 w-5" />} title="Save your account" description="You're browsing as a guest. Add your mobile number and a 6-digit PIN so you can sign in again and keep your orders, addresses and wallet.">
       <form onSubmit={submit} className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
           <Input label="Full name" required value={name} onChange={(e) => setName(e.target.value)} error={errors.name} autoComplete="name" />
           <Input label="Mobile number" required inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))} error={errors.phone} autoComplete="tel" />
-          <Input label="Password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} error={errors.password} autoComplete="new-password" wrapperClassName="sm:col-span-2" />
+          <Input label="6-digit PIN" type="password" inputMode="numeric" required minLength={6} maxLength={6} pattern="[0-9]{6}" value={password} onChange={(e) => setPassword(e.target.value.replace(/\D/g, "").slice(0, 6))} error={errors.password} autoComplete="new-password" wrapperClassName="sm:col-span-2" />
         </div>
         <p className="text-xs text-ink-3">Your mobile number becomes your login.</p>
         <Button type="submit" fullWidth loading={busy}>Save my account</Button>

@@ -1,7 +1,6 @@
 "use client";
 import * as React from "react";
-import Link from "next/link";
-import { ShoppingBag, TicketPercent, X, Store as StoreIcon } from "lucide-react";
+import { ShoppingBag, TicketPercent, X } from "lucide-react";
 import type { CartSummary } from "@/types/app";
 import { addToCartAction, applyCouponAction, getCartSummary, removeCouponAction } from "@/lib/actions/cart";
 import { useCartStore } from "@/stores/cart-store";
@@ -38,19 +37,12 @@ export function CartView({ initial, coupons }: { initial: CartSummary | null; co
   const remove = async () => { setCouponBusy(true); await removeCouponAction(); await refresh(); setCouponBusy(false); };
 
   if (!summary || summary.empty || !summary.items.length) {
-    return <EmptyState icon={<ShoppingBag className="h-7 w-7" />} title="Your cart is empty" description="Add groceries, masala, dairy or snacks from your neighbourhood kirana stores." action={<Button href="/categories">Start shopping</Button>} />;
+    return <EmptyState icon={<ShoppingBag className="h-7 w-7" />} title="Your cart is empty" description="Add groceries, fruits and vegetables — delivered in minutes." action={<Button href="/categories">Start shopping</Button>} />;
   }
 
   return (
     <div className="grid gap-5 px-4 sm:px-0 lg:grid-cols-[1fr_360px]">
       <div className="space-y-4">
-        {summary.store ? (
-          <div className="flex items-center gap-3 rounded-lg border border-line bg-card px-4 py-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-md bg-brand-50 text-brand-600"><StoreIcon className="h-5 w-5" /></span>
-            <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-ink">{summary.store.name}</p><p className="text-xs text-ink-3">{summary.store.area} · {summary.store.is_open ? `Packing in ~${summary.store.avg_prep_minutes} min` : "Closed right now"}</p></div>
-            <Link href={`/s/${summary.store.slug}`} className="text-xs font-semibold text-brand-700">Add more</Link>
-          </div>
-        ) : null}
         <FreeDeliveryBar s={summary} />
         <ul className="divide-y divide-line rounded-lg border border-line bg-card px-4">
           {summary.items.map((line) => <CartItem key={line.id} line={line} onQty={onQty} busy={busyId === line.inventory_id} />)}

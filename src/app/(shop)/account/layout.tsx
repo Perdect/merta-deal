@@ -1,0 +1,24 @@
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { getSessionUser } from "@/lib/supabase/server";
+import { getMyProfile } from "@/lib/data/account";
+import { AccountShell, type WorkspaceLink } from "@/components/account/account-shell";
+
+/** Private customer area: never indexed (authentication protects it regardless). */
+export const metadata: Metadata = { robots: { index: false, follow: false } };
+
+export default async function AccountLayout({ children }: { children: React.ReactNode }) {
+  const user = await getSessionUser();
+  if (!user) redirect("/login?next=/account");
+  const profile = await getMyProfile();
+  if (!profile) redirect("/login?next=/account");
+  const workspace: WorkspaceLink[] = [];
+  if (profile.role === "store_owner" || profile.role === "store_staff") workspace.push({ href: "/store", label: "Store dashboard", icon: "store" });
+  if (profile.role === "rider") workspace.push({ href: "/rider", label: "Rider app", icon: "bike" });
+  if (profile.role === "admin" || profile.role === "super_admin") workspace.push({ href: "/admin", label: "Admin console", icon: "layout" });
+  return (
+    <AccountShell name={profile.full_name} phone={profile.phone} avatarUrl={profile.avatar_url} walletBalance={Number(profile.wallet_balance)} isGuest={profile.is_guest} workspace={workspace}>
+      {children}
+    </AccountShell>
+  );
+}

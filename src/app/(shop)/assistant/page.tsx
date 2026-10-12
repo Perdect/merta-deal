@@ -7,8 +7,9 @@ import { site } from "@/config/site";
 
 export const metadata: Metadata = {
   title: "AI shopping assistant — bolo ya likho, list ready",
-  description: `Tell ${site.name} what you need in Hinglish, Hindi or English — "family of 4 for a week", "Diwali sweets aur namkeen" — and get a ready-to-order list matched to real products from ${site.city} kirana stores.`,
-  alternates: { canonical: "/assistant" },
+  description: `Tell ${site.name} what you need in Hinglish, Hindi or English and get a ready-to-order list matched to products in stock in ${site.city}.`,
+  // A tool, not a landing page: crawlable, but kept out of the index.
+  robots: { index: false, follow: true },
 };
 
 export const dynamic = "force-dynamic";

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Long-press the app icon: jump straight to search, orders or the cart. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut android:shortcutId="search" android:enabled="true" android:icon="@drawable/shortcut_search"
+        android:shortcutShortLabel="@string/shortcutSearch" android:shortcutLongLabel="@string/shortcutSearchLong">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="com.mertadeal.app"
+            android:targetClass="com.mertadeal.app.LauncherActivity" android:data="https://mertadeal.com/search?source=twa_shortcut" />
+    </shortcut>
+    <shortcut android:shortcutId="orders" android:enabled="true" android:icon="@drawable/shortcut_orders"
+        android:shortcutShortLabel="@string/shortcutOrders" android:shortcutLongLabel="@string/shortcutOrdersLong">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="com.mertadeal.app"
+            android:targetClass="com.mertadeal.app.LauncherActivity" android:data="https://mertadeal.com/account/orders?source=twa_shortcut" />
+    </shortcut>
+    <shortcut android:shortcutId="cart" android:enabled="true" android:icon="@drawable/shortcut_cart"
+        android:shortcutShortLabel="@string/shortcutCart" android:shortcutLongLabel="@string/shortcutCartLong">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="com.mertadeal.app"
+            android:targetClass="com.mertadeal.app.LauncherActivity" android:data="https://mertadeal.com/cart?source=twa_shortcut" />
+    </shortcut>
+</shortcuts>

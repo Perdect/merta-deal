@@ -4,7 +4,7 @@ import type { Category, HomeFeed, NearbyStore, ProductCard, ProductDetail, Searc
 
 export const getHomeFeed = cache(async (lat?: number | null, lng?: number | null): Promise<HomeFeed | null> => {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("home_feed", { p_lat: lat ?? undefined, p_lng: lng ?? undefined, p_limit: 12 });
+  const { data, error } = await supabase.rpc("home_feed", { p_lat: lat ?? undefined, p_lng: lng ?? undefined, p_limit: 8 });
   if (error) { console.error("home_feed", error.message); return null; }
   return data as unknown as HomeFeed;
 });
@@ -17,7 +17,9 @@ export const getCategories = cache(async (): Promise<Category[]> => {
 
 export const getCategoryBySlug = cache(async (slug: string) => {
   const supabase = await createClient();
-  const { data } = await supabase.from("categories").select("*").eq("slug", slug).maybeSingle();
+  // Switched-off categories are gone for customers (404), not an empty page.
+  const { data, error } = await supabase.from("categories").select("*").eq("slug", slug).eq("is_active", true).maybeSingle();
+  if (error) throw new Error(`category lookup failed: ${error.message}`);
   if (!data) return null;
   const { data: children } = await supabase.from("categories").select("*").eq("parent_id", data.id).eq("is_active", true).order("sort_order");
   const parent = data.parent_id ? (await supabase.from("categories").select("*").eq("id", data.parent_id).maybeSingle()).data : null;
@@ -40,8 +42,14 @@ export async function searchProducts(p: SearchParams): Promise<SearchResult> {
 export const getProductDetail = cache(async (slug: string): Promise<ProductDetail | null> => {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("product_detail", { p_slug: slug });
-  if (error || !data) return null;
-  return data as unknown as ProductDetail;
+  // A database error must not look like "product removed" (a 404 tells search engines to drop the page);
+  // throwing renders the error screen with a retry instead. Only a missing/inactive product is null.
+  if (error) throw new Error(`product_detail failed: ${error.message}`);
+  if (!data) return null;
+  const detail = data as unknown as ProductDetail;
+  // Seller of record + shelf life live on the product row (0015); the RPC predates them.
+  const { data: extra } = await supabase.from("products").select("shelf_life, seller_name, seller_address, seller_license").eq("id", detail.id).maybeSingle();
+  return { ...detail, ...(extra ?? {}) };
 });
 
 export const getBrands = cache(async () => {
@@ -97,10 +105,12 @@ export const getCollections = cache(async (): Promise<{ id: string; title: strin
     const cat = (p.categories as unknown as { slug: string } | null)?.slug;
     return { id: p.id, title: p.title, description: p.description, kind: p.promo_type === "flash_sale" ? "Flash sale" : "Collection", href: cat ? `/c/${cat}` : "/search?sort=popular" };
   });
+  // Launch scope is Grocery, Fruits and Vegetables: every quick pick must land on
+  // products a customer can actually buy, never an empty search.
   const quick = [
-    { id: "chai-time", title: "Chai time", description: "Tea, biscuits, namkeen for 4 pm", kind: "Quick pick", href: "/search?q=tea%20biscuits%20namkeen" },
-    { id: "breakfast", title: "Breakfast basket", description: "Milk, bread, butter, poha, eggs", kind: "Quick pick", href: "/search?q=milk%20butter%20poha" },
     { id: "monthly", title: "Monthly ration", description: "Atta, dal, rice, oil, sugar, salt", kind: "Quick pick", href: "/c/grocery?sort=popular" },
+    { id: "fresh-sabzi", title: "Fresh sabzi", description: "Onion, potato, tomato, hari mirch from the mandi", kind: "Quick pick", href: "/c/vegetables" },
+    { id: "fruit-basket", title: "Fruit basket", description: "Banana, apple, anar, papaya", kind: "Quick pick", href: "/c/fruits" },
   ];
   return [...promos, ...quick].slice(0, 8);
 });

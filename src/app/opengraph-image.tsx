@@ -10,9 +10,11 @@ export const contentType = "image/png";
 export default function OpenGraphImage() {
   return new ImageResponse(
     (
-      <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: 72, background: "linear-gradient(135deg, #0B6E4F 0%, #0E8A63 60%, #12A374 100%)", color: "#FFFFFF", fontFamily: "sans-serif" }}>
+      <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: 72, background: "linear-gradient(135deg, #2A7F2F 0%, #329537 60%, #3FAA45 100%)", color: "#FFFFFF", fontFamily: "sans-serif" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-          <div style={{ width: 84, height: 84, borderRadius: 24, background: "#F4B942", display: "flex", alignItems: "center", justifyContent: "center", color: "#0B3D2C", fontSize: 52, fontWeight: 800 }}>M</div>
+          <div style={{ width: 84, height: 84, borderRadius: 24, background: "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="64" height="64" viewBox="0 0 64 64"><g transform="translate(0 -2.5)"><path d="M12 18h6l5 22h22l5-16H21" fill="none" stroke="#329537" strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round" /><circle cx="26" cy="48" r="3.5" fill="#329537" /><circle cx="42" cy="48" r="3.5" fill="#329537" /><path d="M37 25l-6.5 9h5.5l-3 7.5 7.5-9.5h-5.5z" fill="#F2A93B" /></g></svg>
+          </div>
           <div style={{ display: "flex", flexDirection: "column" }}>
             <div style={{ fontSize: 34, fontWeight: 700, letterSpacing: -0.5 }}>{site.name}</div>
             <div style={{ fontSize: 22, opacity: 0.85 }}>{`${site.city}, ${site.state} · ${site.defaultPincode}`}</div>
@@ -20,7 +22,7 @@ export default function OpenGraphImage() {
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           <div style={{ fontSize: 76, fontWeight: 800, lineHeight: 1.05, letterSpacing: -2 }}>{site.tagline}</div>
-          <div style={{ fontSize: 30, opacity: 0.92, maxWidth: 980, lineHeight: 1.3 }}>Groceries, masala, dairy and daily essentials from Merta City&apos;s trusted kirana stores — delivered in 30–60 minutes.</div>
+          <div style={{ fontSize: 30, opacity: 0.92, maxWidth: 980, lineHeight: 1.3 }}>Groceries, fresh fruits and vegetables from Merta Deal, Merta City&apos;s own online grocery stores — delivered in 20–25 minutes.</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 24, opacity: 0.9 }}>
           <div style={{ display: "flex", gap: 28 }}>

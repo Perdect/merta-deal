@@ -112,6 +112,17 @@ export function friendlyError(err: unknown): string {
   for (const [code, msg] of Object.entries(map)) {
     if (raw.startsWith(code)) return msg;
   }
+  // Plain-language versions of common Supabase Auth / network messages.
+  const patterns: [RegExp, string][] = [
+    [/phone number has already been registered|phone.*already (been )?registered|phone_exists/i, "This mobile number already has a Merta Deal account. Sign in with it, or use a different number."],
+    [/email address has already been registered|email.*already (been )?registered|email_exists|user already registered/i, "This email is already linked to another account. Use a different email."],
+    [/invalid login credentials/i, "Wrong mobile number or PIN. Check them and try again."],
+    [/token has expired or is invalid|otp.*expired|invalid otp/i, "That code is wrong or has expired. Request a new one."],
+    [/for security purposes, you can only request this|rate limit|too many requests/i, "Too many attempts. Please wait a minute and try again."],
+    [/failed to fetch|fetch failed|network ?error|load failed/i, "You seem to be offline. Check your internet connection and try again."],
+    [/password should be at least/i, "Your PIN is too short."],
+  ];
+  for (const [re, msg] of patterns) if (re.test(raw)) return msg;
   const m = raw.match(/^[A-Z_]+:\s*(.+)$/);
   if (m) return m[1];
   return raw;

@@ -11,7 +11,7 @@ export function Tabs({ items, value, onChange, className, variant = "underline",
         const active = t.value === value;
         return (
           <button key={t.value} type="button" role="tab" aria-selected={active} disabled={t.disabled} onClick={() => onChange(t.value)}
-            className={cn("relative shrink-0 whitespace-nowrap font-semibold transition-colors disabled:opacity-40",
+            className={cn("tap relative shrink-0 whitespace-nowrap font-semibold transition-colors disabled:opacity-40",
               size === "sm" ? "px-3 py-2 text-xs" : "px-4 py-2.5 text-sm",
               variant === "underline" ? cn("-mb-px border-b-2", active ? "border-brand-600 text-brand-700" : "border-transparent text-ink-3 hover:text-ink") : cn("rounded-full", active ? "bg-card text-ink shadow-card" : "text-ink-3 hover:text-ink"))}>
             {t.label}
@@ -25,7 +25,7 @@ export function Tabs({ items, value, onChange, className, variant = "underline",
 
 export function Chip({ active, children, onClick, className, icon }: { active?: boolean; children: React.ReactNode; onClick?: () => void; className?: string; icon?: React.ReactNode }) {
   return (
-    <button type="button" onClick={onClick} aria-pressed={active} className={cn("inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors", active ? "border-brand-600 bg-brand-50 text-brand-700" : "border-line-2 bg-card text-ink-2 hover:bg-surface-2", className)}>
+    <button type="button" onClick={onClick} aria-pressed={active} className={cn("tap inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors", active ? "border-brand-600 bg-brand-50 text-brand-700" : "border-line-2 bg-card text-ink-2 hover:bg-surface-2", className)}>
       {icon}{children}
     </button>
   );

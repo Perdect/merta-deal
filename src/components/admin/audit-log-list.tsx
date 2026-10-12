@@ -1,54 +1,71 @@
-"use client";
 import * as React from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
-import { Badge, type BadgeTone } from "@/components/ui/badge";
-import type { AuditRow } from "@/lib/data/admin";
-import { cn, formatDateTime } from "@/lib/utils";
+import { StatusPill, type Tone } from "@/components/admin/kit";
 
-const ACTION_TONE = (a: string): BadgeTone => (a === "delete" || a.includes("cancel") || a.includes("reject") || a.includes("suspend") ? "danger" : a === "insert" || a.includes("create") || a.includes("approve") ? "success" : a.startsWith("dispatch") ? "saffron" : "info");
+/* Audit log presentation (server-safe): action pills and a before/after view of a change. */
 
-/** Diff-friendly rendering: highlights keys whose value changed between before/after. */
-function Diff({ before, after }: { before: unknown; after: unknown }) {
-  const b = (before ?? {}) as Record<string, unknown>; const a = (after ?? {}) as Record<string, unknown>;
-  const keys = [...new Set([...Object.keys(b), ...Object.keys(a)])].filter((k) => k !== "updated_at" && k !== "search_vector");
-  const changed = keys.filter((k) => JSON.stringify(b[k]) !== JSON.stringify(a[k]));
-  if (before && after && changed.length) {
-    return (
-      <table className="w-full text-xs"><thead><tr className="text-left text-ink-3"><th className="py-1 pr-3 font-semibold">Field</th><th className="py-1 pr-3 font-semibold">Before</th><th className="py-1 font-semibold">After</th></tr></thead>
-        <tbody className="divide-y divide-line">{changed.map((k) => <tr key={k}><td className="py-1 pr-3 font-mono text-ink-2">{k}</td><td className="py-1 pr-3 font-mono text-danger">{fmt(b[k])}</td><td className="py-1 font-mono text-success">{fmt(a[k])}</td></tr>)}</tbody></table>
-    );
-  }
+export function actionTone(a: string): Tone {
+  if (a === "delete" || /cancel|reject|suspend|fail|refund/.test(a)) return "red";
+  if (a === "insert" || /create|approve|paid|verified/.test(a)) return "green";
+  if (a.startsWith("dispatch")) return "amber";
+  if (/broadcast|notify/.test(a)) return "violet";
+  return "blue";
+}
+
+export function ActionPill({ action }: { action: string }) {
+  return <StatusPill tone={actionTone(action)} className="font-mono">{action}</StatusPill>;
+}
+
+const IGNORED = new Set(["updated_at", "search_vector"]);
+const fmt = (v: unknown) => (v === undefined ? "—" : v === null ? "null" : typeof v === "object" ? JSON.stringify(v) : String(v));
+const asObj = (v: unknown) => (v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null);
+
+/** Field names whose value differs between before and after (both must be objects). */
+export function changedFields(before: unknown, after: unknown): string[] {
+  const b = asObj(before); const a = asObj(after);
+  if (!b || !a) return [];
+  return [...new Set([...Object.keys(b), ...Object.keys(a)])].filter((k) => !IGNORED.has(k) && JSON.stringify(b[k]) !== JSON.stringify(a[k]));
+}
+
+/** Changed fields as a before/after table, followed by the full JSON payloads. */
+export function AuditChanges({ before, after }: { before: unknown; after: unknown }) {
+  const b = asObj(before) ?? {}; const a = asObj(after) ?? {};
+  const changed = changedFields(before, after);
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      {before != null ? <div><p className="mb-1 text-[10px] font-bold uppercase text-ink-3">Before</p><pre className="max-h-64 overflow-auto rounded-sm bg-surface p-2 font-mono text-[11px] text-ink-2">{JSON.stringify(before, null, 2)}</pre></div> : null}
-      {after != null ? <div><p className="mb-1 text-[10px] font-bold uppercase text-ink-3">After</p><pre className="max-h-64 overflow-auto rounded-sm bg-surface p-2 font-mono text-[11px] text-ink-2">{JSON.stringify(after, null, 2)}</pre></div> : null}
-      {before == null && after == null ? <p className="text-xs text-ink-3">No payload recorded.</p> : null}
+    <div className="space-y-4">
+      {changed.length ? (
+        <section>
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-3">Changed fields ({changed.length})</h3>
+          <div className="overflow-x-auto rounded-lg border border-line">
+            <table className="w-full text-xs">
+              <thead><tr className="bg-[#fafbfa] text-left text-ink-3"><th scope="col" className="px-2.5 py-1.5 font-semibold">Field</th><th scope="col" className="px-2.5 py-1.5 font-semibold">Before</th><th scope="col" className="px-2.5 py-1.5 font-semibold">After</th></tr></thead>
+              <tbody className="divide-y divide-line">
+                {changed.map((k) => (
+                  <tr key={k} className="align-top">
+                    <td className="px-2.5 py-1.5 font-mono text-ink-2">{k}</td>
+                    <td className="max-w-[180px] break-words px-2.5 py-1.5 font-mono text-[#b4231b]"><span className="sr-only">Before: </span>{fmt(b[k])}</td>
+                    <td className="max-w-[180px] break-words px-2.5 py-1.5 font-mono text-[#26782a]"><span className="sr-only">After: </span>{fmt(a[k])}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
+      <div className="grid gap-3">
+        <JsonBlock label="Before" value={before} />
+        <JsonBlock label="After" value={after} />
+      </div>
     </div>
   );
 }
-const fmt = (v: unknown) => (v == null ? "∅" : typeof v === "object" ? JSON.stringify(v) : String(v));
 
-export function AuditLogList({ rows }: { rows: AuditRow[] }) {
-  const [open, setOpen] = React.useState<Set<number>>(new Set());
-  const toggle = (id: number) => setOpen((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+function JsonBlock({ label, value }: { label: string; value: unknown }) {
   return (
-    <ul className="divide-y divide-line rounded-lg border border-line bg-card">
-      {rows.map((r) => { const isOpen = open.has(r.id); return (
-        <li key={r.id}>
-          <button type="button" onClick={() => toggle(r.id)} aria-expanded={isOpen} className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-surface">
-            {isOpen ? <ChevronDown className="h-4 w-4 shrink-0 text-ink-3" /> : <ChevronRight className="h-4 w-4 shrink-0 text-ink-3" />}
-            <span className="w-36 shrink-0 text-xs tabular text-ink-3">{formatDateTime(r.created_at)}</span>
-            <Badge tone={ACTION_TONE(r.action)} size="xs" className="shrink-0 font-mono">{r.action}</Badge>
-            <span className="shrink-0 text-xs font-semibold text-ink">{r.entity}</span>
-            <span className="min-w-0 flex-1 truncate font-mono text-[11px] text-ink-4">{r.entity_id ?? ""}</span>
-            <span className="hidden shrink-0 text-xs text-ink-3 sm:inline">{r.actor?.full_name ?? (r.actor_id ? r.actor_id.slice(0, 8) : "system")}{r.actor_role ? <span className="text-ink-4"> · {r.actor_role}</span> : null}</span>
-          </button>
-          <div className={cn("border-t border-line bg-surface/60 px-4 py-3", !isOpen && "hidden")}>
-            {isOpen ? <Diff before={r.before_data} after={r.after_data} /> : null}
-            {r.ip_address ? <p className="mt-2 text-[10px] text-ink-4">IP {r.ip_address}</p> : null}
-          </div>
-        </li>
-      ); })}
-    </ul>
+    <section>
+      <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-ink-3">{label}</h3>
+      {value == null
+        ? <p className="rounded-lg bg-surface px-3 py-2 text-xs text-ink-3">{label === "Before" ? "Nothing recorded (for example, a newly created record)." : "Nothing recorded (for example, a deleted record)."}</p>
+        : <pre className="max-h-72 overflow-auto rounded-lg bg-surface p-3 font-mono text-[11px] leading-relaxed text-ink-2">{JSON.stringify(value, null, 2)}</pre>}
+    </section>
   );
 }

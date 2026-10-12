@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Phone, MessageCircle, Mail, LifeBuoy, ChevronRight } from "lucide-react";
+import { Phone, Mail, LifeBuoy, ChevronRight } from "lucide-react";
 import { getSessionUser } from "@/lib/supabase/server";
 import { getMyTickets } from "@/lib/data/account";
 import { getMyOrders } from "@/lib/data/orders";
@@ -10,8 +10,9 @@ import { isRazorpayConfigured } from "@/lib/env";
 import { site } from "@/config/site";
 import { FaqAccordion, type FaqItem } from "@/components/account/faq";
 import { TicketForm, TICKET_CATEGORY_LABEL, type TicketOrderOption } from "@/components/account/ticket-form";
-import { PageHeader } from "@/components/ui/misc";
+import { AccountSection } from "@/components/account/account-section";
 import { SectionHeader } from "@/components/ui/card";
+import { WhatsAppIcon } from "@/components/shared/whatsapp-icon";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/states";
 import { formatINR, formatDateTime } from "@/lib/utils";
@@ -56,8 +57,7 @@ export default async function SupportPage({ searchParams }: { searchParams: Prom
   ];
 
   return (
-    <div className="pt-1">
-      <PageHeader title="Help & support" back="/account" action={<TicketForm orders={orderOptions} preselectOrder={sp.order} openInitially={Boolean(sp.order) || sp.new === "1"} />} />
+    <AccountSection title="Customer Support" action={<TicketForm orders={orderOptions} preselectOrder={sp.order} openInitially={Boolean(sp.order) || sp.new === "1"} />}>
       <div className="space-y-6 px-4 sm:px-0">
         <section className="grid gap-3 sm:grid-cols-3">
           <a href={`tel:${phone.replace(/\s/g, "")}`} className="flex items-center gap-3 rounded-lg border border-line bg-card p-4 shadow-card transition-shadow hover:shadow-float">
@@ -66,7 +66,7 @@ export default async function SupportPage({ searchParams }: { searchParams: Prom
           </a>
           {whatsapp ? (
             <a href={`https://wa.me/${whatsapp}?text=${encodeURIComponent("Hi Merta Deal, I need help with my order.")}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-lg border border-line bg-card p-4 shadow-card transition-shadow hover:shadow-float">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-success-50 text-success"><MessageCircle className="h-5 w-5" /></span>
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#25D366] text-white"><WhatsAppIcon className="h-[22px] w-[22px]" /></span>
               <span className="min-w-0"><span className="block text-sm font-bold text-ink">WhatsApp</span><span className="block truncate text-xs text-ink-3">+{whatsapp}</span></span>
             </a>
           ) : null}
@@ -102,6 +102,6 @@ export default async function SupportPage({ searchParams }: { searchParams: Prom
           <FaqAccordion items={faqs} />
         </section>
       </div>
-    </div>
+    </AccountSection>
   );
 }

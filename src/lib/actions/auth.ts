@@ -1,4 +1,5 @@
 "use server";
+import { friendlyError } from "@/lib/utils";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
@@ -9,13 +10,14 @@ const ROLE_HOME: Record<string, string> = { store_owner: "/store", store_staff: 
 /** Indian mobile numbers are stored in E.164 without the plus sign, e.g. 919876543210. */
 const toE164 = (mobile: string) => `+91${mobile.replace(/\D/g, "").slice(-10)}`;
 const mobileSchema = z.string().transform((v) => v.replace(/\D/g, "").slice(-10)).pipe(z.string().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number"));
+/** Sign-in secret is a 6-digit PIN. It is stored as the Supabase password, so it must clear the project's minimum length (6). */
+const pinSchema = z.string().transform((v) => v.replace(/\D/g, "")).pipe(z.string().regex(/^\d{6}$/, "Enter your 6-digit PIN"));
 
-const signInSchema = z.object({ mobile: mobileSchema, password: z.string().min(6, "Password must be at least 6 characters"), next: z.string().optional() });
+const signInSchema = z.object({ mobile: mobileSchema, password: pinSchema, next: z.string().optional(), guestUserId: z.string().optional() });
 const signUpSchema = z.object({
   fullName: z.string().min(2, "Enter your name"),
   mobile: mobileSchema,
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  role: z.enum(["customer", "store_owner", "rider"]).default("customer"),
+  password: pinSchema,
   next: z.string().optional(),
 });
 
@@ -27,8 +29,14 @@ export async function signInAction(_prev: AuthResult | null, formData: FormData)
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithPassword({ phone: toE164(parsed.data.mobile), password: parsed.data.password });
   if (error) {
-    if (/phone.*(disabled|not enabled)|Unsupported phone provider/i.test(error.message)) return { ok: false, error: "Mobile sign-in is not enabled on the server yet. In Supabase → Authentication → Providers, turn on Phone (SMS provider optional when phone confirmations are off)." };
-    return { ok: false, error: error.message === "Invalid login credentials" ? "Incorrect mobile number or password." : error.message };
+    if (/phone.*(disabled|not enabled)|Unsupported phone provider/i.test(error.message)) return { ok: false, error: "Mobile sign-in is not enabled on the server yet. The Supabase Phone provider must be switched on — see docs/GO-LIVE.md, step A4." };
+    return { ok: false, error: friendlyError(error) };
+  }
+  // Signing in from the cart drawer: carry the guest session's cart over to this account.
+  const guestId = parsed.data.guestUserId;
+  if (guestId && /^[0-9a-f-]{36}$/i.test(guestId) && guestId !== data.user.id) {
+    const { error: mergeErr } = await supabase.rpc("merge_guest_cart", { p_guest_user_id: guestId });
+    if (mergeErr) console.error("merge_guest_cart", mergeErr.message);
   }
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", data.user.id).maybeSingle();
   const role = profile?.role ?? "customer";
@@ -40,15 +48,17 @@ export async function signUpAction(_prev: AuthResult | null, formData: FormData)
   const parsed = signUpSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: "Please check the form", fieldErrors: flatten(parsed.error) };
   const supabase = await createClient();
-  const { fullName, mobile, password, role } = parsed.data;
+  // Public sign-up creates customers only; store and rider accounts are set up by the admin.
+  const { fullName, mobile, password } = parsed.data;
+  const role = "customer" as const;
   const { data, error } = await supabase.auth.signUp({
     phone: toE164(mobile), password,
     options: { data: { full_name: fullName, phone: mobile, role }, channel: "sms" },
   });
   if (error) {
-    if (/already registered|already exists/i.test(error.message)) return { ok: false, error: "This mobile number already has an account. Please sign in.", fieldErrors: { mobile: "Already registered" } };
-    if (/phone.*(disabled|not enabled)|Unsupported phone provider/i.test(error.message)) return { ok: false, error: "Mobile sign-up is not enabled on the server yet (Supabase → Authentication → Providers → Phone)." };
-    return { ok: false, error: error.message };
+    if (/already (been )?registered|already exists/i.test(error.message)) return { ok: false, error: "This mobile number already has an account. Please sign in.", fieldErrors: { mobile: "Already registered" } };
+    if (/phone.*(disabled|not enabled)|Unsupported phone provider/i.test(error.message)) return { ok: false, error: "Mobile sign-up is not enabled on the server yet. The Supabase Phone provider must be switched on — see docs/GO-LIVE.md, step A4." };
+    return { ok: false, error: friendlyError(error) };
   }
   if (data.session) redirect(parsed.data.next?.startsWith("/") ? parsed.data.next : ROLE_HOME[role] ?? "/");
   // Phone confirmations are enabled on the project: an SMS OTP must be verified before the first sign-in.
@@ -61,7 +71,7 @@ export async function verifySignupOtpAction(mobile: string, token: string): Prom
   if (!m.success) return { ok: false, error: "Enter a valid mobile number" };
   const supabase = await createClient();
   const { data, error } = await supabase.auth.verifyOtp({ phone: toE164(m.data), token: token.replace(/\D/g, ""), type: "sms" });
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: friendlyError(error) };
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", data.user!.id).maybeSingle();
   return { ok: true, redirectTo: ROLE_HOME[profile?.role ?? "customer"] ?? "/" };
 }
@@ -74,12 +84,12 @@ export async function signOutAction() {
 
 /** OTP login (passwordless) — only when an SMS provider is configured on the project. */
 export async function sendPhoneOtpAction(phone: string): Promise<AuthResult> {
-  if (!env.phoneAuthEnabled) return { ok: false, error: "OTP login needs an SMS provider (MSG91/Twilio) in Supabase Auth. Use your mobile number and password instead." };
+  if (!env.phoneAuthEnabled) return { ok: false, error: "OTP login needs an SMS provider (MSG91/Twilio) in Supabase Auth. Use your mobile number and PIN instead." };
   const m = mobileSchema.safeParse(phone);
   if (!m.success) return { ok: false, error: "Enter a valid 10-digit mobile number" };
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithOtp({ phone: toE164(m.data) });
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: friendlyError(error) };
   return { ok: true, message: "OTP sent" };
 }
 
@@ -88,20 +98,20 @@ export async function verifyPhoneOtpAction(phone: string, token: string): Promis
   if (!m.success) return { ok: false, error: "Enter a valid mobile number" };
   const supabase = await createClient();
   const { data, error } = await supabase.auth.verifyOtp({ phone: toE164(m.data), token: token.replace(/\D/g, ""), type: "sms" });
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: friendlyError(error) };
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", data.user!.id).maybeSingle();
   return { ok: true, redirectTo: ROLE_HOME[profile?.role ?? "customer"] ?? "/" };
 }
 
-/** Password reset for phone accounts = OTP to the mobile, then set a new password (needs an SMS provider). */
+/** PIN reset for phone accounts = OTP to the mobile, then set a new PIN (needs an SMS provider). */
 export async function resetPasswordAction(_prev: AuthResult | null, formData: FormData): Promise<AuthResult> {
   const m = mobileSchema.safeParse(String(formData.get("mobile") ?? ""));
   if (!m.success) return { ok: false, error: "Enter a valid 10-digit mobile number" };
-  if (!env.phoneAuthEnabled) return { ok: false, error: "Password reset by SMS is not enabled yet. Please contact support to reset your password." };
+  if (!env.phoneAuthEnabled) return { ok: false, error: "PIN reset by SMS is not enabled yet. Please contact support to reset your PIN." };
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithOtp({ phone: toE164(m.data), options: { shouldCreateUser: false } });
-  if (error) return { ok: false, error: error.message };
-  return { ok: true, message: "We sent a code to your mobile. Enter it to sign in, then set a new password in Settings.", redirectTo: `verify:${m.data}` };
+  if (error) return { ok: false, error: friendlyError(error) };
+  return { ok: true, message: "We sent a code to your mobile. Enter it to sign in, then set a new PIN in Settings.", redirectTo: `verify:${m.data}` };
 }
 
 function flatten(err: z.ZodError) {

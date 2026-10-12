@@ -2,7 +2,7 @@ import { Skeleton, LoadingState } from "@/components/ui/states";
 
 export default function AccountLoading() {
   return (
-    <div className="pt-1" aria-busy>
+    <div data-route-loading="" className="pt-1" aria-busy>
       <div className="flex items-center gap-3 px-4 py-3 sm:px-0">
         <Skeleton className="h-10 w-10 rounded-full" />
         <Skeleton className="h-7 w-44" />

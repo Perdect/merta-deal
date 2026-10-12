@@ -6,7 +6,7 @@ export function QrPoster({ path, title, subtitle, code }: { path: string; title:
   const img = `/api/qr?path=${encodeURIComponent(path)}&size=640`;
   return (
     <div className="mx-auto w-[360px] rounded-2xl border border-line bg-white p-6 text-center shadow-card print:shadow-none" id="qr-poster">
-      <div className="flex items-center justify-center gap-2"><LogoMark size={36} /><span className="font-display text-xl font-extrabold text-ink">Merta<span className="text-brand-600">Deal</span></span></div>
+      <div className="flex items-center justify-center gap-2"><LogoMark size={36} /><span className="font-display text-xl font-extrabold text-ink">Merta<span className="text-fresh">Deal</span></span></div>
       <p className="mt-1 text-xs font-semibold uppercase tracking-[0.2em] text-saffron-700">Scan · Order · Pay</p>
       <div className="mx-auto mt-4 w-[260px] rounded-xl border-4 border-brand-600 p-2">
         {/* eslint-disable-next-line @next/next/no-img-element */}

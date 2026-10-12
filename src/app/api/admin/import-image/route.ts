@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   const admin = createAdminClient();
   if (!admin) return NextResponse.json({ error: "SUPABASE_SERVICE_ROLE_KEY is required to store imported images." }, { status: 503 });
 
-  const results: { slug?: string; product_id?: string; ok: boolean; url?: string; error?: string; source_px?: string }[] = [];
+  const results: { slug?: string; product_id?: string; ok: boolean; url?: string; error?: string; source_px?: string; cutout?: boolean }[] = [];
   for (const item of parsed.data.items) {
     try {
       const q = item.product_id
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
       const { error } = await supabase.from("products").update(patch).eq("id", q.data.id);
       if (error) { results.push({ slug: q.data.slug, ok: false, error: error.message }); continue; }
       await supabase.rpc("audit", { p_action: "product.image_import", p_entity: "products", p_entity_id: q.data.id, p_after: { url: pub.publicUrl, source: item.source ?? item.url, credit: item.credit ?? null } as never });
-      results.push({ slug: q.data.slug, ok: true, url: pub.publicUrl, source_px: `${out.sourceWidth}×${out.sourceHeight}` });
+      results.push({ slug: q.data.slug, ok: true, url: pub.publicUrl, source_px: `${out.sourceWidth}×${out.sourceHeight}`, cutout: out.cutout });
     } catch (e) {
       results.push({ slug: item.slug, product_id: item.product_id, ok: false, error: e instanceof Error ? e.message : "Import failed" });
     }

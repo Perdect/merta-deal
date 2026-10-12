@@ -9,11 +9,13 @@ import { toast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/overlay";
 import { QuantityStepper } from "@/components/ui/misc";
 import { cn } from "@/lib/utils";
+import { track } from "@/lib/analytics";
 
-type Props = { inventoryId: string | null; maxQty?: number | null; stockQty?: number | null; size?: "sm" | "md"; className?: string; label?: string; signedIn?: boolean; fullWidth?: boolean };
+type Props = { inventoryId: string | null; maxQty?: number | null; stockQty?: number | null; size?: "sm" | "md"; className?: string; stepperClassName?: string; label?: string; signedIn?: boolean; fullWidth?: boolean };
 
 /** ADD button that turns into a quantity stepper; syncs with the server cart via RPC. */
-export function AddToCart({ inventoryId, maxQty, stockQty, size = "md", className, label = "ADD", signedIn = true, fullWidth }: Props) {
+/** `className` styles the ADD button; `stepperClassName` styles the quantity control that replaces it. */
+export function AddToCart({ inventoryId, maxQty, stockQty, size = "md", className, stepperClassName, label = "ADD", signedIn = true, fullWidth }: Props) {
   const router = useRouter();
   const qty = useCartStore((s) => (inventoryId ? s.qtyFor(inventoryId) : 0));
   const setPending = useCartStore((s) => s.setPending);
@@ -40,7 +42,7 @@ export function AddToCart({ inventoryId, maxQty, stockQty, size = "md", classNam
     } else {
       const summary = await getCartSummary();
       setSummary(summary); setPending(inventoryId, null);
-      if (qty === 0 && next > 0) toast.success("Added to cart");
+      if (qty === 0 && next > 0) { toast.success("Added to cart"); track("add_to_cart", { items: [{ item_id: inventoryId, quantity: next }] }); }
     }
     setBusy(false);
   }, [inventoryId, signedIn, router, setPending, setSummary, qty]);
@@ -52,10 +54,10 @@ export function AddToCart({ inventoryId, maxQty, stockQty, size = "md", classNam
   return (
     <>
       {qty > 0 ? (
-        <QuantityStepper value={qty} onChange={(v) => update(v)} min={0} max={max} size={size} loading={busy} className={cn(fullWidth && "w-full justify-between", className)} />
+        <QuantityStepper value={qty} onChange={(v) => update(v)} min={0} max={max} size={size} loading={busy} className={cn("motion-safe:animate-pop", fullWidth && "w-full justify-between", stepperClassName)} />
       ) : (
         <button type="button" onClick={() => update(1)} disabled={busy}
-          className={cn("inline-flex items-center justify-center gap-1 rounded-sm border border-brand-600 bg-brand-50 font-bold text-brand-700 transition-colors hover:bg-brand-100 active:scale-[0.98] disabled:opacity-60", size === "sm" ? "h-8 px-3 text-xs" : "h-9 px-4 text-sm", fullWidth && "w-full", className)}>
+          className={cn("tap inline-flex items-center justify-center gap-1 rounded-sm border border-brand-600 bg-brand-50 font-bold text-brand-700 transition-[background-color,transform] duration-150 hover:bg-brand-100 active:scale-95 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600", size === "sm" ? "h-8 px-3 text-xs" : "h-9 px-4 text-sm", fullWidth && "w-full", className)}>
           {label}<Plus className="h-3.5 w-3.5" />
         </button>
       )}

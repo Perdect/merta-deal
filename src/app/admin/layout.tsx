@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/supabase/server";
 import { getAdminNotifications } from "@/lib/data/admin";
-import { DashboardShell } from "@/components/shared/dashboard-shell";
-import { adminNav } from "@/config/site";
+import { AdminShell } from "@/components/admin/kit/shell";
 
 export const metadata: Metadata = { title: { default: "Admin", template: "%s · Admin | Merta Deal" }, robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
@@ -15,8 +14,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (user.role !== "admin" && user.role !== "super_admin") redirect("/");
   const { unread } = await getAdminNotifications(1);
   return (
-    <DashboardShell nav={adminNav} title="Admin" accent="ink" user={{ name: user.fullName ?? user.email, role: user.role, avatarUrl: user.avatarUrl }} notificationsHref="/admin/notifications" unread={unread} mobileTabs>
-      <div className="mx-auto w-full max-w-7xl">{children}</div>
-    </DashboardShell>
+    <AdminShell user={{ name: user.fullName, email: user.email, role: user.role, avatarUrl: user.avatarUrl }} unread={unread}>
+      {children}
+    </AdminShell>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import Link from "next/link";
 import Script from "next/script";
 import { useRouter } from "next/navigation";
 import { Home, Briefcase, MapPin, Plus, Zap, Clock, CalendarClock, Banknote, Wallet, Smartphone, CreditCard, Landmark, Check, Info } from "lucide-react";
@@ -39,7 +40,18 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
 
   const online = ["upi", "card", "netbanking"] as PaymentMethod[];
   const walletOk = walletBalance >= summary.total;
-  const canPlace = addressId && summary.serviceable && summary.meets_min_order && !summary.issues.length && (deliveryType !== "scheduled" || slot) && !(payment === "wallet" && !walletOk) && !(online.includes(payment) && !razorpayEnabled);
+  // The first reason the order cannot be placed, in the order a customer can fix it. Shown next
+  // to the button so a greyed-out "Place order" is never a mystery. The rules themselves come from
+  // cart_summary (zone/store min order, serviceability), not from here.
+  const blocker = !addressId ? "Select or add a delivery address to continue."
+    : !summary.serviceable ? (summary.service_message ?? "We don't deliver to this address yet.")
+    : !summary.meets_min_order ? `Minimum order is ${formatINR(summary.min_order_amount)} for your area. Add ${formatINR(summary.min_order_amount - summary.subtotal)} more to place this order.`
+    : summary.issues.length ? "Some items are no longer available in the quantity you chose. Update your cart to continue."
+    : deliveryType === "scheduled" && !slot ? "Pick a delivery slot to continue."
+    : payment === "wallet" && !walletOk ? "Your wallet balance doesn't cover this order. Choose another payment method."
+    : online.includes(payment) && !razorpayEnabled ? "Online payment isn't available yet. Choose Cash on Delivery."
+    : null;
+  const canPlace = !blocker;
 
   const scheduledRange = () => {
     if (deliveryType !== "scheduled" || !slot) return {};
@@ -60,7 +72,7 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
       if (!r.ok) { toast.error(d.error ?? "Could not start payment"); router.replace(`/orders/${order.order_id}?payment=setup`); return; }
       if (!window.Razorpay) { toast.error("Payment library failed to load. Check your connection."); router.replace(`/orders/${order.order_id}?payment=pending`); return; }
       const rzp = new window.Razorpay({
-        key: d.keyId, amount: d.amount, currency: d.currency, name: "Merta Deal", description: `Order ${d.orderNumber}`, order_id: d.razorpayOrderId, prefill: d.prefill, theme: { color: "#0B6E4F" },
+        key: d.keyId, amount: d.amount, currency: d.currency, name: "Merta Deal", description: `Order ${d.orderNumber}`, order_id: d.razorpayOrderId, prefill: d.prefill, theme: { color: "#329537" },
         handler: async (resp: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
           const v = await fetch("/api/payments/razorpay/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId: order.order_id, ...resp }) });
           if (v.ok) router.replace(`/orders/${order.order_id}?placed=1`); else { const e = await v.json(); toast.error(e.error ?? "Payment verification failed"); router.replace(`/orders/${order.order_id}?payment=failed`); }
@@ -82,7 +94,7 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
               <li key={a.id}>
                 <button type="button" onClick={() => setAddressId(a.id)} className={cn("flex w-full items-start gap-3 rounded-md border p-3 text-left", active ? "border-brand-600 bg-brand-50" : "border-line bg-card")}>
                   <span className={cn("mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-sm", active ? "bg-brand-600 text-white" : "bg-surface-2 text-ink-3")}>{active ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}</span>
-                  <span className="min-w-0"><span className="block text-sm font-bold text-ink">{a.label ?? a.type[0].toUpperCase() + a.type.slice(1)} · {a.full_name}</span><span className="block text-xs text-ink-2">{a.house}, {a.street}, {a.area}{a.landmark ? `, ${a.landmark}` : ""}, {a.city} – {a.pincode}</span><span className="block text-xs text-ink-3">{a.phone}{a.lat ? " · GPS pinned" : ""}</span></span>
+                  <span className="min-w-0"><span className="block text-sm font-bold text-ink">{a.label ?? a.type[0].toUpperCase() + a.type.slice(1)} · {a.full_name}</span><span className="block text-xs text-ink-2">{[a.house, a.street, a.area, a.landmark, `${a.city} – ${a.pincode}`].filter(Boolean).join(", ")}</span><span className="block text-xs text-ink-3">{a.phone}{a.lat ? " · GPS pinned" : ""}</span></span>
                 </button>
               </li>); })}
           </ul>
@@ -119,10 +131,11 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
       <aside className="space-y-3 lg:sticky lg:top-24 lg:self-start">
         <FreeDeliveryBar s={summary} />
         <div className={cn("rounded-lg border border-line bg-card p-4", refreshing && "opacity-70")}>
-          <h2 className="mb-3 text-base font-bold text-ink">Order summary · {summary.store?.name}</h2>
+          <h2 className="mb-3 text-base font-bold text-ink">Order summary</h2>
           <ul className="mb-3 max-h-40 space-y-1 overflow-y-auto text-sm">{summary.items.map((i) => <li key={i.id} className="flex justify-between gap-2"><span className="line-clamp-1 text-ink-2">{i.quantity} × {i.name}</span><span className="tabular text-ink">{formatINR(i.line_total)}</span></li>)}</ul>
           <PriceBreakdown s={summary} />
         </div>
+        {blocker ? <Alert tone="warning">{blocker}{!summary.meets_min_order && addressId && summary.serviceable ? <> <Link href="/cart" className="font-semibold underline">Add items</Link></> : null}</Alert> : null}
         <Button size="lg" fullWidth loading={placing} disabled={!canPlace} onClick={place}>{online.includes(payment) ? `Pay ${formatINR(summary.total, { precise: true })}` : `Place order · ${formatINR(summary.total, { precise: true })}`}</Button>
         <p className="text-center text-[11px] text-ink-3">By placing this order you agree to the terms of service. Delivery OTP will be shared after the order is placed.</p>
       </aside>

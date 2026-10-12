@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IconButton } from "./button";
 import { useHydrated } from "@/hooks/use-hydrated";
+import { useBackToClose } from "@/hooks/use-back-to-close";
 
 function useLockBody(open: boolean) {
   React.useEffect(() => {
@@ -34,12 +35,12 @@ export interface OverlayProps { open: boolean; onClose: () => void; title?: Reac
 
 /** Centered dialog on desktop; on phones it becomes a bottom sheet. */
 export function Modal({ open, onClose, title, children, className, footer, description, size = "md" }: OverlayProps & { size?: "sm" | "md" | "lg" }) {
-  useLockBody(open); useEscape(open, onClose);
+  useLockBody(open); useEscape(open, onClose); useBackToClose(open, onClose);
   if (!open) return null;
   const sizes = { sm: "sm:max-w-sm", md: "sm:max-w-md", lg: "sm:max-w-2xl" };
   return (
     <Portal>
-      <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true">
+      <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center" role="dialog" aria-modal="true">
         <div className="absolute inset-0 bg-ink/50 animate-fade-in" onClick={onClose} />
         <div className={cn("relative w-full max-h-[92dvh] overflow-hidden rounded-t-2xl bg-card shadow-sheet animate-slide-up sm:rounded-xl sm:animate-pop", sizes[size], className)}>
           <div className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-line-2 sm:hidden" />
@@ -62,11 +63,11 @@ export function Modal({ open, onClose, title, children, className, footer, descr
 
 /** Slide-in side panel (filters, menus). */
 export function Drawer({ open, onClose, title, children, className, footer, side = "right" }: OverlayProps & { side?: "left" | "right" }) {
-  useLockBody(open); useEscape(open, onClose);
+  useLockBody(open); useEscape(open, onClose); useBackToClose(open, onClose);
   if (!open) return null;
   return (
     <Portal>
-      <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
+      <div className="fixed inset-0 z-[60]" role="dialog" aria-modal="true">
         <div className="absolute inset-0 bg-ink/50 animate-fade-in" onClick={onClose} />
         <div className={cn("absolute inset-y-0 flex w-[88%] max-w-sm flex-col bg-card shadow-float", side === "right" ? "right-0 animate-slide-in-right" : "left-0", className)}>
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
@@ -83,11 +84,11 @@ export function Drawer({ open, onClose, title, children, className, footer, side
 
 /** Mobile-first bottom sheet (always anchored to the bottom, even on desktop). */
 export function BottomSheet({ open, onClose, title, children, className, footer, description }: OverlayProps) {
-  useLockBody(open); useEscape(open, onClose);
+  useLockBody(open); useEscape(open, onClose); useBackToClose(open, onClose);
   if (!open) return null;
   return (
     <Portal>
-      <div className="fixed inset-0 z-50 flex items-end justify-center" role="dialog" aria-modal="true">
+      <div className="fixed inset-0 z-[60] flex items-end justify-center" role="dialog" aria-modal="true">
         <div className="absolute inset-0 bg-ink/50 animate-fade-in" onClick={onClose} />
         <div className={cn("relative w-full max-w-lg rounded-t-2xl bg-card shadow-sheet animate-slide-up", className)}>
           <div className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-line-2" />
@@ -100,8 +101,8 @@ export function BottomSheet({ open, onClose, title, children, className, footer,
               <IconButton label="Close" onClick={onClose} className="-mr-2"><X className="h-5 w-5" /></IconButton>
             </div>
           ) : null}
-          <div className="max-h-[75dvh] overflow-y-auto px-5 pb-4">{children}</div>
-          {footer ? <div className="border-t border-line bg-surface px-5 py-3 safe-bottom">{footer}</div> : null}
+          <div className="max-h-[75dvh] overflow-y-auto overscroll-contain px-5 pb-4" style={footer ? undefined : { paddingBottom: "calc(1rem + var(--safe-bottom))" }}>{children}</div>
+          {footer ? <div className="border-t border-line bg-surface px-5 py-3" style={{ paddingBottom: "calc(0.75rem + var(--safe-bottom))" }}>{footer}</div> : null}
         </div>
       </div>
     </Portal>
