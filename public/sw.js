@@ -1,5 +1,5 @@
 /* Merta Deal service worker: offline shell for navigations, cache-first static assets, web push. */
-const VERSION = "md-v3";
+const VERSION = "md-v4";
 const STATIC_CACHE = `${VERSION}-static`;
 const OFFLINE_URL = "/offline.html";
 
