@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/input";
 import { Modal } from "@/components/ui/overlay";
 import { Alert } from "@/components/ui/states";
 import { toast } from "@/components/ui/toast";
-import { AddressForm } from "./address-form";
+import { AddressWizard } from "./address-wizard";
 import { PriceBreakdown, FreeDeliveryBar } from "./price-breakdown";
 import { cn, formatINR } from "@/lib/utils";
 
@@ -140,8 +140,8 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
         <p className="text-center text-[11px] text-ink-3">By placing this order you agree to the terms of service. Delivery OTP will be shared after the order is placed.</p>
       </aside>
 
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add delivery address" size="lg">
-        <AddressForm defaultName={user.name} defaultPhone={user.phone} onCancel={addresses.length ? () => setAddOpen(false) : undefined} onSaved={(a) => { setAddresses((cur) => [a, ...cur.filter((x) => x.id !== a.id)]); setAddressId(a.id); setAddOpen(false); }} />
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Location information" size="lg">
+        <AddressWizard defaultName={user.name} defaultPhone={user.phone} onCancel={addresses.length ? () => setAddOpen(false) : undefined} onSaved={(a) => { setAddresses((cur) => [a, ...cur.filter((x) => x.id !== a.id)]); setAddressId(a.id); setAddOpen(false); }} />
       </Modal>
     </div>
   );

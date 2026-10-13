@@ -86,8 +86,19 @@ export function haversineKm(lat1: number, lng1: number, lat2: number, lng2: numb
 }
 
 /** Parses Postgres error text like `MIN_ORDER: Minimum order amount is ₹99` into a friendly message. */
+/** Cart limit messages, shared by the server error mapping and the quantity controls. */
+export const maxPerOrderMessage = (n: number) => `Maximum ${n} ${n === 1 ? "pack" : "packs"} per order`;
+export const onlyAvailableMessage = (n: number) => (n <= 0 ? "Out of stock" : `Only ${n} available`);
+
 export function friendlyError(err: unknown): string {
   const raw = typeof err === "string" ? err : err instanceof Error ? err.message : (err as { message?: string })?.message ?? "Something went wrong";
+  // Cart limits (add_to_cart): "MAX_PER_ORDER: 5" / "ONLY_AVAILABLE: 3".
+  const limit = raw.match(/^MAX_PER_ORDER:\s*(\d+)/);
+  if (limit) return maxPerOrderMessage(Number(limit[1]));
+  const avail = raw.match(/^ONLY_AVAILABLE:\s*(\d+)/);
+  if (avail) return onlyAvailableMessage(Number(avail[1]));
+  if (raw.startsWith("ITEMS_UNAVAILABLE")) return "Some items in your cart changed (stock or per-order limit). Review your cart and try again.";
+  if (/inventory_stock_qty_check|violates check constraint "inventory_stock/i.test(raw)) return "Some items just sold out. Review your cart and try again.";
   const map: Record<string, string> = {
     AUTH_REQUIRED: "Please sign in to continue.",
     CART_EMPTY: "Your cart is empty.",

@@ -6,7 +6,8 @@ import { AlertTriangle, Bot, Loader2, MessageCircle, Mic, MicOff, Send, Shopping
 import type { AssistantResponse } from "@/lib/ai/schemas";
 import { addToCartAction, getCartSummary } from "@/lib/actions/cart";
 import { useCartStore } from "@/stores/cart-store";
-import { cn } from "@/lib/utils";
+import { cn, maxPerOrderMessage, onlyAvailableMessage } from "@/lib/utils";
+import { packLimit } from "@/lib/cart-sync";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/states";
 import { Chip } from "@/components/ui/tabs";
@@ -107,16 +108,23 @@ export function AssistantChat({ signedIn, aiConfigured, autoVoice, waId }: { sig
     const plan = planAddAll(turn.result.lines, turn.choices, cartStoreId);
     if (!plan.adds.length) { toast.warning("Nothing to add", plan.skipped[0]?.reason ? `Skipped: ${plan.skipped.map((s) => s.name).join(", ")}` : undefined); return; }
     setAdding(turn.id);
-    let added = 0; const failed: string[] = [];
+    let added = 0; const failed: string[] = []; const reduced: string[] = [];
     for (const a of plan.adds) {
+      // Never exceed the product's per-order limit (or stock): add what fits and say what was cut.
+      const c = turn.result.lines[a.lineIdx]?.candidates[a.candidateIdx];
+      const lim = packLimit(c?.max_order_qty, c?.stock_qty);
       const existing = useCartStore.getState().qtyFor(a.inventoryId);
-      const res = await addToCartAction(a.inventoryId, existing + a.packs);
+      const target = Math.min(existing + a.packs, lim.max);
+      if (target < existing + a.packs) reduced.push(target <= existing ? `${a.name}: already at the limit (${(lim.byStock ? onlyAvailableMessage(lim.max) : maxPerOrderMessage(lim.max)).toLowerCase()})` : `${a.name}: ${target - existing} of ${a.packs} added (${lim.message.toLowerCase()})`);
+      if (target <= existing) continue;
+      const res = await addToCartAction(a.inventoryId, target);
       if (res.ok) added++;
       else failed.push(`${a.name} (${res.conflict ? "another store is in your cart" : res.error})`);
     }
     const summary = await getCartSummary();
     cart.setSummary(summary);
     setAdding(null);
+    if (reduced.length) { cart.setNotice({ title: "Some quantities were reduced", lines: reduced }); cart.openDrawer("cart"); }
     if (plan.adds.some((a) => a.switched)) setTurns((t) => t.map((x) => (x.id === turn.id && x.choices ? { ...x, choices: x.choices.map((c, i) => { const sw = plan.adds.find((a) => a.lineIdx === i && a.switched); return sw ? { candidate: sw.candidateIdx, packs: sw.packs } : c; }) } : x)));
     const skippedNote = [...plan.skipped.map((s) => `${s.name} — ${s.reason}`), ...failed];
     if (added) toast.success(`Added ${added} item${added > 1 ? "s" : ""}${plan.targetStoreName ? ` from ${plan.targetStoreName}` : ""}`, skippedNote.length ? `Skipped ${skippedNote.length}: ${skippedNote.slice(0, 3).join("; ")}${skippedNote.length > 3 ? "…" : ""}` : undefined);

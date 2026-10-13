@@ -15,7 +15,7 @@ import { discountPct } from "@/lib/utils";
 
 type FormState = { name: string; category_id: string; brand_name: string; weight_value: string; weight_unit: WeightUnit; pack_label: string; mrp: string; selling_price: string; stock_qty: string; low_stock_threshold: string; max_order_qty: string; description: string; image_url: string | null; is_veg: boolean; is_local: boolean };
 
-const blank: FormState = { name: "", category_id: "", brand_name: "", weight_value: "", weight_unit: "g", pack_label: "", mrp: "", selling_price: "", stock_qty: "10", low_stock_threshold: "5", max_order_qty: "10", description: "", image_url: null, is_veg: true, is_local: false };
+const blank: FormState = { name: "", category_id: "", brand_name: "", weight_value: "", weight_unit: "g", pack_label: "", mrp: "", selling_price: "", stock_qty: "10", low_stock_threshold: "5", max_order_qty: "5", description: "", image_url: null, is_veg: true, is_local: false };
 
 function fromRow(r: StoreInventoryRow): FormState {
   const p = r.product;
@@ -81,7 +81,7 @@ export function ProductForm({ storeId, categories, item }: { storeId: string; ca
             <Input label="Selling price (₹)" required type="number" inputMode="decimal" min={0} step="0.5" value={form.selling_price} onChange={(e) => set("selling_price", e.target.value)} error={errors.selling_price ?? (Number(form.selling_price) > Number(form.mrp) && form.mrp ? "Cannot be higher than MRP" : undefined)} rightSlot={pct > 0 ? <DiscountBadge pct={pct} /> : null} hint={pct > 0 ? `Customers see ${pct}% off` : "Must be at or below MRP"} />
             <Input label="Stock (units)" required type="number" inputMode="numeric" min={0} value={form.stock_qty} onChange={(e) => set("stock_qty", e.target.value)} error={errors.stock_qty} hint={item ? "Use the Inventory page for day-to-day +/- changes; this sets the exact count." : undefined} />
             <Input label="Low-stock alert at" type="number" inputMode="numeric" min={0} value={form.low_stock_threshold} onChange={(e) => set("low_stock_threshold", e.target.value)} error={errors.low_stock_threshold} hint="You get a notification at this level" />
-            <Input label="Max per order" type="number" inputMode="numeric" min={1} max={100} value={form.max_order_qty} onChange={(e) => set("max_order_qty", e.target.value)} error={errors.max_order_qty} />
+            <Input label="Max per order" type="number" inputMode="numeric" min={1} max={100} value={form.max_order_qty} onChange={(e) => set("max_order_qty", e.target.value)} error={errors.max_order_qty} hint="Packs one customer can buy in an order" />
           </div>
         </section>
       </div>

@@ -31,9 +31,9 @@ export function AddressForm({ initial, onSaved, onCancel, defaultName, defaultPh
       try {
         const r = await fetch(`/api/maps/geocode?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}`);
         const d = await r.json();
-        if (d.ok) { if (d.area && !form.area) set("area", d.area); if (d.pincode) set("pincode", d.pincode); if (d.street && !form.street) set("street", d.street); toast.success("Location pinned and address suggested"); }
-        else toast.info("Location pinned", d.message ?? "Fill in the address details.");
-      } catch { toast.info("Location pinned"); }
+        if (d.ok) { if (d.area && !form.area) set("area", d.area); if (d.pincode) set("pincode", d.pincode); toast.success("Location pinned and address suggested", d.source === "osm" ? "Address data © OpenStreetMap contributors. Please check it." : "Please check it before saving."); }
+        else toast.info("Location pinned", "Please type your house and area details.");
+      } catch { toast.info("Location pinned", "Please type your house and area details."); }
       setLocating(false);
     }, (err) => {
       toast.error(err.code === err.PERMISSION_DENIED ? "Location permission is blocked. Allow it in your browser settings." : "Could not get your location. Type the address instead.");
@@ -57,12 +57,10 @@ export function AddressForm({ initial, onSaved, onCancel, defaultName, defaultPh
         ))}
       </div>
       <Button type="button" variant="secondary" fullWidth loading={locating} onClick={locate}><LocateFixed className="h-4 w-4" /> {form.lat ? "Location pinned · Update GPS" : "Use current location (GPS)"}</Button>
-      {/* Only what a rider needs: house, area, receiver and phone. Street and landmark are optional; city and pincode come prefilled. */}
+      {/* Only what a rider needs: house, area, receiver and phone; city and pincode come prefilled. Street/landmark already saved on an address are kept. */}
       <div className="grid gap-3 sm:grid-cols-2">
         <Input label="House / Flat / Shop no." required value={form.house} onChange={(e) => set("house", e.target.value)} error={errors.house} placeholder="e.g. 12, First floor" autoComplete="address-line1" />
         <Input label="Area / Colony" required value={form.area} onChange={(e) => set("area", e.target.value)} error={errors.area} placeholder="e.g. Sadar Bazaar" autoComplete="address-level3" />
-        <Input label="Street (optional)" value={form.street ?? ""} onChange={(e) => set("street", e.target.value)} error={errors.street} placeholder="e.g. Station Road" autoComplete="address-line2" />
-        <Input label="Landmark (optional)" value={form.landmark ?? ""} onChange={(e) => set("landmark", e.target.value)} placeholder="e.g. Near Ghanti Ghar" />
         <Input label="Receiver's name" required value={form.full_name} onChange={(e) => set("full_name", e.target.value)} error={errors.full_name} autoComplete="name" />
         <Input label="Mobile number" required inputMode="numeric" value={form.phone} onChange={(e) => set("phone", e.target.value.replace(/\D/g, "").slice(0, 10))} error={errors.phone} autoComplete="tel-national" placeholder="10-digit number" />
         <Input label="City" required value={form.city} onChange={(e) => set("city", e.target.value)} error={errors.city} autoComplete="address-level2" />

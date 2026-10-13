@@ -2,7 +2,8 @@
 import * as React from "react";
 import { ShoppingBag, TicketPercent, X } from "lucide-react";
 import type { CartSummary } from "@/types/app";
-import { addToCartAction, applyCouponAction, getCartSummary, removeCouponAction } from "@/lib/actions/cart";
+import { applyCouponAction, getCartSummary, removeCouponAction } from "@/lib/actions/cart";
+import { setLineQuantity } from "@/lib/cart-sync";
 import { useCartStore } from "@/stores/cart-store";
 import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
@@ -15,18 +16,12 @@ import { formatINR } from "@/lib/utils";
 export function CartView({ initial, coupons }: { initial: CartSummary | null; coupons: { code: string; title: string; min_order_amount: number }[] }) {
   const summary = useCartStore((s) => s.summary) ?? initial;
   const setSummary = useCartStore((s) => s.setSummary);
-  const [busyId, setBusyId] = React.useState<string | null>(null);
   const [code, setCode] = React.useState("");
   const [couponBusy, setCouponBusy] = React.useState(false);
   React.useEffect(() => { setSummary(initial); }, [initial, setSummary]);
 
   const refresh = async () => setSummary(await getCartSummary());
-  const onQty = async (inventoryId: string, qty: number) => {
-    setBusyId(inventoryId);
-    const r = await addToCartAction(inventoryId, qty);
-    if (!r.ok) toast.error(r.error);
-    await refresh(); setBusyId(null);
-  };
+  const onQty = (inventoryId: string, qty: number) => { void setLineQuantity(inventoryId, qty); };
   const apply = async (c = code) => {
     if (!c.trim()) return;
     setCouponBusy(true);
@@ -45,7 +40,7 @@ export function CartView({ initial, coupons }: { initial: CartSummary | null; co
       <div className="space-y-4">
         <FreeDeliveryBar s={summary} />
         <ul className="divide-y divide-line rounded-lg border border-line bg-card px-4">
-          {summary.items.map((line) => <CartItem key={line.id} line={line} onQty={onQty} busy={busyId === line.inventory_id} />)}
+          {summary.items.map((line) => <CartItem key={line.id} line={line} onQty={onQty} issue={summary.issues.find((i) => i.inventory_id === line.inventory_id)} />)}
         </ul>
 
         <div className="rounded-lg border border-line bg-card p-4">

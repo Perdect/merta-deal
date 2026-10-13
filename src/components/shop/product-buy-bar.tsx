@@ -2,9 +2,9 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import type { ProductDetail } from "@/types/app";
-import { addToCartAction, getCartSummary } from "@/lib/actions/cart";
 import { ensureGuestSessionAction } from "@/lib/actions/guest";
 import { useCartStore } from "@/stores/cart-store";
+import { packLimit, setLineQuantity } from "@/lib/cart-sync";
 import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/overlay";
@@ -16,6 +16,7 @@ import { formatINR } from "@/lib/utils";
 /**
  * Add to Cart for the product page: floats above the dock on mobile, sits under the gallery on
  * desktop. After adding it becomes a stepper + "Go to cart", both backed by the server cart.
+ * Quantity is in packs (pack size shown under the stepper); the + stops at the product's limit.
  */
 export function ProductBuyBar({ product, signedIn }: { product: ProductDetail; signedIn: boolean }) {
   const router = useRouter();
@@ -24,11 +25,12 @@ export function ProductBuyBar({ product, signedIn }: { product: ProductDetail; s
   const qty = useCartStore((s) => (offer ? s.qtyFor(offer.inventory_id) : 0));
   const subtotal = useCartStore((s) => s.summary?.subtotal ?? 0);
   const count = useCartStore((s) => s.totalCount());
-  const setPending = useCartStore((s) => s.setPending);
-  const setSummary = useCartStore((s) => s.setSummary);
+  const syncing = useCartStore((s) => (offer ? offer.inventory_id in s.pending : false));
   const openDrawer = useCartStore((s) => s.openDrawer);
   const [busy, setBusy] = React.useState(false);
   const [conflict, setConflict] = React.useState<{ current: string; next: string } | null>(null);
+
+  const limit = packLimit(offer?.max_order_qty, offer?.stock_qty);
 
   const add = async (replace = false) => {
     if (!offer) return;
@@ -38,25 +40,15 @@ export function ProductBuyBar({ product, signedIn }: { product: ProductDetail; s
       if (!g.ok) { setBusy(false); router.push(`/login?next=${encodeURIComponent(`/p/${product.slug}`)}`); return; }
       if (g.created) router.refresh();
     }
-    const target = qty + 1;
-    setPending(offer.inventory_id, target);
-    const res = await addToCartAction(offer.inventory_id, target, replace);
-    if (!res.ok) {
-      setPending(offer.inventory_id, null);
-      if (res.conflict) setConflict({ current: res.conflict.current_store.name, next: res.conflict.new_store.name });
-      else toast.error(res.error);
-      setBusy(false); return;
-    }
-    setSummary(await getCartSummary()); setPending(offer.inventory_id, null);
+    const res = await setLineQuantity(offer.inventory_id, Math.min(qty + 1, Math.max(limit.max, 1)), { replace });
     setBusy(false);
+    if (!res.ok) { if (res.conflict) setConflict({ current: res.conflict.current_store.name, next: res.conflict.new_store.name }); return; }
     toast.success("Added to cart");
   };
-  const setQty = async (v: number) => {
+  const setQty = (v: number) => {
     if (!offer) return;
-    setPending(offer.inventory_id, v);
-    const res = await addToCartAction(offer.inventory_id, v);
-    if (!res.ok) { setPending(offer.inventory_id, null); toast.error(res.error); return; }
-    setSummary(await getCartSummary()); setPending(offer.inventory_id, null);
+    if (v === limit.max && v > qty) toast.info(limit.message, "That's the most you can add of this item.");
+    void setLineQuantity(offer.inventory_id, v);
   };
   const soldOut = !offer || offer.status === "out_of_stock";
 
@@ -66,7 +58,10 @@ export function ProductBuyBar({ product, signedIn }: { product: ProductDetail; s
         <div className="rounded-2xl border border-line bg-card p-2 shadow-float md:border-0 md:bg-transparent md:p-0 md:shadow-none">
           {qty > 0 && offer ? (
             <div className="flex items-center gap-2">
-              <QuantityStepper value={qty} onChange={setQty} min={0} max={Math.min(offer.max_order_qty, offer.stock_qty)} className="h-12 flex-1 justify-between rounded-xl px-1" />
+              <div className="flex flex-1 flex-col">
+                <QuantityStepper value={qty} onChange={setQty} min={0} max={limit.max} maxLabel={limit.message} loading={syncing} className="h-12 w-full justify-between rounded-xl px-1" />
+                <p className={`mt-1 text-center text-[11px] leading-tight ${qty >= limit.max ? "font-semibold text-saffron-700" : "text-ink-3"}`} aria-live="polite">{qty >= limit.max ? limit.message : product.pack_label ? `${qty} × ${product.pack_label} pack` : `${qty} ${qty === 1 ? "pack" : "packs"}`}</p>
+              </div>
               <Button size="lg" className="h-12 flex-1 rounded-xl text-[15px]" onClick={() => openDrawer("cart")}>Go to cart · {formatINR(subtotal)}</Button>
             </div>
           ) : (

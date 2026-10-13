@@ -60,14 +60,19 @@ export type ProductDetail = ProductCard & {
   offers: ProductOffer[]; related: ProductCard[]; frequently_bought: ProductCard[]; reviews: ProductReview[]; in_wishlist: boolean;
 };
 
-export type CartLine = { id: string; inventory_id: string; product_id: string; name: string; slug: string; image_url: string | null; pack_label: string | null; brand_name: string | null; quantity: number; unit_price: number; unit_mrp: number; line_total: number; stock_qty: number; max_order_qty: number; available: boolean };
+export type CartLine = { id: string; inventory_id: string; product_id: string; name: string; slug: string; image_url: string | null; pack_label: string | null; brand_name: string | null; quantity: number; unit_price: number; unit_mrp: number; line_total: number; stock_qty: number; max_order_qty: number; available: boolean;
+  /** Quantity is above the product's per-order limit (limit lowered after adding). */ over_limit?: boolean;
+  /** Price when the quantity was last set; `price_changed` once the current price differs. */ price_at_add?: number | null; price_changed?: boolean };
+export type CartIssue = { product_id: string; inventory_id?: string; name: string; quantity?: number; available_qty: number; max_order_qty?: number; reason?: "unavailable" | "stock" | "limit" };
+/** reorder RPC: lines left out, and lines added with fewer packs than ordered last time. */
+export type ReorderResult = { added: number; skipped: { name: string; reason?: string }[]; adjusted?: { name: string; requested: number; added: number; reason: "limit" | "stock" }[] };
 export type CartSummary = {
   cart_id?: string; empty: boolean;
   store: { id: string; name: string; slug: string; area: string; is_open: boolean; avg_prep_minutes: number; lat: number; lng: number } | null;
-  items: CartLine[]; item_count: number; issues: { product_id: string; name: string; available_qty: number }[];
+  items: CartLine[]; item_count: number; issues: CartIssue[];
   subtotal: number; mrp_total: number; item_savings: number;
   coupon: { valid: boolean; coupon_id?: string; code?: string; title?: string; discount?: number; reason?: string } | null; coupon_discount: number;
-  delivery_fee: number; express_fee: number; platform_fee: number; tax: number; tax_rate: number; total: number;
+  delivery_fee: number; /** Fee waived because the order is above the free-delivery amount (shown struck through). */ delivery_fee_waived?: number; express_fee: number; platform_fee: number; tax: number; tax_rate: number; total: number;
   free_delivery_threshold: number; free_delivery_gap: number; min_order_amount: number; meets_min_order: boolean;
   address: Address | null; zone: { id: string; name: string; express_supported: boolean } | null;
   serviceable: boolean; service_message: string | null; eta_min_minutes: number; eta_max_minutes: number; distance_km: number; delivery_type: DeliveryType;

@@ -12,6 +12,9 @@ type CartState = {
   pending: Record<string, number>; // inventory_id -> optimistic qty
   /** Slide-in cart panel: closed, the cart itself, or the payment step. */
   drawer: null | "cart" | "pay";
+  /** Explanation shown at the top of the cart until dismissed (e.g. what a reorder changed). */
+  notice: { title: string; lines: string[] } | null;
+  setNotice: (n: { title: string; lines: string[] } | null) => void;
   openDrawer: (step?: "cart" | "pay") => void;
   closeDrawer: () => void;
   setSummary: (s: CartSummary | null) => void;
@@ -26,6 +29,8 @@ export const useCartStore = create<CartState>((set, get) => ({
   loading: false,
   pending: {},
   drawer: null,
+  notice: null,
+  setNotice: (notice) => set({ notice }),
   openDrawer: (step = "cart") => set({ drawer: step }),
   closeDrawer: () => set({ drawer: null }),
   setSummary: (summary) => set({ summary }),

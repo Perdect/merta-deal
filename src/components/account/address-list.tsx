@@ -5,6 +5,7 @@ import { Home, Briefcase, MapPin, Plus, Pencil, Trash2 } from "lucide-react";
 import type { Address } from "@/types/app";
 import { deleteAddressAction, setDefaultAddressAction } from "@/lib/actions/checkout";
 import { AddressForm } from "@/components/shop/address-form";
+import { AddressWizard } from "@/components/shop/address-wizard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Modal, ConfirmDialog } from "@/components/ui/overlay";
@@ -102,8 +103,9 @@ export function AddressList({ initial, defaultName, defaultPhone, openNew = fals
         </ul>
       )}
 
-      <Modal open={editing !== null} onClose={() => setEditing(null)} title={editing === "new" ? "Add address" : "Edit address"} size="lg">
-        {editing !== null ? <AddressForm initial={editing === "new" ? undefined : editing} onSaved={onSaved} onCancel={() => setEditing(null)} defaultName={defaultName} defaultPhone={defaultPhone} /> : null}
+      <Modal open={editing !== null} onClose={() => setEditing(null)} title={editing === "new" ? "Location information" : "Edit address"} size="lg">
+        {editing === "new" ? <AddressWizard onSaved={onSaved} onCancel={() => setEditing(null)} defaultName={defaultName} defaultPhone={defaultPhone} />
+          : editing !== null ? <AddressForm initial={editing} onSaved={onSaved} onCancel={() => setEditing(null)} defaultName={defaultName} defaultPhone={defaultPhone} /> : null}
       </Modal>
       <ConfirmDialog open={deleting !== null} onClose={() => setDeleting(null)} onConfirm={remove} title="Delete this address?" description={deleting ? formatAddressLine(deleting) : undefined} confirmLabel="Delete" tone="danger" loading={Boolean(deleting && busyId === deleting.id)} />
     </div>

@@ -2,8 +2,8 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
-import { addToCartAction, getCartSummary } from "@/lib/actions/cart";
 import { ensureGuestSessionAction } from "@/lib/actions/guest";
+import { packLimit, setLineQuantity } from "@/lib/cart-sync";
 import { useCartStore } from "@/stores/cart-store";
 import { toast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/overlay";
@@ -13,39 +13,36 @@ import { track } from "@/lib/analytics";
 
 type Props = { inventoryId: string | null; maxQty?: number | null; stockQty?: number | null; size?: "sm" | "md"; className?: string; stepperClassName?: string; label?: string; signedIn?: boolean; fullWidth?: boolean };
 
-/** ADD button that turns into a quantity stepper; syncs with the server cart via RPC. */
+/**
+ * ADD button that turns into a − qty + stepper (quantity = packs). Shared cart state, so every card
+ * for the same product shows the same number. Limits: the product's max per order, or the stock if
+ * lower; the server enforces them too. Taps are queued, never dropped.
+ */
 /** `className` styles the ADD button; `stepperClassName` styles the quantity control that replaces it. */
 export function AddToCart({ inventoryId, maxQty, stockQty, size = "md", className, stepperClassName, label = "ADD", signedIn = true, fullWidth }: Props) {
   const router = useRouter();
   const qty = useCartStore((s) => (inventoryId ? s.qtyFor(inventoryId) : 0));
-  const setPending = useCartStore((s) => s.setPending);
-  const setSummary = useCartStore((s) => s.setSummary);
-  const [busy, setBusy] = React.useState(false);
+  const syncing = useCartStore((s) => (inventoryId ? inventoryId in s.pending : false));
+  const [starting, setStarting] = React.useState(false);
   const [conflict, setConflict] = React.useState<{ current: string; next: string; qty: number } | null>(null);
   const outOfStock = !inventoryId || (stockQty != null && stockQty <= 0);
-  const max = Math.max(1, Math.min(maxQty ?? 10, stockQty ?? 99));
+  const limit = packLimit(maxQty, stockQty);
 
-  const update = React.useCallback(async (next: number, replace = false) => {
+  const update = async (next: number, replace = false) => {
     if (!inventoryId) return;
-    if (!signedIn) {
-      setBusy(true);
+    if (!signedIn && qty === 0) {
+      setStarting(true);
       const g = await ensureGuestSessionAction();
-      if (!g.ok) { setBusy(false); router.push(`/login?next=${encodeURIComponent(window.location.pathname)}`); return; }
+      setStarting(false);
+      if (!g.ok) { router.push(`/login?next=${encodeURIComponent(window.location.pathname)}`); return; }
       if (g.created) router.refresh();
     }
-    setPending(inventoryId, next); setBusy(true);
-    const res = await addToCartAction(inventoryId, next, replace);
-    if (!res.ok) {
-      setPending(inventoryId, null);
-      if (res.conflict) setConflict({ current: res.conflict.current_store.name, next: res.conflict.new_store.name, qty: next });
-      else toast.error(res.error);
-    } else {
-      const summary = await getCartSummary();
-      setSummary(summary); setPending(inventoryId, null);
-      if (qty === 0 && next > 0) { toast.success("Added to cart"); track("add_to_cart", { items: [{ item_id: inventoryId, quantity: next }] }); }
-    }
-    setBusy(false);
-  }, [inventoryId, signedIn, router, setPending, setSummary, qty]);
+    const first = qty === 0 && next > 0;
+    if (next === limit.max && next > qty) toast.info(limit.message, "That's the most you can add of this item.");
+    const res = await setLineQuantity(inventoryId, next, { replace });
+    if (!res.ok && res.conflict) setConflict({ current: res.conflict.current_store.name, next: res.conflict.new_store.name, qty: next });
+    else if (res.ok && first) { toast.success("Added to cart"); track("add_to_cart", { items: [{ item_id: inventoryId, quantity: next }] }); }
+  };
 
   if (outOfStock) {
     return <span className={cn("inline-flex items-center justify-center rounded-sm border border-line-2 bg-surface-2 px-3 text-xs font-semibold text-ink-3", size === "sm" ? "h-8" : "h-9", fullWidth && "w-full", className)}>Out of stock</span>;
@@ -54,9 +51,9 @@ export function AddToCart({ inventoryId, maxQty, stockQty, size = "md", classNam
   return (
     <>
       {qty > 0 ? (
-        <QuantityStepper value={qty} onChange={(v) => update(v)} min={0} max={max} size={size} loading={busy} className={cn("motion-safe:animate-pop", fullWidth && "w-full justify-between", stepperClassName)} />
+        <QuantityStepper value={qty} onChange={(v) => update(v)} min={0} max={limit.max} maxLabel={limit.message} size={size} loading={syncing} className={cn("motion-safe:animate-pop", fullWidth && "w-full justify-between", stepperClassName)} />
       ) : (
-        <button type="button" onClick={() => update(1)} disabled={busy}
+        <button type="button" onClick={() => update(1)} disabled={starting}
           className={cn("tap inline-flex items-center justify-center gap-1 rounded-sm border border-brand-600 bg-brand-50 font-bold text-brand-700 transition-[background-color,transform] duration-150 hover:bg-brand-100 active:scale-95 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600", size === "sm" ? "h-8 px-3 text-xs" : "h-9 px-4 text-sm", fullWidth && "w-full", className)}>
           {label}<Plus className="h-3.5 w-3.5" />
         </button>

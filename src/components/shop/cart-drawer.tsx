@@ -4,9 +4,10 @@ import Link from "next/link";
 import Script from "next/script";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, X, Clock, TicketPercent, ReceiptText, Check, Plus, Home, Briefcase, MapPin, Zap, CalendarClock, Smartphone, CreditCard, Landmark, Wallet, Banknote, ShoppingBag, BadgePercent } from "lucide-react";
-import type { Address, DeliveryType, PaymentMethod, ProductCard as ProductCardType } from "@/types/app";
-import { addToCartAction, applyCouponAction, getCartSummary, removeCouponAction } from "@/lib/actions/cart";
+import { ChevronLeft, X, Clock, TicketPercent, ReceiptText, Check, Plus, Home, Briefcase, MapPin, Zap, CalendarClock, Smartphone, CreditCard, Landmark, Wallet, Banknote, ShoppingBag, BadgePercent, Truck } from "lucide-react";
+import type { Address, CartLine, DeliveryType, PaymentMethod, ProductCard as ProductCardType } from "@/types/app";
+import { acknowledgeCartPricesAction, applyCouponAction, getCartSummary, removeCouponAction } from "@/lib/actions/cart";
+import { packLimit, setLineQuantity } from "@/lib/cart-sync";
 import { placeOrderAction } from "@/lib/actions/checkout";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useCartStore } from "@/stores/cart-store";
@@ -18,7 +19,7 @@ import { Modal } from "@/components/ui/overlay";
 import { Alert } from "@/components/ui/states";
 import { QuantityStepper } from "@/components/ui/misc";
 import { toast } from "@/components/ui/toast";
-import { AddressForm } from "./address-form";
+import { AddressWizard } from "./address-wizard";
 import { ProductImage } from "./product-image";
 import { ProductCard } from "./product-card";
 import { LoginModal } from "@/components/auth/login-modal";
@@ -87,7 +88,10 @@ export function CartDrawer({ signedIn, isGuest, addresses: initialAddresses, wal
   const [slot, setSlot] = React.useState(slots[0] ?? "");
   const [payment, setPayment] = React.useState<PaymentMethod>(codEnabled ? "cod" : razorpayEnabled ? "upi" : "wallet");
   const [instructions, setInstructions] = React.useState("");
-  const [busyId, setBusyId] = React.useState<string | null>(null);
+  const pending = useCartStore((st) => st.pending);
+  const notice = useCartStore((st) => st.notice);
+  const setNotice = useCartStore((st) => st.setNotice);
+  const placingRef = React.useRef(false);
   const [code, setCode] = React.useState("");
   const [couponBusy, setCouponBusy] = React.useState(false);
   const [placing, setPlacing] = React.useState(false);
@@ -124,12 +128,18 @@ export function CartDrawer({ signedIn, isGuest, addresses: initialAddresses, wal
   }, [step, storeId, suggestedFor]);
 
   const refresh = async () => setSummary(await getCartSummary(step === "pay" ? addressId : null, step === "pay" ? deliveryType : "standard"));
-  const onQty = async (inventoryId: string, qty: number) => { setBusyId(inventoryId); const r = await addToCartAction(inventoryId, qty); if (!r.ok) toast.error(r.error); await refresh(); setBusyId(null); };
+  // Quantity changes go through the shared queue (optimistic, merged taps, server-checked limits).
+  const onQty = (line: CartLine, qty: number) => {
+    const lim = packLimit(line.max_order_qty, line.stock_qty);
+    if (qty === lim.max && qty > (pending[line.inventory_id] ?? line.quantity)) toast.info(lim.message, "That's the most you can add of this item.");
+    void setLineQuantity(line.inventory_id, qty);
+  };
   const applyCoupon = async (c = code) => { if (!c.trim()) return; setCouponBusy(true); const r = await applyCouponAction(c); if (r.ok) { toast.success(`Coupon applied — you save ${formatINR(r.data.discount)}`); setCode(""); } else toast.error(r.error); await refresh(); setCouponBusy(false); };
   const removeCoupon = async () => { setCouponBusy(true); await removeCouponAction(); await refresh(); setCouponBusy(false); };
 
   const empty = !s || s.empty || !items.length;
-  const savings = s ? s.item_savings + s.coupon_discount : 0;
+  const deliveryWaived = Number(s?.delivery_fee_waived ?? 0);
+  const savings = s ? s.item_savings + s.coupon_discount + deliveryWaived : 0;
   const etaLabel = s?.eta_max_minutes ? `${s.eta_min_minutes}–${s.eta_max_minutes}` : hydrated && location?.etaMax ? `${location.etaMin}–${location.etaMax}` : `${eta.min}–${eta.max}`;
   const selectedAddress = addresses.find((a) => a.id === addressId) ?? null;
   const headerLine = selectedAddress ? `${selectedAddress.label ?? selectedAddress.type[0].toUpperCase() + selectedAddress.type.slice(1)} · ${selectedAddress.house}, ${selectedAddress.area}` : hydrated && location ? location.label : `Delivering across ${site.city}`;
@@ -151,9 +161,16 @@ export function CartDrawer({ signedIn, isGuest, addresses: initialAddresses, wal
   };
 
   const place = async () => {
-    if (!addressId || !s) return; setPlacing(true);
+    if (!addressId || !s || placingRef.current) return;
+    placingRef.current = true; setPlacing(true);
     const res = await placeOrderAction({ addressId, paymentMethod: payment, deliveryType, instructions, ...scheduledRange() });
-    if (!res.ok) { toast.error(res.error); setPlacing(false); return; }
+    if (!res.ok) {
+      // Nothing was ordered and the cart is untouched; reload it so any change (stock, limit, price) shows.
+      toast.error(res.error);
+      const fresh = await getCartSummary(addressId, deliveryType);
+      if (fresh) { setSummary(fresh); if (fresh.issues.length) openDrawer("cart"); }
+      placingRef.current = false; setPlacing(false); return;
+    }
     const order = res.data;
     const done = (q: string) => { leavingForOrder(); closeDrawer(); setSummary(null); router.replace(`/orders/${order.order_id}?${q}`); };
     if (!order.payment_required) { done("placed=1"); return; }
@@ -205,6 +222,14 @@ export function CartDrawer({ signedIn, isGuest, addresses: initialAddresses, wal
             </div>
           ) : step === "cart" && s ? (
             <>
+              {notice ? (
+                <div className="relative">
+                  <Alert tone="info" title={notice.title} className="pr-10">
+                    <ul className="mt-1 list-disc space-y-0.5 pl-4">{notice.lines.map((l) => <li key={l}>{l}</li>)}</ul>
+                  </Alert>
+                  <button type="button" onClick={() => setNotice(null)} aria-label="Dismiss" className="tap absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full text-[#1e3a8a] hover:bg-info/10"><X className="h-4 w-4" /></button>
+                </div>
+              ) : null}
               <Card className="p-4">
                 <h3 className="font-display text-base font-bold text-ink">Coupons & offers</h3>
                 {s.coupon?.valid && s.coupon_discount > 0 ? (
@@ -236,20 +261,30 @@ export function CartDrawer({ signedIn, isGuest, addresses: initialAddresses, wal
                   <div className="min-w-0 flex-1"><p className="font-display text-base font-bold text-ink">Delivering in {etaLabel} mins</p><p className="text-xs text-ink-3">{s.item_count} item{s.item_count === 1 ? "" : "s"}</p></div>
                 </div>
                 <ul className="divide-y divide-line px-4">
-                  {items.map((line) => (
-                    <li key={line.id} className={cn("flex items-start gap-3 py-3", !line.available && "opacity-70")}>
+                  {items.map((line) => {
+                    const qty = pending[line.inventory_id] ?? line.quantity;
+                    const lim = packLimit(line.max_order_qty, line.stock_qty);
+                    const issue = s.issues.find((i) => i.inventory_id === line.inventory_id);
+                    const note = issue
+                      ? issue.reason === "unavailable" ? "No longer available. Remove it to continue."
+                        : issue.reason === "stock" ? (issue.available_qty > 0 ? `Only ${issue.available_qty} available. Reduce the quantity to continue.` : "Sold out. Remove it to continue.")
+                        : `${lim.message}. Reduce the quantity to continue.`
+                      : null;
+                    return (
+                    <li key={line.id} className={cn("flex items-start gap-3 py-3", issue && "opacity-90")}>
                       <Link href={`/p/${line.slug}`} onClick={closeDrawer} className="shrink-0 overflow-hidden rounded-md border border-line"><ProductImage image={line.image_url} brand={line.brand_name} productName={line.name} packSize={line.pack_label} className="h-14 w-14" sizes="56px" /></Link>
                       <div className="min-w-0 flex-1">
                         <Link href={`/p/${line.slug}`} onClick={closeDrawer} className="line-clamp-2 text-[15px] font-semibold leading-snug text-ink">{line.name}</Link>
-                        <p className="text-xs text-ink-3">{line.pack_label}</p>
-                        {!line.available ? <p className="mt-0.5 text-xs font-semibold text-danger">Only {line.stock_qty} available</p> : null}
+                        <p className="text-xs text-ink-3">{qty} {qty === 1 ? "pack" : "packs"}{line.pack_label ? ` (${line.pack_label})` : ""}</p>
+                        {note ? <p className="mt-0.5 text-xs font-semibold text-danger" role="status">{note}</p>
+                          : qty >= lim.max ? <p className="mt-0.5 text-xs font-medium text-saffron-700">{lim.message}</p> : null}
+                        {line.price_changed && line.price_at_add != null ? <p className="mt-0.5 text-xs font-medium text-info">Price {Number(line.unit_price) < Number(line.price_at_add) ? "dropped" : "changed"} from {formatINR(line.price_at_add)} to {formatINR(line.unit_price)}</p> : null}
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-1.5">
-                        <QuantityStepper value={line.quantity} onChange={(v) => onQty(line.inventory_id, v)} min={0} max={Math.min(line.max_order_qty, Math.max(line.stock_qty, 0))} size="sm" loading={busyId === line.inventory_id} className="rounded-lg" />
+                        <QuantityStepper value={qty} onChange={(v) => onQty(line, v)} min={0} max={issue ? Math.min(qty, lim.max) : lim.max} maxLabel={lim.message} size="sm" loading={line.inventory_id in pending} className="rounded-lg" />
                         <p className="tabular text-sm"><span className="mr-1 text-xs text-ink-3 line-through">{line.unit_mrp > line.unit_price ? formatINR(line.unit_mrp * line.quantity) : ""}</span><span className="font-bold text-brand-700">{formatINR(line.line_total)}</span></p>
                       </div>
-                    </li>
-                  ))}
+                    </li>); })}
                 </ul>
                 <p className="border-t border-line px-4 py-3 text-center text-sm font-semibold text-ink">Forgot something? <Link href="/categories" onClick={closeDrawer} className="font-bold text-brand-700">Add More Items</Link></p>
               </Card>
@@ -261,7 +296,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: initialAddresses, wal
                 </div>
                 <div className="px-4 py-1">
                   <Row label="Item Total" value={formatINR(s.subtotal)} strike={s.mrp_total > s.subtotal ? s.mrp_total : undefined} />
-                  <Row label="Delivery Fee" value={s.delivery_fee === 0 ? <span className="font-bold text-success">FREE</span> : formatINR(s.delivery_fee)} sub={s.free_delivery_threshold > 0 && s.free_delivery_gap > 0 ? `Free above ${formatINR(s.free_delivery_threshold)} (Unlock by adding ${formatINR(s.free_delivery_gap)} more)` : undefined} />
+                  <Row label="Delivery Fee" value={s.delivery_fee === 0 ? <span className="font-bold text-success">FREE</span> : formatINR(s.delivery_fee)} strike={s.delivery_fee === 0 && deliveryWaived > 0 ? deliveryWaived : undefined} sub={s.free_delivery_threshold > 0 && s.free_delivery_gap > 0 ? `Free above ${formatINR(s.free_delivery_threshold)} (Unlock by adding ${formatINR(s.free_delivery_gap)} more)` : undefined} />
                   {s.express_fee > 0 ? <Row label="Express delivery" value={formatINR(s.express_fee)} /> : null}
                   {s.coupon_discount > 0 ? <Row label={`Coupon (${s.coupon?.code})`} value={<span className="text-success">− {formatINR(s.coupon_discount)}</span>} /> : null}
                   {s.platform_fee > 0 ? <Row label="Platform fee" value={formatINR(s.platform_fee)} /> : null}
@@ -273,9 +308,17 @@ export function CartDrawer({ signedIn, isGuest, addresses: initialAddresses, wal
               {savings > 0 ? (
                 <section className="rounded-2xl border border-success/30 bg-success-50 p-3">
                   <div className="flex items-center justify-between px-1 pb-3"><p className="font-display text-base font-bold text-ink">Savings on this order</p><span className="rounded-md bg-brand-600 px-2.5 py-1 text-sm font-bold text-white">{formatINR(savings)}</span></div>
-                  <div className="divide-y divide-line rounded-xl bg-card px-3">
-                    {s.item_savings > 0 ? <div className="flex items-center justify-between py-2.5 text-sm"><span className="flex items-center gap-2 text-ink"><BadgePercent className="h-4 w-4 text-brand-600" /> Discount on MRP</span><span className="font-semibold tabular">{formatINR(s.item_savings)}</span></div> : null}
-                    {s.coupon_discount > 0 ? <div className="flex items-center justify-between py-2.5 text-sm"><span className="flex items-center gap-2 text-ink"><TicketPercent className="h-4 w-4 text-brand-600" /> Coupon {s.coupon?.code}</span><span className="font-semibold tabular">{formatINR(s.coupon_discount)}</span></div> : null}
+                  <div className="divide-y divide-dashed divide-line rounded-xl bg-card px-3">
+                    {[
+                      { show: s.item_savings > 0, icon: <BadgePercent className="h-3.5 w-3.5" />, label: "Discount on MRP", value: s.item_savings },
+                      { show: s.coupon_discount > 0, icon: <TicketPercent className="h-3.5 w-3.5" />, label: `Coupon ${s.coupon?.code ?? ""}`.trim(), value: s.coupon_discount },
+                      { show: deliveryWaived > 0, icon: <Truck className="h-3.5 w-3.5" />, label: "FREE delivery savings", value: deliveryWaived },
+                    ].filter((r) => r.show).map((r) => (
+                      <div key={r.label} className="flex items-center justify-between py-2.5 text-sm">
+                        <span className="flex items-center gap-2 font-medium text-ink"><span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-600 text-white">{r.icon}</span>{r.label}</span>
+                        <span className="font-bold tabular text-ink">{formatINR(r.value)}</span>
+                      </div>
+                    ))}
                   </div>
                 </section>
               ) : null}
@@ -346,7 +389,14 @@ export function CartDrawer({ signedIn, isGuest, addresses: initialAddresses, wal
                 {isGuest || !signedIn ? (
                   <Button size="lg" fullWidth className="h-13 rounded-xl text-base" onClick={() => setLoginOpen(true)}>Login to Proceed</Button>
                 ) : (
-                  <Button size="lg" fullWidth className="h-13 rounded-xl text-base" disabled={Boolean(cartBlocker)} onClick={() => openDrawer("pay")}>Click to Pay {formatINR(s.total, { precise: true })}</Button>
+                  <>
+                    {!cartBlocker && items.some((l) => l.price_changed) ? <Alert tone="info" className="mb-2">Some prices changed since you added these items. The bill above uses today&rsquo;s prices.</Alert> : null}
+                    {addresses.length === 0 ? (
+                      <Button size="lg" fullWidth className="h-13 rounded-xl text-base" disabled={Boolean(cartBlocker)} onClick={() => setAddOpen(true)}>Add Address to proceed</Button>
+                    ) : (
+                      <Button size="lg" fullWidth className="h-13 rounded-xl text-base" disabled={Boolean(cartBlocker) || Object.keys(pending).length > 0} onClick={async () => { if (items.some((l) => l.price_changed)) await acknowledgeCartPricesAction(); openDrawer("pay"); }}>Click to Pay {formatINR(s.total, { precise: true })}</Button>
+                    )}
+                  </>
                 )}
               </>
             ) : (
@@ -360,8 +410,8 @@ export function CartDrawer({ signedIn, isGuest, addresses: initialAddresses, wal
         ) : null}
       </aside>
 
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add delivery address" size="lg">
-        <AddressForm defaultName={user.name} defaultPhone={user.phone} onCancel={() => setAddOpen(false)} onSaved={(a) => { setAdded((cur) => [a, ...cur.filter((x) => x.id !== a.id)]); setAddressId(a.id); setAddOpen(false); }} />
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Location information" size="lg">
+        <AddressWizard defaultName={user.name} defaultPhone={user.phone} onCancel={() => setAddOpen(false)} onSaved={(a) => { setAdded((cur) => [a, ...cur.filter((x) => x.id !== a.id)]); setAddressId(a.id); setAddOpen(false); if (step === "cart") openDrawer("pay"); }} />
       </Modal>
       <LoginModal open={loginOpen && (isGuest || !signedIn)} onClose={() => setLoginOpen(false)} eta={`${eta.min}–${eta.max} minutes`} guest={isGuest} onGuestContinue={isGuest ? () => { setLoginOpen(false); openDrawer("pay"); } : undefined} />
     </div>,

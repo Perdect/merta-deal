@@ -60,7 +60,7 @@ under India's DPDP Act.
   Jaipur address**. Hide the address and set the service area to Merta City (341510, 341511).
 - Name: **MertaDeal** (exactly as on the site/logo). Category: *Grocery delivery service* (secondary:
   *Grocery store* only if customers can walk in). Phone: +91 88750 20202. Website: https://mertadeal.com.
-  Hours: 7:00 am–10:00 pm daily (keep identical to the site). Email support@mertadeal.com.
+  Hours: 6:00 am–11:00 pm daily (keep identical to the site). Email support@mertadeal.com.
 - Verification is done by the owner (usually a video showing the business, equipment and signage).
 - Then add the street address to the site's structured data (ask to switch `OnlineStore` to a
   `GroceryStore` LocalBusiness with the verified address) — not before.

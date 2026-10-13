@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { friendlyError } from "@/lib/utils";
-import type { CartSummary, DeliveryType } from "@/types/app";
+import type { CartSummary, DeliveryType, ReorderResult } from "@/types/app";
 
 export type ActionResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string; conflict?: { current_store: { id: string; name: string }; new_store: { id: string; name: string } } };
 
@@ -51,10 +51,19 @@ export async function clearCartAction(): Promise<ActionResult> {
   return { ok: true, data: undefined };
 }
 
-export async function reorderAction(orderId: string): Promise<ActionResult<{ added: number; skipped: { name: string }[] }>> {
+/** Adds a past order's items: what fits the per-product limits and stock; reductions are reported. */
+export async function reorderAction(orderId: string): Promise<ActionResult<ReorderResult>> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("reorder", { p_order_id: orderId });
   if (error) return { ok: false, error: friendlyError(error) };
   revalidatePath("/cart");
-  return { ok: true, data: data as { added: number; skipped: { name: string }[] } };
+  return { ok: true, data: data as unknown as ReorderResult };
+}
+
+/** The customer has seen the current prices (called before continuing to payment). */
+export async function acknowledgeCartPricesAction(): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("acknowledge_cart_prices" as never);
+  if (error) return { ok: false, error: friendlyError(error) };
+  return { ok: true, data: undefined };
 }

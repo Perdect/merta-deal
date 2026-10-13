@@ -52,7 +52,7 @@ function QuickEditPanel({ product, offer, storeName, showFlags, onClose }: { pro
     mode: "add" as Mode, amount: "", reason: "restock" as Reason, note: "",
     opening: "",
     low: offer ? String(offer.low_stock_threshold) : "5",
-    max: offer ? String(offer.max_order_qty) : "10",
+    max: offer ? String(offer.max_order_qty) : "5",
     is_active: product.is_active, is_approved: product.is_approved,
   }), [offer, product]);
   const [f, setF] = React.useState(init);
@@ -198,7 +198,7 @@ function QuickEditPanel({ product, offer, storeName, showFlags, onClose }: { pro
                     <Field label="Low-stock alert at" htmlFor="qe-low" error={err("low")}>
                       <input id="qe-low" inputMode="numeric" type="number" step="1" min="0" value={f.low} onChange={(e) => set("low", e.target.value)} aria-invalid={Boolean(err("low"))} className={inputCls} />
                     </Field>
-                    <Field label="Max per order" htmlFor="qe-max" error={err("max")}>
+                    <Field label="Max per order" htmlFor="qe-max" error={err("max")} hint="Packs one customer can buy in an order">
                       <input id="qe-max" inputMode="numeric" type="number" step="1" min="1" max="100" value={f.max} onChange={(e) => set("max", e.target.value)} aria-invalid={Boolean(err("max"))} className={inputCls} />
                     </Field>
                   </div>

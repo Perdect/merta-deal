@@ -47,13 +47,18 @@ export function Price({ price, mrp, size = "md", className }: { price: number | 
   );
 }
 
-export function QuantityStepper({ value, onChange, min = 0, max = 99, size = "md", disabled, className, loading }: { value: number; onChange: (v: number) => void; min?: number; max?: number; size?: "sm" | "md"; disabled?: boolean; className?: string; loading?: boolean }) {
+/**
+ * − qty + control. Buttons stay usable while a change is saving (`loading` only pulses the number):
+ * callers queue taps (see setLineQuantity). At `max` the + is disabled and `maxLabel` explains why.
+ */
+export function QuantityStepper({ value, onChange, min = 0, max = 99, size = "md", disabled, className, loading, maxLabel }: { value: number; onChange: (v: number) => void; min?: number; max?: number; size?: "sm" | "md"; disabled?: boolean; className?: string; loading?: boolean; maxLabel?: string }) {
   const h = size === "sm" ? "h-8" : "h-9";
+  const atMax = value >= max;
   return (
     <div className={cn("inline-flex items-center rounded-sm bg-brand-600 text-white shadow-[0_1px_0_rgb(0_0_0/0.05)]", h, disabled && "opacity-60", className)}>
-      <button type="button" aria-label="Decrease" disabled={disabled || loading || value <= min} onClick={() => onChange(Math.max(min, value - 1))} className={cn("tap flex items-center justify-center rounded-l-[inherit] transition-colors hover:bg-brand-700 disabled:opacity-50", size === "sm" ? "w-8" : "w-9", h)}><Minus className="h-4 w-4" /></button>
-      <span className={cn("min-w-7 text-center text-sm font-bold tabular", loading && "animate-pulse-soft")}>{value}</span>
-      <button type="button" aria-label="Increase" disabled={disabled || loading || value >= max} onClick={() => onChange(Math.min(max, value + 1))} className={cn("tap flex items-center justify-center rounded-r-[inherit] transition-colors hover:bg-brand-700 disabled:opacity-50", size === "sm" ? "w-8" : "w-9", h)}><Plus className="h-4 w-4" /></button>
+      <button type="button" aria-label={value <= 1 && min === 0 ? "Remove" : "Decrease"} disabled={disabled || value <= min} onClick={() => onChange(Math.max(min, value - 1))} className={cn("tap flex items-center justify-center rounded-l-[inherit] transition-colors hover:bg-brand-700 disabled:opacity-50", size === "sm" ? "w-8" : "w-9", h)}><Minus className="h-4 w-4" /></button>
+      <span className={cn("min-w-7 text-center text-sm font-bold tabular", loading && "animate-pulse-soft")} aria-live="polite">{value}</span>
+      <button type="button" aria-label={atMax && maxLabel ? `Increase — ${maxLabel}` : "Increase"} title={atMax ? maxLabel : undefined} disabled={disabled || atMax} onClick={() => onChange(Math.min(max, value + 1))} className={cn("tap flex items-center justify-center rounded-r-[inherit] transition-colors hover:bg-brand-700 disabled:opacity-50", size === "sm" ? "w-8" : "w-9", h)}><Plus className="h-4 w-4" /></button>
     </div>
   );
 }
