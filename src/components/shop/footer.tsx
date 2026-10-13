@@ -40,7 +40,7 @@ export function Footer() {
         </div>
         <div className="col-span-2 md:col-span-1">
           <h2 className="text-sm font-bold text-ink">Download App</h2>
-          <InstallButtons className="mt-2 grid grid-cols-2 gap-2 space-y-0 md:grid-cols-1 [&>p]:col-span-2 md:[&>p]:col-span-1" />
+          <InstallButtons className="mt-2 flex flex-wrap gap-2 space-y-0 [&>p]:basis-full" />
         </div>
       </div>
       <div className="border-t border-line px-4 py-3 text-center text-xs text-ink-3">© {new Date().getFullYear()} {site.name}. All rights reserved.</div>

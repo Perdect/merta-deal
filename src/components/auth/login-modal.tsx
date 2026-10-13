@@ -89,7 +89,7 @@ export function LoginModal({ open, onClose, eta, guest, onGuestContinue }: { ope
           {guest && onGuestContinue ? <button type="button" onClick={onGuestContinue} className="mt-1 min-h-11 w-full text-center text-sm font-semibold text-ink-2 underline-offset-2 hover:underline">Continue as guest instead</button> : null}
           <div className="mt-5 border-t border-line pt-4">
             <p className="text-center text-sm font-bold text-ink">Get the app for a better experience</p>
-            <InstallButtons className="mt-3 grid grid-cols-2 gap-2 space-y-0 [&>p]:hidden" />
+            <InstallButtons className="mt-3 flex flex-wrap justify-center gap-2 space-y-0 [&>p]:hidden" />
           </div>
         </div>
       </div>
