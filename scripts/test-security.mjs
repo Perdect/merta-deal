@@ -1,5 +1,5 @@
-// Security + rider-flow checks for 0023 (roles, approval, rider privacy, RLS, notify/audit lockdown, payout details).
-// Loads every migration + seed into PGlite (no Postgres needed). Run from a folder with @electric-sql/pglite installed:
+// Security, rider-flow, product-save and search-visibility checks (0023–0025). Loads every migration + seed into PGlite.
+// Run from a folder with @electric-sql/pglite installed:
 //   node scripts/test-security.mjs "$PWD"
 import { PGlite } from "@electric-sql/pglite";
 import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
@@ -25,6 +25,8 @@ for (const f of migrations) {
 await exec("seed", read("supabase/seed.sql"));
 // Production order: data already exists when 0019 runs, so apply it again after the seed.
 await exec("0019 after seed", read("supabase/migrations/0019_cart_limits.sql"));
+// …and the later migrations that redefine 0019 functions, so the final state matches production.
+await exec("0024 after 0019", read("supabase/migrations/0024_product_save_keeps_stock.sql"));
 console.log(`loaded ${migrations.length} migrations + seed`);
 
 let pass = 0, fail = 0;
@@ -191,6 +193,44 @@ ok("the rider's assignment is closed (rider freed)", after2.asg === 'cancelled',
 ok("no earning for a cancelled handover", (await one(`select count(*)::int n from rider_earnings where assignment_id = $1`, [next.id])).n === 0);
 await as(next.user_id);
 ok("rider cannot complete a cancelled order", /./.test(await err(`select public.verify_delivery_otp($1::uuid, '0000', true)`, [next.id]) ?? (await one(`select (public.verify_delivery_otp($1::uuid, '0000', true)->>'ok') r`, [next.id])).r === 'false' ? 'x' : ''));
+
+console.log("Product form saves (0024): stock and visibility are never clobbered");
+await as(STORE_OWNER);
+const cat = (await one(`select id from categories where parent_id is not null limit 1`)).id;
+const up = (args) => one(`select public.upsert_store_product($1::uuid, $2, $3::uuid, '', 500, 'g', '500 g', $4, $5, $6, 5, null, null, false, true, $7::uuid, 5, $8) r`, [STORE, args.name ?? 'Regression Test Dal', cat, args.mrp ?? 100, args.sp ?? 90, args.stock, args.pid ?? null, args.active ?? null]).then((x) => x.r);
+const created = await up({ stock: 20 });
+let pinv = await one(`select stock_qty, is_active from inventory where id = $1`, [created.inventory_id]);
+ok("new listing: opening stock 20, visible by default", pinv.stock_qty === 20 && pinv.is_active === true, JSON.stringify(pinv));
+await q(`select public.adjust_stock($1::uuid, -3, 'order', 'sold while form open')`, [created.inventory_id]);
+await up({ pid: created.product_id, stock: null, sp: 85 });
+pinv = await one(`select stock_qty, selling_price from inventory where id = $1`, [created.inventory_id]);
+ok("edit save with no stock keeps the live count (17, not the stale 20)", pinv.stock_qty === 17 && Number(pinv.selling_price) === 85, JSON.stringify(pinv));
+await q(`update inventory set is_active = false where id = $1`, [created.inventory_id]);
+await up({ pid: created.product_id, stock: null, sp: 80 });
+ok("editing a hidden product keeps it hidden", (await one(`select is_active from inventory where id = $1`, [created.inventory_id])).is_active === false);
+await up({ pid: created.product_id, stock: null, active: true });
+ok("form can switch visibility on explicitly", (await one(`select is_active from inventory where id = $1`, [created.inventory_id])).is_active === true);
+const hiddenNew = await up({ name: 'Regression Hidden Item', stock: 5, active: false });
+ok("new listing can start hidden", (await one(`select is_active from inventory where id = $1`, [hiddenNew.inventory_id])).is_active === false);
+ok("negative stock rejected", /INVALID_STOCK/.test(await err(`select public.upsert_store_product($1::uuid, 'Neg', $2::uuid, '', 1, 'g', '1 g', 10, 9, -1)`, [STORE, cat]) ?? ""));
+ok("price above MRP rejected", /PRICE_ABOVE_MRP/.test(await err(`select public.upsert_store_product($1::uuid, 'Bad price', $2::uuid, '', 1, 'g', '1 g', 10, 12, 1)`, [STORE, cat]) ?? ""));
+await as(cust2);
+ok("a customer cannot write another store's products", /FORBIDDEN/.test(await err(`select public.upsert_store_product($1::uuid, 'Hack', $2::uuid, '', 1, 'g', '1 g', 10, 9, 1)`, [STORE, cat]) ?? ""));
+await as(staffUser);
+ok("store staff can save products (no stock overwrite)", (await err(`select public.upsert_store_product($1::uuid, 'Regression Test Dal', $2::uuid, '', 500, 'g', '500 g', 100, 70, null, 5, null, null, false, true, $3::uuid, 5, null)`, [STORE, cat, created.product_id])) === null && (await one(`select stock_qty from inventory where id = $1`, [created.inventory_id])).stock_qty === 17);
+
+console.log("Hidden products stay out of shopper search (0025)");
+await as(STORE_OWNER);
+const qa = await up({ name: 'Zzqa Hidden Probe', stock: 4, active: false });
+const anonSearch = async (term) => { await db.exec(`set role anon`); try { return (await one(`select public.search_products(p_query => $1) r`, [term])).r; } finally { await db.exec(`reset role`); } };
+const anonSuggest = async (term) => { await db.exec(`set role anon`); try { return (await one(`select public.search_suggest($1, 8) r`, [term])).r; } finally { await db.exec(`reset role`); } };
+ok("hidden product not in shopper search", !(await anonSearch('Zzqa Hidden Probe')).items.some((x) => x.name === 'Zzqa Hidden Probe'));
+ok("hidden product not in typeahead", !(await anonSuggest('Zzqa Hidden')).products.some((x) => x.name === 'Zzqa Hidden Probe'));
+await as(STORE_OWNER); await q(`update inventory set is_active = true where id = $1`, [qa.inventory_id]);
+ok("visible product appears in shopper search", (await anonSearch('Zzqa Hidden Probe')).items.some((x) => x.name === 'Zzqa Hidden Probe'));
+await q(`update inventory set is_active = false where id = $1`, [qa.inventory_id]);
+await as(STORE_OWNER);
+ok("store catalog picker still finds unlisted products", (await one(`select public.search_products(p_query => 'Zzqa Hidden Probe', p_include_unlisted => true) r`)).r.items.some((x) => x.name === 'Zzqa Hidden Probe'));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

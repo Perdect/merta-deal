@@ -82,16 +82,18 @@ export const getStoreOrderTracking = cache(async (storeId: string, orderId: stri
 /* Products & inventory ----------------------------------------------------------------------- */
 
 export type StoreInventoryRow = Inventory & {
-  product: Pick<Tables<"products">, "id" | "name" | "slug" | "image_url" | "pack_label" | "weight_value" | "weight_unit" | "is_veg" | "is_local" | "brand_id" | "category_id" | "created_by_store_id" | "description"> & {
+  product: Pick<Tables<"products">, "id" | "name" | "slug" | "image_url" | "pack_label" | "weight_value" | "weight_unit" | "is_veg" | "is_local" | "brand_id" | "category_id" | "created_by_store_id" | "description" | "is_active" | "is_approved"> & {
     brand: { name: string } | null;
-    category: Pick<Category, "id" | "name" | "slug" | "parent_id"> | null;
+    category: Pick<Category, "id" | "name" | "slug" | "parent_id" | "is_active"> | null;
   };
 };
-const INVENTORY_COLS = "*, product:products!inner(id, name, slug, image_url, pack_label, weight_value, weight_unit, is_veg, is_local, brand_id, category_id, created_by_store_id, description, brand:brands(name), category:categories(id, name, slug, parent_id))";
+const INVENTORY_COLS = "*, product:products!inner(id, name, slug, image_url, pack_label, weight_value, weight_unit, is_veg, is_local, brand_id, category_id, created_by_store_id, description, is_active, is_approved, brand:brands(name), category:categories(id, name, slug, parent_id, is_active))";
 
-export type InventoryFilter = { q?: string; status?: Enums<"inventory_status"> | ""; categoryId?: string; page?: number; pageSize?: number; activeOnly?: boolean };
+export const INVENTORY_SORTS = { recent: "Recently updated", name: "Name (A–Z)", stock_low: "Stock: low to high", price_low: "Price: low to high", price_high: "Price: high to low" } as const;
+export type InventorySort = keyof typeof INVENTORY_SORTS;
+export type InventoryFilter = { q?: string; status?: Enums<"inventory_status"> | ""; categoryId?: string; page?: number; pageSize?: number; activeOnly?: boolean; sort?: InventorySort };
 
-export const getStoreInventory = cache(async (storeId: string, f: InventoryFilter = {}): Promise<{ items: StoreInventoryRow[]; total: number; page: number; pageSize: number }> => {
+export const getStoreInventory = cache(async (storeId: string, f: InventoryFilter = {}): Promise<{ items: StoreInventoryRow[]; total: number; page: number; pageSize: number; error: boolean }> => {
   const supabase = await createClient();
   const page = Math.max(1, f.page ?? 1); const pageSize = Math.min(60, f.pageSize ?? 24);
   let q = supabase.from("inventory").select(INVENTORY_COLS, { count: "exact" }).eq("store_id", storeId);
@@ -99,9 +101,31 @@ export const getStoreInventory = cache(async (storeId: string, f: InventoryFilte
   if (f.status) q = q.eq("status", f.status);
   if (f.categoryId) q = q.eq("product.category_id", f.categoryId);
   if (f.activeOnly) q = q.eq("is_active", true);
-  const { data, count, error } = await q.order("updated_at", { ascending: false }).range((page - 1) * pageSize, page * pageSize - 1);
+  // Stable ordering: the chosen sort, then id, so pages never repeat or skip rows.
+  q = f.sort === "name" ? q.order("product(name)", { ascending: true })
+    : f.sort === "stock_low" ? q.order("stock_qty", { ascending: true })
+    : f.sort === "price_low" ? q.order("selling_price", { ascending: true })
+    : f.sort === "price_high" ? q.order("selling_price", { ascending: false })
+    : q.order("updated_at", { ascending: false });
+  const { data, count, error } = await q.order("id").range((page - 1) * pageSize, page * pageSize - 1);
   if (error) console.error("getStoreInventory", error.message);
-  return { items: (data ?? []) as unknown as StoreInventoryRow[], total: count ?? 0, page, pageSize };
+  return { items: (data ?? []) as unknown as StoreInventoryRow[], total: count ?? 0, page, pageSize, error: Boolean(error) };
+});
+
+/** Listing counts per stock state (same search/category filters), for the filter chips. */
+export const getStoreInventoryCounts = cache(async (storeId: string, f: Pick<InventoryFilter, "q" | "categoryId"> = {}): Promise<Record<"" | Enums<"inventory_status">, number> | null> => {
+  const supabase = await createClient();
+  const count = async (status?: Enums<"inventory_status">) => {
+    let q = supabase.from("inventory").select("id, product:products!inner(id)", { count: "exact", head: true }).eq("store_id", storeId);
+    if (f.q?.trim()) q = q.ilike("product.name", `%${f.q.trim().replace(/[%_]/g, "")}%`);
+    if (f.categoryId) q = q.eq("product.category_id", f.categoryId);
+    if (status) q = q.eq("status", status);
+    const { count: n, error } = await q;
+    return error ? null : n ?? 0;
+  };
+  const [all, inS, low, out] = await Promise.all([count(), count("in_stock"), count("low_stock"), count("out_of_stock")]);
+  if (all === null || inS === null || low === null || out === null) return null;
+  return { "": all, in_stock: inS, low_stock: low, out_of_stock: out };
 });
 
 export const getInventoryItem = cache(async (storeId: string, inventoryId: string): Promise<StoreInventoryRow | null> => {
@@ -138,7 +162,12 @@ export const getCategoryGroups = cache(async (): Promise<CategoryGroup[]> => {
   const { data } = await supabase.from("categories").select("*").eq("is_active", true).order("sort_order").order("name");
   const all = (data ?? []) as Category[];
   const parents = all.filter((c) => !c.parent_id);
-  return parents.map((p) => ({ parent: p, children: all.filter((c) => c.parent_id === p.id) })).filter((g) => g.children.length > 0);
+  // A top-level category with no sub-categories is itself the leaf products are filed under (30+ catalog
+  // products use one), so it is offered as its own option instead of disappearing from the list.
+  return parents.map((p) => {
+    const children = all.filter((c) => c.parent_id === p.id);
+    return { parent: p, children: children.length ? children : [p] };
+  });
 });
 
 /* Customers ---------------------------------------------------------------------------------- */

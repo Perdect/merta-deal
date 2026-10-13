@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: { default: "Store portal", template: "%s | Store | Merta Deal" }, robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: { default: "Store panel", template: "%s · Store panel | Merta Deal" }, robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
 
 /**

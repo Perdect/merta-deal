@@ -8,6 +8,7 @@ import { Input, Textarea, Select } from "@/components/ui/input";
 import { Modal } from "@/components/ui/overlay";
 import { toast } from "@/components/ui/toast";
 import { formatDate, formatINR } from "@/lib/utils";
+import { afterOverlayClose } from "@/hooks/use-back-to-close";
 
 export const TICKET_CATEGORIES = [
   { value: "order", label: "Order issue" },
@@ -46,7 +47,7 @@ export function TicketForm({ orders, preselectOrder, openInitially }: { orders: 
     setBusy(false);
     if (!r.ok) { toast.error(r.error); return; }
     toast.success("Ticket created", "Our support team will reply here.");
-    setOpen(false); router.push(`/account/support/${r.data}`);
+    setOpen(false); afterOverlayClose(() => router.push(`/account/support/${r.data}`));
   };
 
   return (

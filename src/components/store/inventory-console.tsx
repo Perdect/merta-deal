@@ -3,19 +3,20 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Search, Minus, Plus, Download, PackageX, AlertTriangle, SlidersHorizontal, Pencil, Check, X, History } from "lucide-react";
-import { Input, Select, Textarea, Checkbox } from "@/components/ui/input";
+import { Input, Checkbox } from "@/components/ui/input";
 import { Button, IconButton } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Pagination } from "@/components/ui/misc";
 import { EmptyState } from "@/components/ui/states";
-import { BottomSheet, ConfirmDialog } from "@/components/ui/overlay";
+import { ConfirmDialog } from "@/components/ui/overlay";
 import { Chip } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/toast";
 import { ProductImage } from "@/components/shop/product-image";
 import { useDebouncedValue } from "@/hooks/use-debounce";
 import { adjustStockAction, updateInventoryPricingAction, bulkOutOfStockAction, getInventoryExportAction } from "@/lib/actions/store";
 import { useStoreOrdersRealtime } from "./use-store-realtime";
-import { INVENTORY_STATUS_META, STOCK_REASONS } from "./constants";
+import { INVENTORY_STATUS_META } from "./constants";
+import { StockSheet } from "./stock-sheet";
 import type { StoreInventoryRow, MovementRow } from "@/lib/data/store";
 import { cn, formatINR, timeAgo, discountPct } from "@/lib/utils";
 import type { Enums } from "@/types/database";
@@ -34,6 +35,7 @@ export function InventoryConsole({ storeId, items, total, page, pageSize, filter
   const [bulkBusy, setBulkBusy] = React.useState(false);
   const [exporting, setExporting] = React.useState(false);
   const [adjust, setAdjust] = React.useState<StoreInventoryRow | null>(null);
+  const adjustTarget = React.useMemo(() => (adjust ? { id: adjust.id, name: adjust.product.name, stock: adjust.stock_qty } : null), [adjust]);
 
   const go = React.useCallback((patch: Record<string, string | number | undefined>) => {
     const next = new URLSearchParams(sp.toString());
@@ -127,7 +129,7 @@ export function InventoryConsole({ storeId, items, total, page, pageSize, filter
       </section>
 
       <ConfirmDialog open={bulkOpen} onClose={() => setBulkOpen(false)} onConfirm={bulk} loading={bulkBusy} tone="danger" title={`Mark ${selected.size} item${selected.size === 1 ? "" : "s"} out of stock?`} description="Stock is set to zero and customers can no longer order them. Each change is logged so you can restock later." confirmLabel="Mark out of stock" />
-      <AdjustSheet item={adjust} onClose={() => setAdjust(null)} onDone={() => { setAdjust(null); router.refresh(); }} />
+      <StockSheet target={adjustTarget} onClose={() => setAdjust(null)} onDone={() => { setAdjust(null); router.refresh(); }} />
     </div>
   );
 }
@@ -181,42 +183,9 @@ function InventoryLine({ item, selected, onSelect, onAdjust }: { item: StoreInve
         <IconButton label="Decrease stock" size="icon" className="h-9 w-9 border border-line-2" disabled={busy || stock <= 0} onClick={() => step(-1)}><Minus className="h-4 w-4" /></IconButton>
         <span className={cn("w-10 text-center text-base font-bold tabular", stock === 0 ? "text-danger" : "text-ink", busy && "animate-pulse-soft")}>{stock}</span>
         <IconButton label="Increase stock" size="icon" className="h-9 w-9 border border-line-2" disabled={busy} onClick={() => step(1)}><Plus className="h-4 w-4" /></IconButton>
-        <Button size="xs" variant="ghost" onClick={onAdjust} className="ml-1">Adjust</Button>
+        <Button size="xs" variant="ghost" onClick={onAdjust} className="ml-1 pointer-coarse:h-11">Update stock</Button>
       </div>
       <div className="col-start-2 md:col-start-auto"><Badge tone={meta.tone} size="xs">{meta.label}</Badge></div>
     </li>
-  );
-}
-
-/** Larger stock change with a reason (logged to inventory_movements via adjust_stock). */
-function AdjustSheet({ item, onClose, onDone }: { item: StoreInventoryRow | null; onClose: () => void; onDone: () => void }) {
-  const [mode, setMode] = React.useState<"add" | "remove" | "set">("add");
-  const [qty, setQty] = React.useState("");
-  const [reason, setReason] = React.useState(STOCK_REASONS[0].value);
-  const [note, setNote] = React.useState("");
-  const [busy, setBusy] = React.useState(false);
-  const [seen, setSeen] = React.useState(item);
-  if (seen !== item) { setSeen(item); setMode("add"); setQty(""); setReason("restock"); setNote(""); }
-  if (!item) return null;
-  const n = Number(qty);
-  const delta = mode === "add" ? n : mode === "remove" ? -n : n - item.stock_qty;
-  const valid = Number.isInteger(n) && n >= 0 && delta !== 0 && item.stock_qty + delta >= 0;
-  const apply = async () => {
-    setBusy(true);
-    const r = await adjustStockAction(item.id, delta, reason, note);
-    setBusy(false);
-    if (!r.ok) { toast.error(r.error); return; }
-    toast.success(`Stock is now ${r.data.stock_qty}`, item.product.name);
-    onDone();
-  };
-  return (
-    <BottomSheet open onClose={onClose} title="Adjust stock" description={`${item.product.name} · currently ${item.stock_qty}`} footer={<Button fullWidth loading={busy} disabled={!valid} onClick={apply}>Apply {valid ? `(${delta > 0 ? "+" : ""}${delta})` : ""}</Button>}>
-      <div className="space-y-3">
-        <div className="grid grid-cols-3 gap-2">{([["add", "Add"], ["remove", "Remove"], ["set", "Set to"]] as const).map(([v, l]) => <button key={v} type="button" onClick={() => { setMode(v); setReason(v === "add" ? "restock" : v === "remove" ? "damage" : "stock_count"); }} className={cn("h-10 rounded-sm border text-sm font-semibold", mode === v ? "border-brand-600 bg-brand-50 text-brand-700" : "border-line-2 text-ink-2")}>{l}</button>)}</div>
-        <Input label={mode === "set" ? "New stock count" : "Quantity"} type="number" inputMode="numeric" min={0} value={qty} onChange={(e) => setQty(e.target.value)} autoFocus />
-        <Select label="Reason" options={STOCK_REASONS} value={reason} onChange={(e) => setReason(e.target.value)} />
-        <Textarea label="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} className="min-h-16" placeholder="e.g. 2 packets torn" />
-      </div>
-    </BottomSheet>
   );
 }

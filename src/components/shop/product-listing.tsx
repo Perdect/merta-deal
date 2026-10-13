@@ -11,6 +11,7 @@ import { useMedia } from "@/hooks/use-media";
 import { Checkbox } from "@/components/ui/input";
 import { EmptyState, ProductGridSkeleton } from "@/components/ui/states";
 import { cn } from "@/lib/utils";
+import { afterOverlayClose } from "@/hooks/use-back-to-close";
 
 const SORTS = [
   { value: "relevance", label: "Relevance" }, { value: "popular", label: "Popularity" }, { value: "price_asc", label: "Price: low to high" },
@@ -82,7 +83,7 @@ export function ProductListing({ result, filters, signedIn, wished, loadMoreHref
       )}
 
       <FilterPanel open={filterOpen} onClose={() => setFilterOpen(false)} footer={
-        <div className="flex gap-2"><Button variant="outline" fullWidth onClick={() => { startTransition(() => router.replace(pathname)); setFilterOpen(false); }}>Clear all</Button><Button fullWidth onClick={() => setFilterOpen(false)}>Apply · {result.total} products</Button></div>
+        <div className="flex gap-2"><Button variant="outline" fullWidth onClick={() => { setFilterOpen(false); afterOverlayClose(() => startTransition(() => router.replace(pathname))); }}>Clear all</Button><Button fullWidth onClick={() => setFilterOpen(false)}>Apply · {result.total} products</Button></div>
       }>
         <div className="space-y-6 py-4 md:px-4">
           <FilterGroup title="Availability"><Checkbox label="In stock only" checked={sp.get("inStock") === "1"} onChange={(e) => set({ inStock: e.target.checked ? "1" : null })} /><Checkbox label="Local products of Merta" checked={sp.get("local") === "1"} onChange={(e) => set({ local: e.target.checked ? "1" : null })} /></FilterGroup>

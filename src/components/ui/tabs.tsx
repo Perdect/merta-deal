@@ -25,7 +25,7 @@ export function Tabs({ items, value, onChange, className, variant = "underline",
 
 export function Chip({ active, children, onClick, className, icon }: { active?: boolean; children: React.ReactNode; onClick?: () => void; className?: string; icon?: React.ReactNode }) {
   return (
-    <button type="button" onClick={onClick} aria-pressed={active} className={cn("tap inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors", active ? "border-brand-600 bg-brand-50 text-brand-700" : "border-line-2 bg-card text-ink-2 hover:bg-surface-2", className)}>
+    <button type="button" onClick={onClick} aria-pressed={active} className={cn("tap inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors pointer-coarse:h-11 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600", active ? "border-brand-600 bg-brand-50 text-brand-800" : "border-line-2 bg-card text-ink-2 hover:bg-surface-2", className)}>
       {icon}{children}
     </button>
   );

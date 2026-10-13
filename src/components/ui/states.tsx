@@ -7,8 +7,8 @@ export function Spinner({ className, size = 20 }: { className?: string; size?: n
   return <Loader2 className={cn("animate-spin text-brand-600", className)} style={{ width: size, height: size }} aria-label="Loading" />;
 }
 
-export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn("skeleton", className)} aria-hidden />;
+export function Skeleton({ className, style }: { className?: string; style?: React.CSSProperties }) {
+  return <div className={cn("skeleton", className)} style={style} aria-hidden />;
 }
 
 export function LoadingState({ label = "Loading…", className, rows = 3 }: { label?: string; className?: string; rows?: number }) {

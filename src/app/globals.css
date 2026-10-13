@@ -141,6 +141,7 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
   --bottom-nav-h: 66px;
+  --store-tabs-h: 64px;
 }
 
 @layer base {

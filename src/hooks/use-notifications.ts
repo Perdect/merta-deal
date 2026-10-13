@@ -3,6 +3,7 @@ import * as React from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Notification } from "@/types/app";
 import { toast } from "@/components/ui/toast";
+import { realtimeTopic } from "@/lib/realtime-topic";
 
 /** Live in-app notifications for the signed-in user (Supabase Realtime on `notifications`). */
 export function useNotifications(userId: string | null, initial: Notification[] = [], opts: { toastNew?: boolean } = { toastNew: true }) {
@@ -12,7 +13,7 @@ export function useNotifications(userId: string | null, initial: Notification[] 
   React.useEffect(() => {
     if (!userId) return;
     const supabase = createClient();
-    const ch = supabase.channel(`notifications:${userId}`)
+    const ch = supabase.channel(realtimeTopic(`notifications:${userId}`))
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` }, (payload) => {
         const n = payload.new as Notification;
         setItems((cur) => [n, ...cur].slice(0, 100));

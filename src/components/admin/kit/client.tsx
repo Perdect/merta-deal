@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Search, SlidersHorizontal, X } from "lucide-react";
 import { useDebouncedValue } from "@/hooks/use-debounce";
-import { useBackToClose } from "@/hooks/use-back-to-close";
+import { useBackToClose, afterOverlayClose } from "@/hooks/use-back-to-close";
 import { cn } from "@/lib/utils";
 
 /* ------------------------------------------------------------------------------------------------
@@ -158,7 +158,8 @@ export function ListToolbar({ searchKey = "q", searchPlaceholder = "Search", fil
   const panelKeys = [...filters.map((f) => f.key), ...(dateRange ? ["from", "to"] : [])];
   const applied = panelKeys.filter((k) => sp.get(k));
   const openPanel = () => { setDraft(Object.fromEntries(panelKeys.map((k) => [k, sp.get(k) ?? ""]))); setOpen(true); };
-  const apply = () => { set(Object.fromEntries(panelKeys.map((k) => [k, draft[k] || null]))); setOpen(false); };
+  // Close first, then navigate once the panel's history entry is gone (otherwise its pop undoes the filter).
+  const apply = () => { const patch = Object.fromEntries(panelKeys.map((k) => [k, draft[k] || null])); setOpen(false); afterOverlayClose(() => set(patch)); };
   const rangeInvalid = Boolean(draft.from && draft.to && draft.from > draft.to);
 
   const chipLabel = (k: string) => {
@@ -169,7 +170,7 @@ export function ListToolbar({ searchKey = "q", searchPlaceholder = "Search", fil
     return `${f?.label ?? k}: ${f?.options.find((o) => o.value === v)?.label ?? v}`;
   };
 
-  const clearAll = () => { set(Object.fromEntries(panelKeys.map((k) => [k, null]))); setDraft(Object.fromEntries(panelKeys.map((k) => [k, ""]))); setOpen(false); };
+  const clearAll = () => { setDraft(Object.fromEntries(panelKeys.map((k) => [k, ""]))); setOpen(false); afterOverlayClose(() => set(Object.fromEntries(panelKeys.map((k) => [k, null])))); };
   return (
     <div className={cn("mb-3 space-y-2", className)}>
       <div className="flex flex-wrap items-center gap-2">

@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { useRiderStore } from "./rider-store";
 import { useRiderGps, useWakeLock } from "./use-rider-gps";
 import { useNow } from "./use-now";
+import { realtimeTopic } from "@/lib/realtime-topic";
 
 const EMPTY_NOTIFICATIONS: Notification[] = [];
 
@@ -49,7 +50,7 @@ export function RiderShell({ user, rider, initialActive, children }: { user: She
       if (t) clearTimeout(t);
       t = setTimeout(async () => { bumpAssignments(); const r = await refreshRiderStatsAction(); if (r.ok) setStats(r.data); }, 400);
     };
-    const ch = supabase.channel(`rider:${rider.id}`)
+    const ch = supabase.channel(realtimeTopic(`rider:${rider.id}`))
       .on("postgres_changes", { event: "*", schema: "public", table: "delivery_assignments", filter: `rider_id=eq.${rider.id}` }, bump)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "delivery_partners", filter: `id=eq.${rider.id}` }, (payload) => setRider(payload.new as DeliveryPartner))
       .subscribe((status) => setRealtime(status === "SUBSCRIBED"));

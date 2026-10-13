@@ -97,8 +97,8 @@ export function Pagination({ page, pageSize, total, onChange, className }: { pag
     <div className={cn("flex items-center justify-between gap-3 text-sm text-ink-3", className)}>
       <span>Page {page} of {pages} · {total} items</span>
       <div className="flex gap-1">
-        <button type="button" disabled={page <= 1} onClick={() => onChange(page - 1)} className="inline-flex h-9 w-9 items-center justify-center rounded-sm border border-line-2 bg-card disabled:opacity-40" aria-label="Previous page"><ChevronLeft className="h-4 w-4" /></button>
-        <button type="button" disabled={page >= pages} onClick={() => onChange(page + 1)} className="inline-flex h-9 w-9 items-center justify-center rounded-sm border border-line-2 bg-card disabled:opacity-40" aria-label="Next page"><ChevronRight className="h-4 w-4" /></button>
+        <button type="button" disabled={page <= 1} onClick={() => onChange(page - 1)} className="inline-flex h-9 w-9 items-center justify-center rounded-sm border border-line-2 bg-card text-ink disabled:bg-surface-2 disabled:text-ink-4 pointer-coarse:h-11 pointer-coarse:w-11 focus-visible:outline-2 focus-visible:outline-brand-600" aria-label="Previous page"><ChevronLeft className="h-4 w-4" aria-hidden /></button>
+        <button type="button" disabled={page >= pages} onClick={() => onChange(page + 1)} className="inline-flex h-9 w-9 items-center justify-center rounded-sm border border-line-2 bg-card text-ink disabled:bg-surface-2 disabled:text-ink-4 pointer-coarse:h-11 pointer-coarse:w-11 focus-visible:outline-2 focus-visible:outline-brand-600" aria-label="Next page"><ChevronRight className="h-4 w-4" aria-hidden /></button>
       </div>
     </div>
   );

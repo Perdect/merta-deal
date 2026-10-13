@@ -11,6 +11,7 @@ import { Avatar } from "@/components/ui/misc";
 import { EmptyBlock, StatusPill } from "@/components/admin/kit";
 import { VEHICLE_LABEL } from "@/components/admin/ops/pills";
 import { cn, haversineKm, timeAgo } from "@/lib/utils";
+import { realtimeTopic } from "@/lib/realtime-topic";
 
 /**
  * Live rider board for admins. Always renders the list (with last-fix age and distance from the city
@@ -26,7 +27,7 @@ export function RidersLiveBoard({ initial }: { initial: LiveRider[] }) {
   React.useEffect(() => { const t = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(t); }, []);
   React.useEffect(() => {
     const supabase = createClient();
-    const ch = supabase.channel("admin:riders")
+    const ch = supabase.channel(realtimeTopic("admin:riders"))
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "delivery_partners" }, (payload) => {
         const r = payload.new as { id: string; is_online: boolean; status: string; current_lat: number | null; current_lng: number | null; last_location_at: string | null };
         setRiders((cur) => {

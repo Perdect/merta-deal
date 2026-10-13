@@ -3,6 +3,15 @@ import { cn } from "@/lib/utils";
 
 const fieldBase = "w-full rounded-sm border border-line-2 bg-card px-3.5 text-[15px] text-ink placeholder:text-ink-4 transition-shadow focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 disabled:bg-surface-2 disabled:text-ink-3 aria-[invalid=true]:border-danger aria-[invalid=true]:ring-danger-50";
 
+/** Hint or error under a field, linked to it with aria-describedby; errors carry an icon, not just red text. */
+function FieldNote({ id, error, hint }: { id: string; error?: string; hint?: string }) {
+  if (error) return <p id={`${id}-note`} className="flex items-start gap-1 text-xs font-medium text-danger"><svg aria-hidden viewBox="0 0 24 24" className="mt-px h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.25"><circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" /></svg>{error}</p>;
+  if (hint) return <p id={`${id}-note`} className="text-xs text-ink-3">{hint}</p>;
+  return null;
+}
+const describedBy = (id: string, error?: string, hint?: string, own?: string) => [own, error || hint ? `${id}-note` : null].filter(Boolean).join(" ") || undefined;
+const Req = ({ on }: { on?: boolean }) => (on ? <span className="text-danger" aria-hidden> *</span> : null);
+
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   hint?: string;
@@ -22,16 +31,15 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Inp
     <div className={cn("space-y-1.5", wrapperClassName)}>
       {label ? (
         <label htmlFor={inputId} className="block text-sm font-medium text-ink-2">
-          {label}
-          {props.required ? <span className="text-danger"> *</span> : null}
+          {label}<Req on={props.required} />
         </label>
       ) : null}
       <div className="relative">
         {leftIcon ? <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-ink-3">{leftIcon}</span> : null}
-        <input ref={ref} id={inputId} aria-invalid={Boolean(error)} className={cn(fieldBase, "h-11", leftIcon && "pl-10", rightSlot && "pr-12", className)} {...props} />
+        <input ref={ref} id={inputId} aria-invalid={Boolean(error)} aria-describedby={describedBy(inputId, error, hint, props["aria-describedby"])} className={cn(fieldBase, "h-11", leftIcon && "pl-10", rightSlot && "pr-12", className)} {...props} />
         {rightSlot ? <span className="absolute inset-y-0 right-2 flex items-center">{rightSlot}</span> : null}
       </div>
-      {error ? <p className="text-xs text-danger">{error}</p> : hint ? <p className="text-xs text-ink-3">{hint}</p> : null}
+      <FieldNote id={inputId} error={error} hint={hint} />
     </div>
   );
 });
@@ -42,9 +50,9 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(fun
   const inputId = id ?? generatedId;
   return (
     <div className="space-y-1.5">
-      {label ? <label htmlFor={inputId} className="block text-sm font-medium text-ink-2">{label}</label> : null}
-      <textarea ref={ref} id={inputId} aria-invalid={Boolean(error)} className={cn(fieldBase, "min-h-24 py-2.5", className)} {...props} />
-      {error ? <p className="text-xs text-danger">{error}</p> : hint ? <p className="text-xs text-ink-3">{hint}</p> : null}
+      {label ? <label htmlFor={inputId} className="block text-sm font-medium text-ink-2">{label}<Req on={props.required} /></label> : null}
+      <textarea ref={ref} id={inputId} aria-invalid={Boolean(error)} aria-describedby={describedBy(inputId, error, hint, props["aria-describedby"])} className={cn(fieldBase, "min-h-24 py-2.5", className)} {...props} />
+      <FieldNote id={inputId} error={error} hint={hint} />
     </div>
   );
 });
@@ -55,25 +63,36 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(function 
   const inputId = id ?? generatedId;
   return (
     <div className="space-y-1.5">
-      {label ? <label htmlFor={inputId} className="block text-sm font-medium text-ink-2">{label}</label> : null}
-      <select ref={ref} id={inputId} aria-invalid={Boolean(error)} className={cn(fieldBase, "h-11 appearance-none bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%237a837e%22 stroke-width=%222%22><path d=%22m6 9 6 6 6-6%22/></svg>')] bg-[length:16px] bg-[right_12px_center] bg-no-repeat pr-9", className)} {...props}>
+      {label ? <label htmlFor={inputId} className="block text-sm font-medium text-ink-2">{label}<Req on={props.required} /></label> : null}
+      <select ref={ref} id={inputId} aria-invalid={Boolean(error)} aria-describedby={describedBy(inputId, error, hint, props["aria-describedby"])} className={cn(fieldBase, "h-11 appearance-none bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%237a837e%22 stroke-width=%222%22><path d=%22m6 9 6 6 6-6%22/></svg>')] bg-[length:16px] bg-[right_12px_center] bg-no-repeat pr-9", className)} {...props}>
         {placeholder ? <option value="">{placeholder}</option> : null}
         {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
-      {error ? <p className="text-xs text-danger">{error}</p> : hint ? <p className="text-xs text-ink-3">{hint}</p> : null}
+      <FieldNote id={inputId} error={error} hint={hint} />
     </div>
   );
 });
 
-export function Switch({ checked, onChange, label, disabled }: { checked: boolean; onChange: (v: boolean) => void; label?: string; disabled?: boolean }) {
+/**
+ * On/off switch. A real <button role="switch"> named by its visible label (or `ariaLabel` when there is
+ * none), with a visible focus ring and a ≥44px touch area around the 28px track.
+ */
+export function Switch({ checked, onChange, label, disabled, ariaLabel, description, className }: { checked: boolean; onChange: (v: boolean) => void; label?: React.ReactNode; disabled?: boolean; ariaLabel?: string; description?: React.ReactNode; className?: string }) {
+  const id = React.useId();
   return (
-    <label className={cn("inline-flex items-center gap-3 cursor-pointer select-none", disabled && "opacity-50 pointer-events-none")}>
-      <span role="switch" aria-checked={checked} tabIndex={0} onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); onChange(!checked); } }} onClick={() => onChange(!checked)}
-        className={cn("relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors", checked ? "bg-brand-600" : "bg-line-2")}>
+    <span className={cn("inline-flex min-h-11 items-center gap-3 select-none", disabled && "opacity-60", className)}>
+      <button type="button" role="switch" aria-checked={checked} disabled={disabled} onClick={() => onChange(!checked)}
+        aria-labelledby={label ? `${id}-l` : undefined} aria-label={label ? undefined : ariaLabel} aria-describedby={description ? `${id}-d` : undefined}
+        className={cn("relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full transition-colors before:absolute before:-inset-2 before:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed", checked ? "bg-brand-600" : "bg-ink-4")}>
         <span className={cn("inline-block h-5 w-5 rounded-full bg-white shadow transition-transform", checked ? "translate-x-6" : "translate-x-1")} />
-      </span>
-      {label ? <span className="text-sm font-medium text-ink">{label}</span> : null}
-    </label>
+      </button>
+      {label || description ? (
+        <span className="min-w-0">
+          {label ? <span id={`${id}-l`} className="block cursor-pointer text-sm font-medium text-ink" onClick={() => { if (!disabled) onChange(!checked); }}>{label}</span> : null}
+          {description ? <span id={`${id}-d`} className="block text-xs text-ink-3">{description}</span> : null}
+        </span>
+      ) : null}
+    </span>
   );
 }
 

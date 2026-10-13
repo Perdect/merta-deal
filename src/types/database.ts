@@ -3061,6 +3061,7 @@ export type Database = {
           p_sort?: string
           p_page?: number
           p_page_size?: number
+          p_include_unlisted?: boolean
         }
         Returns: Json
       }
@@ -3146,7 +3147,7 @@ export type Database = {
           p_pack_label: string
           p_mrp: number
           p_selling_price: number
-          p_stock_qty: number
+          p_stock_qty: number | null
           p_low_stock_threshold?: number
           p_description?: string
           p_image_url?: string
@@ -3154,6 +3155,7 @@ export type Database = {
           p_is_veg?: boolean
           p_product_id?: string
           p_max_order_qty?: number
+          p_is_active?: boolean | null
         }
         Returns: Json
       }

@@ -14,6 +14,7 @@ import { ProductImage } from "@/components/shop/product-image";
 import { addFromCatalogAction } from "@/lib/actions/store";
 import type { ProductCard, SearchResult } from "@/types/app";
 import { formatINR, discountPct } from "@/lib/utils";
+import { afterOverlayClose } from "@/hooks/use-back-to-close";
 
 /**
  * "Add from catalog": typeahead over the shared product catalog (rpc search_products, browser client),
@@ -35,7 +36,7 @@ export function CatalogPicker({ storeId, listedProductIds }: { storeId: string; 
     const run = async () => {
       setLoading(true);
       const supabase = createClient();
-      const { data, error } = await supabase.rpc("search_products", { p_query: dq.trim() || undefined, p_page_size: 12, p_sort: dq.trim() ? "relevance" : "popular" });
+      const { data, error } = await supabase.rpc("search_products", { p_query: dq.trim() || undefined, p_page_size: 12, p_sort: dq.trim() ? "relevance" : "popular", p_include_unlisted: true });
       if (cancelled) return;
       setLoading(false);
       if (error) { toast.error("Catalog search failed", error.message); return; }
@@ -56,7 +57,7 @@ export function CatalogPicker({ storeId, listedProductIds }: { storeId: string; 
     setBusy(false);
     if (!r.ok) { toast.error(r.error); return; }
     toast.success("Added to your store", pick.name);
-    setPick(null); router.push(`/store/products/${r.data.inventory_id}`); router.refresh();
+    setPick(null); afterOverlayClose(() => { router.push(`/store/products/${r.data.inventory_id}`); router.refresh(); });
   };
   const pct = discountPct(Number(form.mrp), Number(form.selling_price));
 

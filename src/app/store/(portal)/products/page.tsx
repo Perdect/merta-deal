@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getMyStore, getStoreInventory, getCategoryGroups } from "@/lib/data/store";
+import { getMyStore, getStoreInventory, getStoreInventoryCounts, getCategoryGroups, INVENTORY_SORTS, type InventorySort } from "@/lib/data/store";
 import { ProductList } from "@/components/store/product-list";
-import { PageHeader } from "@/components/ui/misc";
 import type { Enums } from "@/types/database";
 
 export const metadata: Metadata = { title: "Products" };
@@ -10,20 +9,22 @@ export const dynamic = "force-dynamic";
 
 const STATUSES: Enums<"inventory_status">[] = ["in_stock", "low_stock", "out_of_stock"];
 
-export default async function StoreProductsPage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string; category?: string; page?: string }> }) {
+export default async function StoreProductsPage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string; category?: string; sort?: string; page?: string }> }) {
   const sp = await searchParams;
   const membership = await getMyStore();
   if (!membership) redirect("/store/register");
   const status = STATUSES.includes(sp.status as Enums<"inventory_status">) ? (sp.status as Enums<"inventory_status">) : "";
-  const page = Math.max(1, Number(sp.page ?? 1) || 1);
-  const [list, categories] = await Promise.all([
-    getStoreInventory(membership.store.id, { q: sp.q ?? "", status, categoryId: sp.category || undefined, page, pageSize: 24 }),
+  const sort: InventorySort = sp.sort && sp.sort in INVENTORY_SORTS ? (sp.sort as InventorySort) : "recent";
+  const q = (sp.q ?? "").trim().slice(0, 80);
+  const categoryId = /^[0-9a-f-]{36}$/.test(sp.category ?? "") ? sp.category! : "";
+  const page = Math.max(1, Math.floor(Number(sp.page ?? 1)) || 1);
+  const [list, counts, categories] = await Promise.all([
+    getStoreInventory(membership.store.id, { q, status, categoryId: categoryId || undefined, sort, page, pageSize: 24 }),
+    getStoreInventoryCounts(membership.store.id, { q, categoryId: categoryId || undefined }),
     getCategoryGroups(),
   ]);
   return (
-    <div>
-      <PageHeader title="Products" subtitle={`${list.total} listing${list.total === 1 ? "" : "s"}`} className="px-0" />
-      <ProductList items={list.items} total={list.total} page={list.page} pageSize={list.pageSize} filter={{ q: sp.q ?? "", status, categoryId: sp.category ?? "" }} categories={categories} />
-    </div>
+    <ProductList items={list.items} total={list.total} page={list.page} pageSize={list.pageSize} error={list.error}
+      filter={{ q, status, categoryId, sort }} categories={categories} sorts={INVENTORY_SORTS} counts={counts} />
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Clock, ShieldAlert, Store as StoreIcon } from "lucide-react";
+import { Clock, ShieldAlert } from "lucide-react";
 import { DashboardShell } from "@/components/shared/dashboard-shell";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/states";
@@ -39,15 +39,14 @@ export function StoreShell({ store, role, user, unread, notifications, children 
   const meta = STORE_STATUS_META[store.status];
   const badge = (
     <span className="flex items-center gap-2">
-      <Badge tone={meta.tone}>{meta.label}</Badge>
-      <span className={store.is_open ? "inline-flex items-center gap-1 text-xs font-semibold text-success" : "inline-flex items-center gap-1 text-xs font-semibold text-ink-3"}><span className={store.is_open ? "h-2 w-2 rounded-full bg-success" : "h-2 w-2 rounded-full bg-line-2"} />{store.is_open ? "Open" : "Closed"}</span>
+      {store.status !== "active" ? <Badge tone={meta.tone}>{meta.label}</Badge> : <span className="max-lg:hidden"><Badge tone={meta.tone}>{meta.label}</Badge></span>}
+      <span className={store.is_open ? "inline-flex items-center gap-1 rounded-full bg-success-50 px-2 py-0.5 text-xs font-semibold text-success" : "inline-flex items-center gap-1 rounded-full bg-surface-2 px-2 py-0.5 text-xs font-semibold text-ink-2"}><span className={store.is_open ? "h-2 w-2 rounded-full bg-success" : "h-2 w-2 rounded-full bg-ink-4"} aria-hidden />{store.is_open ? "Open" : "Closed"}</span>
     </span>
   );
 
   return (
-    <DashboardShell nav={storeNav} title="Store" badge={badge} user={{ name: user.name, role: role === "owner" ? "store owner" : `store ${role}`, avatarUrl: user.avatarUrl }} notificationsHref="/store/notifications" unread={Math.max(unread, live.unread)}>
+    <DashboardShell nav={storeNav} title="Store panel" storeName={store.name} badge={badge} user={{ name: user.name, role: role === "owner" ? "store owner" : `store ${role}`, avatarUrl: user.avatarUrl }} notificationsHref="/store/notifications" unread={Math.max(unread, live.unread)}>
       <div className="mx-auto w-full max-w-6xl space-y-4">
-        <div className="flex items-center gap-2 lg:hidden"><StoreIcon className="h-4 w-4 text-brand-600" /><p className="truncate text-sm font-bold text-ink">{store.name}</p>{badge}</div>
         {store.status === "pending" ? (
           <Alert tone="warning" icon={<Clock className="h-4 w-4" />} title="Awaiting admin approval">Your store is being verified. You can set up products, stock and your profile now; customers will see the store and orders will start once an admin approves it.</Alert>
         ) : store.status === "suspended" ? (

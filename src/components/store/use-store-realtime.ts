@@ -1,6 +1,7 @@
 "use client";
 import * as React from "react";
 import { createClient } from "@/lib/supabase/client";
+import { realtimeTopic } from "@/lib/realtime-topic";
 
 /**
  * Subscribes to order inserts/updates for one store (RLS lets members see them) and calls
@@ -15,7 +16,7 @@ export function useStoreOrdersRealtime(storeId: string, onChange: () => void, op
     const supabase = createClient();
     let t: ReturnType<typeof setTimeout> | null = null;
     const bump = () => { if (t) clearTimeout(t); t = setTimeout(() => ref.current(), 500); };
-    const ch = supabase.channel(`store-orders:${storeId}`)
+    const ch = supabase.channel(realtimeTopic(`store-orders:${storeId}`))
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders", filter: `store_id=eq.${storeId}` }, bump)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "orders", filter: `store_id=eq.${storeId}` }, bump);
     if (opts.inventory) ch.on("postgres_changes", { event: "UPDATE", schema: "public", table: "inventory", filter: `store_id=eq.${storeId}` }, bump);

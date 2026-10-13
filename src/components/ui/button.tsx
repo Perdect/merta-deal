@@ -33,7 +33,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { className, variant = "primary", size = "md", loading, href, fullWidth, children, disabled, type, ...props },
+  { className, variant = "primary", size = "md", loading, href, fullWidth, children, disabled, type, onClick, ...props },
   ref,
 ) {
   // Disabled = readable grey (≥4.5:1), not a faded brand colour; loading keeps the portal colour + spinner.
@@ -45,14 +45,14 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function 
   const cls = cn(base, variants[variant], sizes[size], fullWidth && "w-full", className, state);
   if (href) {
     return (
-      <Link href={href} className={cls} aria-disabled={disabled || loading} aria-busy={loading || undefined}>
+      <Link href={href} className={cls} aria-disabled={disabled || loading} aria-busy={loading || undefined} aria-label={props["aria-label"]} onClick={onClick as unknown as React.MouseEventHandler<HTMLAnchorElement>}>
         {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
         {children}
       </Link>
     );
   }
   return (
-    <button ref={ref} type={type ?? "button"} className={cls} disabled={disabled || loading} aria-busy={loading || undefined} {...props}>
+    <button ref={ref} type={type ?? "button"} className={cls} disabled={disabled || loading} aria-busy={loading || undefined} onClick={onClick} {...props}>
       {loading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
       {children}
     </button>

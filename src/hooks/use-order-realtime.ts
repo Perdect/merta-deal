@@ -2,6 +2,7 @@
 import * as React from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { TrackingLocation } from "@/types/app";
+import { realtimeTopic } from "@/lib/realtime-topic";
 
 /**
  * Subscribes to Supabase Realtime for one order: order row, its assignments, status history and
@@ -18,7 +19,7 @@ export function useOrderRealtime(orderId: string, assignmentId: string | null, o
     const supabase = createClient();
     let t: ReturnType<typeof setTimeout> | null = null;
     const bump = () => { if (t) clearTimeout(t); t = setTimeout(() => changeRef.current(), 400); };
-    const ch = supabase.channel(`order:${orderId}`)
+    const ch = supabase.channel(realtimeTopic(`order:${orderId}`))
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "orders", filter: `id=eq.${orderId}` }, bump)
       .on("postgres_changes", { event: "*", schema: "public", table: "delivery_assignments", filter: `order_id=eq.${orderId}` }, bump)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "order_status_history", filter: `order_id=eq.${orderId}` }, bump);

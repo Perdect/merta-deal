@@ -95,7 +95,8 @@ export async function updateStoreProfileAction(storeId: string, input: StoreProf
   if (!parsed.success) return { ok: false, error: "Please fix the highlighted fields", fieldErrors: fieldErrors(parsed.error) };
   const supabase = await createClient();
   // status / commission_rate / is_featured are admin-only; the stores_protect_columns trigger ignores them silently.
-  const { error } = await supabase.from("stores").update(parsed.data).eq("id", storeId);
+  const { data: touched, error } = await supabase.from("stores").update(parsed.data).eq("id", storeId).select("id");
+  if (!error && !touched?.length) return { ok: false, error: NOT_ALLOWED };
   if (error) return { ok: false, error: friendlyError(error) };
   revalidatePath("/store", "layout");
   return { ok: true, data: undefined };
@@ -115,7 +116,8 @@ export async function updateStoreSettingsAction(storeId: string, input: StoreSet
   const parsed = settingsSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Please fix the highlighted fields", fieldErrors: fieldErrors(parsed.error) };
   const supabase = await createClient();
-  const { error } = await supabase.from("stores").update(parsed.data).eq("id", storeId);
+  const { data: touched, error } = await supabase.from("stores").update(parsed.data).eq("id", storeId).select("id");
+  if (!error && !touched?.length) return { ok: false, error: NOT_ALLOWED };
   if (error) return { ok: false, error: friendlyError(error) };
   revalidatePath("/store", "layout");
   return { ok: true, data: undefined };
@@ -123,7 +125,8 @@ export async function updateStoreSettingsAction(storeId: string, input: StoreSet
 
 export async function setStoreOpenAction(storeId: string, isOpen: boolean): Promise<ActionResult<{ is_open: boolean }>> {
   const supabase = await createClient();
-  const { error } = await supabase.from("stores").update({ is_open: isOpen }).eq("id", storeId);
+  const { data: touched, error } = await supabase.from("stores").update({ is_open: isOpen }).eq("id", storeId).select("id");
+  if (!error && !touched?.length) return { ok: false, error: NOT_ALLOWED };
   if (error) return { ok: false, error: friendlyError(error) };
   revalidatePath("/store", "layout");
   return { ok: true, data: { is_open: isOpen } };
@@ -138,7 +141,8 @@ export async function updateStoreMediaAction(storeId: string, input: { logo_url?
   if ("cover_url" in input) patch.cover_url = input.cover_url ?? null;
   if (input.photos) patch.photos = input.photos.filter((p) => /^https?:\/\//.test(p)).slice(0, 12);
   const supabase = await createClient();
-  const { error } = await supabase.from("stores").update(patch).eq("id", storeId);
+  const { data: touched, error } = await supabase.from("stores").update(patch).eq("id", storeId).select("id");
+  if (!error && !touched?.length) return { ok: false, error: NOT_ALLOWED };
   if (error) return { ok: false, error: friendlyError(error) };
   revalidatePath("/store", "layout");
   return { ok: true, data: undefined };
@@ -177,6 +181,9 @@ export async function storeOrderAction(orderId: string, action: StoreOrderAction
   return { ok: true, data: { status: res.status, assignment_id: res.assignment_id ?? null } };
 }
 
+/** RLS hides rows the caller may not edit, so an update can "succeed" while changing nothing. */
+const NOT_ALLOWED = "This change wasn't saved: you don't have access to it, or your session has expired. Sign in again and retry.";
+
 /* Products & inventory ----------------------------------------------------------------------- */
 
 const productSchema = z.object({
@@ -189,9 +196,11 @@ const productSchema = z.object({
   pack_label: z.string().trim().max(40).optional().nullable().transform((v) => (v ? v : null)),
   mrp: z.number().positive("Enter the MRP"),
   selling_price: z.number().positive("Enter the selling price"),
-  stock_qty: z.number().int().min(0),
-  low_stock_threshold: z.number().int().min(0).max(1000),
-  max_order_qty: z.number().int().min(1).max(100),
+  // null = keep the live stock count (edits change stock through the logged adjust_stock instead).
+  stock_qty: z.number({ message: "Enter the stock count" }).int("Use a whole number").min(0, "Stock can't be negative").max(100000, "That's more than 100,000 — check the number").nullable(),
+  low_stock_threshold: z.number({ message: "Enter a number" }).int("Use a whole number").min(0, "Can't be negative").max(1000, "Keep this under 1,000"),
+  max_order_qty: z.number({ message: "Enter a number" }).int("Use a whole number").min(1, "At least 1").max(100, "At most 100"),
+  is_active: z.boolean().nullable().optional(),
   description: z.string().trim().max(2000).optional().nullable().transform((v) => (v ? v : null)),
   image_url: z.string().url().optional().nullable().or(z.literal("")).transform((v) => (v ? v : null)),
   is_veg: z.boolean(),
@@ -206,7 +215,7 @@ export async function saveStoreProductAction(storeId: string, input: StoreProduc
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("upsert_store_product", {
     p_store_id: storeId, p_name: d.name, p_category_id: d.category_id, p_brand_name: d.brand_name ?? "", p_weight_value: d.weight_value, p_weight_unit: d.weight_unit,
-    p_pack_label: d.pack_label ?? `${d.weight_value} ${d.weight_unit}`, p_mrp: d.mrp, p_selling_price: d.selling_price, p_stock_qty: d.stock_qty, p_low_stock_threshold: d.low_stock_threshold,
+    p_pack_label: d.pack_label ?? `${d.weight_value} ${d.weight_unit}`, p_mrp: d.mrp, p_selling_price: d.selling_price, p_stock_qty: d.stock_qty, p_low_stock_threshold: d.low_stock_threshold, p_is_active: d.is_active ?? null,
     p_description: d.description ?? undefined, p_image_url: d.image_url ?? undefined, p_is_local: d.is_local, p_is_veg: d.is_veg, p_product_id: d.product_id ?? undefined, p_max_order_qty: d.max_order_qty,
   });
   if (error) return { ok: false, error: friendlyError(error) };
@@ -230,7 +239,8 @@ export async function addFromCatalogAction(storeId: string, input: { product_id:
 
 export async function toggleInventoryActiveAction(inventoryId: string, isActive: boolean): Promise<ActionResult> {
   const supabase = await createClient();
-  const { error } = await supabase.from("inventory").update({ is_active: isActive }).eq("id", inventoryId);
+  const { data: touched, error } = await supabase.from("inventory").update({ is_active: isActive }).eq("id", inventoryId).select("id");
+  if (!error && !touched?.length) return { ok: false, error: NOT_ALLOWED };
   if (error) return { ok: false, error: friendlyError(error) };
   revalidatePath("/store/products"); revalidatePath("/store/inventory");
   return { ok: true, data: undefined };
@@ -250,7 +260,8 @@ export async function updateInventoryPricingAction(inventoryId: string, input: {
   const parsed = schema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
   const supabase = await createClient();
-  const { error } = await supabase.from("inventory").update(parsed.data).eq("id", inventoryId);
+  const { data: touched, error } = await supabase.from("inventory").update(parsed.data).eq("id", inventoryId).select("id");
+  if (!error && !touched?.length) return { ok: false, error: NOT_ALLOWED };
   if (error) return { ok: false, error: friendlyError(error) };
   revalidatePath("/store/inventory"); revalidatePath("/store/products");
   return { ok: true, data: undefined };

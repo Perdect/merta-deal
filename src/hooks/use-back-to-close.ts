@@ -34,3 +34,15 @@ export function useBackToClose(open: boolean, onClose: () => void) {
   /** Call right before closing the panel to navigate elsewhere (e.g. after placing an order). */
   return React.useCallback(() => { skipRef.current = true; }, []);
 }
+
+/**
+ * Run a navigation after an overlay that uses useBackToClose has closed. Closing pops the overlay's history
+ * entry (history.back(), which completes asynchronously); navigating in the same tick gets undone by that pop.
+ * Waits for the popstate (or a short fallback when the overlay had no entry), then runs `fn`.
+ */
+export function afterOverlayClose(fn: () => void) {
+  let done = false;
+  const run = () => { if (done) return; done = true; window.removeEventListener("popstate", run); setTimeout(fn, 0); };
+  window.addEventListener("popstate", run);
+  setTimeout(run, 400);
+}
