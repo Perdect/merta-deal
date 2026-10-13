@@ -22,6 +22,8 @@ export type LocalPlace = { id: string; name: string; aliases: string[]; area: st
 
 async function adminClient() {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("SESSION_EXPIRED");
   const { data: isAdmin } = await supabase.rpc("is_admin");
   if (!isAdmin) throw new Error("FORBIDDEN");
   return supabase;
@@ -38,7 +40,7 @@ export async function saveLocalPlaceAction(input: LocalPlaceInput): Promise<Acti
       : supabase.from("local_places" as never).insert(row as never).select("id").single();
     const { data, error } = await q;
     if (error) return { ok: false, error: friendlyError(error) };
-    await supabase.rpc("audit", { p_action: id ? "local_place.update" : "local_place.create", p_entity: "local_place", p_entity_id: (data as { id: string }).id, p_after: row as never });
+    await supabase.rpc("admin_audit", { p_action: id ? "local_place.update" : "local_place.create", p_entity: "local_place", p_entity_id: (data as { id: string }).id, p_after: row as never });
     revalidatePath("/admin/delivery");
     return { ok: true, data: { id: (data as { id: string }).id } };
   } catch (e) { return { ok: false, error: friendlyError(e) }; }
@@ -50,7 +52,7 @@ export async function deleteLocalPlaceAction(id: string): Promise<ActionResult> 
     const supabase = await adminClient();
     const { error } = await supabase.from("local_places" as never).delete().eq("id", id);
     if (error) return { ok: false, error: friendlyError(error) };
-    await supabase.rpc("audit", { p_action: "local_place.delete", p_entity: "local_place", p_entity_id: id });
+    await supabase.rpc("admin_audit", { p_action: "local_place.delete", p_entity: "local_place", p_entity_id: id });
     revalidatePath("/admin/delivery");
     return { ok: true, data: undefined };
   } catch (e) { return { ok: false, error: friendlyError(e) }; }

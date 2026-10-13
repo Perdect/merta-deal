@@ -60,7 +60,8 @@ export function LoginModal({ open, onClose, eta, guest, onGuestContinue }: { ope
 
         <div className="relative px-5 pb-[calc(1.5rem+var(--safe-bottom))] pt-5 sm:px-8 sm:py-8">
           <div className="flex justify-center"><LogoMark size={52} /></div>
-          <h2 className="mt-3 text-center font-display text-xl font-bold leading-tight text-ink sm:mt-4 sm:text-2xl">Login to start ordering</h2>
+          <p className="mt-3 text-center text-xs font-bold uppercase tracking-wide text-brand-700 sm:mt-4">Customer login</p>
+          <h2 className="mt-1 text-center font-display text-xl font-bold leading-tight text-ink sm:text-2xl">Login to start ordering</h2>
 
           <form action={formAction} className="mt-6 space-y-4">
             <input type="hidden" name="next" value={pathname} />

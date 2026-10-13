@@ -1,5 +1,5 @@
 import * as React from "react";
-import { AlertTriangle, Inbox, Loader2, RefreshCw } from "lucide-react";
+import { AlertCircle, AlertTriangle, CheckCircle2, Inbox, Info, Loader2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
 
@@ -67,17 +67,26 @@ export function ErrorState({ title = "Something went wrong", description, onRetr
   );
 }
 
+const ALERT_ICON = {
+  info: <Info className="h-4 w-4" />,
+  warning: <AlertTriangle className="h-4 w-4" />,
+  danger: <AlertCircle className="h-4 w-4" />,
+  success: <CheckCircle2 className="h-4 w-4" />,
+  neutral: <Info className="h-4 w-4" />,
+};
+
 export function Alert({ tone = "info", title, children, className, icon }: { tone?: "info" | "warning" | "danger" | "success" | "neutral"; title?: string; children?: React.ReactNode; className?: string; icon?: React.ReactNode }) {
   const tones = {
     info: "border-info/20 bg-info-50 text-[#1e3a8a]",
     warning: "border-warning/30 bg-warning-50 text-[#6b4d00]",
     danger: "border-danger/20 bg-danger-50 text-[#8a1f18]",
-    success: "border-success/20 bg-success-50 text-brand-800",
+    success: "border-success/20 bg-success-50 text-[#14532d]",
     neutral: "border-line bg-surface-2 text-ink-2",
   };
   return (
     <div className={cn("flex gap-3 rounded-md border px-3.5 py-3 text-sm", tones[tone], className)} role={tone === "danger" ? "alert" : "status"}>
-      {icon ? <span className="mt-0.5 shrink-0">{icon}</span> : null}
+      {/* Status is never colour-only: every tone carries an icon (callers may pass their own). */}
+      <span className="mt-0.5 shrink-0" aria-hidden>{icon ?? ALERT_ICON[tone]}</span>
       <div className="min-w-0">
         {title ? <p className="font-semibold">{title}</p> : null}
         {children ? <div className={cn(title && "mt-0.5")}>{children}</div> : null}

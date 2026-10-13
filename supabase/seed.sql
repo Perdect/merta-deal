@@ -509,6 +509,10 @@ insert into public.addresses (user_id, type, label, full_name, phone, house, str
 ('30000000-0000-4000-8000-000000000001', 'work', 'Office', 'Rahul Bishnoi', '9876500001', 'Office 4, 1st Floor', 'Station Road', 'Station Road', 'Above Punjab National Bank', 'Merta City', '341510', 26.6430, 74.0262, 'b0000000-0000-4000-8000-000000000002', false);
 
 -- ------------------------------------------------------------------ RIDERS --
+-- Sign-up never creates riders (0023); approved riders are provisioned here like an admin would.
+insert into public.delivery_partners (user_id, city_id, vehicle_type, status)
+select id, 'a0000000-0000-4000-8000-000000000001', 'bike', 'active' from seed_users where role = 'rider'
+on conflict (user_id) do nothing;
 update public.delivery_partners dp set
   status = 'active', is_online = (n <= 6),
   vehicle_type = (array['bike','scooter','bike','bicycle','bike','scooter','bike','bike','scooter','bike'])[n]::public.vehicle_type,

@@ -29,7 +29,7 @@ export function BottomNav({ unread = 0 }: { unread?: number }) {
             <li key={item.href}>
               <Link href={item.href} aria-current={active ? "page" : undefined} aria-label={item.icon === "user" && unread > 0 ? `${item.label}, ${unread} unread notifications` : undefined}
                 className={cn("relative flex h-full w-full flex-col items-center justify-center gap-0.5 rounded-[22px] text-[11px] font-semibold transition-colors focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-brand-600", active ? "text-brand-700" : "text-ink-3")}>
-                <span className={cn("relative flex h-7 w-12 items-center justify-center rounded-full transition-colors duration-200", active && "bg-brand-600 text-white shadow-[0_4px_12px_-4px_rgb(11_110_79/0.6)]")}>
+                <span className={cn("relative flex h-7 w-12 items-center justify-center rounded-full transition-colors duration-200", active && "bg-brand-600 text-white shadow-[0_4px_12px_-4px_var(--color-brand-600)]")}>
                   <Icon className="h-[18px] w-[18px]" strokeWidth={active ? 2.2 : 1.9} aria-hidden />
                   {item.icon === "user" && unread > 0 ? <span aria-hidden className="absolute right-2.5 top-0.5 h-2 w-2 rounded-full bg-saffron-500 ring-2 ring-card" /> : null}
                 </span>

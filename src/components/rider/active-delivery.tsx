@@ -104,7 +104,7 @@ function RiderMap({ a, leg }: { a: RiderAssignment; leg: "store" | "customer" })
   return <LiveMap store={{ lat: a.pickup_lat ?? a.store.lat, lng: a.pickup_lng ?? a.store.lng, name: a.store.name }} customer={leg === "customer" ? customer.point : null} rider={fixToTrackingLocation(fix)} trail={[]} showRoute={leg === "customer"} className="mt-3" />;
 }
 
-const anchorBtn = "inline-flex h-12 items-center justify-center gap-2 rounded-md px-4 text-base font-semibold select-none active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400";
+const anchorBtn = "inline-flex h-12 items-center justify-center gap-2 rounded-md px-4 text-base font-semibold select-none active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600";
 
 /** Call + Navigate: plain anchors (tel: / Google Maps directions deep link, no API key needed). */
 function ActionRow({ phone, dest, phoneLabel }: { phone: string | null; dest: { lat: number; lng: number } | null; phoneLabel: string }) {

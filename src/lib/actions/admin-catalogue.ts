@@ -26,13 +26,15 @@ function firstIssue(e: z.ZodError) { return e.issues[0]?.message ?? "Invalid inp
 
 async function requireAdmin() {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("SESSION_EXPIRED");
   const { data: isAdmin } = await supabase.rpc("is_admin");
   if (!isAdmin) throw new Error("FORBIDDEN");
   return supabase;
 }
 
 async function audit(supabase: Awaited<ReturnType<typeof createClient>>, action: string, entity: string, entityId: string, before: unknown, after: unknown) {
-  await supabase.rpc("audit", { p_action: action, p_entity: entity, p_entity_id: entityId, p_before: (before ?? undefined) as Json | undefined, p_after: (after ?? undefined) as Json | undefined });
+  await supabase.rpc("admin_audit", { p_action: action, p_entity: entity, p_entity_id: entityId, p_before: (before ?? undefined) as Json | undefined, p_after: (after ?? undefined) as Json | undefined });
 }
 
 function revalidateProduct(productId: string, slug?: string | null) {

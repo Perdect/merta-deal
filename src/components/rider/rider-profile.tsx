@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Bell, CheckCheck, LifeBuoy, LogOut, Info, Phone, Mail, ShieldCheck } from "lucide-react";
 import type { DeliveryPartner, Notification } from "@/types/app";
 import { updateRiderProfileAction, markRiderNotificationsReadAction, type RiderFormResult } from "@/lib/actions/rider";
-import { signOutAction } from "@/lib/actions/auth";
+import { staffSignOutAction } from "@/lib/actions/auth";
 import { useNotifications } from "@/hooks/use-notifications";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
@@ -65,7 +65,7 @@ export function RiderProfile({ user, rider: initialRider, notifications }: { use
 
       <div className="grid grid-cols-2 gap-2">
         <Link href="/account/support" className="inline-flex h-12 items-center justify-center gap-2 rounded-md border border-line-2 bg-card px-4 text-sm font-semibold text-ink active:scale-[0.98]"><LifeBuoy className="h-5 w-5 text-brand-600" /> Support</Link>
-        <form action={signOutAction} className="contents"><Button type="submit" variant="outline" size="lg" className="text-danger"><LogOut className="h-5 w-5" /> Sign out</Button></form>
+        <form action={staffSignOutAction} className="contents"><input type="hidden" name="portal" value="rider" /><Button type="submit" variant="outline" size="lg" className="text-danger"><LogOut className="h-5 w-5" /> Sign out</Button></form>
       </div>
     </div>
   );

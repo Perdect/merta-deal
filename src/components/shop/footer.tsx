@@ -5,7 +5,7 @@ import { Logo } from "@/components/ui/misc";
 import { InstallButtons } from "@/components/pwa/install-buttons";
 
 /**
- * Footer: brand + app badges, Shop, Help, For Partners (coming soon), and a bottom bar with the
+ * Footer: brand + app badges, Shop, Help, For Partners (rider sign-up live; selling and ads coming soon), and a bottom bar with the
  * legal links. Phones: brand on top, link columns two-up; desktop: four columns.
  */
 export function Footer() {
@@ -51,20 +51,18 @@ export function Footer() {
           </nav>
 
           <section aria-labelledby="footer-partners" className="col-span-2 md:col-span-1">
-            <h2 id="footer-partners" className={`${heading} flex flex-wrap items-center gap-2`}>
-              For Partners
-              <span className="rounded-full bg-saffron-50 px-2 py-0.5 text-[10px] font-bold tracking-wide text-saffron-700 ring-1 ring-inset ring-saffron-200">Coming soon</span>
-            </h2>
-            <ul className={`${list} text-ink-3`}>
+            <h2 id="footer-partners" className={heading}>For Partners</h2>
+            <ul className={list}>
+              <li><Link href="/deliver" className={link}><Bike className={icon} strokeWidth={1.75} aria-hidden />Deliver with Merta Deal</Link></li>
               {[
                 { icon: Store, label: "Sell on Merta Deal" },
-                { icon: Bike, label: "Deliver with Merta Deal" },
                 { icon: Megaphone, label: "Advertise with us" },
               ].map(({ icon: Icon, label }) => (
-                <li key={label} className="flex items-center gap-2 pointer-coarse:min-h-11"><Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />{label}</li>
+                <li key={label} className="flex flex-wrap items-center gap-2 text-ink-3 pointer-coarse:min-h-11"><Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />{label}
+                  <span className="rounded-full bg-saffron-50 px-2 py-0.5 text-[10px] font-bold tracking-wide text-saffron-700 ring-1 ring-inset ring-saffron-200">Coming soon</span></li>
               ))}
             </ul>
-            <p className="mt-3 text-xs text-ink-3">Shop owner or rider in {site.city}? Write to <a href={`mailto:${site.supportEmail}`} className="font-semibold text-brand-700 hover:underline">{site.supportEmail}</a> to join early.</p>
+            <p className="mt-3 text-xs text-ink-3">Shop owner in {site.city}? Write to <a href={`mailto:${site.supportEmail}`} className="font-semibold text-brand-700 hover:underline">{site.supportEmail}</a> to join early.</p>
           </section>
         </div>
       </div>

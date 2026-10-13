@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bell, ChevronRight, ChevronsLeft, ChevronsRight, ExternalLink, LogOut, Menu, Settings, X, ChevronDown } from "lucide-react";
 import { Logo, LogoMark, Avatar } from "@/components/ui/misc";
-import { signOutAction } from "@/lib/actions/auth";
+import { staffSignOutAction } from "@/lib/actions/auth";
 import { cn } from "@/lib/utils";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { ADMIN_NAV, ADMIN_NAV_FOOTER, activeNavHref, breadcrumbs, type AdminNavItem } from "./nav";
@@ -179,7 +179,7 @@ function AccountMenu({ user }: { user: ShellUser }) {
           </div>
           <Link role="menuitem" href="/admin/settings" onClick={() => setOpen(false)} className="flex items-center gap-2.5 px-3 py-2 text-sm text-ink-2 hover:bg-surface-2 pointer-coarse:min-h-11"><Settings className="h-4 w-4" aria-hidden />Settings</Link>
           <Link role="menuitem" href="/" target="_blank" onClick={() => setOpen(false)} className="flex items-center gap-2.5 px-3 py-2 text-sm text-ink-2 hover:bg-surface-2 pointer-coarse:min-h-11 md:hidden"><ExternalLink className="h-4 w-4" aria-hidden />Customer site</Link>
-          <form action={signOutAction} className="border-t border-line">
+          <form action={staffSignOutAction} className="border-t border-line"><input type="hidden" name="portal" value="admin" />
             <button role="menuitem" type="submit" className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-danger hover:bg-danger-50 pointer-coarse:min-h-11"><LogOut className="h-4 w-4" aria-hidden />Sign out</button>
           </form>
         </div>

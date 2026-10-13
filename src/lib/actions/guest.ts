@@ -1,6 +1,7 @@
 "use server";
 import { friendlyError } from "@/lib/utils";
 import { redirect } from "next/navigation";
+import { safeNext } from "@/lib/safe-next";
 import { createClient } from "@/lib/supabase/server";
 import { env } from "@/lib/env";
 
@@ -14,7 +15,7 @@ export async function continueAsGuestAction(next?: string): Promise<{ ok: false;
   const supabase = await createClient();
   const { error } = await supabase.auth.signInAnonymously({ options: { data: { full_name: "Guest", role: "customer" } } });
   if (error) return { ok: false, error: friendlyError(error) };
-  redirect(next && next.startsWith("/") ? next : "/");
+  redirect(safeNext(next, "/"));
 }
 
 /** Silently starts a guest session (no redirect) so "ADD" works straight from a scanned QR. */

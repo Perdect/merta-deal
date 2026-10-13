@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { env } from "@/lib/env";
+import { safeNext } from "@/lib/safe-next";
 
 const ROLE_HOME: Record<string, string> = { store_owner: "/store", store_staff: "/store", rider: "/rider", admin: "/admin", super_admin: "/admin", customer: "/" };
 
@@ -40,8 +41,7 @@ export async function signInAction(_prev: AuthResult | null, formData: FormData)
   }
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", data.user.id).maybeSingle();
   const role = profile?.role ?? "customer";
-  const next = parsed.data.next && parsed.data.next.startsWith("/") ? parsed.data.next : ROLE_HOME[role] ?? "/";
-  redirect(next);
+  redirect(safeNext(parsed.data.next, ROLE_HOME[role] ?? "/"));
 }
 
 export async function signUpAction(_prev: AuthResult | null, formData: FormData): Promise<AuthResult> {
@@ -60,7 +60,7 @@ export async function signUpAction(_prev: AuthResult | null, formData: FormData)
     if (/phone.*(disabled|not enabled)|Unsupported phone provider/i.test(error.message)) return { ok: false, error: "Mobile sign-up is not enabled on the server yet. The Supabase Phone provider must be switched on — see docs/GO-LIVE.md, step A4." };
     return { ok: false, error: friendlyError(error) };
   }
-  if (data.session) redirect(parsed.data.next?.startsWith("/") ? parsed.data.next : ROLE_HOME[role] ?? "/");
+  if (data.session) redirect(safeNext(parsed.data.next, ROLE_HOME[role] ?? "/"));
   // Phone confirmations are enabled on the project: an SMS OTP must be verified before the first sign-in.
   return { ok: true, message: `We sent a verification code to +91 ${mobile}. Enter it below to activate your account.`, redirectTo: `verify:${mobile}` };
 }
@@ -80,6 +80,53 @@ export async function signOutAction() {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/");
+}
+
+/* ------------------------------------------------------------------------------------------------
+ * Staff portals (admin, delivery partner): same mobile + PIN accounts, but the portal is only entered
+ * after the server confirms the account holds that role. A valid PIN without the role is signed straight
+ * back out, so a customer session can never ride into a staff portal and no half-signed-in state remains.
+ * ---------------------------------------------------------------------------------------------- */
+export type StaffPortal = "admin" | "rider";
+const staffSignInSchema = z.object({ mobile: mobileSchema, password: pinSchema, next: z.string().optional(), portal: z.enum(["admin", "rider"]) });
+
+export async function staffSignInAction(_prev: AuthResult | null, formData: FormData): Promise<AuthResult> {
+  const parsed = staffSignInSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { ok: false, error: "Please check the form", fieldErrors: flatten(parsed.error) };
+  const { portal } = parsed.data;
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithPassword({ phone: toE164(parsed.data.mobile), password: parsed.data.password });
+  if (error) {
+    if (/phone.*(disabled|not enabled)|Unsupported phone provider/i.test(error.message)) return { ok: false, error: "Mobile sign-in is not enabled on the server yet." };
+    return { ok: false, error: friendlyError(error) };
+  }
+  const { data: profile } = await supabase.from("profiles").select("role, is_active").eq("id", data.user.id).maybeSingle();
+  let allowed = Boolean(profile?.is_active);
+  if (portal === "admin") allowed &&= profile?.role === "admin" || profile?.role === "super_admin";
+  else {
+    const { data: rider } = await supabase.from("delivery_partners").select("id").eq("user_id", data.user.id).maybeSingle();
+    allowed &&= Boolean(rider);
+  }
+  if (!allowed) {
+    await supabase.auth.signOut();
+    return {
+      ok: false,
+      error: !profile?.is_active
+        ? "This account is deactivated. Contact Merta Deal support."
+        : portal === "admin"
+          ? "This account doesn't have admin access. Shoppers sign in from the Merta Deal website."
+          : "This number isn't registered as a Merta Deal delivery partner. Apply from the \"Deliver with Merta Deal\" page first.",
+    };
+  }
+  redirect(safeNext(parsed.data.next, `/${portal}`, `/${portal}`));
+}
+
+/** Sign out of a staff portal and land on that portal's login page. */
+export async function staffSignOutAction(formData: FormData) {
+  const portal: StaffPortal = formData.get("portal") === "rider" ? "rider" : "admin";
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  redirect(`/${portal}/login?signed_out=1`);
 }
 
 /** OTP login (passwordless) — only when an SMS provider is configured on the project. */

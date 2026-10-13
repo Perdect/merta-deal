@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
         : { images: [...gallery, pub.publicUrl].slice(0, 8) };
       const { error } = await supabase.from("products").update(patch).eq("id", q.data.id);
       if (error) { results.push({ slug: q.data.slug, ok: false, error: error.message }); continue; }
-      await supabase.rpc("audit", { p_action: "product.image_import", p_entity: "products", p_entity_id: q.data.id, p_after: { url: pub.publicUrl, source: item.source ?? item.url, credit: item.credit ?? null } as never });
+      await supabase.rpc("admin_audit", { p_action: "product.image_import", p_entity: "products", p_entity_id: q.data.id, p_after: { url: pub.publicUrl, source: item.source ?? item.url, credit: item.credit ?? null } as never });
       results.push({ slug: q.data.slug, ok: true, url: pub.publicUrl, source_px: `${out.sourceWidth}×${out.sourceHeight}`, cutout: out.cutout });
     } catch (e) {
       results.push({ slug: item.slug, product_id: item.product_id, ok: false, error: e instanceof Error ? e.message : "Import failed" });

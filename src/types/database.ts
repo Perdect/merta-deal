@@ -2673,6 +2673,36 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_audit: {
+        Args: {
+          p_action: string
+          p_entity: string
+          p_entity_id: string
+          p_before?: Json
+          p_after?: Json
+        }
+        Returns: undefined
+      }
+      admin_notify_store: {
+        Args: {
+          p_store_id: string
+          p_type: string
+          p_title: string
+          p_body: string
+          p_data?: Json
+        }
+        Returns: undefined
+      }
+      admin_notify_user: {
+        Args: {
+          p_user_id: string
+          p_type: string
+          p_title: string
+          p_body: string
+          p_data?: Json
+        }
+        Returns: undefined
+      }
       audit: {
         Args: {
           p_action: string

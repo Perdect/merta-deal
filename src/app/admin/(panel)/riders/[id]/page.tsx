@@ -5,6 +5,7 @@ import { Bike, Star } from "lucide-react";
 import { getRiderDetail, getCities } from "@/lib/data/admin";
 import { AdminPageHeader, Panel, DetailList, DataTable, CellStack, EmptyBlock, MetricCard, StatusText, rupees, rupeesRounded } from "@/components/admin/kit";
 import { RiderStatusActions, RiderEditPanel } from "@/components/admin/rider-actions";
+import { ResetPinButton } from "@/components/admin/reset-pin";
 import { RiderStatusPill, OnlinePill, ActivePill, VEHICLE_LABEL } from "@/components/admin/ops/pills";
 import { Avatar, StarRating } from "@/components/ui/misc";
 import { formatDate, formatDateTime, formatNumber, timeAgo } from "@/lib/utils";
@@ -79,6 +80,7 @@ export default async function AdminRiderPage({ params }: { params: Promise<{ id:
               { label: "Emergency contact", value: r.emergency_contact ?? "—" },
               { label: "City", value: city?.name ?? "Any" },
             ]} />
+            <div className="mt-4 border-t border-line pt-3"><ResetPinButton userId={r.user_id} name={name} /></div>
           </Panel>
           <Panel title="Location">
             <DetailList items={[

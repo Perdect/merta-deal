@@ -1,9 +1,11 @@
 "use server";
+import { randomInt } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { adminRpc } from "@/lib/data/admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { friendlyError, slugify } from "@/lib/utils";
 import { env } from "@/lib/env";
 import type { ActionResult } from "./cart";
@@ -31,6 +33,8 @@ function invalid(parsed: { success: false; error: z.ZodError }): ActionResult<ne
 /** Guard: the proxy + layout already gate /admin, but every action re-checks server-side. */
 async function requireAdmin() {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("SESSION_EXPIRED");
   const { data: isAdmin } = await supabase.rpc("is_admin");
   if (!isAdmin) throw new Error("FORBIDDEN");
   return supabase;
@@ -38,7 +42,7 @@ async function requireAdmin() {
 
 async function audit(action: string, entity: string, entityId: string | null, before?: unknown, after?: unknown) {
   const supabase = await createClient();
-  await supabase.rpc("audit", { p_action: action, p_entity: entity, p_entity_id: entityId ?? "", p_before: (before ?? undefined) as Json | undefined, p_after: (after ?? undefined) as Json | undefined });
+  await supabase.rpc("admin_audit", { p_action: action, p_entity: entity, p_entity_id: entityId ?? "", p_before: (before ?? undefined) as Json | undefined, p_after: (after ?? undefined) as Json | undefined });
 }
 
 function revalidate(...paths: string[]) { for (const p of paths) revalidatePath(p); }
@@ -106,7 +110,7 @@ export async function setStoreStatusAction(storeId: string, status: Enums<"store
       pending: ["Store under review", `${store.name} is back under review by the Merta Deal team.`],
     };
     const [title, body] = msg[parsed.data.status];
-    await supabase.rpc("notify_user", { p_user_id: store.owner_id, p_type: "store_status", p_title: title, p_body: body, p_data: { store_id: storeId, status: parsed.data.status } });
+    await supabase.rpc("admin_notify_user", { p_user_id: store.owner_id, p_type: "store_status", p_title: title, p_body: body, p_data: { store_id: storeId, status: parsed.data.status } });
     revalidate("/admin/stores", `/admin/stores/${storeId}`, "/admin");
     return { ok: true, data: undefined };
   } catch (e) { return fail(e); }
@@ -513,7 +517,7 @@ export async function setRiderStatusAction(riderId: string, status: Enums<"rider
       pending: ["Account under review", "Your delivery partner account is under review again."],
     };
     const [title, body] = msg[parsed.data.status];
-    await supabase.rpc("notify_user", { p_user_id: rider.user_id, p_type: "rider_status", p_title: title, p_body: body, p_data: { status: parsed.data.status } });
+    await supabase.rpc("admin_notify_user", { p_user_id: rider.user_id, p_type: "rider_status", p_title: title, p_body: body, p_data: { status: parsed.data.status } });
     revalidate("/admin/riders", `/admin/riders/${riderId}`, "/admin");
     return { ok: true, data: undefined };
   } catch (e) { return fail(e); }
@@ -683,7 +687,7 @@ export async function setPayoutStatusAction(payoutId: string, status: Enums<"pay
     if (parsed.data.status === "paid") patch.paid_at = new Date().toISOString();
     const { error } = await supabase.from("payouts").update(patch).eq("id", payoutId);
     if (error) return fail(error);
-    if (parsed.data.status === "paid") await supabase.rpc("notify_store", { p_store_id: payout.store_id, p_type: "payout_paid", p_title: "Payout sent", p_body: `₹${Number(payout.net_amount).toFixed(2)} for ${payout.period_start} to ${payout.period_end} has been transferred. Ref: ${parsed.data.reference}`, p_data: { payout_id: payoutId } });
+    if (parsed.data.status === "paid") await supabase.rpc("admin_notify_store", { p_store_id: payout.store_id, p_type: "payout_paid", p_title: "Payout sent", p_body: `₹${Number(payout.net_amount).toFixed(2)} for ${payout.period_start} to ${payout.period_end} has been transferred. Ref: ${parsed.data.reference}`, p_data: { payout_id: payoutId } });
     revalidate("/admin/payouts", `/admin/stores/${payout.store_id}`);
     return { ok: true, data: undefined };
   } catch (e) { return fail(e); }
@@ -737,7 +741,7 @@ export async function updateTicketAction(ticketId: string, input: { status?: Enu
     if (error) return fail(error);
     await audit("ticket.update", "support_tickets", ticketId, before, patch);
     if (parsed.data.status && parsed.data.status !== before.status && (parsed.data.status === "resolved" || parsed.data.status === "closed")) {
-      await supabase.rpc("notify_user", { p_user_id: before.user_id, p_type: "ticket_status", p_title: `Ticket ${before.ticket_number} ${parsed.data.status}`, p_body: "Our support team has updated your ticket. Reply if you still need help.", p_data: { ticket_id: ticketId } });
+      await supabase.rpc("admin_notify_user", { p_user_id: before.user_id, p_type: "ticket_status", p_title: `Ticket ${before.ticket_number} ${parsed.data.status}`, p_body: "Our support team has updated your ticket. Reply if you still need help.", p_data: { ticket_id: ticketId } });
     }
     revalidate("/admin/support", `/admin/support/${ticketId}`, `/account/support/${ticketId}`);
     return { ok: true, data: undefined };
@@ -800,5 +804,32 @@ export async function importProductPhotosAction(items: { slug: string; url: stri
     if (!res.ok) return { ok: false, error: body.error ?? `Import failed (${res.status})` };
     revalidate("/admin/products", "/admin/products/images", "/");
     return { ok: true, data: { imported: body.imported ?? 0, failed: body.failed ?? 0, results: body.results ?? [] } };
+  } catch (e) { return fail(e); }
+}
+
+/* ------------------------------------------------------------------------------------------------
+ * PIN recovery for staff and customers (no SMS provider): an admin sets a random 6-digit PIN and
+ * reads it out to the verified account holder. Admin PINs need a super admin; nobody resets their own
+ * here (they change it in account settings). The PIN is returned once and never logged.
+ * ---------------------------------------------------------------------------------------------- */
+export async function resetUserPinAction(userId: string): Promise<ActionResult<{ pin: string }>> {
+  if (!uuid.safeParse(userId).success) return { ok: false, error: "Invalid account" };
+  try {
+    const supabase = await requireAdmin();
+    const { data: { user: me } } = await supabase.auth.getUser();
+    if (me?.id === userId) return { ok: false, error: "Change your own PIN from your account settings." };
+    const { data: target } = await supabase.from("profiles").select("role, is_guest, is_active").eq("id", userId).maybeSingle();
+    if (!target || target.is_guest) return { ok: false, error: "This account has no PIN to reset (guest or missing account)." };
+    if (target.role === "admin" || target.role === "super_admin") {
+      const { data: isSuper } = await supabase.rpc("is_super_admin");
+      if (!isSuper) return { ok: false, error: "Only a super admin can reset an admin's PIN." };
+    }
+    const service = createAdminClient();
+    if (!service) return { ok: false, error: "PIN reset needs SUPABASE_SERVICE_ROLE_KEY on the server." };
+    const pin = String(randomInt(0, 1_000_000)).padStart(6, "0");
+    const { error } = await service.auth.admin.updateUserById(userId, { password: pin });
+    if (error) return fail(error);
+    await audit("user.reset_pin", "profile", userId, undefined, { role: target.role });
+    return { ok: true, data: { pin } };
   } catch (e) { return fail(e); }
 }

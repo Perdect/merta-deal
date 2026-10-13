@@ -80,7 +80,7 @@ export function Switch({ checked, onChange, label, disabled }: { checked: boolea
 export function Checkbox({ label, className, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label?: React.ReactNode }) {
   return (
     <label className={cn("inline-flex items-center gap-2.5 cursor-pointer text-sm text-ink", className)}>
-      <input type="checkbox" className="h-4.5 w-4.5 rounded-xs border-line-2 text-brand-600 accent-brand-600 focus:ring-brand-400" {...props} />
+      <input type="checkbox" className="h-4.5 w-4.5 rounded-xs border-line-2 text-brand-600 accent-brand-600 focus-visible:ring-2 focus-visible:ring-brand-600" {...props} />
       {label}
     </label>
   );

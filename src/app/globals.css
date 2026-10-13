@@ -2,25 +2,29 @@
 
 /* ------------------------------------------------------------------------
    MERTA DEAL design tokens
-   Brand green is the logo green #329537 (brand-600) with a matching scale, saffron accent, warm neutrals.
+   Portal colours: customer green #15803D, admin blue #1D4ED8, delivery partner orange #C2410C (each is
+   brand-600 inside its portal). Logo green #329537 stays the same everywhere. Saffron accent, warm neutrals.
    ------------------------------------------------------------------------ */
 @theme {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-display: var(--font-jakarta), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
-  --color-brand-50: #f1f9f1;
-  --color-brand-100: #dbf0dc;
-  --color-brand-200: #b9dfbb;
-  --color-brand-300: #84c887;
-  --color-brand-400: #4ab54f;
-  --color-brand-500: #3aa640;
-  --color-brand-600: #329537;
-  --color-brand-700: #26782a;
-  /* Produce-card green (price block, savings) — the vivid green of fresh-grocery pricing. */
-  --color-fresh: #329537;
-  --color-fresh-50: #f1f9f1;
-  --color-brand-800: #1c5f1f;
-  --color-brand-900: #134916;
+  /* Customer portal (default): green #15803D on brand-600, the shade buttons, links and selected
+     states use. 5.0:1 against white, so it passes WCAG AA for text too. Admin and rider portals
+     re-map this scale (see .theme-admin / .theme-rider below); the logo keeps its own green. */
+  --color-brand-50: #f0fdf4;
+  --color-brand-100: #dcfce7;
+  --color-brand-200: #bbf7d0;
+  --color-brand-300: #86efac;
+  --color-brand-400: #4ade80;
+  --color-brand-500: #16a34a;
+  --color-brand-600: #15803d;
+  --color-brand-700: #166534;
+  --color-brand-800: #14532d;
+  --color-brand-900: #0d3d20;
+  /* Produce-card green (price block, savings). */
+  --color-fresh: #15803d;
+  --color-fresh-50: #f0fdf4;
 
   --color-saffron-50: #fff7e8;
   --color-saffron-100: #feebc4;
@@ -46,10 +50,11 @@
 
   --color-danger: #d9342b;
   --color-danger-50: #fdeeed;
-  --color-success: #329537;
-  --color-success-50: #f1f9f1;
-  --color-warning: #e0a100;
-  --color-warning-50: #fff8e1;
+  /* Status colours mean the same in every portal and are always paired with an icon or words. */
+  --color-success: #15803d;
+  --color-success-50: #f0fdf4;
+  --color-warning: #b45309;
+  --color-warning-50: #fffbeb;
   --color-info: #2563eb;
   --color-info-50: #ebf1ff;
 
@@ -78,6 +83,7 @@
   --animate-tag: tag 0.22s ease-out both;
 
   @keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
+
   @keyframes slide-up { from { opacity: 0; transform: translateY(16px) } to { opacity: 1; transform: translateY(0) } }
   /* Search hint: hold each word ~2.2s, slide up 0.3s; the 4th row repeats the 1st for a seamless loop. */
   @keyframes search-hint { 0%, 29% { transform: translateY(0) } 33%, 62% { transform: translateY(-25%) } 66%, 95% { transform: translateY(-50%) } 99%, 100% { transform: translateY(-75%) } }
@@ -101,6 +107,33 @@
   @keyframes rise { from { opacity: 0; transform: translateY(12px) } to { opacity: 1; transform: translateY(0) } }
   @keyframes bump { 0% { transform: scale(1) } 45% { transform: scale(1.35) } 100% { transform: scale(1) } }
   @keyframes tag { 0%, 100% { transform: rotate(0) } 35% { transform: rotate(-14deg) } 70% { transform: rotate(8deg) } }
+}
+
+/* Portal themes. A wrapper class re-maps the brand scale, so every brand-* utility inside (buttons,
+   links, tabs, nav, selected states, focus rings, inputs) follows the portal without per-component code. */
+.theme-admin {
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-200: #bfdbfe;
+  --color-brand-300: #93c5fd;
+  --color-brand-400: #60a5fa;
+  --color-brand-500: #2563eb;
+  --color-brand-600: #1d4ed8;
+  --color-brand-700: #1e40af;
+  --color-brand-800: #1e3a8a;
+  --color-brand-900: #172554;
+}
+.theme-rider {
+  --color-brand-50: #fff7ed;
+  --color-brand-100: #ffedd5;
+  --color-brand-200: #fed7aa;
+  --color-brand-300: #fdba74;
+  --color-brand-400: #fb923c;
+  --color-brand-500: #ea580c;
+  --color-brand-600: #c2410c;
+  --color-brand-700: #9a3412;
+  --color-brand-800: #7c2d12;
+  --color-brand-900: #431407;
 }
 
 :root {

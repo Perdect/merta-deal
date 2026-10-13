@@ -44,7 +44,7 @@ export function integrationStatus(): IntegrationStatus[] {
   const s = serverEnv();
   return [
     { key: "supabase", label: "Supabase (database, auth, realtime, storage)", configured: isSupabaseConfigured(), envVars: ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"], note: "Required. Apply supabase/migrations then supabase/seed.sql." },
-    { key: "service_role", label: "Supabase service role (webhooks, push fan-out)", configured: Boolean(s.serviceRoleKey), envVars: ["SUPABASE_SERVICE_ROLE_KEY"], note: "Needed only for Razorpay webhooks and server-side push delivery." },
+    { key: "service_role", label: "Supabase service role (webhooks, push fan-out)", configured: Boolean(s.serviceRoleKey), envVars: ["SUPABASE_SERVICE_ROLE_KEY"], note: "Needed for Razorpay webhooks, server-side push delivery, product photo import and admin PIN resets." },
     { key: "razorpay", label: "Razorpay (UPI, cards, net banking)", configured: Boolean(s.razorpayKeyId && s.razorpayKeySecret), envVars: ["NEXT_PUBLIC_RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"], note: "Cash on Delivery works without it. Online methods are shown as unavailable until configured." },
     { key: "maps", label: "Google Maps (customer map, rider navigation, ETA)", configured: Boolean(env.mapsKey), envVars: ["NEXT_PUBLIC_GOOGLE_MAPS_API_KEY", "GOOGLE_MAPS_SERVER_API_KEY"], note: "Live rider GPS still streams via Supabase Realtime; the map tile and route ETA need this key." },
     { key: "push", label: "Web Push (VAPID)", configured: Boolean(env.vapidPublicKey && s.vapidPrivateKey), envVars: ["NEXT_PUBLIC_VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY", "VAPID_SUBJECT"], note: "In-app notifications work without it. Generate keys with `pnpm push:keys`." },

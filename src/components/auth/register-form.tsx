@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/states";
 import { toast } from "@/components/ui/toast";
+import { safeNext } from "@/lib/safe-next";
 
 /** Fields rise in one after another; `motion-safe` keeps them still for reduced-motion users. */
 const rise = (i: number) => ({ className: "motion-safe:animate-rise", style: { animationDelay: `${180 + i * 70}ms` } });
@@ -27,7 +28,7 @@ export function RegisterForm({ next }: { next?: string }) {
         <h1 className="text-xl font-bold text-ink">Verify your mobile</h1>
         <Alert tone="success">{state.message}</Alert>
         <Input label="6-digit code" inputMode="numeric" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} autoFocus />
-        <Button fullWidth size="lg" loading={busy} onClick={async () => { setBusy(true); const r = await verifySignupOtpAction(m, otp); setBusy(false); if (r.ok) router.replace(next ?? r.redirectTo ?? "/"); else toast.error(r.error); }}>Activate account</Button>
+        <Button fullWidth size="lg" loading={busy} onClick={async () => { setBusy(true); const r = await verifySignupOtpAction(m, otp); setBusy(false); if (r.ok) router.replace(safeNext(next, r.redirectTo ?? "/")); else toast.error(r.error); }}>Activate account</Button>
       </div>
     );
   }

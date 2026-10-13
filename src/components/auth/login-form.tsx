@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/states";
 import { toast } from "@/components/ui/toast";
+import { safeNext } from "@/lib/safe-next";
 
 /** Sign in with mobile number + 6-digit PIN. OTP login appears only when the project has an SMS provider. */
 export function LoginForm({ next, phoneEnabled, guestEnabled, confirmed, reason }: { next?: string; phoneEnabled: boolean; guestEnabled: boolean; confirmed?: boolean; reason?: string }) {
@@ -21,16 +22,17 @@ export function LoginForm({ next, phoneEnabled, guestEnabled, confirmed, reason 
   const [guestBusy, setGuestBusy] = React.useState(false);
 
   const sendOtp = async () => { setBusy(true); const r = await sendPhoneOtpAction(mobile); setBusy(false); if (r.ok) { setOtpSent(true); toast.success("OTP sent to +91 " + mobile); } else toast.error(r.error); };
-  const verify = async () => { setBusy(true); const r = await verifyPhoneOtpAction(mobile, otp); setBusy(false); if (r.ok) router.replace(next ?? r.redirectTo ?? "/"); else toast.error(r.error); };
+  const verify = async () => { setBusy(true); const r = await verifyPhoneOtpAction(mobile, otp); setBusy(false); if (r.ok) router.replace(safeNext(next, r.redirectTo ?? "/")); else toast.error(r.error); };
   const guest = async () => { setGuestBusy(true); const r = await continueAsGuestAction(next); if (r && !r.ok) { toast.error(r.error); setGuestBusy(false); } };
   const fieldErr = (k: string) => (state && !state.ok ? state.fieldErrors?.[k] : undefined);
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-ink">Welcome back</h1>
+      <p className="text-xs font-bold uppercase tracking-wide text-brand-700">Customer login</p>
+      <h1 className="mt-1 text-xl font-bold text-ink">Welcome back</h1>
       <p className="mt-1 text-sm text-ink-3">Sign in with your mobile number to order and track deliveries.</p>
       {confirmed ? <Alert tone="success" className="mt-3">Your account is active. You can sign in now.</Alert> : null}
-      {reason === "admin" || reason === "store" ? <Alert tone="info" className="mt-3">{reason === "admin" ? "Sign in with your admin account to open the admin panel." : "Sign in with your store account to open the store dashboard."}</Alert> : null}
+      {reason === "store" ? <Alert tone="info" className="mt-3">Sign in with your store account to open the store dashboard.</Alert> : null}
 
       {otpMode ? (
         <div className="mt-5 space-y-4">
@@ -63,6 +65,7 @@ export function LoginForm({ next, phoneEnabled, guestEnabled, confirmed, reason 
       ) : null}
 
       <p className="mt-6 text-center text-sm text-ink-3">New to Merta Deal? <Link href={`/register${next ? `?next=${encodeURIComponent(next)}` : ""}`} className="font-semibold text-brand-700">Create account</Link></p>
+      <p className="mt-3 text-center text-xs text-ink-3">Staff: <Link href="/rider/login" className="font-semibold text-ink-2 underline-offset-2 hover:underline">Delivery partner login</Link></p>
     </div>
   );
 }

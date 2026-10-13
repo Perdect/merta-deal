@@ -23,7 +23,7 @@ export function AppBar({ title, subtitle, back = "/", actions, cart = false, chi
     return () => ro.disconnect();
   }, []);
   return (
-    <div ref={ref} data-page-bar="" className={cn("sticky top-0 z-30 left-1/2 mb-3 flex min-h-14 w-screen max-w-[100vw] -translate-x-1/2 items-center gap-1 bg-card px-2 pb-1.5 shadow-[0_1px_3px_rgb(23_32_28/0.08)] lg:hidden", className)} style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 6px)" }}>
+    <div ref={ref} data-page-bar="" className={cn("sticky top-0 z-30 mx-[calc(50%-50vw)] mb-3 flex min-h-14 w-screen items-center gap-1 bg-card px-2 pb-1.5 shadow-[0_1px_3px_rgb(23_32_28/0.08)] lg:hidden", className)} style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 6px)" }}>
       <button type="button" onClick={goBack} aria-label="Back" className="tap flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink hover:bg-surface-2"><ChevronLeft className="h-6 w-6" /></button>
       {children ?? (
         <div className="min-w-0 flex-1 px-1">

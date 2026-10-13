@@ -163,7 +163,7 @@ function RiderBottomNav() {
           return (
             <li key={item.href}>
               <Link href={item.href} aria-current={isActive ? "page" : undefined} className={cn("relative flex h-full flex-col items-center justify-center gap-0.5 text-[10.5px] font-semibold transition-colors", isActive ? "text-brand-700" : "text-ink-3")}>
-                <span className={cn("flex h-7 w-12 items-center justify-center rounded-full transition-all", isActive && "bg-brand-600 text-white shadow-[0_4px_12px_-4px_rgb(11_110_79/0.6)]")}>
+                <span className={cn("flex h-7 w-12 items-center justify-center rounded-full transition-all", isActive && "bg-brand-600 text-white shadow-[0_4px_12px_-4px_var(--color-brand-600)]")}>
                   <DynamicIcon name={item.icon} className="h-[18px] w-[18px]" />
                 </span>
                 {item.label}

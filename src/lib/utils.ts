@@ -112,6 +112,8 @@ export function friendlyError(err: unknown): string {
     INVALID_SLOT: "Please choose a valid delivery slot.",
     COD_DISABLED: "Cash on Delivery is currently disabled.",
     FORBIDDEN: "You are not allowed to do that.",
+    SESSION_EXPIRED: "Your session has expired. Sign in again to continue.",
+    ACCOUNT_REQUIRED: "Create a Merta Deal account (mobile number + PIN) before applying. Guest sessions can't apply.",
     OFFER_EXPIRED: "This delivery request has expired.",
     ALREADY_ON_DELIVERY: "Finish your current delivery before accepting another.",
     RIDER_NOT_ACTIVE: "Your rider account is pending approval.",

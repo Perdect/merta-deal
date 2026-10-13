@@ -6,6 +6,7 @@ import { getUserDetail } from "@/lib/data/admin";
 import { getSessionUser } from "@/lib/supabase/server";
 import { AdminPageHeader, Panel, DetailList, DataTable, CellStack, EmptyBlock, MetricCard, OrderStatusPill, PaymentStatusPill, paymentMethodLabel, StatusPill, rupees, rupeesRounded } from "@/components/admin/kit";
 import { UserActions } from "@/components/admin/user-actions";
+import { ResetPinButton } from "@/components/admin/reset-pin";
 import { RolePill, ActivePill, RiderStatusPill, StoreStatusPill, VEHICLE_LABEL } from "@/components/admin/ops/pills";
 import { Avatar } from "@/components/ui/misc";
 import { formatDate, formatDateTime, formatNumber, timeAgo } from "@/lib/utils";
@@ -97,6 +98,11 @@ export default async function AdminUserPage({ params }: { params: Promise<{ id: 
 
           <Panel title="Account actions" description="Each change is confirmed and recorded in the audit log">
             <UserActions userId={p.id} role={p.role} isActive={p.is_active} isSuperAdmin={me?.role === "super_admin"} isSelf={me?.id === p.id} name={p.full_name} walletBalance={Number(p.wallet_balance)} />
+          </Panel>
+          <Panel title="Sign-in recovery" description="For a verified account holder who forgot their PIN">
+            <ResetPinButton userId={p.id} name={p.full_name ?? "this user"}
+              disabled={me?.id === p.id || ((p.role === "admin" || p.role === "super_admin") && me?.role !== "super_admin")}
+              disabledReason={me?.id === p.id ? "Change your own PIN from account settings." : (p.role === "admin" || p.role === "super_admin") && me?.role !== "super_admin" ? "Only a super admin can reset an admin's PIN." : undefined} />
           </Panel>
         </aside>
       </div>

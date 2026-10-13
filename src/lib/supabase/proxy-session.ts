@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/types/database";
 import { env, isSupabaseConfigured } from "@/lib/env";
+import { safeNext } from "@/lib/safe-next";
 
 const ROLE_HOME: Record<string, string> = { store_owner: "/store", store_staff: "/store", rider: "/rider", admin: "/admin", super_admin: "/admin", customer: "/" };
 
@@ -10,7 +11,7 @@ const PROTECTED: { prefix: string; roles: string[] }[] = [
   { prefix: "/admin", roles: ["admin", "super_admin"] },
   { prefix: "/store/register", roles: ALL_ROLES },            // any signed-in user may register a kirana store
   { prefix: "/store", roles: ["store_owner", "store_staff", "admin", "super_admin"] },
-  { prefix: "/rider", roles: ["rider", "customer", "admin", "super_admin"] }, // customers land on rider registration
+  { prefix: "/rider", roles: ["rider", "customer", "admin", "super_admin"] }, // applicants (customers) see their application status
   { prefix: "/account", roles: ["customer", "store_owner", "store_staff", "rider", "admin", "super_admin"] },
   { prefix: "/orders", roles: ["customer", "store_owner", "store_staff", "rider", "admin", "super_admin"] },
   { prefix: "/checkout", roles: ["customer", "store_owner", "store_staff", "rider", "admin", "super_admin"] },
@@ -40,39 +41,61 @@ export async function updateSession(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
   const path = request.nextUrl.pathname;
-  const rule = PROTECTED.find((r) => path === r.prefix || path.startsWith(r.prefix + "/"));
+  const portal = path === "/admin" || path.startsWith("/admin/") ? "admin" : path === "/rider" || path.startsWith("/rider/") ? "rider" : null;
+  const portalLogin = portal ? `/${portal}/login` : null;
 
-  if (rule) {
-    if (!user) {
-      const url = new URL("/login", request.url);
-      url.searchParams.set("next", path);
-      return NextResponse.redirect(url);
+  // Staff login pages are public. Someone already signed in with the right access goes straight in.
+  if (portalLogin && path === portalLogin) {
+    if (user && !user.is_anonymous) {
+      const me = await profileFor(supabase, user.id);
+      const inside = portal === "admin" ? me.active && (me.role === "admin" || me.role === "super_admin") : me.active && me.role === "rider";
+      const home = portal === "admin" ? "/admin" : "/rider";
+      if (inside) return NextResponse.redirect(new URL(safeNext(request.nextUrl.searchParams.get("next"), home, home), request.url));
     }
-    const role = (user.app_metadata?.role as string | undefined) ?? (await roleFor(supabase, user.id));
-    if (!rule.roles.includes(role)) {
-      // Staff areas: a guest or customer session gets the sign-in page (to switch to the staff account)
-      // instead of a silent bounce to the shop home, which looked like a broken link.
-      if (path.startsWith("/admin") || (path.startsWith("/store") && !path.startsWith("/store/register"))) {
-        const url = new URL("/login", request.url);
-        url.searchParams.set("next", path + request.nextUrl.search);
-        url.searchParams.set("reason", path.startsWith("/admin") ? "admin" : "store");
-        return NextResponse.redirect(url);
-      }
-      return NextResponse.redirect(new URL(ROLE_HOME[role] ?? "/", request.url));
-    }
-    response.headers.set("x-user-role", role);
+    return response;
   }
 
-  // Signed-in users skip the sign-in pages — except guests (they sign in to keep their cart) and anyone
-  // sent here to switch to a staff account.
+  const rule = PROTECTED.find((r) => path === r.prefix || path.startsWith(r.prefix + "/"));
+  if (rule) {
+    const back = path + request.nextUrl.search;
+    // Admin and rider areas need a real (non-guest) account; each portal has its own sign-in page.
+    if (!user || (portalLogin && user.is_anonymous)) {
+      const url = new URL(portalLogin ?? "/login", request.url);
+      url.searchParams.set("next", back);
+      return NextResponse.redirect(url);
+    }
+    const me = await profileFor(supabase, user.id);
+    const allowed = rule.roles.includes(me.role) && (portal !== "admin" || me.active);
+    if (!allowed) {
+      if (portalLogin) {
+        // Signed in, but not with a staff account: the portal's login page explains and offers a switch.
+        const url = new URL(portalLogin, request.url);
+        url.searchParams.set("next", back);
+        url.searchParams.set("denied", "1");
+        return NextResponse.redirect(url);
+      }
+      if (path.startsWith("/store") && !path.startsWith("/store/register")) {
+        const url = new URL("/login", request.url);
+        url.searchParams.set("next", back);
+        url.searchParams.set("reason", "store");
+        return NextResponse.redirect(url);
+      }
+      return NextResponse.redirect(new URL(ROLE_HOME[me.role] ?? "/", request.url));
+    }
+    response.headers.set("x-user-role", me.role);
+  }
+
+  // Signed-in users skip the customer sign-in pages — except guests (they sign in to keep their cart) and
+  // anyone sent here to switch to a store account.
   if (user && !user.is_anonymous && !request.nextUrl.searchParams.get("reason") && (path === "/login" || path === "/register")) {
-    const role = await roleFor(supabase, user.id);
-    return NextResponse.redirect(new URL(request.nextUrl.searchParams.get("next") ?? ROLE_HOME[role] ?? "/", request.url));
+    const me = await profileFor(supabase, user.id);
+    return NextResponse.redirect(new URL(safeNext(request.nextUrl.searchParams.get("next"), ROLE_HOME[me.role] ?? "/"), request.url));
   }
   return response;
 }
 
-async function roleFor(supabase: ReturnType<typeof createServerClient<Database>>, userId: string) {
-  const { data } = await supabase.from("profiles").select("role").eq("id", userId).maybeSingle();
-  return data?.role ?? "customer";
+/** Role and active flag from the profile (never from user-editable metadata). */
+async function profileFor(supabase: ReturnType<typeof createServerClient<Database>>, userId: string) {
+  const { data } = await supabase.from("profiles").select("role, is_active").eq("id", userId).maybeSingle();
+  return { role: data?.role ?? "customer", active: data?.is_active ?? false };
 }
