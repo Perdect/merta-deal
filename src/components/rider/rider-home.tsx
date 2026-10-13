@@ -67,7 +67,7 @@ export function RiderHome({ initial }: { initial: RiderHomeData }) {
             <Stat label="Deliveries" value={stats.today_deliveries} icon={<PackageCheck className="h-4 w-4" />} />
             <Stat label="Earned today" value={formatINR(stats.today_earnings)} tone="brand" icon={<IndianRupee className="h-4 w-4" />} />
             <Stat label="This week" value={formatINR(stats.week_earnings)} icon={<Wallet className="h-4 w-4" />} hint="Last 7 days" />
-            <Stat label="COD in hand" value={formatINR(stats.cod_in_hand)} tone="saffron" icon={<Banknote className="h-4 w-4" />} hint="Collected today" />
+            <Stat label="Cash to hand over" value={formatINR(stats.cash_due ?? stats.cod_in_hand)} tone="saffron" icon={<Banknote className="h-4 w-4" />} hint={`Collected today ${formatINR(stats.cod_in_hand)}`} />
             <Stat label="New requests" value={stats.new_requests} icon={<BellRing className="h-4 w-4" />} />
             <Stat label="Active" value={stats.active} icon={<Bike className="h-4 w-4" />} />
           </div>

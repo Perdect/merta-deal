@@ -8,7 +8,7 @@ import type { ActionResult } from "./cart";
    own delivery, cash confirmation, no double payout) and the audit log live in the SQL functions
    (0021_otp_handover_rider_payouts.sql); these wrappers only validate input and refresh pages. */
 
-export type RiderBalance = { rider_id: string; name: string; phone: string | null; payable: number; processing: number; paid: number; failed: number };
+export type RiderBalance = { rider_id: string; name: string; phone: string | null; payable: number; processing: number; paid: number; failed: number; cash_collected: number; cash_remitted: number; cash_due: number };
 
 /** Support path when the customer cannot reach their OTP; requires a reason, audited. */
 export async function adminConfirmDeliveryAction(orderId: string, reason: string, cashCollected: boolean): Promise<ActionResult<{ already: boolean }>> {
@@ -38,4 +38,15 @@ export async function settleRiderPayoutAction(payoutId: string, outcome: "paid" 
   revalidatePath("/admin/payouts");
   const d = data as { status: string; already?: boolean };
   return { ok: true, data: { status: d.status, already: Boolean(d.already) } };
+}
+
+/** Cash a rider collected on COD orders, handed over to Merta Deal (cannot exceed what they hold). */
+export async function recordCashRemittanceAction(riderId: string, amount: number, reference?: string, note?: string): Promise<ActionResult<{ due: number }>> {
+  if (!/^[0-9a-f-]{36}$/.test(riderId)) return { ok: false, error: "Invalid rider" };
+  if (!Number.isFinite(amount) || amount <= 0) return { ok: false, error: "Enter the amount received." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("admin_record_cash_remittance" as never, { p_rider_id: riderId, p_amount: Math.round(amount * 100) / 100, p_reference: reference?.trim() || null, p_note: note?.trim() || null } as never);
+  if (error) return { ok: false, error: friendlyError(error) };
+  revalidatePath("/admin/payouts/riders");
+  return { ok: true, data: { due: Number((data as { due: number }).due) } };
 }

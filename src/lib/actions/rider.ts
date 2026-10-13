@@ -158,3 +158,15 @@ export async function markRiderNotificationsReadAction(ids?: string[]): Promise<
   revalidatePath("/rider/profile");
   return { ok: true, data: Number(data ?? 0) };
 }
+
+export type FailedDeliveryReason = "customer_unreachable" | "address_problem" | "customer_refused" | "other";
+/** The handover couldn't happen: the order goes back to the store and admin re-dispatches or cancels it. */
+export async function reportFailedDeliveryAction(assignmentId: string, reason: FailedDeliveryReason, note?: string): Promise<ActionResult<{ order_status: string }>> {
+  if (!/^[0-9a-f-]{36}$/.test(assignmentId)) return { ok: false, error: "Invalid delivery" };
+  if (reason === "other" && (note ?? "").trim().length < 5) return { ok: false, error: "Describe what happened (at least 5 characters)." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("rider_report_failed_delivery" as never, { p_assignment_id: assignmentId, p_reason: reason, p_note: note?.trim() || null } as never);
+  if (error) return { ok: false, error: friendlyError(error) };
+  revalidatePath("/rider");
+  return { ok: true, data: { order_status: String((data as { order_status: string }).order_status) } };
+}

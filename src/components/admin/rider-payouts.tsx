@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { createRiderPayoutAction, settleRiderPayoutAction, adminConfirmDeliveryAction } from "@/lib/actions/admin-delivery";
+import { createRiderPayoutAction, settleRiderPayoutAction, adminConfirmDeliveryAction, recordCashRemittanceAction } from "@/lib/actions/admin-delivery";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { Modal, ConfirmDialog } from "@/components/ui/overlay";
@@ -97,6 +97,42 @@ export function SupportConfirmDelivery({ orderId, cod, total }: { orderId: strin
           ) : null}
           <div className="flex gap-2"><Button type="button" variant="outline" className="flex-1" onClick={() => setOpen(false)}>Cancel</Button><Button type="submit" className="flex-1" loading={busy} disabled={reason.trim().length < 10 || (cod && !cash)}>Confirm delivery</Button></div>
         </form>
+      </Modal>
+    </>
+  );
+}
+
+/** "Record cash received": the rider hands over COD cash; the amount can't exceed what they hold. */
+export function RecordCashReceived({ riderId, name, due }: { riderId: string; name: string; due: number }) {
+  const router = useRouter();
+  const [open, setOpen] = React.useState(false);
+  const [amount, setAmount] = React.useState("");
+  const [reference, setReference] = React.useState("");
+  const [note, setNote] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const n = Number(amount);
+  const fieldError = amount.trim() === "" ? undefined : !(n > 0) ? "Enter an amount above zero." : n > due + 0.001 ? `At most ${formatINR(due)} is due.` : undefined;
+  const save = async () => {
+    if (busy || fieldError || !(n > 0)) return;
+    setBusy(true); setError(null);
+    const r = await recordCashRemittanceAction(riderId, n, reference, note);
+    setBusy(false);
+    if (!r.ok) { setError(r.error); return; }
+    toast.success(`${formatINR(n)} received from ${name}`, r.data.due > 0 ? `${formatINR(r.data.due)} still to hand over.` : "Nothing left to hand over.");
+    setOpen(false); setAmount(""); setReference(""); setNote(""); router.refresh();
+  };
+  return (
+    <>
+      <Button size="sm" variant="outline" disabled={due <= 0} onClick={() => { setAmount(String(due)); setOpen(true); }}>Record cash</Button>
+      <Modal open={open} onClose={() => (busy ? undefined : setOpen(false))} title={`Cash received from ${name}`} description={`${formatINR(due)} of cash-on-delivery money is with this rider.`}
+        footer={<div className="flex gap-2"><Button variant="outline" className="flex-1" onClick={() => setOpen(false)} disabled={busy}>Cancel</Button><Button className="flex-1" loading={busy} disabled={Boolean(fieldError) || !(n > 0)} onClick={save}>Record {n > 0 ? formatINR(n) : ""}</Button></div>}>
+        <div className="space-y-3">
+          <Input label="Amount received (₹)" type="number" inputMode="decimal" min={0} step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} error={fieldError} required />
+          <Input label="Reference (optional)" value={reference} onChange={(e) => setReference(e.target.value)} placeholder="e.g. UPI ref, or 'cash at store'" maxLength={80} />
+          <Textarea label="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} className="min-h-16" maxLength={200} />
+          {error ? <p role="alert" className="text-sm font-medium text-danger">{error}</p> : null}
+        </div>
       </Modal>
     </>
   );

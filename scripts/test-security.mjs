@@ -1,5 +1,5 @@
-// Security, rider-flow, product-save, search-visibility and grouped-category checks (0023–0026). Loads every migration + seed into PGlite.
-// Run from a folder with @electric-sql/pglite installed:
+// Security, rider-flow, product-save, search-visibility, grouped-category, failed-delivery and cash hand-over checks
+// (0023–0027). Loads every migration + seed into PGlite. Run from a folder with @electric-sql/pglite installed:
 //   node scripts/test-security.mjs "$PWD"
 import { PGlite } from "@electric-sql/pglite";
 import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
@@ -240,6 +240,50 @@ ok("dal,pulses returns both categories' products", both === dal + pul && both > 
 ok("single slug unchanged (parent includes children)", grocery >= both, JSON.stringify({ grocery }));
 ok("spaces in the list are tolerated", (await tot('dal, pulses')) === both);
 ok("unknown slug in a list is ignored", (await tot('dal,nope')) === dal);
+
+console.log("Failed delivery and cash hand-over (0027)");
+const F = await mkReady();
+const fUser = (await one(`select dp.user_id from delivery_assignments a join delivery_partners dp on dp.id = a.rider_id where a.id = $1`, [F.a])).user_id;
+const fRider = (await one(`select rider_id from delivery_assignments where id = $1`, [F.a])).rider_id;
+await as(fUser); await q(`select public.rider_respond_assignment($1::uuid, true)`, [F.a]); await q(`select public.rider_pickup($1::uuid)`, [F.a]);
+const otherR = (await one(`select user_id from delivery_partners where status = 'active' and user_id <> $1 limit 1`, [fUser])).user_id;
+await as(otherR);
+ok("another rider cannot report this delivery", /FORBIDDEN/.test(await err(`select public.rider_report_failed_delivery($1::uuid, 'customer_unreachable')`, [F.a]) ?? ""));
+await as(fUser);
+ok("unknown reason rejected", /INVALID_REASON/.test(await err(`select public.rider_report_failed_delivery($1::uuid, 'bored')`, [F.a]) ?? ""));
+ok("'other' needs a description", /REASON_REQUIRED/.test(await err(`select public.rider_report_failed_delivery($1::uuid, 'other', 'x')`, [F.a]) ?? ""));
+const fr = (await one(`select public.rider_report_failed_delivery($1::uuid, 'customer_unreachable', 'Called 3 times') r`, [F.a])).r;
+const fa = await one(`select a.status, a.failure_reason, o.status as order_status from delivery_assignments a join orders o on o.id = a.order_id where a.id = $1`, [F.a]);
+ok("failed attempt closes the assignment with the reason", fa.status === 'cancelled' && /Customer not reachable: Called 3 times/.test(fa.failure_reason), JSON.stringify(fa));
+ok("order returns to ready for pickup", fr.ok === true && fa.order_status === 'ready_for_pickup', JSON.stringify(fr));
+ok("no earning for a failed attempt", (await one(`select count(*)::int n from rider_earnings where assignment_id = $1`, [F.a])).n === 0);
+ok("rider is free again (no active delivery)", (await one(`select count(*)::int n from delivery_assignments where rider_id = $1 and status in ('accepted','picked_up')`, [fRider])).n === 0);
+ok("reporting twice is rejected", /INVALID_STATE/.test(await err(`select public.rider_report_failed_delivery($1::uuid, 'customer_unreachable')`, [F.a]) ?? ""));
+ok("customer, store and admins notified", (await one(`select count(distinct user_id)::int n from notifications where type = 'delivery_failed' and data->>'order_id' = $1`, [F.o])).n >= 2);
+await as(ADMIN);
+const re = (await one(`select public.admin_assign_rider($1::uuid, $2::uuid) r`, [F.o, fRider])).r;
+const newAsg = (await one(`select id from delivery_assignments where order_id = $1 and status in ('offered','accepted') order by created_at desc limit 1`, [F.o])).id;
+ok("admin can reassign after a failed attempt", Boolean(newAsg), JSON.stringify(re));
+await as(fUser);
+const st0 = await one(`select status from delivery_assignments where id = $1`, [newAsg]);
+if (st0.status === 'offered') await q(`select public.rider_respond_assignment($1::uuid, true)`, [newAsg]);
+await q(`select public.rider_pickup($1::uuid)`, [newAsg]);
+const otpF = (await one(`select delivery_otp from order_secrets where order_id = $1`, [F.o])).delivery_otp;
+ok("second attempt delivers", (await one(`select public.verify_delivery_otp($1::uuid, $2, true) r`, [newAsg, otpF])).r.ok === true);
+const cod = Number((await one(`select total from orders where id = $1`, [F.o])).total);
+const statsAfter = (await one(`select public.rider_dashboard_stats() r`)).r;
+const due0 = Number(statsAfter.cash_due);
+ok("rider sees cash to hand over (includes this COD)", due0 >= cod, JSON.stringify({ due0, cod }));
+ok("rider cannot record their own hand-over", /FORBIDDEN/.test(await err(`select public.admin_record_cash_remittance($1::uuid, 10)`, [fRider]) ?? ""));
+await as(ADMIN);
+ok("cannot record more than is due", /AMOUNT_ABOVE_DUE/.test(await err(`select public.admin_record_cash_remittance($1::uuid, $2)`, [fRider, due0 + 1]) ?? ""));
+ok("zero/negative amounts rejected", /INVALID_AMOUNT/.test(await err(`select public.admin_record_cash_remittance($1::uuid, 0)`, [fRider]) ?? ""));
+const rec = (await one(`select public.admin_record_cash_remittance($1::uuid, $2, 'UPI 1234', 'end of day') r`, [fRider, cod])).r;
+ok("admin records cash received; balance drops", rec.ok === true && Math.abs(Number(rec.due) - (due0 - cod)) < 0.01, JSON.stringify(rec));
+const bal = (await one(`select public.admin_rider_balances() r`)).r.find((x) => x.rider_id === fRider);
+ok("admin balances show cash collected / remitted / due", bal && Number(bal.cash_remitted) >= cod && Math.abs(Number(bal.cash_due) - (due0 - cod)) < 0.01, JSON.stringify(bal));
+ok("hand-over is audited", (await one(`select count(*)::int n from audit_logs where action = 'rider.cash_received' and entity_id = $1`, [fRider])).n >= 1);
+ok("rider can read own hand-over records only", (await rls(fUser, `select id from rider_cash_remittances where rider_id = $1`, [fRider])).length >= 1 && (await rls(otherR, `select id from rider_cash_remittances where rider_id = $1`, [fRider])).length === 0);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

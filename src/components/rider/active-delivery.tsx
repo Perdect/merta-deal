@@ -2,7 +2,9 @@
 import * as React from "react";
 import { Check, Phone, Navigation, Store as StoreIcon, Home, Package, ShieldCheck, Banknote, ChevronLeft, MessageSquareText, ChevronRight } from "lucide-react";
 import type { RiderAssignment } from "@/types/app";
-import { pickupAction, verifyOtpAction, type OtpResult } from "@/lib/actions/rider";
+import { pickupAction, verifyOtpAction, reportFailedDeliveryAction, type OtpResult, type FailedDeliveryReason } from "@/lib/actions/rider";
+import { BottomSheet } from "@/components/ui/overlay";
+import { Textarea } from "@/components/ui/input";
 import { LiveMap } from "@/components/shop/live-map";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -74,8 +76,59 @@ export function ActiveDelivery({ assignment: a, onChanged, onCompleted }: { assi
         {sub === "pickup" ? <Pickup a={a} onBack={() => go("to_store")} onChanged={onChanged} /> : null}
         {sub === "to_customer" ? <GoToCustomer a={a} onNext={() => go("deliver")} /> : null}
         {sub === "deliver" ? <Deliver a={a} verifying={verifying} setVerifying={setVerifying} onBack={() => go("to_customer")} onCompleted={onCompleted} /> : null}
+        {!verifying ? <CantDeliver a={a} onReported={onChanged} /> : null}
       </div>
     </section>
+  );
+}
+
+const FAIL_REASONS: { value: FailedDeliveryReason; label: string; hint: string }[] = [
+  { value: "customer_unreachable", label: "Customer not reachable", hint: "No answer at the door or on the phone" },
+  { value: "address_problem", label: "Address wrong or not found", hint: "Couldn't find the place" },
+  { value: "customer_refused", label: "Customer refused the order", hint: "They didn't want it any more" },
+  { value: "other", label: "Something else", hint: "Describe it below" },
+];
+
+/** Report a handover that can't happen: the order goes back to the store and admin decides (retry or cancel). */
+function CantDeliver({ a, onReported }: { a: RiderAssignment; onReported: () => void }) {
+  const [open, setOpen] = React.useState(false);
+  const [reason, setReason] = React.useState<FailedDeliveryReason | null>(null);
+  const [note, setNote] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const noteNeeded = reason === "other";
+  const valid = reason !== null && (!noteNeeded || note.trim().length >= 5);
+  const submit = async () => {
+    if (!valid || busy || !reason) return;
+    setBusy(true); setError(null);
+    const r = await reportFailedDeliveryAction(a.id, reason, note);
+    setBusy(false);
+    if (!r.ok) { setError(r.error); return; }
+    setOpen(false);
+    toast.info("Reported — bring the order back to the store", `${a.order.order_number}: Merta Deal will re-dispatch or cancel it. You're free for new requests.`);
+    onReported();
+  };
+  return (
+    <>
+      <button type="button" onClick={() => { setOpen(true); setError(null); }} className="mt-3 flex min-h-11 w-full items-center justify-center rounded-md text-sm font-semibold text-ink-2 underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-brand-600">
+        Can&apos;t complete this delivery?
+      </button>
+      <BottomSheet open={open} onClose={() => (busy ? undefined : setOpen(false))} title="Can't complete the delivery" description={`${a.order.order_number} · the order will go back to the store`}
+        footer={<Button fullWidth size="lg" variant="danger" loading={busy} disabled={!valid} onClick={submit}>{busy ? "Reporting…" : "Report and return to store"}</Button>}>
+        <fieldset className="space-y-2">
+          <legend className="sr-only">What went wrong?</legend>
+          {FAIL_REASONS.map((r) => (
+            <label key={r.value} className={cn("flex min-h-12 cursor-pointer items-start gap-3 rounded-md border px-3 py-2.5", reason === r.value ? "border-brand-600 bg-brand-50" : "border-line-2")}>
+              <input type="radio" name="fail-reason" value={r.value} checked={reason === r.value} onChange={() => setReason(r.value)} className="mt-1 h-4 w-4 accent-brand-600" />
+              <span><span className="block text-sm font-semibold text-ink">{r.label}</span><span className="block text-xs text-ink-3">{r.hint}</span></span>
+            </label>
+          ))}
+        </fieldset>
+        <div className="mt-3"><Textarea label={noteNeeded ? "What happened?" : "Note (optional)"} required={noteNeeded} value={note} onChange={(e) => setNote(e.target.value)} className="min-h-16" maxLength={300} placeholder="e.g. Called 3 times, gate locked" /></div>
+        {a.order.payment_method === "cod" ? <p className="mt-2 text-xs text-ink-3">Cash-on-delivery: don&apos;t collect any money for this attempt.</p> : null}
+        {error ? <Alert tone="danger" className="mt-3">{error}</Alert> : null}
+      </BottomSheet>
+    </>
   );
 }
 

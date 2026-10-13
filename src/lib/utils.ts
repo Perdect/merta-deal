@@ -97,6 +97,9 @@ export function friendlyError(err: unknown): string {
   if (limit) return maxPerOrderMessage(Number(limit[1]));
   const avail = raw.match(/^ONLY_AVAILABLE:\s*(\d+)/);
   if (avail) return onlyAvailableMessage(Number(avail[1]));
+  const due = raw.match(/^AMOUNT_ABOVE_DUE:\s*([\d.]+)/);
+  if (due) return `That's more than the rider holds — at most ₹${Number(due[1]).toFixed(2)} is due.`;
+  if (/^INVALID_STATE/.test(raw)) return "This delivery has already moved on (refresh to see its current state).";
   if (raw.startsWith("ITEMS_UNAVAILABLE")) return "Some items in your cart changed (stock or per-order limit). Review your cart and try again.";
   if (/inventory_stock_qty_check|violates check constraint "inventory_stock/i.test(raw)) return "Some items just sold out. Review your cart and try again.";
   const map: Record<string, string> = {
@@ -113,6 +116,9 @@ export function friendlyError(err: unknown): string {
     COD_DISABLED: "Cash on Delivery is currently disabled.",
     FORBIDDEN: "You are not allowed to do that.",
     SESSION_EXPIRED: "Your session has expired. Sign in again to continue.",
+    INVALID_REASON: "Pick what went wrong.",
+    REASON_REQUIRED: "Describe what happened (at least 5 characters).",
+    INVALID_AMOUNT: "Enter an amount above zero.",
     ACCOUNT_REQUIRED: "Create a Merta Deal account (mobile number + PIN) before applying. Guest sessions can't apply.",
     OFFER_EXPIRED: "This delivery request has expired.",
     ALREADY_ON_DELIVERY: "Finish your current delivery before accepting another.",

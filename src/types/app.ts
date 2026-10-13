@@ -106,7 +106,7 @@ export type RiderAssignment = {
   items: { name: string; quantity: number; pack_label: string | null }[];
 };
 
-export type RiderStats = { rider: DeliveryPartner; today_deliveries: number; today_earnings: number; week_earnings: number; cod_in_hand: number; new_requests: number; active: number };
+export type RiderStats = { rider: DeliveryPartner; today_deliveries: number; today_earnings: number; week_earnings: number; cod_in_hand: number; cash_due?: number; new_requests: number; active: number };
 export type StoreStats = { today_orders: number; today_revenue: number; pending_orders: number; active_orders: number; completed_orders: number; cancelled_orders: number; total_revenue: number; products: number; low_stock: number; out_of_stock: number; rating_avg: number; weekly: { day: string; orders: number; revenue: number }[] };
 export type AdminStats = { total_orders: number; today_orders: number; gmv: number; today_gmv: number; revenue: number; customers: number; stores: number; pending_stores: number; riders: number; online_riders: number; pending_orders: number; cancelled_orders: number; avg_delivery_minutes: number | null; on_time_pct: number | null; pending_reviews: number; open_tickets: number; refunds_pending: number; daily: { day: string; orders: number; gmv: number }[]; status_breakdown: Record<string, number> };
 
