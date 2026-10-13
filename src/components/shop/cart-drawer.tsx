@@ -410,7 +410,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: initialAddresses, wal
         ) : null}
       </aside>
 
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Location information" size="lg">
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Location information" size="screen">
         <AddressWizard defaultName={user.name} defaultPhone={user.phone} onCancel={() => setAddOpen(false)} onSaved={(a) => { setAdded((cur) => [a, ...cur.filter((x) => x.id !== a.id)]); setAddressId(a.id); setAddOpen(false); if (step === "cart") openDrawer("pay"); }} />
       </Modal>
       <LoginModal open={loginOpen && (isGuest || !signedIn)} onClose={() => setLoginOpen(false)} eta={`${eta.min}–${eta.max} minutes`} guest={isGuest} onGuestContinue={isGuest ? () => { setLoginOpen(false); openDrawer("pay"); } : undefined} />

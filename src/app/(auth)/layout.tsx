@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Apple, Carrot, Wheat, ShoppingBasket, Zap, Banknote, ShieldCheck } from "lucide-react";
 import { Logo } from "@/components/ui/misc";
 import { site } from "@/config/site";
+import { AuthClose } from "@/components/auth/auth-close";
 
 /** Produce icons drifting in the hero; purely decorative, still when reduced motion is preferred. */
 const FLOATERS = [
@@ -23,6 +24,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   return (
     <div className="flex min-h-dvh flex-col bg-surface">
       <div className="relative overflow-hidden bg-gradient-to-br from-brand-800 via-brand-700 to-brand-600 px-6 pb-20 pt-8 text-white">
+        <AuthClose />
         <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-white/10 blur-2xl" />
         <div aria-hidden className="pointer-events-none absolute -bottom-20 -left-16 h-56 w-56 rounded-full bg-saffron-400/20 blur-2xl" />
         <div aria-hidden className="pointer-events-none absolute inset-x-6 top-7 mx-auto h-16 max-w-md">

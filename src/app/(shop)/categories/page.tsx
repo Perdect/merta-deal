@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { getCategories } from "@/lib/data/catalog";
-import { PageHeader } from "@/components/ui/misc";
+import { ShopPageHeader } from "@/components/shop/shop-page-header";
+import { SearchLink } from "@/components/shop/search-link";
 import { DynamicIcon } from "@/components/shared/dynamic-icon";
 
 export const metadata: Metadata = { title: "Shop by Category – Grocery, Fruits & Vegetables in Merta City", description: "Browse every MertaDeal category — grocery and kirana staples, fresh vegetables and fruits — with home delivery across Merta City, Rajasthan.", alternates: { canonical: "/categories" } };
@@ -13,7 +14,7 @@ export default async function CategoriesPage() {
   const parents = all.filter((c) => !c.parent_id);
   return (
     <div className="pt-1">
-      <PageHeader title="Shop by category" subtitle="Grocery, fresh vegetables and fruits, delivered across Merta City" />
+      <ShopPageHeader title="Shop by category" barTitle="Categories" cart barClassName="-mt-1" actions={<SearchLink />} subtitle="Grocery, fresh vegetables and fruits, delivered across Merta City" />
       <div className="grid gap-3 px-4 sm:grid-cols-2 sm:px-0 lg:grid-cols-3">
         {parents.map((p) => {
           const children = all.filter((c) => c.parent_id === p.id);

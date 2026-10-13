@@ -3,7 +3,7 @@ import { getSessionUser } from "@/lib/supabase/server";
 import { getCartSummary } from "@/lib/actions/cart";
 import { getAvailableCoupons } from "@/lib/data/account";
 import { CartView } from "@/components/shop/cart-view";
-import { PageHeader } from "@/components/ui/misc";
+import { ShopPageHeader } from "@/components/shop/shop-page-header";
 import { EmptyState } from "@/components/ui/states";
 import { Button } from "@/components/ui/button";
 import { ShoppingBag } from "lucide-react";
@@ -17,7 +17,7 @@ export default async function CartPage() {
   const [summary, coupons] = await Promise.all([getCartSummary(), getAvailableCoupons()]);
   return (
     <div className="pt-1">
-      <PageHeader title="Cart" subtitle={summary && !summary.empty ? `${summary.item_count} item${summary.item_count === 1 ? "" : "s"}` : undefined} />
+      <ShopPageHeader title="Cart" fallback="/" barClassName="-mt-1" subtitle={summary && !summary.empty ? `${summary.item_count} item${summary.item_count === 1 ? "" : "s"}` : undefined} />
       <CartView initial={summary} coupons={coupons.map((c) => ({ code: c.code, title: c.title, min_order_amount: Number(c.min_order_amount) }))} />
     </div>
   );

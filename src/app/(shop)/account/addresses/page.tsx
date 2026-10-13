@@ -14,7 +14,7 @@ export default async function AddressesPage({ searchParams }: { searchParams: Pr
   if (!user) redirect(`/login?next=${encodeURIComponent(isNew ? "/account/addresses?new=1" : "/account/addresses")}`);
   const [addresses, profile] = await Promise.all([getMyAddresses(), getMyProfile()]);
   return (
-    <AccountSection title="Saved Addresses">
+    <AccountSection title="Addresses">
       <AddressList initial={addresses} defaultName={profile?.full_name ?? user.fullName} defaultPhone={profile?.phone ?? user.phone} openNew={isNew === "1"} />
     </AccountSection>
   );

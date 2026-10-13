@@ -48,7 +48,7 @@ export function AccountShell({ name, phone, avatarUrl, walletBalance, isGuest, w
   return (
     <div className="mx-auto max-w-6xl md:my-6 md:grid md:grid-cols-[340px_1fr] md:overflow-hidden md:rounded-2xl md:border md:border-line md:bg-card md:shadow-card">
       <aside className={cn("bg-card md:border-r md:border-line", isRoot ? "block" : "hidden md:block")}>
-        <div className="flex items-center gap-4 px-5 pb-4 pt-6">
+        <div className="flex items-center gap-4 px-5 pb-4 pt-6 max-lg:pt-[calc(1.5rem+env(safe-area-inset-top))]">
           <Avatar name={name} src={avatarUrl} size={64} className="shrink-0" />
           <div className="min-w-0">
             <p className="truncate font-display text-2xl font-bold text-ink">{name || (isGuest ? "Guest" : "Add your name")}</p>

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getSessionUser } from "@/lib/supabase/server";
 import { serverEnv } from "@/lib/env";
 import { AssistantChat } from "@/components/assistant/assistant-chat";
-import { PageHeader } from "@/components/ui/misc";
+import { ShopPageHeader } from "@/components/shop/shop-page-header";
 import { site } from "@/config/site";
 
 export const metadata: Metadata = {
@@ -24,7 +24,7 @@ export default async function AssistantPage({ searchParams }: Props) {
   const aiConfigured = Boolean(serverEnv().anthropicKey);
   return (
     <div className="px-4 pt-1 sm:px-0">
-      <PageHeader title="AI shopping assistant" subtitle="“Family of 4 ke liye ek hafte ka saaman” · “2 kilo aata aur ek kilo chini” — Hinglish samajhta hai" className="px-0" />
+      <ShopPageHeader title="AI shopping assistant" barTitle="Shopping assistant" cart subtitle="“Family of 4 ke liye ek hafte ka saaman” · “2 kilo aata aur ek kilo chini” — Hinglish samajhta hai" className="px-0" />
       <AssistantChat signedIn={Boolean(user)} aiConfigured={aiConfigured} autoVoice={mode === "voice"} waId={wa} />
     </div>
   );

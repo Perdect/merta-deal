@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AppBar } from "@/components/shop/app-bar";
 import { Clock, IndianRupee, Truck, Wallet } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getPublicSettings } from "@/lib/data/catalog";
@@ -59,9 +60,10 @@ export default async function DeliveryAreaPage() {
   return (
     <div className="px-4 pb-8 pt-1 sm:px-0">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <nav aria-label="Breadcrumb" className="mt-2 text-xs text-ink-3"><Link href="/" className="tap hover:text-brand-700">Home</Link> / <span className="text-ink">Delivery area</span></nav>
+      <AppBar title="Delivery area & charges" back="/" cart className="-mt-1" />
+      <nav aria-label="Breadcrumb" className="mt-2 text-xs text-ink-3 max-lg:hidden"><Link href="/" className="tap hover:text-brand-700">Home</Link> / <span className="text-ink">Delivery area</span></nav>
 
-      <h1 className="mt-3 font-display text-2xl font-bold leading-tight text-ink">Delivery area, charges & timings in {site.city}</h1>
+      <h1 className="mt-1 font-display lg:mt-3 text-2xl font-bold leading-tight text-ink">Delivery area, charges & timings in {site.city}</h1>
       <p className="mt-2 max-w-3xl text-sm leading-relaxed text-ink-2">
         {site.seoName} delivers groceries, fruits and vegetables to homes in {site.city}, Rajasthan{pincodes.length ? ` (pincode${pincodes.length > 1 ? "s" : ""} ${pincodes.join(", ")})` : ""}. Enter your address or pincode at checkout and we confirm the exact charge before you pay.
       </p>

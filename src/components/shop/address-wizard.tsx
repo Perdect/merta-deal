@@ -13,7 +13,7 @@ export function AddressWizard({ onSaved, onCancel, defaultName, defaultPhone }: 
   const [picked, setPicked] = React.useState<PickedLocation | null>(null);
   if (!picked) return <MapPicker onConfirm={setPicked} />;
   return (
-    <div>
+    <div className="max-sm:px-4 max-sm:py-4">
       <button type="button" onClick={() => setPicked(null)} className="tap mb-3 inline-flex items-center gap-1 text-sm font-semibold text-brand-700"><ChevronLeft className="h-4 w-4" /> Change location on map</button>
       <AddressForm
         initial={{ lat: picked.lat, lng: picked.lng, area: picked.area ?? "", pincode: picked.pincode ?? undefined, street: picked.street ?? "" }}

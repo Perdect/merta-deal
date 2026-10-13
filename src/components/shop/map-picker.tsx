@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { LocateFixed, Search, Loader2, MapPin } from "lucide-react";
+import { LocateFixed, Search, Loader2, MapPin, MapPinOff, ChevronLeft, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import { site } from "@/config/site";
@@ -31,18 +31,24 @@ export type PickedLocation = LatLng & { area?: string; pincode?: string; street?
 type Found = { lat: number; lng: number; title: string; subtitle: string };
 
 /**
- * "Order will be delivered here": the map moves under a fixed centre pin; the address under the pin
- * is looked up when the map stops moving. Search (on submit) and "use my location" move the map.
+ * App-style location screen: search bar, full-height map with a fixed centre pin ("Order will be
+ * delivered here"), and a bottom card. Until a spot is chosen the card offers Search Location /
+ * Current Location; then it shows the address under the pin, whether it is in a delivery zone,
+ * and Confirm & Continue. Searching opens a full-screen "Your Location" results list.
  * Map data © OpenStreetMap contributors.
  */
 export function MapPicker({ initial, onConfirm, confirmLabel = "Confirm & Continue" }: { initial?: LatLng | null; onConfirm: (p: PickedLocation) => void; confirmLabel?: string }) {
   const boxRef = React.useRef<HTMLDivElement>(null);
   const mapRef = React.useRef<LMap | null>(null);
+  const searchRef = React.useRef<HTMLInputElement>(null);
   const [ready, setReady] = React.useState(false);
   const [failed, setFailed] = React.useState(false);
   const [moving, setMoving] = React.useState(false);
+  const [chosen, setChosen] = React.useState(Boolean(initial));
   const [place, setPlace] = React.useState<PickedLocation | null>(null);
+  const [serviceable, setServiceable] = React.useState<boolean | null>(null);
   const [looking, setLooking] = React.useState(false);
+  const [searchMode, setSearchMode] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const [results, setResults] = React.useState<Found[] | null>(null);
   const [searching, setSearching] = React.useState(false);
@@ -51,13 +57,20 @@ export function MapPicker({ initial, onConfirm, confirmLabel = "Confirm & Contin
 
   const lookup = React.useCallback(async (c: LatLng) => {
     const seq = ++lookupSeq.current;
-    setLooking(true);
+    setLooking(true); setServiceable(null);
+    let next: PickedLocation = { ...c };
     try {
       const r = await fetch(`/api/maps/geocode?lat=${c.lat.toFixed(6)}&lng=${c.lng.toFixed(6)}`);
       const d = await r.json() as { ok: boolean; formatted?: string; area?: string; pincode?: string; street?: string; city?: string };
-      if (seq !== lookupSeq.current) return;
-      setPlace(d.ok ? { ...c, area: d.area, pincode: d.pincode, street: d.street, city: d.city, formatted: d.formatted } : { ...c });
-    } catch { if (seq === lookupSeq.current) setPlace({ ...c }); }
+      if (d.ok) next = { ...c, area: d.area, pincode: d.pincode, street: d.street, city: d.city, formatted: d.formatted };
+    } catch { /* address text is optional */ }
+    if (seq !== lookupSeq.current) return;
+    setPlace(next);
+    try {
+      const q = new URLSearchParams({ lat: String(c.lat), lng: String(c.lng), ...(next.pincode ? { pincode: next.pincode } : {}) });
+      const s = await (await fetch(`/api/location/serviceability?${q}`)).json() as { serviceable: boolean };
+      if (seq === lookupSeq.current) setServiceable(Boolean(s.serviceable));
+    } catch { if (seq === lookupSeq.current) setServiceable(null); }
     if (seq === lookupSeq.current) setLooking(false);
   }, []);
 
@@ -68,73 +81,107 @@ export function MapPicker({ initial, onConfirm, confirmLabel = "Confirm & Contin
       const start = initial ?? site.center;
       const map = L.map(boxRef.current, { zoomControl: false, attributionControl: true }).setView([start.lat, start.lng], initial ? 17 : 15);
       L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors' }).addTo(map);
+      map.attributionControl?.setPrefix('<a href="https://leafletjs.com" target="_blank" rel="noreferrer">Leaflet</a>');
+      map.on("dragstart", () => setChosen(true));
       map.on("movestart", () => { setMoving(true); clearTimeout(timer); });
       map.on("moveend", () => { setMoving(false); clearTimeout(timer); timer = setTimeout(() => lookup(map.getCenter()), 600); });
-      map.attributionControl?.setPrefix('<a href="https://leafletjs.com" target="_blank" rel="noreferrer">Leaflet</a>');
       mapRef.current = map; setReady(true);
-      setTimeout(() => map.invalidateSize(), 50);
+      setTimeout(() => map.invalidateSize(), 60);
       lookup(map.getCenter());
     }).catch(() => { if (!cancelled) setFailed(true); });
     return () => { cancelled = true; clearTimeout(timer); mapRef.current?.remove(); mapRef.current = null; };
   }, [initial, lookup]);
 
+  // Leaving the search list shows the map again; Leaflet needs to re-measure its box.
+  React.useEffect(() => { if (!searchMode) setTimeout(() => mapRef.current?.invalidateSize(), 30); }, [searchMode]);
+
   const locate = () => {
-    if (!navigator.geolocation || !window.isSecureContext) { toast.error("Location isn't available here. Move the map or search instead."); return; }
+    if (!navigator.geolocation || !window.isSecureContext) { toast.error("Location isn't available here. Search or move the map instead."); return; }
     setLocating(true);
     navigator.geolocation.getCurrentPosition((pos) => {
       mapRef.current?.setView([pos.coords.latitude, pos.coords.longitude], 18);
-      setLocating(false);
+      setChosen(true); setLocating(false);
     }, (err) => {
-      toast.error(err.code === err.PERMISSION_DENIED ? "Location permission is blocked. Allow it in your browser settings, or move the map." : "Could not get your location. Move the map or search instead.");
+      toast.error(err.code === err.PERMISSION_DENIED ? "Location permission is blocked. Allow it in your browser settings, or search instead." : "Could not get your location. Search or move the map instead.");
       setLocating(false);
     }, { enableHighAccuracy: true, timeout: 12000 });
   };
 
+  // Nominatim's policy forbids search-as-you-type, so results load when the customer submits.
   const search = async (e: React.FormEvent) => {
     e.preventDefault();
     if (query.trim().length < 3) return;
     setSearching(true);
-    try {
-      const r = await fetch(`/api/maps/search?q=${encodeURIComponent(query.trim())}`);
-      const d = await r.json() as { results: Found[] };
-      setResults(d.results);
-    } catch { setResults([]); }
+    try { setResults(((await (await fetch(`/api/maps/search?q=${encodeURIComponent(query.trim())}`)).json()) as { results: Found[] }).results); }
+    catch { setResults([]); }
     setSearching(false);
   };
+  const pick = (r: Found) => { mapRef.current?.setView([r.lat, r.lng], 17); setChosen(true); setSearchMode(false); };
 
   const title = place?.area ?? place?.street ?? place?.city ?? site.city;
   const subtitle = place?.formatted ? place.formatted.split(",").slice(0, 4).join(",") : place ? `${place.lat.toFixed(5)}, ${place.lng.toFixed(5)}` : "";
 
   return (
-    <div className="flex flex-col">
-      <form onSubmit={search} className="relative" role="search">
-        <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-4" aria-hidden />
-        <input value={query} onChange={(e) => { setQuery(e.target.value); if (!e.target.value) setResults(null); }} placeholder="Search a new address" aria-label="Search a new address" enterKeyHint="search"
-          className="h-12 w-full rounded-xl border border-line-2 bg-card pl-10 pr-24 text-[15px] text-ink placeholder:text-ink-4 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100" />
-        <button type="submit" disabled={searching || query.trim().length < 3} className="absolute right-1.5 top-1/2 h-9 -translate-y-1/2 rounded-lg bg-brand-600 px-3 text-sm font-semibold text-white disabled:opacity-50">{searching ? <Loader2 className="h-4 w-4 animate-spin" /> : "Search"}</button>
-        {results ? (
-          <ul className="absolute inset-x-0 top-full z-[500] mt-1 max-h-64 overflow-y-auto rounded-xl border border-line bg-card py-1 shadow-float">
-            {results.length ? results.map((r) => (
-              <li key={`${r.lat},${r.lng}`}>
-                <button type="button" onClick={() => { mapRef.current?.setView([r.lat, r.lng], 17); setResults(null); }} className="flex w-full items-start gap-2.5 px-3 py-2.5 text-left hover:bg-surface-2">
-                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-ink-3" aria-hidden />
-                  <span className="min-w-0"><span className="block truncate text-sm font-semibold text-ink">{r.title}</span><span className="block truncate text-xs text-ink-3">{r.subtitle}</span></span>
-                </button>
-              </li>
-            )) : <li className="px-3 py-3 text-sm text-ink-3">No match. Move the map to your spot instead.</li>}
-          </ul>
-        ) : null}
-      </form>
+    <div className="flex h-full min-h-[520px] flex-col sm:min-h-0">
+      {/* Search bar (tap → full-screen results) */}
+      <div className="shrink-0 bg-card px-4 pb-3 pt-1 max-sm:shadow-[0_1px_0_rgb(23_32_28/0.06)] sm:px-0">
+        {searchMode ? (
+          <form onSubmit={search} role="search" className="flex items-center gap-2">
+            <button type="button" onClick={() => { setSearchMode(false); setResults(null); }} aria-label="Back to map" className="tap flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink hover:bg-surface-2"><ChevronLeft className="h-5 w-5" /></button>
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-4" aria-hidden />
+              <input ref={searchRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search area, street or landmark" aria-label="Search a new address" enterKeyHint="search" autoFocus
+                className="h-12 w-full rounded-xl border border-line-2 bg-card pl-10 pr-10 text-[15px] text-ink placeholder:text-ink-4 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100" />
+              {query ? <button type="button" onClick={() => { setQuery(""); setResults(null); searchRef.current?.focus(); }} aria-label="Clear search" className="tap absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-ink-4"><XCircle className="h-5 w-5" /></button> : null}
+            </div>
+          </form>
+        ) : (
+          <button type="button" onClick={() => setSearchMode(true)} className="flex h-12 w-full items-center gap-3 rounded-xl border border-line-2 bg-card px-3.5 text-left text-[15px] text-ink-4">
+            <Search className="h-4 w-4" aria-hidden />Search a new address
+          </button>
+        )}
+      </div>
 
-      <div className="relative mt-3 h-[min(52dvh,380px)] overflow-hidden rounded-xl border border-line bg-surface-2">
+      {searchMode ? (
+        /* "Your Location": results list */
+        <div className="flex-1 overflow-y-auto bg-surface p-4 sm:min-h-[420px] sm:px-0">
+          {searching ? <p className="flex items-center gap-2 px-1 text-sm text-ink-3"><Loader2 className="h-4 w-4 animate-spin" /> Searching…</p>
+            : results === null ? <p className="px-1 text-sm text-ink-3">Type an area, street or landmark in {site.city} and press search.</p>
+            : results.length === 0 ? <p className="px-1 text-sm text-ink-3">No match. Go back and move the map to your spot, or use your current location.</p>
+            : (
+              <ul className="divide-y divide-dashed divide-line rounded-2xl border border-line bg-card px-4">
+                {results.map((r) => (
+                  <li key={`${r.lat},${r.lng}`}>
+                    <button type="button" onClick={() => pick(r)} className="flex w-full items-start gap-3 py-3.5 text-left">
+                      <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-ink-3" aria-hidden />
+                      <span className="min-w-0"><span className="block font-semibold text-ink">{r.title}</span><span className="block text-xs leading-snug text-ink-3">{r.subtitle}</span></span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+        </div>
+      ) : null}
+
+      {/* Map + pin + bottom card (kept mounted while searching so the map keeps its place) */}
+      <div className={cn("relative flex-1 overflow-hidden bg-surface-2 sm:h-[440px] sm:flex-none sm:rounded-xl sm:border sm:border-line", searchMode && "hidden")}>
         <div ref={boxRef} className="absolute inset-0" />
         {!ready && !failed ? <div className="absolute inset-0 flex items-center justify-center text-sm text-ink-3"><Loader2 className="mr-2 h-4 w-4 animate-spin" />Loading map…</div> : null}
         {failed ? <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-ink-3">The map couldn&rsquo;t load. You can still continue and type your address.</div> : null}
+
+        {ready && chosen && serviceable === false && !moving ? (
+          <div role="alert" className="absolute inset-x-4 top-1/2 z-[460] -translate-y-[calc(100%+96px)] rounded-xl bg-card px-4 py-3 text-center shadow-float">
+            <MapPinOff className="mx-auto h-6 w-6 text-danger" aria-hidden />
+            <p className="mt-1 text-sm font-bold text-ink">We are not serviceable at this location. Please select a different location.</p>
+          </div>
+        ) : null}
+
         {ready ? (
           <div className="pointer-events-none absolute left-1/2 top-1/2 z-[400] flex -translate-x-1/2 -translate-y-full flex-col items-center">
-            <span className={cn("mb-1 rounded-xl bg-ink px-3 py-2 text-center text-white shadow-float transition-opacity", moving && "opacity-0")}>
+            <span className={cn("relative mb-2 rounded-xl bg-ink px-3.5 py-2 text-center text-white shadow-float transition-opacity", moving && "opacity-0")}>
               <span className="block text-[13px] font-bold">Order will be delivered here</span>
               <span className="block text-[11px] text-white/80">Place the pin at your exact location</span>
+              <span aria-hidden className="absolute -bottom-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 bg-ink" />
             </span>
             <svg width="34" height="44" viewBox="0 0 34 44" aria-hidden className={cn("drop-shadow transition-transform duration-150", moving && "-translate-y-2")}>
               <circle cx="17" cy="14" r="12" fill="#329537" stroke="#fff" strokeWidth="3" /><circle cx="17" cy="14" r="4" fill="#fff" />
@@ -143,15 +190,31 @@ export function MapPicker({ initial, onConfirm, confirmLabel = "Confirm & Contin
           </div>
         ) : null}
         {ready ? <span aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 z-[399] h-2 w-5 -translate-x-1/2 rounded-[50%] bg-ink/25" /> : null}
-        <button type="button" onClick={locate} aria-label="Use my current location" className="tap absolute bottom-3 right-3 z-[450] flex h-11 w-11 items-center justify-center rounded-full border border-line bg-card text-brand-700 shadow-float">
-          {locating ? <Loader2 className="h-5 w-5 animate-spin" /> : <LocateFixed className="h-5 w-5" />}
-        </button>
-      </div>
 
-      <div className="mt-3 rounded-xl border border-line bg-card p-4">
-        <p className="font-display text-lg font-bold leading-tight text-ink">{looking && !place ? "Finding address…" : title}</p>
-        <p className="mt-0.5 min-h-5 text-sm text-ink-3">{looking ? "Finding address…" : subtitle}</p>
-        <Button size="lg" fullWidth className="mt-3 h-12 rounded-xl text-base" disabled={(!place && !failed) || moving} onClick={() => onConfirm(place ?? { ...(initial ?? site.center) })}>{confirmLabel}</Button>
+        <div className="absolute inset-x-0 bottom-0 z-[450] p-3 pb-[calc(0.75rem+var(--safe-bottom))]">
+          {chosen ? (
+            <button type="button" onClick={locate} aria-label="Use my current location" className="tap mb-3 ml-auto flex h-11 w-11 items-center justify-center rounded-full border border-line bg-card text-brand-700 shadow-float">
+              {locating ? <Loader2 className="h-5 w-5 animate-spin" /> : <LocateFixed className="h-5 w-5" />}
+            </button>
+          ) : null}
+          <div className="rounded-2xl bg-card p-4 shadow-float">
+            {chosen || failed ? (
+              <>
+                <p className="font-display text-lg font-bold leading-tight text-ink">{looking && !place ? "Finding address…" : title}</p>
+                <p className="mt-0.5 min-h-5 text-sm text-ink-3">{looking ? "Finding address…" : subtitle}</p>
+                <Button size="lg" fullWidth className="mt-3 h-12 rounded-xl text-base" disabled={!failed && (!place || moving || looking || serviceable === false)} onClick={() => onConfirm(place ?? { ...(initial ?? site.center) })}>{confirmLabel}</Button>
+              </>
+            ) : (
+              <>
+                <p className="text-center text-base font-bold text-ink">Select a delivery location</p>
+                <div className="mt-3 grid grid-cols-2 gap-2.5">
+                  <Button variant="outline" size="lg" className="h-12 rounded-xl" onClick={() => setSearchMode(true)}>Search Location</Button>
+                  <Button size="lg" className="h-12 rounded-xl" loading={locating} onClick={locate}>Current Location</Button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

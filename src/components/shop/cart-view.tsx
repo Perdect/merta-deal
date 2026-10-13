@@ -36,8 +36,8 @@ export function CartView({ initial, coupons }: { initial: CartSummary | null; co
   }
 
   return (
-    <div className="grid gap-5 px-4 sm:px-0 lg:grid-cols-[1fr_360px]">
-      <div className="space-y-4">
+    <div className="grid grid-cols-1 gap-5 px-4 sm:px-0 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="min-w-0 space-y-4">
         <FreeDeliveryBar s={summary} />
         <ul className="divide-y divide-line rounded-lg border border-line bg-card px-4">
           {summary.items.map((line) => <CartItem key={line.id} line={line} onQty={onQty} issue={summary.issues.find((i) => i.inventory_id === line.inventory_id)} />)}

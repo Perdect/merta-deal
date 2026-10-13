@@ -5,7 +5,8 @@ import { getSessionUser } from "@/lib/supabase/server";
 import { getBrands, getCategoryBySlug, getWishlistIds, searchProducts } from "@/lib/data/catalog";
 import { parseListingParams } from "@/lib/listing-params";
 import { ProductListing } from "@/components/shop/product-listing";
-import { PageHeader } from "@/components/ui/misc";
+import { ShopPageHeader } from "@/components/shop/shop-page-header";
+import { SearchLink } from "@/components/shop/search-link";
 import { site } from "@/config/site";
 import { CATEGORY_SEO, LISTING_FILTER_KEYS } from "@/config/seo";
 
@@ -53,8 +54,8 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   return (
     <div className="px-4 pt-1 sm:px-0">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <nav aria-label="Breadcrumb" className="mt-2 text-xs text-ink-3"><Link href="/" className="tap hover:text-brand-700">Home</Link> / {parent ? <><Link href={`/c/${parent.slug}`} className="tap hover:text-brand-700">{parent.name}</Link> / </> : null}<span className="text-ink">{category.name}</span></nav>
-      <PageHeader title={seo?.h1 ?? category.name} subtitle={seo ? undefined : category.description ?? `${result.total} products at Merta Deal`} className="px-0" />
+      <nav aria-label="Breadcrumb" className="mt-2 text-xs text-ink-3 max-lg:hidden"><Link href="/" className="tap hover:text-brand-700">Home</Link> / {parent ? <><Link href={`/c/${parent.slug}`} className="tap hover:text-brand-700">{parent.name}</Link> / </> : null}<span className="text-ink">{category.name}</span></nav>
+      <ShopPageHeader title={seo?.h1 ?? category.name} barTitle={category.name} keepTitle={Boolean(seo)} barClassName="-mt-1" fallback={parent ? `/c/${parent.slug}` : "/categories"} cart actions={<SearchLink />} subtitle={seo ? undefined : category.description ?? `${result.total} products at Merta Deal`} className="px-0" />
       {seo ? (
         <div className="-mt-1 mb-4 max-w-3xl text-sm leading-relaxed text-ink-2">
           <p>{seo.intro}</p>

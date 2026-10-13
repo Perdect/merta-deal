@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/ui/states";
 import { Button } from "@/components/ui/button";
 import { CategoryTiles, ProductSection, ServiceStrip } from "@/components/home/home-sections";
 import { OfferCarousel } from "@/components/home/offer-strip";
+import { OffersSheet } from "@/components/home/offers-sheet";
 import { LocalIntro } from "@/components/home/local-intro";
 import { site } from "@/config/site";
 import type { Metadata } from "next";
@@ -56,6 +57,7 @@ export default async function HomePage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }} />
       <h1 className="sr-only">Grocery, fruits and vegetable delivery in {site.city}</h1>
       {home.offers.length ? <OfferCarousel offers={home.offers} /> : null}
+      <OffersSheet offers={home.offers} />
       {home.categories.length ? <CategoryTiles categories={home.categories} /> : null}
       {home.sections.length ? (
         home.sections.map((s, i) => <ProductSection key={s.key} section={s} signedIn={signedIn} wished={wished} first={i === 0} />)

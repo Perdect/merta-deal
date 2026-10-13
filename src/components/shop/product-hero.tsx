@@ -1,15 +1,12 @@
 "use client";
 import * as React from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ArrowLeft, Search, Share2, ChevronRight, Link2 } from "lucide-react";
+import { Share2, ChevronRight, Link2 } from "lucide-react";
 import { ProductImage } from "./product-image";
 import { toast } from "@/components/ui/toast";
 import { Modal } from "@/components/ui/overlay";
 import { WhatsAppIcon } from "@/components/shared/whatsapp-icon";
 import { cn, formatINR } from "@/lib/utils";
 
-const circle = "tap flex h-10 w-10 items-center justify-center rounded-full bg-card/95 text-ink shadow-card backdrop-blur transition-colors hover:bg-surface-2";
 
 /** Share sheet: WhatsApp first (how Merta shares), then copy link, then the phone's own share menu. */
 function useShare(name: string, price?: number) {
@@ -35,60 +32,37 @@ function useShare(name: string, price?: number) {
   return { show, sheet };
 }
 
-/** Share icon for the product info card (desktop); mobile has one over the gallery. */
+/** Share icon: in the product info card (desktop) and the AppBar (phones/tablets). */
 export function ShareButton({ name, price, className }: { name: string; price?: number; className?: string }) {
   const { show, sheet } = useShare(name, price);
   return <><button type="button" onClick={show} aria-label="Share" className={cn("flex h-11 w-11 items-center justify-center rounded-full border border-line bg-card text-ink hover:bg-surface-2", className)}><Share2 className="h-5 w-5" /></button>{sheet}</>;
 }
 
 /**
- * Edge-to-edge swipeable gallery with floating back / search / share controls on mobile, and a
- * compact bar (thumbnail · name · price) that slides in once the gallery scrolls out of view.
- * On desktop it is a plain framed gallery with thumbnails; the regular header stays.
+ * Edge-to-edge swipeable gallery on phones (Back / Share / Cart live in the page's AppBar), a plain
+ * framed gallery with thumbnails on desktop.
  */
-export function ProductHero({ images, name, brand, packSize, price, mrp, backHref, children }: {
+export function ProductHero({ images, name, brand, packSize, children }: {
   images: string[]; name: string; brand?: string | null; packSize?: string | null; price: number; mrp: number;
   /** Where "back" goes when the page was opened directly (no history). */
   backHref: string;
   /** Overlay slot (wishlist button). */
   children?: React.ReactNode;
 }) {
-  const router = useRouter();
   const scroller = React.useRef<HTMLDivElement>(null);
   const hero = React.useRef<HTMLDivElement>(null);
   const [active, setActive] = React.useState(0);
-  const [compact, setCompact] = React.useState(false);
   const list = images.length ? images : [null];
 
-  React.useEffect(() => {
-    const el = hero.current;
-    if (!el) return;
-    const io = new IntersectionObserver(([entry]) => setCompact(!entry.isIntersecting), { rootMargin: "-64px 0px 0px 0px" });
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
 
   const onScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
     setActive(Math.round(el.scrollLeft / Math.max(1, el.clientWidth)));
   };
   const goTo = (i: number) => scroller.current?.scrollTo({ left: i * scroller.current.clientWidth, behavior: "smooth" });
-  const back = () => { if (window.history.length > 1) router.back(); else router.push(backHref); };
-  const { show: share, sheet } = useShare(name, price);
 
   return (
     <>
-      <div aria-hidden={!compact} className={cn("fixed inset-x-0 top-0 z-30 flex items-center gap-2 border-b border-line bg-card/95 px-3 pb-2 backdrop-blur transition-transform duration-200 md:hidden", compact ? "translate-y-0" : "pointer-events-none -translate-y-full")} style={{ paddingTop: "calc(var(--safe-top) + 8px)" }}>
-        <button type="button" onClick={back} aria-label="Back" className={circle}><ArrowLeft className="h-5 w-5" /></button>
-        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-md border border-line bg-white"><ProductImage image={list[0]} brand={brand} productName={name} className="h-full w-full" sizes="40px" /></div>
-        <div className="min-w-0 flex-1 leading-tight">
-          <p className="truncate text-sm font-semibold text-ink">{name}</p>
-          <p className="text-sm tabular"><span className="font-bold text-ink">{formatINR(price)}</span>{mrp > price ? <span className="ml-1.5 text-xs text-ink-3 line-through">{formatINR(mrp)}</span> : null}</p>
-        </div>
-        <Link href="/search" aria-label="Search" className={circle}><Search className="h-5 w-5" /></Link>
-        <button type="button" onClick={share} aria-label="Share" className={circle}><Share2 className="h-5 w-5" /></button>
-      </div>
-
       {/* The thumbnail rail only exists with several photos; a lone photo takes the full width. */}
       <div className={cn(list.length > 1 && "md:grid md:grid-cols-[72px_1fr] md:gap-3")}>
         {list.length > 1 ? (
@@ -114,15 +88,9 @@ export function ProductHero({ images, name, brand, packSize, price, mrp, backHre
             </div>
           ) : null}
           {list.length > 1 ? <button type="button" onClick={() => goTo((active + 1) % list.length)} aria-label="Next image" className="absolute bottom-4 right-4 hidden h-10 w-10 items-center justify-center rounded-full border border-line bg-card text-ink shadow-card hover:bg-surface-2 md:flex"><ChevronRight className="h-5 w-5" /></button> : null}
-          <div className="absolute left-3 top-3 md:hidden"><button type="button" onClick={back} aria-label="Back" className={circle}><ArrowLeft className="h-5 w-5" /></button></div>
-          <div className="absolute right-3 top-3 flex gap-2 md:hidden">
-            <Link href="/search" aria-label="Search" className={circle}><Search className="h-5 w-5" /></Link>
-            <button type="button" onClick={share} aria-label="Share" className={circle}><Share2 className="h-5 w-5" /></button>
-          </div>
           {children ? <div className="absolute bottom-9 right-3 md:right-auto md:left-3 md:top-3 md:bottom-auto">{children}</div> : null}
         </div>
       </div>
-      {sheet}
     </>
   );
 }

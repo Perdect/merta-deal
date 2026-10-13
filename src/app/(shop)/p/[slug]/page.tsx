@@ -5,6 +5,7 @@ import { ChevronRight, Star, Mail, Phone } from "lucide-react";
 import { getSessionUser } from "@/lib/supabase/server";
 import { getProductDetail, getWishlistIds, searchProducts, getPublicSettings } from "@/lib/data/catalog";
 import { ProductHero, ShareButton } from "@/components/shop/product-hero";
+import { AppBar } from "@/components/shop/app-bar";
 import { ProductPurchase, EtaBadge } from "@/components/shop/product-purchase";
 import { ProductBuyBar } from "@/components/shop/product-buy-bar";
 import { DetailSection, type DetailRow } from "@/components/shop/product-details";
@@ -109,7 +110,8 @@ export default async function ProductPage({ params }: Props) {
     <div className="pb-24 md:pb-0 md:pt-2">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <TrackEvent name="view_item" params={{ value: price ?? undefined, items: [{ item_id: product.slug, item_name: product.name, price: price ?? undefined, item_category: product.category_name }] }} />
-      <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1 px-4 pb-2 pt-3 text-xs text-ink-3 sm:px-0 md:pb-4 md:text-sm">
+      <AppBar title={product.name} back={`/c/${product.category_slug}`} cart className="mb-0 md:-mt-2" actions={<ShareButton name={product.name} price={price ?? undefined} className="tap h-10 w-10 border-0 bg-transparent" />} />
+      <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1 px-4 pb-2 pt-3 text-xs text-ink-3 max-lg:hidden sm:px-0 md:pb-4 md:text-sm">
         {crumbs.map((c) => <span key={c.href} className="inline-flex items-center gap-1"><Link href={c.href} className="tap hover:text-brand-700">{c.label}</Link><ChevronRight className="h-3.5 w-3.5 text-ink-4" /></span>)}
         <span className="font-semibold text-ink">{product.name}</span>
       </nav>

@@ -42,7 +42,7 @@ export function OrderTrackingView({ initial, placed, paymentState }: { initial: 
   const complete = async () => { setBusy(true); const r = await completeOrderAction(o.id); setBusy(false); if (r.ok) { toast.success("Thanks for shopping local!"); refresh(); } else toast.error(r.error); };
 
   return (
-    <div className="grid gap-5 px-4 sm:px-0 lg:grid-cols-[1fr_380px]">
+    <div className="grid grid-cols-1 gap-5 px-4 sm:px-0 lg:grid-cols-[minmax(0,1fr)_380px]">
       <div className="space-y-4">
         {placed ? <Alert tone="success" icon={<CheckCircle2 className="h-4 w-4" />} title="Order placed!">{t.store.name} has been notified. {o.payment_method === "cod" ? "Keep cash ready for the rider." : ""}</Alert> : null}
         {paymentState === "pending" || (o.payment_status === "pending" && o.payment_method !== "cod") ? <Alert tone="warning" icon={<CreditCard className="h-4 w-4" />} title="Payment pending">Your order is saved but payment was not completed. The store will start packing once payment is received. <Link href={`/checkout`} className="font-semibold underline">Retry from checkout</Link> or contact support.</Alert> : null}

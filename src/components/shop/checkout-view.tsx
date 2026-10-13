@@ -85,7 +85,7 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
   };
 
   return (
-    <div className="grid gap-5 px-4 sm:px-0 lg:grid-cols-[1fr_360px]">
+    <div className="grid grid-cols-1 gap-5 px-4 sm:px-0 lg:grid-cols-[minmax(0,1fr)_360px]">
       {razorpayEnabled ? <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" /> : null}
       <div className="space-y-5">
         <Section step={1} title="Delivery address">
@@ -140,7 +140,7 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
         <p className="text-center text-[11px] text-ink-3">By placing this order you agree to the terms of service. Delivery OTP will be shared after the order is placed.</p>
       </aside>
 
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Location information" size="lg">
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Location information" size="screen">
         <AddressWizard defaultName={user.name} defaultPhone={user.phone} onCancel={addresses.length ? () => setAddOpen(false) : undefined} onSaved={(a) => { setAddresses((cur) => [a, ...cur.filter((x) => x.id !== a.id)]); setAddressId(a.id); setAddOpen(false); }} />
       </Modal>
     </div>

@@ -6,7 +6,7 @@ export function HeaderHeight() {
   React.useEffect(() => {
     const el = document.querySelector<HTMLElement>("header[data-site-header]");
     if (!el) return;
-    const set = () => document.documentElement.style.setProperty("--header-h", `${el.offsetHeight}px`);
+    const set = () => { if (el.offsetHeight > 0) document.documentElement.style.setProperty("--header-h", `${el.offsetHeight}px`); }; // hidden on pages with their own bar (AppBar sets it)
     set();
     const ro = new ResizeObserver(set); ro.observe(el);
     return () => ro.disconnect();

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { readProductImageManifest } from "@/lib/images/manifest";
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader } from "@/components/ui/misc";
+import { ShopPageHeader } from "@/components/shop/shop-page-header";
 import { site } from "@/config/site";
 
 export const metadata: Metadata = { title: "Image credits", description: `Photo sources and licences for product images on ${site.name}.`, alternates: { canonical: "/attributions" } };
@@ -17,7 +17,7 @@ export default async function AttributionsPage() {
   const sources = [...new Set(entries.map(([, r]) => r.source))];
   return (
     <div className="px-4 pt-1 sm:px-0">
-      <PageHeader title="Image credits" subtitle="Product photos are real packaging or commodity photos from open databases, used under their licences." />
+      <ShopPageHeader title="Image credits" barClassName="-mt-1" subtitle="Product photos are real packaging or commodity photos from open databases, used under their licences." />
       <div className="max-w-3xl space-y-3 text-sm text-ink-2">
         <p>Packaging photographs come from <a className="font-semibold text-brand-700" href="https://world.openfoodfacts.org" rel="noreferrer" target="_blank">Open Food Facts</a> and its sister projects (contributed by their community, <a className="text-brand-700 underline" href="https://creativecommons.org/licenses/by-sa/3.0/" rel="noreferrer" target="_blank">CC BY-SA 3.0</a>). Photos of fresh produce and loose goods come from <a className="font-semibold text-brand-700" href="https://commons.wikimedia.org" rel="noreferrer" target="_blank">Wikimedia Commons</a> under the licence shown for each file. Brand names, logos and packaging artwork remain the property of their respective owners and are shown only to identify the products sold.</p>
         <p className="text-xs text-ink-3">Sources in use: {sources.join(", ") || "none yet"}. Want a photo replaced or credited differently? Write to {site.supportEmail}.</p>

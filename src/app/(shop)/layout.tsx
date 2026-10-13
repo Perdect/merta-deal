@@ -5,6 +5,7 @@ import { isRazorpayConfigured } from "@/lib/env";
 import { getPublicSettings } from "@/lib/data/catalog";
 import { Header } from "@/components/shop/header";
 import { BottomNav } from "@/components/shop/bottom-nav";
+import { ChromePart, NavHistory } from "@/components/shop/app-view";
 import { CartProvider } from "@/components/shop/cart-provider";
 import { StickyCartBar } from "@/components/shop/sticky-cart-bar";
 import { CartDrawer } from "@/components/shop/cart-drawer";
@@ -28,15 +29,16 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
   const slots = Array.isArray(settings.scheduled_slots) ? (settings.scheduled_slots as string[]) : [];
   return (
     <CartProvider initial={cart} signedIn={Boolean(user)}>
-      <Header user={user} addresses={addresses} unread={notifications.unread} defaultEta={defaultEta} />
+      <NavHistory />
+      <ChromePart part="header"><Header user={user} addresses={addresses} unread={notifications.unread} defaultEta={defaultEta} /></ChromePart>
       <main className="mx-auto w-full max-w-6xl flex-1 pb-2 sm:px-6 md:pb-10">{children}</main>
-      <Footer />
-      <StickyCartBar />
+      <ChromePart part="footer"><Footer /></ChromePart>
+      <ChromePart part="cartBar"><StickyCartBar /></ChromePart>
       <CartDrawer signedIn={Boolean(user)} isGuest={Boolean(profile?.is_guest)} addresses={addresses} walletBalance={Number(profile?.wallet_balance ?? 0)}
         razorpayEnabled={isRazorpayConfigured() && settings.online_payments_enabled !== false} codEnabled={settings.cod_enabled !== false} slots={slots}
         coupons={coupons.map((c) => ({ code: c.code, title: c.title, min_order_amount: Number(c.min_order_amount) }))}
         user={{ name: profile?.full_name ?? user?.fullName ?? null, phone: profile?.phone ?? user?.phone ?? null }} eta={defaultEta} />
-      <BottomNav unread={notifications.unread} />
+      <ChromePart part="bottomNav"><BottomNav unread={notifications.unread} /></ChromePart>
       <PwaClient />
       <UpdatePrompt />
       <ConnectionIndicator />

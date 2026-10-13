@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { X } from "lucide-react";
+import { ChevronLeft, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IconButton } from "./button";
 import { useHydrated } from "@/hooks/use-hydrated";
@@ -34,17 +34,28 @@ function Portal({ children }: { children: React.ReactNode }) {
 export interface OverlayProps { open: boolean; onClose: () => void; title?: React.ReactNode; children: React.ReactNode; className?: string; footer?: React.ReactNode; description?: React.ReactNode }
 
 /** Centered dialog on desktop; on phones it becomes a bottom sheet. */
-export function Modal({ open, onClose, title, children, className, footer, description, size = "md" }: OverlayProps & { size?: "sm" | "md" | "lg" }) {
+/**
+ * Dialog. Phones: bottom sheet, or with size="screen" a full-screen page with a back arrow (app
+ * view: location picker, address forms). Tablet/desktop: centred dialog.
+ */
+export function Modal({ open, onClose, title, children, className, footer, description, size = "md" }: OverlayProps & { size?: "sm" | "md" | "lg" | "screen" }) {
   useLockBody(open); useEscape(open, onClose); useBackToClose(open, onClose);
   if (!open) return null;
-  const sizes = { sm: "sm:max-w-sm", md: "sm:max-w-md", lg: "sm:max-w-2xl" };
+  const screen = size === "screen";
+  const sizes = { sm: "sm:max-w-sm", md: "sm:max-w-md", lg: "sm:max-w-2xl", screen: "sm:max-w-2xl" };
   return (
     <Portal>
-      <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center" role="dialog" aria-modal="true">
+      <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label={typeof title === "string" ? title : undefined}>
         <div className="absolute inset-0 bg-ink/50 animate-fade-in" onClick={onClose} />
-        <div className={cn("relative w-full max-h-[92dvh] overflow-hidden rounded-t-2xl bg-card shadow-sheet animate-slide-up sm:rounded-xl sm:animate-pop", sizes[size], className)}>
-          <div className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-line-2 sm:hidden" />
-          {(title || description) ? (
+        <div className={cn("relative flex w-full max-h-[92dvh] flex-col overflow-hidden rounded-t-2xl bg-card shadow-sheet animate-slide-up sm:rounded-xl sm:animate-pop", screen && "max-sm:h-dvh max-sm:max-h-none max-sm:rounded-none max-sm:bg-surface max-sm:pt-[env(safe-area-inset-top)]", sizes[size], className)}>
+          {screen ? null : <div className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-line-2 sm:hidden" />}
+          {screen ? (
+            <div className="flex shrink-0 items-center gap-2 bg-card px-2 py-2.5 shadow-[0_1px_0_rgb(23_32_28/0.08)] sm:px-5 sm:pt-4 sm:pb-2 sm:shadow-none">
+              <button type="button" onClick={onClose} aria-label="Back" className="tap flex h-10 w-10 items-center justify-center rounded-full text-ink hover:bg-surface-2 sm:hidden"><ChevronLeft className="h-6 w-6" /></button>
+              {title ? <h2 className="flex-1 text-lg font-bold text-ink">{title}</h2> : <span className="flex-1" />}
+              <IconButton label="Close" onClick={onClose} className="-mr-2 max-sm:hidden"><X className="h-5 w-5" /></IconButton>
+            </div>
+          ) : (title || description) ? (
             <div className="flex items-start justify-between gap-3 px-5 pt-4 pb-2">
               <div>
                 {title ? <h2 className="text-lg font-bold text-ink">{title}</h2> : null}
@@ -53,7 +64,7 @@ export function Modal({ open, onClose, title, children, className, footer, descr
               <IconButton label="Close" onClick={onClose} className="-mr-2 -mt-1"><X className="h-5 w-5" /></IconButton>
             </div>
           ) : null}
-          <div className="max-h-[70dvh] overflow-y-auto px-5 pb-5">{children}</div>
+          <div className={cn("overflow-y-auto overscroll-contain px-5 pb-5", screen ? "flex-1 max-sm:px-0 max-sm:pb-0 sm:max-h-[78dvh]" : "max-h-[70dvh]")}>{children}</div>
           {footer ? <div className="border-t border-line bg-surface px-5 py-3 safe-bottom">{footer}</div> : null}
         </div>
       </div>

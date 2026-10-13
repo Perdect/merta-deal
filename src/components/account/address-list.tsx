@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Home, Briefcase, MapPin, Plus, Pencil, Trash2 } from "lucide-react";
+import { Home, Briefcase, MapPin, Plus, Pencil, Trash2, ChevronRight } from "lucide-react";
 import type { Address } from "@/types/app";
 import { deleteAddressAction, setDefaultAddressAction } from "@/lib/actions/checkout";
 import { AddressForm } from "@/components/shop/address-form";
@@ -9,7 +9,6 @@ import { AddressWizard } from "@/components/shop/address-wizard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Modal, ConfirmDialog } from "@/components/ui/overlay";
-import { EmptyState } from "@/components/ui/states";
 import { toast } from "@/components/ui/toast";
 import { useLocationStore } from "@/stores/location-store";
 import type { Serviceability } from "@/types/app";
@@ -72,15 +71,24 @@ export function AddressList({ initial, defaultName, defaultPhone, openNew = fals
 
   return (
     <div className="space-y-3">
-      <Button onClick={() => setEditing("new")} fullWidth variant="secondary"><Plus className="h-4 w-4" /> Add new address</Button>
+      <button type="button" onClick={() => setEditing("new")} className="flex w-full items-center gap-3 rounded-2xl border border-line bg-card px-4 py-4 text-left shadow-card transition-colors hover:bg-surface">
+        <Plus className="h-5 w-5 text-brand-700" strokeWidth={2.2} />
+        <span className="flex-1 text-[15px] font-bold text-brand-700">Add New Address</span>
+        <ChevronRight className="h-5 w-5 text-ink-3" />
+      </button>
+      <h2 className="px-1 pt-3 text-base font-bold text-ink">Saved Addresses</h2>
       {sorted.length === 0 ? (
-        <EmptyState icon={<MapPin className="h-7 w-7" />} title="No saved addresses" description="Add your home or work address to check out faster." compact />
+        <div className="flex flex-col items-center rounded-2xl border border-line bg-card px-6 py-12 text-center shadow-card">
+          <EmptyAddressArt className="h-40 w-40" />
+          <p className="mt-5 font-display text-lg font-bold text-ink">No Address Added</p>
+          <p className="mt-1.5 max-w-xs text-sm text-ink-2">To see the saved address here, add your work or home address</p>
+        </div>
       ) : (
         <ul className="space-y-3">
           {sorted.map((a) => {
             const Icon = TYPE_ICON[a.type] ?? MapPin;
             return (
-              <li key={a.id} className="rounded-lg border border-line bg-card p-4 shadow-card">
+              <li key={a.id} className="rounded-2xl border border-line bg-card p-4 shadow-card">
                 <div className="flex items-start gap-3">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700"><Icon className="h-4.5 w-4.5" /></span>
                   <div className="min-w-0 flex-1">
@@ -103,11 +111,31 @@ export function AddressList({ initial, defaultName, defaultPhone, openNew = fals
         </ul>
       )}
 
-      <Modal open={editing !== null} onClose={() => setEditing(null)} title={editing === "new" ? "Location information" : "Edit address"} size="lg">
+      <Modal open={editing !== null} onClose={() => setEditing(null)} title={editing === "new" ? "Location information" : "Edit address"} size="screen">
         {editing === "new" ? <AddressWizard onSaved={onSaved} onCancel={() => setEditing(null)} defaultName={defaultName} defaultPhone={defaultPhone} />
-          : editing !== null ? <AddressForm initial={editing} onSaved={onSaved} onCancel={() => setEditing(null)} defaultName={defaultName} defaultPhone={defaultPhone} /> : null}
+          : editing !== null ? <div className="max-sm:p-4"><AddressForm initial={editing} onSaved={onSaved} onCancel={() => setEditing(null)} defaultName={defaultName} defaultPhone={defaultPhone} /></div> : null}
       </Modal>
       <ConfirmDialog open={deleting !== null} onClose={() => setDeleting(null)} onConfirm={remove} title="Delete this address?" description={deleting ? formatAddressLine(deleting) : undefined} confirmLabel="Delete" tone="danger" loading={Boolean(deleting && busyId === deleting.id)} />
     </div>
+  );
+}
+
+/** Empty-state art: a little house with a delivery pin over it (brand colours, inline SVG). */
+function EmptyAddressArt({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 160 160" className={className} aria-hidden>
+      <ellipse cx="80" cy="140" rx="54" ry="7" fill="#e8ebe6" />
+      <path d="M38 78 80 44l42 34v58H38z" fill="#f1f9f1" stroke="#b9dfbb" strokeWidth="3" strokeLinejoin="round" />
+      <path d="M30 82 80 40l50 42" fill="none" stroke="#329537" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="68" y="102" width="24" height="34" rx="3" fill="#329537" />
+      <circle cx="87" cy="120" r="2" fill="#f1f9f1" />
+      <rect x="46" y="92" width="14" height="14" rx="2" fill="#dbf0dc" stroke="#84c887" strokeWidth="2" />
+      <rect x="100" y="92" width="14" height="14" rx="2" fill="#dbf0dc" stroke="#84c887" strokeWidth="2" />
+      <g transform="translate(104 8)">
+        <path d="M18 0C8 0 0 8 0 18c0 13 18 30 18 30s18-17 18-30C36 8 28 0 18 0z" fill="#F2A93B" />
+        <circle cx="18" cy="18" r="7" fill="#fff" />
+      </g>
+      <circle cx="30" cy="40" r="3" fill="#84c887" /><circle cx="140" cy="70" r="2.5" fill="#F2A93B" /><path d="M22 60l5 5m0-5-5 5" stroke="#b9dfbb" strokeWidth="2" strokeLinecap="round" />
+    </svg>
   );
 }
