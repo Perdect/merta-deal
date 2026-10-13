@@ -50,12 +50,22 @@ export async function updateSession(request: NextRequest) {
     }
     const role = (user.app_metadata?.role as string | undefined) ?? (await roleFor(supabase, user.id));
     if (!rule.roles.includes(role)) {
+      // Staff areas: a guest or customer session gets the sign-in page (to switch to the staff account)
+      // instead of a silent bounce to the shop home, which looked like a broken link.
+      if (path.startsWith("/admin") || (path.startsWith("/store") && !path.startsWith("/store/register"))) {
+        const url = new URL("/login", request.url);
+        url.searchParams.set("next", path + request.nextUrl.search);
+        url.searchParams.set("reason", path.startsWith("/admin") ? "admin" : "store");
+        return NextResponse.redirect(url);
+      }
       return NextResponse.redirect(new URL(ROLE_HOME[role] ?? "/", request.url));
     }
     response.headers.set("x-user-role", role);
   }
 
-  if (user && (path === "/login" || path === "/register")) {
+  // Signed-in users skip the sign-in pages — except guests (they sign in to keep their cart) and anyone
+  // sent here to switch to a staff account.
+  if (user && !user.is_anonymous && !request.nextUrl.searchParams.get("reason") && (path === "/login" || path === "/register")) {
     const role = await roleFor(supabase, user.id);
     return NextResponse.redirect(new URL(request.nextUrl.searchParams.get("next") ?? ROLE_HOME[role] ?? "/", request.url));
   }

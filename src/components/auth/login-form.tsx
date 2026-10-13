@@ -11,7 +11,7 @@ import { Alert } from "@/components/ui/states";
 import { toast } from "@/components/ui/toast";
 
 /** Sign in with mobile number + 6-digit PIN. OTP login appears only when the project has an SMS provider. */
-export function LoginForm({ next, phoneEnabled, guestEnabled, confirmed }: { next?: string; phoneEnabled: boolean; guestEnabled: boolean; confirmed?: boolean }) {
+export function LoginForm({ next, phoneEnabled, guestEnabled, confirmed, reason }: { next?: string; phoneEnabled: boolean; guestEnabled: boolean; confirmed?: boolean; reason?: string }) {
   const router = useRouter();
   const [state, formAction, pending] = React.useActionState<AuthResult | null, FormData>(signInAction, null);
   const [mobile, setMobile] = React.useState("");
@@ -30,6 +30,7 @@ export function LoginForm({ next, phoneEnabled, guestEnabled, confirmed }: { nex
       <h1 className="text-xl font-bold text-ink">Welcome back</h1>
       <p className="mt-1 text-sm text-ink-3">Sign in with your mobile number to order and track deliveries.</p>
       {confirmed ? <Alert tone="success" className="mt-3">Your account is active. You can sign in now.</Alert> : null}
+      {reason === "admin" || reason === "store" ? <Alert tone="info" className="mt-3">{reason === "admin" ? "Sign in with your admin account to open the admin panel." : "Sign in with your store account to open the store dashboard."}</Alert> : null}
 
       {otpMode ? (
         <div className="mt-5 space-y-4">

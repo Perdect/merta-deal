@@ -72,7 +72,7 @@ export function LocalPlacesManager({ places }: { places: LocalPlace[] }) {
       )}
 
       <Modal open={step !== null} onClose={() => { setStep(null); setDraft(null); }} title={step === "map" ? "Pin the landmark" : draft?.id ? "Edit landmark" : "New landmark"} size="screen">
-        {step === "map" ? <MapPicker initial={draft ? { lat: draft.lat, lng: draft.lng } : null} onConfirm={fromMap} confirmLabel="Use this location" /> : null}
+        {step === "map" ? <MapPicker initial={draft ? { lat: draft.lat, lng: draft.lng } : null} onConfirm={fromMap} confirmLabel="Use this location" requireServiceable={false} /> : null}
         {step === "form" && draft ? (
           <form onSubmit={save} className="space-y-4 max-sm:p-4">
             <Input label="Name" required value={draft.name} onChange={(e) => set("name", e.target.value)} placeholder="e.g. Hafiz Sahab ki Dargah" />

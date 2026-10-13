@@ -38,7 +38,7 @@ const SOURCE_LABEL = { place: "Merta landmark", area: "Delivery area", google: "
  * and Confirm & Continue. Searching opens a full-screen "Your Location" results list.
  * Map data © OpenStreetMap contributors.
  */
-export function MapPicker({ initial, onConfirm, confirmLabel = "Confirm & Continue" }: { initial?: LatLng | null; onConfirm: (p: PickedLocation) => void; confirmLabel?: string }) {
+export function MapPicker({ initial, onConfirm, confirmLabel = "Confirm & Continue", requireServiceable = true }: { initial?: LatLng | null; onConfirm: (p: PickedLocation) => void; confirmLabel?: string; /** Block confirming outside delivery zones (customers); admins pinning landmarks pass false. */ requireServiceable?: boolean }) {
   const boxRef = React.useRef<HTMLDivElement>(null);
   const mapRef = React.useRef<LMap | null>(null);
   const searchRef = React.useRef<HTMLInputElement>(null);
@@ -194,7 +194,7 @@ export function MapPicker({ initial, onConfirm, confirmLabel = "Confirm & Contin
         {!ready && !failed ? <div className="absolute inset-0 flex items-center justify-center text-sm text-ink-3"><Loader2 className="mr-2 h-4 w-4 animate-spin" />Loading map…</div> : null}
         {failed ? <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-ink-3">The map couldn&rsquo;t load. You can still continue and type your address.</div> : null}
 
-        {ready && chosen && serviceable === false && !moving ? (
+        {ready && chosen && requireServiceable && serviceable === false && !moving ? (
           <div role="alert" className="absolute inset-x-4 top-1/2 z-[460] -translate-y-[calc(100%+96px)] rounded-xl bg-card px-4 py-3 text-center shadow-float">
             <MapPinOff className="mx-auto h-6 w-6 text-danger" aria-hidden />
             <p className="mt-1 text-sm font-bold text-ink">We are not serviceable at this location. Please select a different location.</p>
@@ -227,7 +227,7 @@ export function MapPicker({ initial, onConfirm, confirmLabel = "Confirm & Contin
               <>
                 <p className="font-display text-lg font-bold leading-tight text-ink">{looking && !place ? "Finding address…" : title}</p>
                 <p className="mt-0.5 min-h-5 text-sm text-ink-3">{looking ? "Finding address…" : subtitle}</p>
-                <Button size="lg" fullWidth className="mt-3 h-12 rounded-xl text-base" disabled={!failed && (!place || moving || looking || serviceable === false)} onClick={() => onConfirm(place ?? { ...(initial ?? site.center) })}>{confirmLabel}</Button>
+                <Button size="lg" fullWidth className="mt-3 h-12 rounded-xl text-base" disabled={!failed && (!place || moving || looking || (requireServiceable && serviceable === false))} onClick={() => onConfirm(place ?? { ...(initial ?? site.center) })}>{confirmLabel}</Button>
               </>
             ) : (
               <>
