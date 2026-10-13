@@ -28,7 +28,8 @@ function loadLeaflet(): Promise<LeafletGlobal> {
 }
 
 export type PickedLocation = LatLng & { area?: string; pincode?: string; street?: string; city?: string; formatted?: string };
-type Found = { lat: number; lng: number; title: string; subtitle: string };
+type Found = { lat?: number; lng?: number; placeId?: string; title: string; subtitle: string; source: "place" | "area" | "google" | "osm" };
+const SOURCE_LABEL = { place: "Merta landmark", area: "Delivery area", google: "Google", osm: "OpenStreetMap" } as const;
 
 /**
  * App-style location screen: search bar, full-height map with a fixed centre pin ("Order will be
@@ -54,6 +55,8 @@ export function MapPicker({ initial, onConfirm, confirmLabel = "Confirm & Contin
   const [searching, setSearching] = React.useState(false);
   const [locating, setLocating] = React.useState(false);
   const lookupSeq = React.useRef(0);
+  const searchSeq = React.useRef(0);
+  const session = React.useRef("");
 
   const lookup = React.useCallback(async (c: LatLng) => {
     const seq = ++lookupSeq.current;
@@ -107,16 +110,39 @@ export function MapPicker({ initial, onConfirm, confirmLabel = "Confirm & Contin
     }, { enableHighAccuracy: true, timeout: 12000 });
   };
 
-  // Nominatim's policy forbids search-as-you-type, so results load when the customer submits.
-  const search = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (query.trim().length < 3) return;
+  // Suggestions while typing (debounced); the newest request wins.
+  const timer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  React.useEffect(() => () => clearTimeout(timer.current), []);
+  const onQuery = (value: string) => {
+    setQuery(value);
+    clearTimeout(timer.current);
+    const term = value.trim();
+    const seq = ++searchSeq.current;
+    if (term.length < 2) { setResults(null); setSearching(false); return; }
+    session.current ||= crypto.randomUUID();
     setSearching(true);
-    try { setResults(((await (await fetch(`/api/maps/search?q=${encodeURIComponent(query.trim())}`)).json()) as { results: Found[] }).results); }
-    catch { setResults([]); }
-    setSearching(false);
+    timer.current = setTimeout(async () => {
+      try {
+        const d = await (await fetch(`/api/maps/search?q=${encodeURIComponent(term)}&session=${session.current}`)).json() as { results: Found[] };
+        if (seq === searchSeq.current) setResults(d.results);
+      } catch { if (seq === searchSeq.current) setResults([]); }
+      if (seq === searchSeq.current) setSearching(false);
+    }, 300);
   };
-  const pick = (r: Found) => { mapRef.current?.setView([r.lat, r.lng], 17); setChosen(true); setSearchMode(false); };
+
+  const search = (e: React.FormEvent) => { e.preventDefault(); if (results?.[0]) void pick(results[0]); };
+  const pick = async (r: Found) => {
+    let at = r.lat != null && r.lng != null ? { lat: r.lat, lng: r.lng } : null;
+    if (!at && r.placeId) {
+      try {
+        const d = await (await fetch(`/api/maps/place?id=${encodeURIComponent(r.placeId)}&session=${session.current}`)).json() as { ok: boolean; lat?: number; lng?: number };
+        if (d.ok && d.lat != null && d.lng != null) at = { lat: d.lat, lng: d.lng };
+      } catch { /* handled below */ }
+    }
+    session.current = ""; // a Google session ends with a selection
+    if (!at) { toast.error("Couldn't open that place. Try another result or move the map."); return; }
+    mapRef.current?.setView([at.lat, at.lng], 17); setChosen(true); setSearchMode(false);
+  };
 
   const title = place?.area ?? place?.street ?? place?.city ?? site.city;
   const subtitle = place?.formatted ? place.formatted.split(",").slice(0, 4).join(",") : place ? `${place.lat.toFixed(5)}, ${place.lng.toFixed(5)}` : "";
@@ -130,9 +156,9 @@ export function MapPicker({ initial, onConfirm, confirmLabel = "Confirm & Contin
             <button type="button" onClick={() => { setSearchMode(false); setResults(null); }} aria-label="Back to map" className="tap flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink hover:bg-surface-2"><ChevronLeft className="h-5 w-5" /></button>
             <div className="relative flex-1">
               <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-4" aria-hidden />
-              <input ref={searchRef} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search area, street or landmark" aria-label="Search a new address" enterKeyHint="search" autoFocus
+              <input ref={searchRef} value={query} onChange={(e) => onQuery(e.target.value)} placeholder="Search area, landmark or street" aria-label="Search a new address" enterKeyHint="search" autoFocus
                 className="h-12 w-full rounded-xl border border-line-2 bg-card pl-10 pr-10 text-[15px] text-ink placeholder:text-ink-4 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100" />
-              {query ? <button type="button" onClick={() => { setQuery(""); setResults(null); searchRef.current?.focus(); }} aria-label="Clear search" className="tap absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-ink-4"><XCircle className="h-5 w-5" /></button> : null}
+              {query ? <button type="button" onClick={() => { onQuery(""); searchRef.current?.focus(); }} aria-label="Clear search" className="tap absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-ink-4"><XCircle className="h-5 w-5" /></button> : null}
             </div>
           </form>
         ) : (
@@ -145,16 +171,15 @@ export function MapPicker({ initial, onConfirm, confirmLabel = "Confirm & Contin
       {searchMode ? (
         /* "Your Location": results list */
         <div className="flex-1 overflow-y-auto bg-surface p-4 sm:min-h-[420px] sm:px-0">
-          {searching ? <p className="flex items-center gap-2 px-1 text-sm text-ink-3"><Loader2 className="h-4 w-4 animate-spin" /> Searching…</p>
-            : results === null ? <p className="px-1 text-sm text-ink-3">Type an area, street or landmark in {site.city} and press search.</p>
-            : results.length === 0 ? <p className="px-1 text-sm text-ink-3">No match. Go back and move the map to your spot, or use your current location.</p>
+          {results === null ? <p className="flex items-center gap-2 px-1 text-sm text-ink-3">{searching ? <><Loader2 className="h-4 w-4 animate-spin" /> Searching…</> : `Type an area, landmark or street in ${site.city}.`}</p>
+            : results.length === 0 && !searching ? <p className="px-1 text-sm text-ink-3">No match for that yet. Go back and move the pin to your spot, or use your current location — the rider follows the pin.</p>
             : (
               <ul className="divide-y divide-dashed divide-line rounded-2xl border border-line bg-card px-4">
-                {results.map((r) => (
-                  <li key={`${r.lat},${r.lng}`}>
+                {results.map((r, i) => (
+                  <li key={`${r.placeId ?? `${r.lat},${r.lng}`}-${i}`}>
                     <button type="button" onClick={() => pick(r)} className="flex w-full items-start gap-3 py-3.5 text-left">
                       <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-ink-3" aria-hidden />
-                      <span className="min-w-0"><span className="block font-semibold text-ink">{r.title}</span><span className="block text-xs leading-snug text-ink-3">{r.subtitle}</span></span>
+                      <span className="min-w-0"><span className="block font-semibold text-ink">{r.title}</span><span className="block text-xs leading-snug text-ink-3">{r.subtitle}{r.subtitle ? " · " : ""}<span className="text-ink-4">{SOURCE_LABEL[r.source]}</span></span></span>
                     </button>
                   </li>
                 ))}

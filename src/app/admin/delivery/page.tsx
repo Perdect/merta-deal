@@ -3,11 +3,16 @@ import { getCities, getZones, getSettings } from "@/lib/data/admin";
 import { CitiesManager, ZoneManager, type ZoneDefaults } from "@/components/admin/zone-manager";
 import { SettingsEditor } from "@/components/admin/settings-editor";
 import { AdminPageHeader, Panel } from "@/components/admin/kit";
+import { LocalPlacesManager } from "@/components/admin/local-places";
+import type { LocalPlace } from "@/lib/actions/admin-places";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Delivery zones" };
 
 export default async function AdminDeliveryPage() {
-  const [cities, zones, settings] = await Promise.all([getCities(), getZones(), getSettings("delivery")]);
+  const supabase = await createClient();
+  const [cities, zones, settings, places] = await Promise.all([getCities(), getZones(), getSettings("delivery"),
+    supabase.from("local_places" as never).select("id, name, aliases, area, pincode, lat, lng, is_active").order("name")]);
   const num = (key: string) => { const v = settings.find((s) => s.key === key)?.value; return v != null && v !== "" && Number.isFinite(Number(v)) ? Number(v) : null; };
   const defaults: ZoneDefaults = {
     delivery_fee: num("delivery_fee_base"), min_order_amount: num("min_order_amount"), free_delivery_threshold: num("free_delivery_threshold"),
@@ -23,6 +28,8 @@ export default async function AdminDeliveryPage() {
         </Panel>
 
         <ZoneManager zones={zones} cities={cities} defaults={defaults} />
+
+        <LocalPlacesManager places={(places.data ?? []) as unknown as LocalPlace[]} />
 
         <SettingsEditor settings={settings} title="Delivery settings" description="Platform-wide fees, ETAs, dispatch and rider pay. A zone's own fee, minimum and ETA take priority where set." />
       </div>
