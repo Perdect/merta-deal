@@ -61,7 +61,7 @@ export function Footer() {
                 { icon: Bike, label: "Deliver with Merta Deal" },
                 { icon: Megaphone, label: "Advertise with us" },
               ].map(({ icon: Icon, label }) => (
-                <li key={label} className="flex items-center gap-2 pointer-coarse:min-h-11" aria-disabled="true"><Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />{label}</li>
+                <li key={label} className="flex items-center gap-2 pointer-coarse:min-h-11"><Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />{label}</li>
               ))}
             </ul>
             <p className="mt-3 text-xs text-ink-3">Shop owner or rider in {site.city}? Write to <a href={`mailto:${site.supportEmail}`} className="font-semibold text-brand-700 hover:underline">{site.supportEmail}</a> to join early.</p>

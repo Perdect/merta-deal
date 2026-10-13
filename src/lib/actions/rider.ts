@@ -104,19 +104,23 @@ export async function pickupAction(assignmentId: string): Promise<ActionResult> 
   return { ok: true, data: undefined };
 }
 
-export type OtpResult = { ok: true; status: "delivered"; reward_points: number } | { ok: false; reason: string; attempts_left?: number };
+export type OtpResult = { ok: true; status: "delivered"; reward_points: number; already?: boolean } | { ok: false; reason: string; attempts_left?: number; locked?: boolean; needs_cash?: boolean };
 
-/** Verifies the customer's 4-digit OTP. A wrong OTP is a normal response (`data.ok === false`), not an error. */
-export async function verifyOtpAction(assignmentId: string, otp: string): Promise<ActionResult<OtpResult>> {
+/**
+ * Verifies the customer's 4-digit OTP (and, for Cash on Delivery, the rider's confirmation that the
+ * full amount was collected). A wrong OTP is a normal response (`data.ok === false`), not an error.
+ * Safe to retry: a repeat after success returns `already: true`.
+ */
+export async function verifyOtpAction(assignmentId: string, otp: string, cashCollected = false): Promise<ActionResult<OtpResult>> {
   const digits = otp.replace(/\D/g, "");
   if (digits.length !== 4) return { ok: false, error: "Enter the 4-digit OTP from the customer." };
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("verify_delivery_otp", { p_assignment_id: assignmentId, p_otp: digits });
+  const { data, error } = await supabase.rpc("verify_delivery_otp", { p_assignment_id: assignmentId, p_otp: digits, p_cash_collected: cashCollected } as never);
   if (error) return { ok: false, error: friendlyError(error) };
-  const res = data as { ok: boolean; reason?: string; attempts_left?: number; reward_points?: number };
+  const res = data as { ok: boolean; reason?: string; attempts_left?: number; reward_points?: number; locked?: boolean; needs_cash?: boolean; already?: boolean };
   revalidatePath("/rider", "layout");
-  if (res.ok) return { ok: true, data: { ok: true, status: "delivered", reward_points: Number(res.reward_points ?? 0) } };
-  return { ok: true, data: { ok: false, reason: res.reason ?? "Incorrect OTP", attempts_left: typeof res.attempts_left === "number" ? res.attempts_left : undefined } };
+  if (res.ok) return { ok: true, data: { ok: true, status: "delivered", reward_points: Number(res.reward_points ?? 0), already: Boolean(res.already) } };
+  return { ok: true, data: { ok: false, reason: res.reason ?? "Incorrect OTP", attempts_left: typeof res.attempts_left === "number" ? res.attempts_left : undefined, locked: Boolean(res.locked), needs_cash: Boolean(res.needs_cash) } };
 }
 
 export type RiderHomeData = { stats: RiderStats | null; offers: RiderAssignment[]; active: RiderAssignment[] };

@@ -53,7 +53,8 @@ select pg_temp.check('order number format', (select order_number ~ '^MD[0-9]{4}[
 select pg_temp.check('stock decremented by 2', (select stock_qty = (select v::int from t where k='stock_before') - 2 from public.inventory where id = (select v::uuid from t where k='inv_atta')));
 select pg_temp.check('cart converted', (select status = 'converted' from public.carts where user_id = '30000000-0000-4000-8000-000000000001' order by created_at desc limit 1));
 select pg_temp.check('payment row cod_pending', (select status = 'cod_pending' from public.payments where order_id = (select v::uuid from t where k='order')));
-select pg_temp.check('customer can see delivery OTP', (select (order_tracking((select v::uuid from t where k='order')) ->> 'delivery_otp') ~ '^[0-9]{4}$'));
+select pg_temp.check('OTP hidden until out for delivery', (select (order_tracking((select v::uuid from t where k='order')) ->> 'delivery_otp') is null));
+select pg_temp.check('order_placed notification carries no OTP', (select bool_and(body not like '%Delivery OTP:%') from public.notifications where user_id = '30000000-0000-4000-8000-000000000001' and type = 'order_placed'));
 select pg_temp.check('customer got order_placed notification', (select count(*) > 0 from public.notifications where user_id = '30000000-0000-4000-8000-000000000001' and type = 'order_placed' and (data ->> 'order_id')::uuid = (select v::uuid from t where k='order')));
 select pg_temp.check('customer cannot call store actions', (select not exists (select 1 where false)));
 do $$ begin
@@ -94,13 +95,28 @@ select pg_temp.check('order -> rider_assigned', (select status = 'rider_assigned
 select pg_temp.check('rider location recorded', (select (record_rider_location(26.6491, 74.0341, 5, 90, 4.2) ->> 'tracked_assignments')::int = 1));
 select pg_temp.check('rider pickup', (select (rider_pickup((select v::uuid from t where k='assignment')) ->> 'status') = 'picked_up'));
 select pg_temp.check('order -> out_for_delivery', (select status = 'out_for_delivery' from public.orders where id = (select v::uuid from t where k='order')));
-select pg_temp.check('wrong OTP rejected', (select not (verify_delivery_otp((select v::uuid from t where k='assignment'), '0000') ->> 'ok')::boolean or (select delivery_otp = '0000' from public.order_secrets where false)));
-insert into t select 'otp', delivery_otp from public.order_secrets where false; -- rider can't read; fetch as superuser below
 reset role;
 insert into t select 'otp', delivery_otp from public.order_secrets where order_id = (select v::uuid from t where k='order');
+insert into t select 'wrong_otp', lpad(((v::int + 1) % 10000)::text, 4, '0') from t where k = 'otp';
 set local role authenticated;
+select pg_temp.as_user('30000000-0000-4000-8000-000000000001');
+select pg_temp.check('customer sees OTP once out for delivery', (select (order_tracking((select v::uuid from t where k='order')) ->> 'delivery_otp') = (select v from t where k='otp')));
+select pg_temp.as_user('10000000-0000-4000-8000-000000000001');
+select pg_temp.check('admin does not receive the OTP', (select (order_tracking((select v::uuid from t where k='order')) ->> 'delivery_otp') is null));
 select pg_temp.as_user((select v from t where k='rider_user'));
-select pg_temp.check('correct OTP delivers', (select (verify_delivery_otp((select v::uuid from t where k='assignment'), (select v from t where k='otp')) ->> 'ok')::boolean));
+select pg_temp.check('COD needs cash confirmation first', (select (verify_delivery_otp((select v::uuid from t where k='assignment'), (select v from t where k='otp'), false) ->> 'needs_cash')::boolean));
+select pg_temp.check('wrong OTP rejected, 4 attempts left (cash check used none)', (select (verify_delivery_otp((select v::uuid from t where k='assignment'), (select v from t where k='wrong_otp'), true) ->> 'attempts_left')::int = 4));
+select pg_temp.check('order not delivered after wrong OTP', (select status = 'out_for_delivery' from public.orders where id = (select v::uuid from t where k='order')));
+select pg_temp.check('correct OTP delivers', (select (verify_delivery_otp((select v::uuid from t where k='assignment'), (select v from t where k='otp'), true) ->> 'ok')::boolean));
+select pg_temp.check('retry after delivery is idempotent', (select (verify_delivery_otp((select v::uuid from t where k='assignment'), (select v from t where k='otp'), true) ->> 'already')::boolean));
+select pg_temp.check('earning recorded once, pending payout', (select count(*) = 1 and bool_and(status = 'pending') from public.rider_earnings where assignment_id = (select v::uuid from t where k='assignment')));
+do $$ begin
+  perform admin_create_rider_payout((select rider_id from public.delivery_assignments where id = (select v::uuid from t where k='assignment')));
+  raise exception 'CHECK FAILED: rider should not create payouts';
+exception when others then
+  if sqlerrm like 'CHECK FAILED%' then raise; end if;
+  raise notice 'ok - rider blocked from payouts (%)', sqlerrm;
+end $$;
 select pg_temp.check('order -> delivered', (select status = 'delivered' from public.orders where id = (select v::uuid from t where k='order')));
 select pg_temp.check('COD collected', (select status = 'cod_collected' from public.payments where order_id = (select v::uuid from t where k='order')));
 select pg_temp.check('rider stats include today delivery', (select (rider_dashboard_stats() ->> 'today_deliveries')::int >= 1));
@@ -121,6 +137,38 @@ select pg_temp.check('admin dashboard stats', (select (admin_dashboard_stats() -
 select pg_temp.check('admin moderates review', (select true from (select moderate_review(id, 'approved') from public.reviews where order_id = (select v::uuid from t where k='order') and target = 'store') x));
 select pg_temp.check('store rating updated after approval', (select rating_count >= 2 from public.stores where id = 'd0000000-0000-4000-8000-000000000001'));
 select pg_temp.check('admin sees audit logs', (select count(*) > 0 from public.audit_logs));
+insert into t select 'rider_id', rider_id::text from public.delivery_assignments where id = (select v::uuid from t where k='assignment');
+select pg_temp.check('admin sees rider balance', (select bool_or((r ->> 'payable')::numeric > 0) from jsonb_array_elements(admin_rider_balances()) r where r ->> 'rider_id' = (select v from t where k='rider_id')));
+insert into t select 'payout1', (admin_create_rider_payout((select v::uuid from t where k='rider_id'), 'weekly') ->> 'payout_id');
+select pg_temp.check('payout processing, earning processing', (select p.status = 'processing' and e.status = 'processing' from public.rider_payouts p join public.rider_earnings e on e.payout_id = p.id where p.id = (select v::uuid from t where k='payout1') limit 1));
+do $$ begin
+  perform admin_create_rider_payout((select v::uuid from t where k='rider_id'));
+  raise exception 'CHECK FAILED: second payout must find nothing to pay';
+exception when others then
+  if sqlerrm like 'CHECK FAILED%' then raise; end if;
+  raise notice 'ok - no double payout (%)', sqlerrm;
+end $$;
+select pg_temp.check('payout marked failed', (select (admin_settle_rider_payout((select v::uuid from t where k='payout1'), 'failed', null, 'UPI ID rejected') ->> 'status') = 'failed'));
+select pg_temp.check('failed earning payable again', (select bool_and(status = 'failed' and payout_id is null) from public.rider_earnings where assignment_id = (select v::uuid from t where k='assignment')));
+insert into t select 'payout2', (admin_create_rider_payout((select v::uuid from t where k='rider_id')) ->> 'payout_id');
+do $$ begin
+  perform admin_settle_rider_payout((select v::uuid from t where k='payout2'), 'paid', null);
+  raise exception 'CHECK FAILED: paid needs a reference';
+exception when others then
+  if sqlerrm like 'CHECK FAILED%' then raise; end if;
+  raise notice 'ok - reference required (%)', sqlerrm;
+end $$;
+select pg_temp.check('retried payout paid', (select (admin_settle_rider_payout((select v::uuid from t where k='payout2'), 'paid', 'UTR4455667788') ->> 'status') = 'paid'));
+select pg_temp.check('earning paid', (select bool_and(status = 'paid') from public.rider_earnings where assignment_id = (select v::uuid from t where k='assignment')));
+select pg_temp.check('settling paid twice is a no-op', (select (admin_settle_rider_payout((select v::uuid from t where k='payout2'), 'paid', 'UTR4455667788') ->> 'already')::boolean));
+do $$ begin
+  perform admin_settle_rider_payout((select v::uuid from t where k='payout2'), 'failed', null, 'oops');
+  raise exception 'CHECK FAILED: a paid payout must not change';
+exception when others then
+  if sqlerrm like 'CHECK FAILED%' then raise; end if;
+  raise notice 'ok - paid payout locked (%)', sqlerrm;
+end $$;
+select pg_temp.check('payout actions audited', (select count(*) >= 4 from public.audit_logs where action like 'rider_payout.%'));
 update public.settings set value = '499' where key = 'free_delivery_threshold';
 select pg_temp.check('admin can update settings', (select (value #>> '{}') = '499' from public.settings where key = 'free_delivery_threshold'));
 

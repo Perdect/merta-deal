@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/states";
 import { toast } from "@/components/ui/toast";
 import { cn, formatINR, formatTime } from "@/lib/utils";
+import { site } from "@/config/site";
 import { useRiderStore, fixToTrackingLocation } from "./rider-store";
 import { addressLine, customerOf, formatKm, navigateUrl } from "./rider-utils";
 
@@ -189,19 +190,21 @@ function GoToCustomer({ a, onNext }: { a: RiderAssignment; onNext: () => void })
 
 function Deliver({ a, verifying, setVerifying, onBack, onCompleted }: { a: RiderAssignment; verifying: boolean; setVerifying: (v: boolean) => void; onBack: () => void; onCompleted: (c: CompletedDelivery) => void }) {
   const [otp, setOtp] = React.useState("");
-  const [fail, setFail] = React.useState<{ reason: string; attempts_left?: number } | null>(null);
+  const [fail, setFail] = React.useState<{ reason: string; attempts_left?: number; locked?: boolean } | null>(null);
+  const [cash, setCash] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const cod = a.order.payment_method === "cod" && Number(a.cod_amount) > 0;
   const c = customerOf(a);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (otp.length !== 4) return;
+    if (otp.length !== 4 || verifying || (cod && !cash)) return;
     setVerifying(true); setFail(null); setError(null);
-    const r = await verifyOtpAction(a.id, otp);
+    const r = await verifyOtpAction(a.id, otp, cod && cash);
     setVerifying(false);
-    if (!r.ok) { setError(r.error); return; }
-    if (!r.data.ok) { setFail({ reason: r.data.reason, attempts_left: r.data.attempts_left }); setOtp(""); if ("vibrate" in navigator) navigator.vibrate?.([80, 40, 80]); return; }
+    // Network/server error: nothing changed if it failed, and a retry is safe if it went through.
+    if (!r.ok) { setError(`${r.error} You can try again — the delivery is never recorded twice.`); return; }
+    if (!r.data.ok) { setFail({ reason: r.data.reason, attempts_left: r.data.attempts_left, locked: r.data.locked }); setOtp(""); if ("vibrate" in navigator) navigator.vibrate?.([80, 40, 80]); return; }
     try { sessionStorage.removeItem(subKey(a.id)); } catch { /* ignore */ }
     onCompleted({ assignment: a, result: r.data });
   };
@@ -212,15 +215,24 @@ function Deliver({ a, verifying, setVerifying, onBack, onCompleted }: { a: Rider
         <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-3">{cod ? "Collect cash" : "Payment"}</p>
         <p className="font-display text-2xl font-extrabold tabular text-ink">{cod ? formatINR(a.cod_amount) : "Prepaid"}</p>
         <p className="text-xs text-ink-2">{cod ? `Collect from ${c.name} before asking for the OTP.` : "Nothing to collect — hand over the order."}</p>
+        {cod ? (
+          <label className="mt-3 flex min-h-11 cursor-pointer items-center gap-3 rounded-md border border-saffron-300 bg-card px-3 py-2 text-sm font-semibold text-ink">
+            <input type="checkbox" checked={cash} onChange={(e) => setCash(e.target.checked)} className="h-5 w-5 accent-brand-600" disabled={verifying} />
+            I&rsquo;ve collected {formatINR(a.cod_amount)} in cash from {c.name}
+          </label>
+        ) : null}
       </div>
       <label htmlFor={`otp-${a.id}`} className="mt-4 flex items-center gap-2 text-sm font-semibold text-ink"><ShieldCheck className="h-4 w-4 text-brand-600" /> Ask the customer for their 4-digit delivery OTP</label>
       <Input id={`otp-${a.id}`} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" pattern="[0-9]*" autoComplete="one-time-code" maxLength={4} placeholder="••••" aria-label="Delivery OTP"
-        className="mt-2 h-16 text-center font-display text-3xl font-extrabold tracking-[0.5em]" wrapperClassName="mt-0" disabled={verifying} autoFocus />
-      {fail ? <Alert tone="danger" className="mt-3" title={fail.reason}>{typeof fail.attempts_left === "number" ? (fail.attempts_left > 0 ? `${fail.attempts_left} attempt${fail.attempts_left === 1 ? "" : "s"} left. Ask the customer to re-check the OTP in their order.` : "No attempts left. Contact support.") : null}</Alert> : null}
+        className="mt-2 h-16 text-center font-display text-3xl font-extrabold tracking-[0.5em]" wrapperClassName="mt-0" disabled={verifying || fail?.locked} autoFocus />
+      {fail ? <Alert tone="danger" className="mt-3" title={fail.reason}>
+        {fail.locked ? <>The OTP is locked for this order. Call support — they confirm the handover with the customer and complete it. <a href={`tel:+${site.supportPhone.replace(/\D/g, "")}`} className="mt-2 inline-flex min-h-11 items-center font-bold underline">Call Merta Deal support</a></>
+          : typeof fail.attempts_left === "number" ? `${fail.attempts_left} attempt${fail.attempts_left === 1 ? "" : "s"} left. Ask the customer to re-check the OTP in their order.` : null}
+      </Alert> : null}
       {error ? <Alert tone="danger" className="mt-3">{error}</Alert> : null}
       <div className="mt-3 flex gap-2">
         <Button type="button" variant="outline" size="lg" onClick={onBack} disabled={verifying} aria-label="Back to directions"><ChevronLeft className="h-5 w-5" /></Button>
-        <Button type="submit" size="lg" className="flex-1" loading={verifying} disabled={otp.length !== 4}>{verifying ? "Verifying OTP…" : "Verify OTP & complete"}</Button>
+        <Button type="submit" size="lg" className="flex-1" loading={verifying} disabled={otp.length !== 4 || (cod && !cash) || Boolean(fail?.locked)}>{verifying ? "Verifying OTP…" : "Verify OTP & complete"}</Button>
       </div>
     </form>
   );
@@ -235,8 +247,9 @@ export function DeliveryComplete({ completed, onDone }: { completed: CompletedDe
       <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success text-white"><Check className="h-8 w-8" /></span>
       <h2 className="mt-3 font-display text-xl font-extrabold text-ink">Delivered!</h2>
       <p className="text-sm text-ink-3">{a.order.order_number} · {a.store.name}</p>
-      <p className="mt-4 text-[11px] font-semibold uppercase tracking-wide text-ink-3">You earned</p>
+      <p className="mt-4 text-[11px] font-semibold uppercase tracking-wide text-ink-3">Added to your earnings</p>
       <p className="font-display text-4xl font-extrabold tabular text-brand-700">{formatINR(a.earning)}</p>
+      <p className="text-xs text-ink-3">Payout pending · see Earnings for payout status</p>
       {cod ? <p className="mt-2 text-sm text-ink-2">Cash collected: <strong className="tabular">{formatINR(a.cod_amount)}</strong> — keep it safe for deposit.</p> : null}
       <Button size="lg" fullWidth className="mt-5" onClick={onDone}>Back to home</Button>
     </section>

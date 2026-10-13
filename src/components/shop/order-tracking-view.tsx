@@ -2,7 +2,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Phone, ShieldCheck, Store as StoreIcon, MapPin, Star, HelpCircle, XCircle, CheckCircle2, Wifi, WifiOff, CreditCard } from "lucide-react";
+import { Phone, Store as StoreIcon, MapPin, Star, HelpCircle, XCircle, CheckCircle2, Wifi, WifiOff, CreditCard } from "lucide-react";
 import type { OrderTracking, TrackingLocation } from "@/types/app";
 import { getOrderTrackingAction } from "@/lib/actions/tracking";
 import { cancelOrderAction, completeOrderAction } from "@/lib/actions/account";
@@ -19,6 +19,7 @@ import { Alert } from "@/components/ui/states";
 import { KeyValue, Avatar, StarRating } from "@/components/ui/misc";
 import { toast } from "@/components/ui/toast";
 import { formatINR, formatDateTime, minutesUntil, cn } from "@/lib/utils";
+import { DeliveryOtpStrip } from "./delivery-otp-strip";
 
 export function OrderTrackingView({ initial, placed, paymentState }: { initial: OrderTracking; placed?: boolean; paymentState?: string }) {
   const router = useRouter();
@@ -58,12 +59,7 @@ export function OrderTrackingView({ initial, placed, paymentState }: { initial: 
             </div>
             <div className="flex flex-col items-end gap-1.5"><OrderStatusBadge status={o.status} size="md" /><span className={cn("inline-flex items-center gap-1 text-[10px] font-semibold", connected ? "text-success" : "text-ink-4")}>{connected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}{connected ? "Live" : "Polling"}</span></div>
           </div>
-          {t.delivery_otp && !["delivered", "completed", "cancelled", "rejected"].includes(o.status) ? (
-            <div className="mt-4 flex items-center gap-3 rounded-md bg-saffron-50 p-3">
-              <ShieldCheck className="h-6 w-6 text-saffron-700" />
-              <div className="flex-1"><p className="text-xs font-semibold uppercase tracking-wide text-saffron-700">Delivery OTP</p><p className="font-display text-2xl font-extrabold tracking-[0.3em] text-ink">{t.delivery_otp}</p><p className="text-xs text-ink-3">Share this with the rider only at handover.</p></div>
-            </div>
-          ) : null}
+          {o.status === "out_for_delivery" ? <DeliveryOtpStrip otp={t.delivery_otp} locked={t.otp_locked} /> : null}
         </section>
 
         {live || o.status === "ready_for_pickup" ? (

@@ -17,12 +17,14 @@ export default async function ProfilePage() {
   if (!profile) redirect("/login?next=/account/profile");
   return (
     <AccountSection title="Profile">
-      <div className="space-y-8">
-        {profile.is_guest ? <SaveAccountForm profile={profile} /> : null}
-        <ProfileForm profile={profile} email={user.email} />
-        <p className="text-sm text-ink-3">Want to change your sign-in PIN? <Link href="/account/settings" className="font-semibold text-brand-700">Go to Settings & PIN</Link></p>
-        <div className="border-t border-line pt-6"><DeleteAccountRequest /></div>
-      </div>
+      {/* A guest only needs to save the account; editing and deletion apply to registered accounts. */}
+      {profile.is_guest ? <SaveAccountForm profile={profile} /> : (
+        <div className="space-y-8">
+          <ProfileForm profile={profile} />
+          <p className="text-sm text-ink-3">Want to change your sign-in PIN? <Link href="/account/settings" className="font-semibold text-brand-700">Go to Settings &amp; PIN</Link></p>
+          <div className="border-t border-line pt-6"><DeleteAccountRequest /></div>
+        </div>
+      )}
     </AccountSection>
   );
 }

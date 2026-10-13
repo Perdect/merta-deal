@@ -5,6 +5,7 @@ import { OrderTimeline } from "@/components/shop/order-status";
 import { ProductImage } from "@/components/shop/product-image";
 import { DetailList, OrderStatusPill, PaymentStatusPill, paymentMethodLabel, StatusPill } from "@/components/admin/kit";
 import { ORDER_STATUS_META } from "@/lib/order-status";
+import { SupportConfirmDelivery } from "./rider-payouts";
 import { formatINR, formatDateTime, formatTime, minutesUntil } from "@/lib/utils";
 
 export type AddressSnapshot = { full_name: string; phone: string; house: string; street: string; area: string; landmark?: string; city: string; pincode: string; lat?: number; lng?: number };
@@ -28,10 +29,14 @@ export function OrderFacts({ t, compact }: { t: OrderTracking; compact?: boolean
       </div>
       <p className="-mt-3 text-sm text-ink-3">{ORDER_STATUS_META[o.status].description}{o.promised_at && !TERMINAL.includes(o.status) ? ` · promised by ${formatTime(o.promised_at)}` : ""}{o.cancel_reason ? ` · ${o.cancel_reason}` : ""}{o.reject_reason ? ` · ${o.reject_reason}` : ""}</p>
 
-      {t.delivery_otp && !TERMINAL.includes(o.status) ? (
-        <div className="flex items-center gap-3 rounded-xl border border-saffron-200 bg-saffron-50 px-3 py-2.5">
-          <ShieldCheck className="h-5 w-5 text-saffron-700" aria-hidden />
-          <div><p className="text-xs font-medium text-saffron-700">Delivery OTP</p><p className="font-display text-lg font-bold tracking-[0.25em] text-ink">{t.delivery_otp}</p></div>
+      {o.status === "out_for_delivery" ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-saffron-200 bg-saffron-50 px-3 py-2.5">
+          <ShieldCheck className="h-5 w-5 shrink-0 text-saffron-700" aria-hidden />
+          <div className="min-w-0 flex-1 text-sm">
+            <p className="font-medium text-ink">{t.otp_locked ? "Delivery OTP locked after too many wrong tries" : "Handover needs the customer’s delivery OTP"}</p>
+            <p className="text-xs text-ink-3">Only the customer can see the OTP. If they can&rsquo;t reach it, confirm with them by phone and complete it here (audited).</p>
+          </div>
+          <SupportConfirmDelivery orderId={o.id} cod={o.payment_method === "cod"} total={Number(o.total)} />
         </div>
       ) : null}
 

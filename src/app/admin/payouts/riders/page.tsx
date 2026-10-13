@@ -1,0 +1,71 @@
+import type { Metadata } from "next";
+import { Bike, Banknote, Clock, Loader, CheckCircle2, AlertTriangle } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+import { AdminPageHeader, MetricCard, DataTable, CellStack, EmptyBlock, ErrorBlock, Panel, StatusPill, rupees, rupeesRounded } from "@/components/admin/kit";
+import { CreateRiderPayout, SettleRiderPayout } from "@/components/admin/rider-payouts";
+import type { RiderBalance } from "@/lib/actions/admin-delivery";
+import { formatDateTime } from "@/lib/utils";
+
+export const metadata: Metadata = { title: "Rider payouts" };
+export const dynamic = "force-dynamic";
+
+type PayoutRow = { id: string; rider_id: string; amount: number; earning_count: number; status: "processing" | "paid" | "failed" | "pending"; reference_no: string | null; failure_reason: string | null; created_at: string; settled_at: string | null };
+const TONE = { pending: "amber", processing: "blue", paid: "green", failed: "red" } as const;
+const LABEL = { pending: "Pending", processing: "Processing", paid: "Paid", failed: "Failed" } as const;
+
+/**
+ * Rider earnings are credited when a delivery is confirmed (OTP or audited support handover) and
+ * paid out manually: no payout integration is configured. Create a payout, transfer the money,
+ * then mark it paid with the reference — or failed, which makes the earnings payable again.
+ */
+export default async function RiderPayoutsPage() {
+  const supabase = await createClient();
+  const [bal, pay] = await Promise.all([
+    supabase.rpc("admin_rider_balances" as never),
+    supabase.from("rider_payouts" as never).select("id, rider_id, amount, earning_count, status, reference_no, failure_reason, created_at, settled_at").order("created_at", { ascending: false }).limit(50),
+  ]);
+  const balances = (bal.data ?? []) as unknown as RiderBalance[];
+  const payouts = (pay.data ?? []) as unknown as PayoutRow[];
+  const nameOf = new Map(balances.map((b) => [b.rider_id, b.name]));
+  const sum = (k: keyof Pick<RiderBalance, "payable" | "processing" | "paid" | "failed">) => balances.reduce((a, b) => a + Number(b[k]), 0);
+
+  return (
+    <>
+      <AdminPageHeader title="Rider payouts" back="/admin/payouts" description="Delivery earnings are credited after an OTP-confirmed (or support-confirmed) handover. No automatic payout is connected, so payouts are sent manually: create one, transfer the money, then mark it paid." />
+      {bal.error ? <ErrorBlock title="Couldn't load rider balances" description="The database didn't respond. Try again." retryHref="/admin/payouts/riders" /> : (
+        <>
+          <section aria-label="Totals" className="mb-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
+            <MetricCard label="Payable" period="Not yet in a payout" value={rupeesRounded(sum("payable"))} icon={Clock} tone={sum("payable") > 0 ? "attention" : "default"} />
+            <MetricCard label="Processing" period="Being sent" value={rupeesRounded(sum("processing"))} icon={Loader} />
+            <MetricCard label="Paid" period="All time" value={rupeesRounded(sum("paid"))} icon={CheckCircle2} />
+            <MetricCard label="Failed" period="Payable again" value={rupeesRounded(sum("failed"))} icon={AlertTriangle} tone={sum("failed") > 0 ? "attention" : "default"} />
+          </section>
+
+          <Panel title="Riders" flush className="mb-4">
+            <DataTable caption="Rider balances" rows={balances} rowKey={(r) => r.rider_id} maxHeight={null}
+              empty={<EmptyBlock icon={Bike} title="No riders yet" description="Riders appear here once they are approved." />}
+              columns={[
+                { key: "rider", header: "Rider", render: (r) => <CellStack primary={r.name} secondary={r.phone ? `+91 ${r.phone}` : undefined} /> },
+                { key: "payable", header: "Payable", align: "right", render: (r) => <span className="tabular font-semibold text-ink">{rupees(r.payable)}</span> },
+                { key: "processing", header: "Processing", align: "right", hideBelow: "sm", render: (r) => <span className="tabular text-ink-2">{rupees(r.processing)}</span> },
+                { key: "paid", header: "Paid", align: "right", hideBelow: "md", render: (r) => <span className="tabular text-ink-2">{rupees(r.paid)}</span> },
+                { key: "actions", header: "", align: "right", render: (r) => <CreateRiderPayout riderId={r.rider_id} name={r.name} payable={Number(r.payable)} /> },
+              ]} />
+          </Panel>
+
+          <Panel title="Payouts" description="Latest 50" flush>
+            <DataTable caption="Rider payouts" rows={payouts} rowKey={(p) => p.id} maxHeight={null}
+              empty={<EmptyBlock icon={Banknote} title="No rider payouts yet" description="Create a payout from a rider's payable balance above." />}
+              columns={[
+                { key: "rider", header: "Rider", render: (p) => <CellStack primary={nameOf.get(p.rider_id) ?? "Rider"} secondary={`${p.earning_count} ${p.earning_count === 1 ? "delivery" : "deliveries"} · ${formatDateTime(p.created_at)}`} /> },
+                { key: "amount", header: "Amount", align: "right", render: (p) => <span className="tabular font-semibold text-ink">{rupees(p.amount)}</span> },
+                { key: "status", header: "Status", render: (p) => <StatusPill tone={TONE[p.status]}>{LABEL[p.status]}</StatusPill> },
+                { key: "ref", header: "Reference", hideBelow: "md", render: (p) => <span className="text-xs text-ink-2">{p.reference_no ?? p.failure_reason ?? "—"}</span> },
+                { key: "actions", header: "", align: "right", render: (p) => (p.status === "processing" ? <SettleRiderPayout payoutId={p.id} amount={Number(p.amount)} name={nameOf.get(p.rider_id) ?? "Rider"} /> : null) },
+              ]} />
+          </Panel>
+        </>
+      )}
+    </>
+  );
+}

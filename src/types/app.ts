@@ -91,7 +91,8 @@ export type OrderTracking = {
   payment: { provider: string; method: PaymentMethod; status: Enums<"payment_status">; amount: number; provider_order_id: string | null; refund_required: boolean } | null;
   assignment: { id: string; status: Enums<"assignment_status">; accepted_at: string | null; picked_up_at: string | null; delivered_at: string | null; distance_km: number | null; earning: number | null; cod_amount: number; expires_at: string; rider: TrackingRider; last_location: TrackingLocation | null } | null;
   customer: { name: string; phone: string } | null;
-  delivery_otp: string | null;
+  /** Only for the customer, only while out for delivery. */ delivery_otp: string | null;
+  /** Too many wrong OTP attempts: the handover must go through support. */ otp_locked?: boolean | null;
   can_review: boolean;
   reviews: { target: Enums<"review_target">; product_id: string | null; rating: number; status: Enums<"review_status"> }[];
   viewer: "admin" | "customer" | "store" | "rider";

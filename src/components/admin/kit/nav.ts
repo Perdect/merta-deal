@@ -1,4 +1,5 @@
 import {
+  Wallet,
   LayoutDashboard, BarChart3, ShoppingBag, MapPinned, Bike, Store, Package, Camera, FolderTree, Tags,
   TicketPercent, Megaphone, Bell, CreditCard, Banknote, LifeBuoy, Star, Users, Settings, ScrollText, type LucideIcon,
 } from "lucide-react";
@@ -32,6 +33,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   { label: "Finance", items: [
     { href: "/admin/payments", label: "Payments", icon: CreditCard },
     { href: "/admin/payouts", label: "Payouts", icon: Banknote },
+    { href: "/admin/payouts/riders", label: "Rider payouts", icon: Wallet },
   ] },
   { label: "Customer Care", items: [
     { href: "/admin/support", label: "Support", icon: LifeBuoy },
