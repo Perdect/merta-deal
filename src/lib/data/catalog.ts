@@ -114,3 +114,67 @@ export const getCollections = cache(async (): Promise<{ id: string; title: strin
   ];
   return [...promos, ...quick].slice(0, 8);
 });
+
+/* Categories screen ------------------------------------------------------------------------- */
+
+export type CategoryTile = { key: string; label: string; href: string; image: string | null; count: number };
+export type CategoryTab = { id: string; slug: string; name: string; image: string | null; count: number; tiles: CategoryTile[] };
+
+/**
+ * Tiles that cover several overlapping catalogue categories (no data change: the link filters by all of
+ * them via search_products' comma list). Grouped categories also take the first member's position.
+ */
+const TILE_GROUPS: Record<string, { slugs: string[]; label: string }[]> = {
+  grocery: [{ slugs: ["dal", "pulses"], label: "Dal & Pulses" }],
+};
+/** Where a parent lists related staples together (Atta next to Flour & Besan), slugs come first in this order. */
+const TILE_ORDER: Record<string, string[]> = { grocery: ["atta", "flour", "rice", "dal", "oil", "sugar", "salt", "dry-fruits"] };
+
+/**
+ * Tabs = active top-level categories that customers can actually buy from; tiles = their sub-categories
+ * with at least one listed product (empty ones are hidden). Tile pictures come from the most popular
+ * listed product (approved catalogue photos), falling back to the category's own image.
+ */
+export const getCategoryTabs = cache(async (): Promise<CategoryTab[]> => {
+  const supabase = await createClient();
+  const [cats, cards] = await Promise.all([
+    getCategories(),
+    supabase.from("v_product_cards").select("category_id, image_url, popularity_score").not("inventory_id", "is", null).order("popularity_score", { ascending: false }).limit(2000),
+  ]);
+  if (cards.error) throw new Error(`category tiles failed: ${cards.error.message}`);
+  const byCat = new Map<string, { count: number; image: string | null }>();
+  for (const r of (cards.data ?? []) as { category_id: string | null; image_url: string | null }[]) {
+    if (!r.category_id) continue;
+    const cur = byCat.get(r.category_id) ?? { count: 0, image: null };
+    cur.count += 1; if (!cur.image && r.image_url) cur.image = r.image_url;
+    byCat.set(r.category_id, cur);
+  }
+  const parents = cats.filter((c) => !c.parent_id);
+  return parents.map((p) => {
+    const children = cats.filter((c) => c.parent_id === p.id);
+    const stat = (id: string) => byCat.get(id) ?? { count: 0, image: null };
+    const groups = TILE_GROUPS[p.slug] ?? [];
+    const grouped = new Set(groups.flatMap((g) => g.slugs));
+    const order = TILE_ORDER[p.slug] ?? [];
+    const rank = (slug: string) => { const i = order.indexOf(slug); return i === -1 ? order.length + 1 : i; };
+    const tiles: (CategoryTile & { sort: number })[] = [];
+    for (const c of children) {
+      if (grouped.has(c.slug)) continue;
+      const s = stat(c.id);
+      if (s.count > 0) tiles.push({ key: c.slug, label: c.name, href: `/c/${c.slug}`, image: s.image ?? c.image_url, count: s.count, sort: rank(c.slug) * 1000 + c.sort_order });
+    }
+    for (const g of groups) {
+      const members = children.filter((c) => g.slugs.includes(c.slug));
+      const count = members.reduce((n, c) => n + stat(c.id).count, 0);
+      if (count === 0) continue;
+      const live = members.filter((c) => stat(c.id).count > 0);
+      // A group with only one non-empty member links straight to it.
+      const href = live.length === 1 ? `/c/${live[0].slug}` : `/c/${p.slug}?category=${live.map((c) => c.slug).join(",")}`;
+      tiles.push({ key: g.slugs.join("+"), label: g.label, href, image: live.map((c) => stat(c.id).image).find(Boolean) ?? null, count, sort: rank(g.slugs[0]) * 1000 + Math.min(...members.map((c) => c.sort_order)) });
+    }
+    tiles.sort((a, b) => a.sort - b.sort || a.label.localeCompare(b.label));
+    const own = stat(p.id);
+    const count = own.count + children.reduce((n, c) => n + stat(c.id).count, 0);
+    return { id: p.id, slug: p.slug, name: p.name, image: p.image_url ?? own.image, count, tiles: tiles.map((t) => ({ key: t.key, label: t.label, href: t.href, image: t.image, count: t.count })) };
+  }).filter((t) => t.count > 0);
+});

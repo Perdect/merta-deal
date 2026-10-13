@@ -140,7 +140,8 @@
   color-scheme: light;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
-  --bottom-nav-h: 66px;
+  --bottom-nav-h: 58px;
+  --cart-bar-h: 52px;
   --store-tabs-h: 64px;
 }
 
@@ -185,7 +186,7 @@
   &::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.6), transparent); background-size: 600px 100%; animation: shimmer 1.4s linear infinite; }
 }
 
-@utility pb-nav { padding-bottom: calc(var(--bottom-nav-h) + var(--safe-bottom) + 28px); }
+@utility pb-nav { padding-bottom: calc(var(--bottom-nav-h) + var(--safe-bottom) + 16px); }
 @utility safe-bottom { padding-bottom: var(--safe-bottom); }
 /* Invisible 44×44 px minimum hit area around compact controls (WCAG 2.5.5 / Apple & Material guidance)
    without changing how they look. The parent must not clip it (no overflow-hidden on the control). */

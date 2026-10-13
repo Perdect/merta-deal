@@ -1,4 +1,4 @@
-// Security, rider-flow, product-save and search-visibility checks (0023–0025). Loads every migration + seed into PGlite.
+// Security, rider-flow, product-save, search-visibility and grouped-category checks (0023–0026). Loads every migration + seed into PGlite.
 // Run from a folder with @electric-sql/pglite installed:
 //   node scripts/test-security.mjs "$PWD"
 import { PGlite } from "@electric-sql/pglite";
@@ -231,6 +231,15 @@ ok("visible product appears in shopper search", (await anonSearch('Zzqa Hidden P
 await q(`update inventory set is_active = false where id = $1`, [qa.inventory_id]);
 await as(STORE_OWNER);
 ok("store catalog picker still finds unlisted products", (await one(`select public.search_products(p_query => 'Zzqa Hidden Probe', p_include_unlisted => true) r`)).r.items.some((x) => x.name === 'Zzqa Hidden Probe'));
+
+console.log("Grouped category tiles (0026)");
+const anonQ = async (sql, params) => { await db.exec(`set role anon`); try { return (await one(sql, params)).r; } finally { await db.exec(`reset role`); } };
+const tot = async (slug) => (await anonQ(`select public.search_products(p_category_slug => $1) r`, [slug])).total;
+const [dal, pul, both, grocery] = [await tot('dal'), await tot('pulses'), await tot('dal,pulses'), await tot('grocery')];
+ok("dal,pulses returns both categories' products", both === dal + pul && both > 0, JSON.stringify({ dal, pul, both }));
+ok("single slug unchanged (parent includes children)", grocery >= both, JSON.stringify({ grocery }));
+ok("spaces in the list are tolerated", (await tot('dal, pulses')) === both);
+ok("unknown slug in a list is ignored", (await tot('dal,nope')) === dal);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

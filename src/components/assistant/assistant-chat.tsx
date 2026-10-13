@@ -204,7 +204,7 @@ export function AssistantChat({ signedIn, aiConfigured, autoVoice, waId }: { sig
         <div ref={endRef} />
       </div>
 
-      <form onSubmit={onSubmit} className="sticky bottom-[calc(var(--bottom-nav-h)_+_var(--safe-bottom)_+_18px)] z-30 mt-4 rounded-xl border border-line bg-card p-3 shadow-float md:bottom-4">
+      <form onSubmit={onSubmit} className="sticky bottom-[calc(var(--bottom-nav-h)_+_var(--safe-bottom)_+_8px)] z-30 mt-4 rounded-xl border border-line bg-card p-3 shadow-float md:bottom-4">
         {speech.supported === false ? (
           <p className="mb-2 flex items-start gap-1.5 text-xs text-ink-3"><MicOff className="mt-0.5 h-3.5 w-3.5 shrink-0" />Voice input needs the Web Speech API (Chrome, Edge or Android Chrome over HTTPS). Safari and Firefox don&apos;t support it here — typing works the same.</p>
         ) : null}

@@ -16,8 +16,10 @@ export function chromeFor(pathname: string): Chrome {
   if (under(pathname, ["/account", "/orders", "/track"])) return { header: false, bottomNav: true, footer: false, cartBar: false };
   // Product details bring their own buy bar.
   if (under(pathname, ["/p"])) return { header: false, bottomNav: true, footer: true, cartBar: false };
+  // Categories: a compact browsing screen — no marketing footer on phones.
+  if (under(pathname, ["/categories"])) return { header: false, bottomNav: true, footer: false, cartBar: true };
   // Browsing: compact bar (Back, title or search, Cart).
-  if (under(pathname, ["/categories", "/c", "/search"])) return { header: false, bottomNav: true, footer: true, cartBar: true };
+  if (under(pathname, ["/c", "/search"])) return { header: false, bottomNav: true, footer: true, cartBar: true };
   // Information pages.
   if (under(pathname, ["/terms", "/privacy", "/delivery-area", "/attributions", "/assistant", "/start", "/deliver"])) return { header: false, bottomNav: true, footer: true, cartBar: false };
   return { header: true, bottomNav: true, footer: true, cartBar: true };

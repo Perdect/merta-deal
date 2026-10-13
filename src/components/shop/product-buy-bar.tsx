@@ -54,7 +54,7 @@ export function ProductBuyBar({ product, signedIn }: { product: ProductDetail; s
 
   return (
     <>
-      <div className="fixed inset-x-3 z-40 md:static md:inset-auto" style={{ bottom: "calc(var(--bottom-nav-h) + var(--safe-bottom) + 18px)" }}>
+      <div className="fixed inset-x-3 z-40 md:static md:inset-auto" style={{ bottom: "calc(var(--bottom-nav-h) + var(--safe-bottom) + 8px)" }}>
         <div className="rounded-2xl border border-line bg-card p-2 shadow-float md:border-0 md:bg-transparent md:p-0 md:shadow-none">
           {qty > 0 && offer ? (
             <div className="flex items-center gap-2">

@@ -50,7 +50,7 @@ export function ProductImage({ image, src, imageAlt, alt, brand, productName, pa
     return (
       <div className={cn("relative overflow-hidden bg-white", rounded, className)}>
         <Image src={candidate} alt={label} fill sizes={sizes} priority={priority} loading={priority ? undefined : "lazy"}
-          className={cn("transition-transform duration-300 ease-out group-hover:scale-[1.04]", fit === "cover" ? "object-cover" : "object-contain p-[3%]")}
+          className={cn("transition-transform duration-300 ease-out group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100", fit === "cover" ? "object-cover" : "object-contain p-[3%]")}
           onError={() => setFailed(candidate)} />
       </div>
     );

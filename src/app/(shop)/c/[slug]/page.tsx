@@ -39,6 +39,10 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const data = await getCategoryBySlug(slug);
   if (!data) notFound();
   const { category, children, parent } = data;
+  // A grouped tile (e.g. ?category=dal,pulses) titles the bar with the group, not the parent.
+  const picked = String(sp.category ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+  const pickedNames = children.filter((c) => picked.includes(c.slug)).map((c) => c.name);
+  const barTitle = pickedNames.length ? pickedNames.join(" & ") : category.name;
   const listingParams = parseListingParams(sp, { category: sp.category ? String(sp.category) : slug });
   const [user, result, brands, wished] = await Promise.all([getSessionUser(), searchProducts(listingParams), getBrands(), getWishlistIds()]);
   const seo = CATEGORY_SEO[slug];
@@ -55,7 +59,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     <div className="px-4 pt-1 sm:px-0">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <nav aria-label="Breadcrumb" className="mt-2 text-xs text-ink-3 max-lg:hidden"><Link href="/" className="tap hover:text-brand-700">Home</Link> / {parent ? <><Link href={`/c/${parent.slug}`} className="tap hover:text-brand-700">{parent.name}</Link> / </> : null}<span className="text-ink">{category.name}</span></nav>
-      <ShopPageHeader title={seo?.h1 ?? category.name} barTitle={category.name} keepTitle={Boolean(seo)} barClassName="-mt-1" fallback={parent ? `/c/${parent.slug}` : "/categories"} cart actions={<SearchLink />} subtitle={seo ? undefined : category.description ?? `${result.total} products at Merta Deal`} className="px-0" />
+      <ShopPageHeader title={seo?.h1 ?? category.name} barTitle={barTitle} keepTitle={Boolean(seo)} barClassName="-mt-1" fallback={parent ? `/c/${parent.slug}` : "/categories"} cart actions={<SearchLink />} subtitle={seo ? undefined : category.description ?? `${result.total} products at Merta Deal`} className="px-0" />
       {seo ? (
         <div className="-mt-1 mb-4 max-w-3xl text-sm leading-relaxed text-ink-2">
           <p>{seo.intro}</p>

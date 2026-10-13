@@ -14,6 +14,13 @@ export function ChromePart({ part, children }: { part: keyof Chrome; children: R
   return <div className={show ? "contents" : part === "bottomNav" ? "contents max-md:hidden" : "contents max-lg:hidden"}>{children}</div>;
 }
 
+/** Bottom padding for the docked tabs when the page has no footer to carry it (phones only). */
+export function NavSpacer() {
+  const c = chromeFor(usePathname());
+  if (!c.bottomNav || c.footer) return null;
+  return <div aria-hidden className="md:hidden" style={{ height: "calc(var(--bottom-nav-h) + var(--safe-bottom) + 12px)" }} />;
+}
+
 /* In-app history, so Back returns to the previous screen (with its scroll position) when there is
    one, and goes to a sensible page when a link was opened directly. */
 const stack: string[] = [];

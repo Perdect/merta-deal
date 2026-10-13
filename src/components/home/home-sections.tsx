@@ -105,7 +105,7 @@ function OtpIcon() {
 /** Small service strip: what actually happens on every order. */
 export function ServiceStrip({ etaLabel }: { etaLabel: string }) {
   const items = [
-    { Icon: DeliveryIcon, t: <>Delivery in <span className="whitespace-nowrap">{etaLabel}</span></>, key: "delivery", s: "Across Merta City", tile: "bg-fresh-50 text-fresh" },
+    { Icon: DeliveryIcon, t: <>Delivery in <span className="whitespace-nowrap">{etaLabel}</span></>, key: "delivery", s: null as string | null, tile: "bg-fresh-50 text-fresh" },
     { Icon: PaymentIcon, t: "Cash or UPI", key: "pay", s: "Pay on delivery", tile: "bg-saffron-50 text-saffron-700" },
     { Icon: OtpIcon, t: "OTP handover", key: "otp", s: "Safe delivery", tile: "bg-[#e7f3f4] text-[#0f6f78]" },
   ];
@@ -114,7 +114,7 @@ export function ServiceStrip({ etaLabel }: { etaLabel: string }) {
       {items.map(({ Icon, t, key, s, tile }) => (
         <div key={key} className="group flex flex-col items-center gap-1.5 px-1.5 text-center sm:flex-row sm:justify-center sm:gap-3 sm:text-left">
           <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:-translate-y-0.5 motion-reduce:transform-none ${tile}`}><Icon /></span>
-          <span><span className="block text-xs font-bold text-ink sm:text-sm">{t}</span><span className="block text-[10.5px] text-ink-3 sm:text-xs">{s}</span></span>
+          <span><span className="block text-xs font-bold text-ink sm:text-sm">{t}</span>{s ? <span className="block text-[10.5px] text-ink-3 sm:text-xs">{s}</span> : null}</span>
         </div>
       ))}
     </section>

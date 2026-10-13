@@ -5,7 +5,7 @@ import { isRazorpayConfigured } from "@/lib/env";
 import { getPublicSettings } from "@/lib/data/catalog";
 import { Header } from "@/components/shop/header";
 import { BottomNav } from "@/components/shop/bottom-nav";
-import { ChromePart, NavHistory } from "@/components/shop/app-view";
+import { ChromePart, NavHistory, NavSpacer } from "@/components/shop/app-view";
 import { CartProvider } from "@/components/shop/cart-provider";
 import { StickyCartBar } from "@/components/shop/sticky-cart-bar";
 import { CartDrawer } from "@/components/shop/cart-drawer";
@@ -34,6 +34,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
       <main className="mx-auto w-full max-w-6xl flex-1 pb-2 sm:px-6 md:pb-10">{children}</main>
       <ChromePart part="footer"><Footer /></ChromePart>
       <ChromePart part="cartBar"><StickyCartBar /></ChromePart>
+      <NavSpacer />
       <CartDrawer signedIn={Boolean(user)} isGuest={Boolean(profile?.is_guest)} addresses={addresses} walletBalance={Number(profile?.wallet_balance ?? 0)}
         razorpayEnabled={isRazorpayConfigured() && settings.online_payments_enabled !== false} codEnabled={settings.cod_enabled !== false} slots={slots}
         coupons={coupons.map((c) => ({ code: c.code, title: c.title, min_order_amount: Number(c.min_order_amount) }))}
