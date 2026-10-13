@@ -97,7 +97,7 @@ function RiderTopBar({ name, rider, isOnline, gpsOn }: { name: string | null; ri
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-bold leading-tight text-ink">{name ?? "Delivery partner"}</p>
           <p className="truncate text-[11px] leading-tight text-ink-3">
-            Merta Deal Rider
+            Merta Deal delivery partner
             <span className={cn("ml-1.5 inline-flex items-center gap-0.5 align-middle", realtime ? "text-success" : "text-ink-4")} title={realtime ? "Live updates connected" : "Live updates reconnecting"}>
               {realtime ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
             </span>
