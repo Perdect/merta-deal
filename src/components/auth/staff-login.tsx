@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import Link from "next/link";
-import { Bike, Eye, EyeOff, KeyRound, Lock, LogIn, ShieldCheck } from "lucide-react";
+import { AtSign, Bike, Eye, EyeOff, KeyRound, Lock, LogIn, ShieldCheck, Smartphone } from "lucide-react";
 import { staffSignInAction, type AuthResult, type StaffPortal } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +40,10 @@ export function StaffLogin({ portal, next, denied, signedOut, signedInAs }: { po
   const [state, formAction, pending] = React.useActionState<AuthResult | null, FormData>(staffSignInAction, null);
   const [mobile, setMobile] = React.useState("");
   const [showPin, setShowPin] = React.useState(false);
+  // Admin accounts can be phone + PIN or email + password; delivery partners always use phone + PIN.
+  const [method, setMethod] = React.useState<"mobile" | "email">("mobile");
+  const [email, setEmail] = React.useState("");
+  const byEmail = portal === "admin" && method === "email";
   const fieldErr = (k: string) => (state && !state.ok ? state.fieldErrors?.[k] : undefined);
 
   return (
@@ -67,23 +71,43 @@ export function StaffLogin({ portal, next, denied, signedOut, signedInAs }: { po
           <form action={formAction} className="mt-5 space-y-4" noValidate>
             <input type="hidden" name="portal" value={portal} />
             <input type="hidden" name="next" value={next ?? ""} />
+            {portal === "admin" ? (
+              <div className="grid grid-cols-2 gap-1 rounded-md bg-surface-2 p-1" role="group" aria-label="Sign in with">
+                {([["mobile", "Mobile + PIN", Smartphone], ["email", "Email", AtSign]] as const).map(([m, label, Icon]) => (
+                  <button key={m} type="button" onClick={() => setMethod(m)} aria-pressed={method === m}
+                    className={cn("flex min-h-11 items-center justify-center gap-1.5 rounded-sm text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-brand-600", method === m ? "bg-card text-brand-700 shadow-card" : "text-ink-2 hover:text-ink")}>
+                    <Icon className="h-4 w-4" aria-hidden />{label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            {byEmail ? (
+              <>
+                <Input key="email" name="email" type="email" inputMode="email" label="Email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value.trim())} placeholder="you@mertadeal.com" leftIcon={<AtSign className="h-4 w-4" />} error={fieldErr("email")} />
+                <Input key="email-password" name="password" type={showPin ? "text" : "password"} label="Password" autoComplete="current-password" required leftIcon={<Lock className="h-4 w-4" />} error={fieldErr("password")}
+                  rightSlot={<button type="button" onClick={() => setShowPin((v) => !v)} aria-label={showPin ? "Hide password" : "Show password"} aria-pressed={showPin} className="flex h-10 w-10 items-center justify-center rounded-full text-ink-3 hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-brand-600">{showPin ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>} />
+              </>
+            ) : (
+              <>
             <Input name="mobile" type="tel" inputMode="numeric" label="Mobile number" autoComplete="username" required maxLength={10}
               value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))}
               leftIcon={<span className="text-sm font-semibold text-ink-3">+91</span>} className="pl-12" placeholder="10-digit mobile number" error={fieldErr("mobile")} />
             <Input name="password" type={showPin ? "text" : "password"} label="6-digit PIN" inputMode="numeric" maxLength={6} pattern="[0-9]{6}" placeholder="6 digits" autoComplete="current-password" required
               onInput={(e) => { const t = e.currentTarget; t.value = t.value.replace(/\D/g, "").slice(0, 6); }} leftIcon={<Lock className="h-4 w-4" />} error={fieldErr("password")}
               rightSlot={<button type="button" onClick={() => setShowPin((v) => !v)} aria-label={showPin ? "Hide PIN" : "Show PIN"} aria-pressed={showPin} className="flex h-10 w-10 items-center justify-center rounded-full text-ink-3 hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-brand-600">{showPin ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>} />
+              </>
+            )}
             {state && !state.ok && !state.fieldErrors ? <Alert tone="danger">{state.error}</Alert> : null}
             <Button type="submit" fullWidth size="lg" loading={pending}><LogIn className="h-4 w-4" aria-hidden /> {c.submit}</Button>
           </form>
 
           <details className="group mt-5 rounded-md border border-line bg-surface px-3.5 py-2.5 text-sm">
             <summary className="flex min-h-8 cursor-pointer list-none items-center gap-2 font-semibold text-brand-700 focus-visible:outline-2 focus-visible:outline-brand-600">
-              <KeyRound className="h-4 w-4" aria-hidden /> Forgot your PIN?
+              <KeyRound className="h-4 w-4" aria-hidden /> {byEmail ? "Forgot your password?" : "Forgot your PIN?"}
             </summary>
             {portal === "admin" ? (
               <p className="mt-2 text-ink-2">
-                Admin PINs are reset by a super admin: <span className="font-semibold">Admin → Users → open the account → Reset PIN</span>. They share the new PIN with you in person or by phone; change it afterwards in your account settings.
+                Admin PINs and passwords are reset by a super admin: <span className="font-semibold">Admin → Users → open the account → Reset PIN</span>. They share the new PIN with you in person or by phone; change it afterwards in your account settings.
                 {" "}If no super admin is available, email <a href={`mailto:${site.supportEmail}`} className="font-semibold text-brand-700 underline">{site.supportEmail}</a>.
               </p>
             ) : (

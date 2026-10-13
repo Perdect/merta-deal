@@ -89,13 +89,19 @@ export async function signOutAction() {
  * ---------------------------------------------------------------------------------------------- */
 export type StaffPortal = "admin" | "rider";
 const staffSignInSchema = z.object({ mobile: mobileSchema, password: pinSchema, next: z.string().optional(), portal: z.enum(["admin", "rider"]) });
+/** Admins may also sign in with an email + password account (no PIN rule: these are ordinary passwords). */
+const staffEmailSchema = z.object({ email: z.string().trim().toLowerCase().email("Enter a valid email address"), password: z.string().min(6, "Enter your password").max(72), next: z.string().optional(), portal: z.literal("admin") });
 
 export async function staffSignInAction(_prev: AuthResult | null, formData: FormData): Promise<AuthResult> {
-  const parsed = staffSignInSchema.safeParse(Object.fromEntries(formData));
+  const raw = Object.fromEntries(formData);
+  const byEmail = raw.portal === "admin" && typeof raw.email === "string";
+  const parsed = byEmail ? staffEmailSchema.safeParse(raw) : staffSignInSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "Please check the form", fieldErrors: flatten(parsed.error) };
   const { portal } = parsed.data;
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.signInWithPassword({ phone: toE164(parsed.data.mobile), password: parsed.data.password });
+  const { data, error } = "email" in parsed.data
+    ? await supabase.auth.signInWithPassword({ email: parsed.data.email, password: parsed.data.password })
+    : await supabase.auth.signInWithPassword({ phone: toE164(parsed.data.mobile), password: parsed.data.password });
   if (error) {
     if (/phone.*(disabled|not enabled)|Unsupported phone provider/i.test(error.message)) return { ok: false, error: "Mobile sign-in is not enabled on the server yet." };
     return { ok: false, error: friendlyError(error) };
