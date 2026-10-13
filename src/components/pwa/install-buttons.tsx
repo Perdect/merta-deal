@@ -6,14 +6,21 @@ import { env } from "@/lib/env";
 import { cn } from "@/lib/utils";
 
 /** Platform marks (drawn inline; lucide ships no brand icons). */
-function AndroidMark({ className }: { className?: string }) {
-  // Play-style four-colour triangle.
+function PlayMark({ className }: { className?: string }) {
+  // Google Play four-colour triangle — only shown when the Play Store listing is live.
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden>
       <path d="M4 2.5v19L13 12z" fill="#00B4FF" />
       <path d="M4 2.5 13 12l3.6-3.5z" fill="#00D467" />
       <path d="M4 21.5l12.6-6L13 12z" fill="#FF3A44" />
       <path d="M16.6 8.5 21 11a1.2 1.2 0 0 1 0 2l-4.4 2.5L13 12z" fill="#FFC700" />
+    </svg>
+  );
+}
+function AndroidMark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden>
+      <path fill="#3DDC84" d="M17.6 9.48l1.84-3.18a.38.38 0 0 0-.66-.38l-1.86 3.22a11.4 11.4 0 0 0-9.84 0L5.22 5.92a.38.38 0 0 0-.66.38L6.4 9.48A10.8 10.8 0 0 0 1 18h22a10.8 10.8 0 0 0-5.4-8.52zM7 15.25a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5zm10 0a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5z" />
     </svg>
   );
 }
@@ -28,10 +35,25 @@ function AppleMark({ className }: { className?: string }) {
 
 type BIPEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: "accepted" | "dismissed" }> };
 
+/** Black two-line app badge (store-badge look). */
+function Badge({ onClick, mark, top, name }: { onClick: () => void; mark: React.ReactNode; top: string; name: string }) {
+  return (
+    <button type="button" onClick={onClick} aria-label={`${top} ${name}`}
+      className="flex h-12 w-full min-w-0 items-center justify-center gap-2 rounded-lg border border-[#a6a6a6] bg-black px-2.5 text-left text-white transition-opacity hover:opacity-85 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 sm:h-14 sm:gap-2.5 sm:px-3">
+      {mark}
+      <span className="min-w-0 leading-none">
+        <span className="block whitespace-nowrap text-[9px] font-medium uppercase tracking-wide sm:text-[10px]">{top}</span>
+        <span className="mt-0.5 block whitespace-nowrap text-[15px] font-semibold tracking-tight min-[380px]:text-base sm:text-lg">{name}</span>
+      </span>
+    </button>
+  );
+}
+
 /**
- * "Download app" buttons. Merta Deal ships as an installable web app (no store listings yet), so
- * these do the real thing: Android → the browser's install prompt; iPhone → the Add to Home
- * Screen steps. No store badges, because there is nothing in the stores to link to.
+ * "Get the app" badges. Merta Deal ships as an installable web app, so these do the real thing:
+ * Android → Google Play once NEXT_PUBLIC_PLAY_STORE_URL is set (badge then reads "Get it on Google
+ * Play"), otherwise the browser's install prompt; iPhone → the Add to Home Screen steps. There is
+ * no App Store listing, so the iPhone badge never claims one.
  */
 export function InstallButtons({ className }: { className?: string }) {
   const [bip, setBip] = React.useState<BIPEvent | null>(null);
@@ -59,7 +81,6 @@ export function InstallButtons({ className }: { className?: string }) {
     if (bip) { await bip.prompt(); const { outcome } = await bip.userChoice; if (outcome === "accepted") setJustInstalled(true); return; }
     setHelp("android");
   };
-  const btn = "flex h-12 w-full min-w-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-line-2 bg-white px-2.5 text-[13px] font-semibold text-ink transition-colors hover:border-ink-3 hover:bg-surface active:scale-[0.99] min-[380px]:text-sm sm:h-14 sm:gap-3 sm:px-4 sm:text-[15px]";
 
   return (
     <div className={cn("space-y-3", className)}>
@@ -67,8 +88,10 @@ export function InstallButtons({ className }: { className?: string }) {
         <p className="flex items-center gap-2 rounded-xl border border-success/30 bg-success-50 px-4 py-3 text-sm font-semibold text-brand-800"><Check className="h-4 w-4" /> Installed on this device</p>
       ) : (
         <>
-          <button type="button" onClick={android} className={btn}><AndroidMark className="h-5 w-5 shrink-0 sm:h-6 sm:w-6" /> Get it on Android</button>
-          <button type="button" onClick={() => setHelp("ios")} className={btn}><AppleMark className="h-5 w-5 shrink-0 text-ink sm:h-6 sm:w-6" /> Get it on iPhone</button>
+          {env.playStoreUrl
+            ? <Badge onClick={android} mark={<PlayMark className="h-6 w-6 shrink-0 sm:h-7 sm:w-7" />} top="Get it on" name="Google Play" />
+            : <Badge onClick={android} mark={<AndroidMark className="h-6 w-6 shrink-0 sm:h-7 sm:w-7" />} top="Install on" name="Android" />}
+          <Badge onClick={() => setHelp("ios")} mark={<AppleMark className="h-6 w-6 shrink-0 text-white sm:h-7 sm:w-7" />} top="Install on" name="iPhone" />
           <p className="text-[11px] text-ink-3">{env.playStoreUrl ? "Android: from Google Play. iPhone: installs from this site." : "Installs from this site — nothing to download from a store."}</p>
         </>
       )}

@@ -33,6 +33,8 @@ export function Footer() {
             <li><Link href="/c/grocery" className={link}>Grocery & kirana</Link></li>
             <li><Link href="/c/vegetables" className={link}>Vegetables</Link></li>
             <li><Link href="/c/fruits" className={link}>Fruits</Link></li>
+            <li><Link href="/terms" className={link}>Terms and Conditions</Link></li>
+            <li><Link href="/privacy" className={link}>Privacy Policy</Link></li>
             <li><Link href="/attributions" className={link}>Image credits</Link></li>
           </ul>
         </div>

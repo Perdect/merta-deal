@@ -9,12 +9,15 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/states";
-import { Logo } from "@/components/ui/misc";
+import { LogoMark } from "@/components/ui/misc";
+import { InstallButtons } from "@/components/pwa/install-buttons";
 import { useHydrated } from "@/hooks/use-hydrated";
-import { site } from "@/config/site";
+import { useBackToClose } from "@/hooks/use-back-to-close";
+import { LoginArt } from "./login-art";
 
 /**
- * Phone-first sign-in over the current page: mobile number → PIN. Used from the cart panel so a
+ * Phone-first sign-in over the current page: mobile number → PIN. Two panels on larger screens
+ * (illustration + form); a bottom sheet with a short illustration banner on phones. Used from the cart panel so a
  * guest never loses their place. When a guest session exists its id is sent along so the server
  * can carry the guest cart over to the account (merge_guest_cart).
  */
@@ -37,25 +40,27 @@ export function LoginModal({ open, onClose, eta, guest, onGuestContinue }: { ope
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
+  useBackToClose(open, onClose);
   if (!open || !hydrated) return null;
   const fieldErr = (k: string) => (state && !state.ok ? state.fieldErrors?.[k] : undefined);
 
   return createPortal(
     <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label="Sign in">
       <div className="absolute inset-0 bg-ink/50 animate-fade-in" onClick={onClose} />
-      <div className="relative grid w-full max-h-[92vh] overflow-y-auto rounded-t-3xl bg-card shadow-float animate-slide-up sm:max-w-3xl sm:grid-cols-[1fr_1.1fr] sm:overflow-hidden sm:rounded-2xl">
-        <div className="relative hidden flex-col justify-between bg-gradient-to-br from-brand-800 via-brand-700 to-brand-500 p-7 text-white sm:flex">
-          <Logo size="md" light />
-          <div>
-            <p className="font-display text-4xl font-extrabold leading-tight">Everything<br />delivered in<br /><span className="text-saffron-300">{eta}</span></p>
-            <p className="mt-4 text-sm text-white/80">{site.tagline}</p>
+      <div className="relative grid w-full max-h-[92dvh] overflow-y-auto overscroll-contain rounded-t-3xl bg-card shadow-float animate-slide-up sm:max-w-3xl sm:grid-cols-[1fr_1.05fr] sm:overflow-hidden sm:rounded-2xl">
+        <button type="button" onClick={onClose} aria-label="Close" className="tap absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-ink-2 shadow-sm hover:bg-surface-2 sm:shadow-none"><X className="h-5 w-5" /></button>
+        {/* Illustration: a short banner on phones, a full panel beside the form from sm up */}
+        <div className="relative h-48 overflow-hidden bg-white sm:h-auto sm:min-h-[460px]">
+          <LoginArt className="absolute inset-0 h-full w-full" />
+          <div className="absolute inset-x-0 bottom-0 px-4 pb-3 text-center text-white sm:pb-7">
+            <p lang="hi" className="font-display text-base font-bold leading-snug sm:text-2xl">मेड़ता की शॉपिंग, अब ऑनलाइन</p>
+            <p className="text-xs font-medium text-white/90 sm:mt-1 sm:text-[15px]">Fresh groceries at your door in {eta}</p>
           </div>
-          <p className="text-xs text-white/60">{site.city}&apos;s own grocery store, at your door.</p>
         </div>
 
-        <div className="relative px-5 pb-6 pt-6 sm:px-8 sm:py-8">
-          <button type="button" onClick={onClose} aria-label="Close" className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full border border-line bg-card text-ink-3 hover:bg-surface-2"><X className="h-5 w-5" /></button>
-          <h2 className="pr-10 font-display text-2xl font-extrabold leading-tight text-ink">Groceries delivered in <span className="text-brand-700">{eta}</span></h2>
+        <div className="relative px-5 pb-[calc(1.5rem+var(--safe-bottom))] pt-5 sm:px-8 sm:py-8">
+          <div className="flex justify-center"><LogoMark size={52} /></div>
+          <h2 className="mt-3 text-center font-display text-xl font-bold leading-tight text-ink sm:mt-4 sm:text-2xl">Login to start ordering</h2>
 
           <form action={formAction} className="mt-6 space-y-4">
             <input type="hidden" name="next" value={pathname} />
@@ -79,9 +84,13 @@ export function LoginModal({ open, onClose, eta, guest, onGuestContinue }: { ope
             )}
           </form>
 
-          <p className="mt-4 text-center text-xs text-ink-3">By continuing, you agree to our terms of service and privacy policy.</p>
+          <p className="mt-4 text-center text-xs leading-relaxed text-ink-3">By continuing, you agree to our <Link href="/terms" target="_blank" className="font-semibold text-brand-700 underline underline-offset-2">Terms and Conditions</Link> and <Link href="/privacy" target="_blank" className="font-semibold text-brand-700 underline underline-offset-2">Privacy Policy</Link>.</p>
           <p className="mt-5 text-center text-sm text-ink-3">New to Merta Deal? <Link href={`/register?next=${encodeURIComponent(pathname)}`} className="font-semibold text-brand-700">Create account</Link></p>
-          {guest && onGuestContinue ? <button type="button" onClick={onGuestContinue} className="mt-3 w-full text-center text-sm font-semibold text-ink-2 underline-offset-2 hover:underline">Continue as guest instead</button> : null}
+          {guest && onGuestContinue ? <button type="button" onClick={onGuestContinue} className="mt-1 min-h-11 w-full text-center text-sm font-semibold text-ink-2 underline-offset-2 hover:underline">Continue as guest instead</button> : null}
+          <div className="mt-5 border-t border-line pt-4">
+            <p className="text-center text-sm font-bold text-ink">Get the app for a better experience</p>
+            <InstallButtons className="mt-3 grid grid-cols-2 gap-2 space-y-0 [&>p]:hidden" />
+          </div>
         </div>
       </div>
     </div>,

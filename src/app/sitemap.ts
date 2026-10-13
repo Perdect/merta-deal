@@ -27,6 +27,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/` },
     { url: `${base}/categories` },
     { url: `${base}/delivery-area` },
+    { url: `${base}/terms` },
+    { url: `${base}/privacy` },
   ];
 
   const supabase = catalogueClient();
