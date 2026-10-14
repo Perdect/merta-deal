@@ -41,7 +41,8 @@ export function AddToCart({ inventoryId, maxQty, stockQty, size = "md", classNam
     if (next === limit.max && next > qty) toast.info(limit.message, "That's the most you can add of this item.");
     const res = await setLineQuantity(inventoryId, next, { replace });
     if (!res.ok && res.conflict) setConflict({ current: res.conflict.current_store.name, next: res.conflict.new_store.name, qty: next });
-    else if (res.ok && first) { toast.success("Added to cart"); track("add_to_cart", { items: [{ item_id: inventoryId, quantity: next }] }); }
+    // No toast: the button turns into the quantity stepper and the cart bar/badge update (a toast covered the header).
+    else if (res.ok && first) track("add_to_cart", { items: [{ item_id: inventoryId, quantity: next }] });
   };
 
   if (outOfStock) {

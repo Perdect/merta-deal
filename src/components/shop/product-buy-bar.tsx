@@ -43,7 +43,7 @@ export function ProductBuyBar({ product, signedIn }: { product: ProductDetail; s
     const res = await setLineQuantity(offer.inventory_id, Math.min(qty + 1, Math.max(limit.max, 1)), { replace });
     setBusy(false);
     if (!res.ok) { if (res.conflict) setConflict({ current: res.conflict.current_store.name, next: res.conflict.new_store.name }); return; }
-    toast.success("Added to cart");
+    // No "Added to cart" toast: the bar switches to the quantity stepper and the cart badge updates.
   };
   const setQty = (v: number) => {
     if (!offer) return;
