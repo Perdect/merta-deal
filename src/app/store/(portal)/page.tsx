@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Package, IndianRupee, Clock, Bike, CheckCircle2, XCircle, Box, AlertTriangle, PackageX, Star } from "lucide-react";
-import { getMyStore, getStoreStats, getPendingStoreOrders } from "@/lib/data/store";
+import { getMyStore, getStoreStats, getPendingStoreOrders, getStoreOrderTabCounts } from "@/lib/data/store";
 import { Stat, Card, CardHeader, CardBody } from "@/components/ui/card";
 import { ErrorState } from "@/components/ui/states";
 import { StarRating } from "@/components/ui/misc";
@@ -16,13 +16,14 @@ export default async function StoreDashboardPage() {
   const membership = await getMyStore();
   if (!membership) redirect("/store/register");
   const { store } = membership;
-  const [stats, pending] = await Promise.all([getStoreStats(store.id), getPendingStoreOrders(store.id, 8)]);
+  const [stats, pending, counts] = await Promise.all([getStoreStats(store.id), getPendingStoreOrders(store.id, 8), getStoreOrderTabCounts(store.id)]);
+  const toPack = counts.new ?? pending.length;
   if (!stats) return <ErrorState title="Could not load your dashboard" description="The stats service did not respond. Pull to refresh or try again in a moment." retryHref="/store" />;
 
   const kpis = [
     { label: "Today's orders", value: formatNumber(stats.today_orders), icon: <Package className="h-4 w-4" />, tone: "brand" as const },
     { label: "Today's revenue", value: formatINR(stats.today_revenue), icon: <IndianRupee className="h-4 w-4" />, tone: "brand" as const, hint: "Your payout share, excl. cancelled" },
-    { label: "Needs acceptance", value: formatNumber(stats.pending_orders), icon: <Clock className="h-4 w-4" />, tone: stats.pending_orders > 0 ? ("saffron" as const) : ("neutral" as const) },
+    { label: "To pack", value: formatNumber(toPack), icon: <Clock className="h-4 w-4" />, tone: toPack > 0 ? ("saffron" as const) : ("neutral" as const) },
     { label: "Active", value: formatNumber(stats.active_orders), icon: <Bike className="h-4 w-4" />, tone: "neutral" as const, hint: "Packing to on the way" },
     { label: "Completed", value: formatNumber(stats.completed_orders), icon: <CheckCircle2 className="h-4 w-4" />, tone: "neutral" as const, hint: "All time" },
     { label: "Cancelled / rejected", value: formatNumber(stats.cancelled_orders), icon: <XCircle className="h-4 w-4" />, tone: "neutral" as const, hint: "All time" },
@@ -45,7 +46,7 @@ export default async function StoreDashboardPage() {
 
       <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
         <div className="space-y-4">
-          <DashboardLive storeId={store.id} isOpen={store.is_open} storeActive={store.status === "active"} pending={pending} pendingTotal={stats.pending_orders} />
+          <DashboardLive storeId={store.id} isOpen={store.is_open} storeActive={store.status === "active"} pending={pending} pendingTotal={toPack} />
         </div>
         <div className="space-y-4">
           <Card>

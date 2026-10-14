@@ -1,5 +1,5 @@
 -- End-to-end order lifecycle test executed as real users (JWT claims) against the local DB.
--- customer -> search -> cart -> coupon -> place order (COD) -> store accept/prepare/ready
+-- customer -> search -> cart -> coupon -> place order (COD) -> auto-confirmed -> store packs/ready
 -- -> auto dispatch -> rider accept -> pickup -> OTP verify -> delivered -> customer review -> completed
 \set ON_ERROR_STOP on
 \set QUIET on
@@ -48,7 +48,9 @@ select pg_temp.check('summary shows coupon discount 30', (select (cart_summary()
 insert into t select 'addr', id::text from public.addresses where user_id = '30000000-0000-4000-8000-000000000001' and is_default limit 1;
 insert into t select 'stock_before', stock_qty::text from public.inventory where id = (select v::uuid from t where k='inv_atta');
 insert into t select 'order', (place_order((select v::uuid from t where k='addr'), 'cod', 'standard', 'Ring the bell')) ->> 'order_id';
-select pg_temp.check('order placed', (select status = 'placed' from public.orders where id = (select v::uuid from t where k='order')));
+select pg_temp.check('COD order confirmed automatically (quick commerce)', (select status = 'store_confirmed' and store_confirmed_at is not null from public.orders where id = (select v::uuid from t where k='order')));
+select pg_temp.check('history: placed then auto-confirmed', (select array_agg(status::text order by created_at, status) = array['placed','store_confirmed'] from public.order_status_history where order_id = (select v::uuid from t where k='order')));
+select pg_temp.check('ETA is the zone window shown at checkout', (select o.eta_minutes = z.eta_max_minutes from public.orders o join public.delivery_zones z on z.id = o.zone_id where o.id = (select v::uuid from t where k='order')));
 select pg_temp.check('order number format', (select order_number ~ '^MD[0-9]{4}[0-9]{6}$' from public.orders where id = (select v::uuid from t where k='order')));
 select pg_temp.check('stock decremented by 2', (select stock_qty = (select v::int from t where k='stock_before') - 2 from public.inventory where id = (select v::uuid from t where k='inv_atta')));
 select pg_temp.check('cart converted', (select status = 'converted' from public.carts where user_id = '30000000-0000-4000-8000-000000000001' order by created_at desc limit 1));
@@ -70,7 +72,7 @@ select pg_temp.as_user('20000000-0000-4000-8000-000000000001');
 select pg_temp.check('store sees the new order', (select count(*) = 1 from public.orders where id = (select v::uuid from t where k='order')));
 select pg_temp.check('store cannot see OTP', (select count(*) = 0 from public.order_secrets where order_id = (select v::uuid from t where k='order')));
 select pg_temp.check('store got new_order notification', (select count(*) > 0 from public.notifications where user_id = '20000000-0000-4000-8000-000000000001' and type = 'new_order' and (data ->> 'order_id')::uuid = (select v::uuid from t where k='order')));
-select pg_temp.check('store accepts', (select (store_update_order((select v::uuid from t where k='order'), 'accept') ->> 'status') = 'store_confirmed'));
+select pg_temp.check('store notification asks to pack, not accept', (select bool_and(body like '%Pack it now%') from public.notifications where user_id = '20000000-0000-4000-8000-000000000001' and type = 'new_order' and (data ->> 'order_id')::uuid = (select v::uuid from t where k='order')));
 select pg_temp.check('store preparing', (select (store_update_order((select v::uuid from t where k='order'), 'preparing') ->> 'status') = 'preparing'));
 do $$ begin
   update public.orders set status = 'delivered' where id = (select v::uuid from t where k='order');

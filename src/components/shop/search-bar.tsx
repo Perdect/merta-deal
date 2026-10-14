@@ -11,7 +11,8 @@ import { ProductImage } from "./product-image";
 /** Zepto-style rotating hint: Search "Groceries" → "Fruits" → "Vegetables" (CSS only, no timers). */
 const HINTS = ["Groceries", "Fruits", "Vegetables"];
 
-export function SearchBar({ className, autoFocus, initial = "", compact }: { className?: string; autoFocus?: boolean; initial?: string; compact?: boolean }) {
+/** `scope` keeps typeahead and results inside one category (search opened from a category page). */
+export function SearchBar({ className, autoFocus, initial = "", compact, scope }: { className?: string; autoFocus?: boolean; initial?: string; compact?: boolean; scope?: { slug: string; name: string } }) {
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
@@ -37,18 +38,27 @@ export function SearchBar({ className, autoFocus, initial = "", compact }: { cla
     const ctrl = new AbortController();
     const run = async () => {
       setLoading(true);
-      try { const r = await fetch(`/api/search/suggest?q=${encodeURIComponent(debounced.trim())}`, { signal: ctrl.signal }); setData(await r.json()); } catch {}
+      try {
+        if (scope) {
+          // Scoped typeahead: products from this category only (no cross-category chips).
+          const r = await fetch(`/api/search?q=${encodeURIComponent(debounced.trim())}&category=${encodeURIComponent(scope.slug)}`, { signal: ctrl.signal });
+          const d = (await r.json()) as { items: SearchSuggest["products"] };
+          setData({ products: d.items.slice(0, 6), brands: [], categories: [], stores: [] } as unknown as SearchSuggest);
+        } else {
+          const r = await fetch(`/api/search/suggest?q=${encodeURIComponent(debounced.trim())}`, { signal: ctrl.signal }); setData(await r.json());
+        }
+      } catch {}
       setLoading(false);
     };
     void run();
     return () => ctrl.abort();
-  }, [debounced, active]);
+  }, [debounced, active, scope?.slug]); // eslint-disable-line react-hooks/exhaustive-deps
   React.useEffect(() => {
     const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
     document.addEventListener("mousedown", h); return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  const submit = (term = q) => { const t = term.trim(); if (!t) return; setOpen(false); router.push(`/search?q=${encodeURIComponent(t)}`); };
+  const submit = (term = q) => { const t = term.trim(); if (!t) return; setOpen(false); router.push(`/search?q=${encodeURIComponent(t)}${scope ? `&category=${encodeURIComponent(scope.slug)}` : ""}`); };
   const shown = active ? data : null;
   const hasResults = shown && (shown.products.length || shown.brands.length || shown.categories.length || shown.stores.length);
 
@@ -57,16 +67,16 @@ export function SearchBar({ className, autoFocus, initial = "", compact }: { cla
       <form role="search" onSubmit={(e) => { e.preventDefault(); submit(); }} className="relative">
         <Search className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-3" />
         <input ref={inputRef} value={q} onChange={(e) => { setQ(e.target.value); setOpen(true); }} onFocus={() => setOpen(true)} autoFocus={autoFocus} type="search" enterKeyHint="search" autoComplete="off"
-          placeholder="" aria-label="Search groceries, fruits and vegetables"
+          placeholder="" aria-label={scope ? `Search in ${scope.name}` : "Search groceries, fruits and vegetables"}
           className={cn("w-full rounded-md border border-line-2 bg-card pl-11 pr-20 text-[15px] text-ink shadow-card placeholder:text-ink-3 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 [&::-webkit-search-cancel-button]:hidden", compact ? "h-11" : "h-12")} />
         {!q ? (
           <span aria-hidden className={cn("pointer-events-none absolute left-11 right-20 top-1/2 flex -translate-y-1/2 items-center overflow-hidden whitespace-nowrap text-[15px] leading-6 text-ink-3", compact ? "h-6" : "h-6")}>
-            Search&nbsp;
+            {scope ? <span className="truncate">Search in {scope.name}</span> : <>Search&nbsp;
             <span className="relative inline-block h-6 overflow-hidden align-top">
               <span className="flex flex-col motion-safe:animate-[search-hint_7.5s_cubic-bezier(0.65,0,0.35,1)_infinite]">
                 {[...HINTS, HINTS[0]].map((h, i) => <span key={i} className="h-6 font-medium text-ink-2">&ldquo;{h}&rdquo;</span>)}
               </span>
-            </span>
+            </span></>}
           </span>
         ) : null}
         <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
@@ -99,7 +109,7 @@ export function SearchBar({ className, autoFocus, initial = "", compact }: { cla
               {shown.stores.map((s) => <Link key={s.id} href={`/s/${s.slug}`} onClick={() => setOpen(false)} className="inline-flex items-center gap-1 rounded-full border border-line-2 bg-card px-2.5 py-1 text-xs font-medium text-ink"><Store className="h-3 w-3 text-info" />{s.name}</Link>)}
             </div>
           ) : null}
-          <button type="button" onClick={() => submit()} className="flex w-full items-center justify-between border-t border-line px-4 py-2.5 text-sm font-semibold text-brand-700 hover:bg-brand-50">See all results for “{q.trim()}” <ArrowUpRight className="h-4 w-4" /></button>
+          <button type="button" onClick={() => submit()} className="flex w-full items-center justify-between border-t border-line px-4 py-2.5 text-sm font-semibold text-brand-700 hover:bg-brand-50">See all results for “{q.trim()}”{scope ? ` in ${scope.name}` : ""} <ArrowUpRight className="h-4 w-4" /></button>
         </div>
       ) : null}
     </div>

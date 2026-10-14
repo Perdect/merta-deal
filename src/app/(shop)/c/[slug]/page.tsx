@@ -39,11 +39,13 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const data = await getCategoryBySlug(slug);
   if (!data) notFound();
   const { category, children, parent } = data;
-  // A grouped tile (e.g. ?category=dal,pulses) titles the bar with the group, not the parent.
-  const picked = String(sp.category ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+  // A grouped tile (e.g. ?category=dal,pulses) narrows to those sub-categories and titles the bar with them.
+  // Only this category's own sub-categories are honoured, so /c/grocery?category=fruits can't show fruit.
+  const picked = String(sp.category ?? "").split(",").map((x) => x.trim()).filter((x) => children.some((c) => c.slug === x));
   const pickedNames = children.filter((c) => picked.includes(c.slug)).map((c) => c.name);
   const barTitle = pickedNames.length ? pickedNames.join(" & ") : category.name;
-  const listingParams = parseListingParams(sp, { category: sp.category ? String(sp.category) : slug });
+  const scopeCategory = picked.length ? picked.join(",") : slug;
+  const listingParams = parseListingParams(sp, { category: scopeCategory });
   const [user, result, brands, wished] = await Promise.all([getSessionUser(), searchProducts(listingParams), getBrands(), getWishlistIds()]);
   const seo = CATEGORY_SEO[slug];
   const crumbs = [{ name: "Home", url: `${site.url}/` }, ...(parent ? [{ name: parent.name, url: `${site.url}/c/${parent.slug}` }] : []), { name: category.name, url: `${site.url}/c/${slug}` }];
@@ -59,7 +61,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     <div className="px-4 pt-1 sm:px-0">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <nav aria-label="Breadcrumb" className="mt-2 text-xs text-ink-3 max-lg:hidden"><Link href="/" className="tap hover:text-brand-700">Home</Link> / {parent ? <><Link href={`/c/${parent.slug}`} className="tap hover:text-brand-700">{parent.name}</Link> / </> : null}<span className="text-ink">{category.name}</span></nav>
-      <ShopPageHeader title={seo?.h1 ?? category.name} barTitle={barTitle} keepTitle={Boolean(seo)} barClassName="-mt-1" fallback={parent ? `/c/${parent.slug}` : "/categories"} cart actions={<SearchLink />} subtitle={seo ? undefined : category.description ?? `${result.total} products at Merta Deal`} className="px-0" />
+      <ShopPageHeader title={seo?.h1 ?? category.name} barTitle={barTitle} keepTitle={Boolean(seo)} barClassName="-mt-1" fallback={parent ? `/c/${parent.slug}` : "/categories"} cart actions={<SearchLink scope={{ slug: scopeCategory, name: barTitle }} />} subtitle={seo ? undefined : category.description ?? `${result.total} products at Merta Deal`} className="px-0" />
       {seo ? (
         <div className="-mt-1 mb-4 max-w-3xl text-sm leading-relaxed text-ink-2">
           <p>{seo.intro}</p>
@@ -71,7 +73,8 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           {children.map((c) => <Link key={c.id} href={`/c/${c.slug}`} className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-line-2 bg-card px-3.5 text-sm font-medium text-ink-2 hover:border-brand-500 hover:text-brand-700">{c.name}</Link>)}
         </div>
       ) : null}
-      <ProductListing result={result} filters={{ brands, categories: children.map((c) => ({ name: c.name, slug: c.slug })) }} signedIn={Boolean(user)} wished={wished} hideCategoryChips />
+      <ProductListing result={result} filters={{ brands, categories: children.map((c) => ({ name: c.name, slug: c.slug })) }} signedIn={Boolean(user)} wished={wished} scope={{ category: scopeCategory }} hideCategoryChips
+        emptyTitle={`No ${barTitle.toLowerCase()} products right now`} emptyHint="Check back soon, or remove a filter if you added one." />
     </div>
   );
 }

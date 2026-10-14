@@ -2,13 +2,13 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Phone, Store as StoreIcon, MapPin, Star, HelpCircle, XCircle, CheckCircle2, Wifi, WifiOff, CreditCard } from "lucide-react";
+import { Phone, Store as StoreIcon, MapPin, Star, HelpCircle, XCircle, CheckCircle2, Wifi, WifiOff, CreditCard, Clock } from "lucide-react";
 import type { OrderTracking, TrackingLocation } from "@/types/app";
 import { getOrderTrackingAction } from "@/lib/actions/tracking";
 import { cancelOrderAction, completeOrderAction } from "@/lib/actions/account";
 import { useOrderRealtime } from "@/hooks/use-order-realtime";
 import { ORDER_STATUS_META, PAYMENT_METHOD_LABEL, PAYMENT_STATUS_LABEL, canCustomerCancel } from "@/lib/order-status";
-import { OrderTimeline, OrderStatusBadge } from "./order-status";
+import { CustomerOrderSteps, OrderStatusBadge } from "./order-status";
 import { LiveMap } from "./live-map";
 import { ProductImage } from "./product-image";
 import { ReviewSheet } from "./review-sheet";
@@ -18,8 +18,23 @@ import { ConfirmDialog } from "@/components/ui/overlay";
 import { Alert } from "@/components/ui/states";
 import { KeyValue, Avatar, StarRating } from "@/components/ui/misc";
 import { toast } from "@/components/ui/toast";
-import { formatINR, formatDateTime, minutesUntil, cn } from "@/lib/utils";
+import { formatINR, formatDateTime, formatTime, cn } from "@/lib/utils";
+import type { OrderStatus } from "@/lib/order-status";
 import { DeliveryOtpStrip } from "./delivery-otp-strip";
+
+const TERMINAL: OrderStatus[] = ["delivered", "completed", "cancelled", "rejected"];
+
+/** Shopper-facing headline for each status (quick-commerce wording; store/admin keep the detailed labels). */
+function headline(status: OrderStatus, paid: boolean) {
+  switch (status) {
+    case "placed": return paid ? "Confirming your order" : "Waiting for payment";
+    case "store_confirmed": case "preparing": return "Packing your order";
+    case "ready_for_pickup": return "Packed · finding a rider";
+    case "rider_assigned": return "Rider is picking up your order";
+    case "out_for_delivery": return "On the way";
+    default: return ORDER_STATUS_META[status].label;
+  }
+}
 
 export function OrderTrackingView({ initial, placed, paymentState }: { initial: OrderTracking; placed?: boolean; paymentState?: string }) {
   const router = useRouter();
@@ -32,11 +47,23 @@ export function OrderTrackingView({ initial, placed, paymentState }: { initial: 
   const [seen, setSeen] = React.useState(initial);
   if (seen !== initial) { setSeen(initial); setT(initial); }
   const refresh = React.useCallback(async () => { const n = await getOrderTrackingAction(t.order.id); if (n) { setT(n); if (n.assignment?.last_location) setRider(n.assignment.last_location); } }, [t.order.id]);
+  // Coming back to the tab (phones pause background pages): fetch the latest state at once.
+  React.useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === "visible") void refresh(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [refresh]);
+  // Minute clock for the countdown and the late notice.
+  const [now, setNow] = React.useState(() => Date.now());
+  React.useEffect(() => { const id = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(id); }, []);
   const connected = useOrderRealtime(t.order.id, t.assignment?.id ?? null, refresh, (loc) => { setRider(loc); setTrail((tr) => [...tr.slice(-200), { lat: loc.lat, lng: loc.lng }]); });
 
   const o = t.order; const meta = ORDER_STATUS_META[o.status];
   const live = ["rider_assigned", "out_for_delivery"].includes(o.status) && t.assignment && ["accepted", "picked_up"].includes(t.assignment.status);
-  const eta = minutesUntil(o.promised_at);
+  const paid = o.payment_method === "cod" || ["paid", "authorized"].includes(o.payment_status);
+  const active = !TERMINAL.includes(o.status);
+  const eta = o.promised_at ? Math.round((new Date(o.promised_at).getTime() - now) / 60000) : null;
+  const late = active && paid && eta != null && eta < 0;
   const addr = o.address_snapshot as unknown as { full_name: string; phone: string; house: string; street: string; area: string; landmark?: string; city: string; pincode: string; lat?: number; lng?: number };
 
   const cancel = async (reason: string) => { setBusy(true); const r = await cancelOrderAction(o.id, reason); setBusy(false); setCancelOpen(false); if (r.ok) { toast.success("Order cancelled"); refresh(); } else toast.error(r.error); };
@@ -45,7 +72,18 @@ export function OrderTrackingView({ initial, placed, paymentState }: { initial: 
   return (
     <div className="grid grid-cols-1 gap-5 px-4 sm:px-0 lg:grid-cols-[minmax(0,1fr)_380px]">
       <div className="space-y-4">
-        {placed ? <Alert tone="success" icon={<CheckCircle2 className="h-4 w-4" />} title="Order placed!">{t.store.name} has been notified. {o.payment_method === "cod" ? "Keep cash ready for the rider." : ""}</Alert> : null}
+        {placed && o.status !== "placed" && active ? <Alert tone="success" icon={<CheckCircle2 className="h-4 w-4" />} title={`Order ${o.order_number} confirmed`}>{t.store.name} is packing it now{o.promised_at ? `, arriving by ${formatTime(o.promised_at)}` : ""}.{o.payment_method === "cod" ? ` Keep ${formatINR(o.total, { precise: true })} cash ready for the rider.` : ""}</Alert> : null}
+        {placed && o.status === "placed" && paid ? <Alert tone="success" icon={<CheckCircle2 className="h-4 w-4" />} title={`Order ${o.order_number} placed`}>{t.store.name} has been notified and will confirm it shortly.</Alert> : null}
+        {late ? (
+          <Alert tone="warning" icon={<Clock className="h-4 w-4" />} title={`Running ${Math.abs(eta!)} min late`}>
+            {o.status === "ready_for_pickup" ? "Your order is packed and we're still finding a delivery partner." : o.status === "placed" ? "The store hasn't confirmed your order yet." : o.status === "out_for_delivery" || o.status === "rider_assigned" ? "Your delivery partner is taking longer than expected." : "The store is taking longer than usual to pack."} Sorry for the wait.
+            <span className="mt-2 flex flex-wrap gap-2">
+              <a href={`tel:${t.store.phone}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-line-2 bg-card px-3 text-sm font-semibold text-ink"><Phone className="h-4 w-4" /> Call store</a>
+              <Link href={`/account/support?order=${o.id}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-line-2 bg-card px-3 text-sm font-semibold text-ink"><HelpCircle className="h-4 w-4" /> Get help</Link>
+              {canCustomerCancel(o.status) ? <button type="button" onClick={() => setCancelOpen(true)} className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-line-2 bg-card px-3 text-sm font-semibold text-danger"><XCircle className="h-4 w-4" /> Cancel order</button> : null}
+            </span>
+          </Alert>
+        ) : null}
         {paymentState === "pending" || (o.payment_status === "pending" && o.payment_method !== "cod") ? <Alert tone="warning" icon={<CreditCard className="h-4 w-4" />} title="Payment pending">Your order is saved but payment was not completed. The store will start packing once payment is received. <Link href={`/checkout`} className="font-semibold underline">Retry from checkout</Link> or contact support.</Alert> : null}
         {paymentState === "setup" ? <Alert tone="warning" title="Online payment unavailable">Razorpay is not configured on this deployment yet. Your order is saved with payment pending; please contact support or choose Cash on Delivery next time.</Alert> : null}
         {paymentState === "failed" ? <Alert tone="danger" title="Payment failed">We could not verify the payment. If money was deducted it will be refunded automatically within 5–7 days.</Alert> : null}
@@ -54,10 +92,10 @@ export function OrderTrackingView({ initial, placed, paymentState }: { initial: 
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs text-ink-3">Order {o.order_number}</p>
-              <h1 className="text-xl font-bold text-ink">{meta.label}</h1>
-              <p className="text-sm text-ink-3">{meta.description}{eta != null && eta > 0 && !["delivered", "completed", "cancelled", "rejected"].includes(o.status) ? ` · arriving in about ${eta} min` : ""}</p>
+              <h1 className="text-xl font-bold text-ink">{headline(o.status, paid)}</h1>
+              <p className="text-sm text-ink-3">{active && paid && eta != null && eta > 0 ? `Arriving in about ${eta} min · by ${formatTime(o.promised_at!)}` : meta.description}</p>
             </div>
-            <div className="flex flex-col items-end gap-1.5"><OrderStatusBadge status={o.status} size="md" /><span className={cn("inline-flex items-center gap-1 text-[10px] font-semibold", connected ? "text-success" : "text-ink-4")}>{connected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}{connected ? "Live" : "Polling"}</span></div>
+            <div className="flex flex-col items-end gap-1.5"><OrderStatusBadge status={o.status} size="md" />{active ? <span role="status" className={cn("inline-flex items-center gap-1 text-[11px] font-semibold", connected ? "text-success" : "text-ink-3")}>{connected ? <Wifi className="h-3 w-3" aria-hidden /> : <WifiOff className="h-3 w-3" aria-hidden />}{connected ? "Live" : "Reconnecting…"}</span> : null}</div>
           </div>
           {o.status === "out_for_delivery" ? <DeliveryOtpStrip otp={t.delivery_otp} locked={t.otp_locked} /> : null}
         </section>
@@ -77,8 +115,8 @@ export function OrderTrackingView({ initial, placed, paymentState }: { initial: 
         ) : null}
 
         <section className="rounded-lg border border-line bg-card p-4">
-          <h2 className="mb-4 text-base font-bold text-ink">Order timeline</h2>
-          <OrderTimeline status={o.status} history={t.history} promisedAt={o.promised_at} />
+          <h2 className="mb-4 text-base font-bold text-ink">Order status</h2>
+          <CustomerOrderSteps status={o.status} history={t.history} promisedAt={active ? o.promised_at : null} paid={paid} />
         </section>
 
         <section className="rounded-lg border border-line bg-card p-4">
@@ -114,7 +152,7 @@ export function OrderTrackingView({ initial, placed, paymentState }: { initial: 
         </div>
       </aside>
 
-      <ConfirmDialog open={cancelOpen} onClose={() => setCancelOpen(false)} tone="danger" title="Cancel this order?" description="You can cancel before the store starts packing. Any payment made will be refunded to the original method." confirmLabel="Yes, cancel" loading={busy} onConfirm={() => cancel("Cancelled by customer")} />
+      <ConfirmDialog open={cancelOpen} onClose={() => setCancelOpen(false)} tone="danger" title="Cancel this order?" description="You can cancel until your order is packed. Any payment made will be refunded to the original method." confirmLabel="Yes, cancel" loading={busy} onConfirm={() => cancel("Cancelled by customer")} />
       <ReviewSheet open={reviewOpen} onClose={() => setReviewOpen(false)} tracking={t} onDone={() => { refresh(); router.refresh(); }} />
     </div>
   );

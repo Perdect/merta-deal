@@ -22,7 +22,7 @@ export function OrdersList({ storeId, tab, orders, total, page, pageSize, counts
     if (next.page !== undefined) { if (next.page <= 1) q.delete("page"); else q.set("page", String(next.page)); }
     router.push(`${pathname}?${q.toString()}`);
   };
-  const empty: Record<StoreOrderTab, string> = { new: "New orders will appear here the moment a customer places one.", preparing: "Accepted orders you are packing show up here.", ready: "Orders packed and waiting for a rider.", on_the_way: "Orders currently with a rider.", completed: "Delivered and completed orders.", cancelled: "Cancelled or rejected orders." };
+  const empty: Record<StoreOrderTab, string> = { new: "New orders appear here the moment a customer places one — pack them and tap Packed.", ready: "Packed orders waiting for or with a rider.", on_the_way: "Orders currently with a rider.", completed: "Delivered and completed orders.", cancelled: "Cancelled or rejected orders." };
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">

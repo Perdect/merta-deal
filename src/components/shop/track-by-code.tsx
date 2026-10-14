@@ -7,7 +7,7 @@ import type { OrderHistoryEntry, OrderStatus } from "@/types/app";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/states";
-import { OrderTimeline, OrderStatusBadge } from "./order-status";
+import { CustomerOrderSteps, OrderStatusBadge } from "./order-status";
 import { formatINR, formatDateTime } from "@/lib/utils";
 
 type Result = { order: { id: string; order_number: string; short_code: string; status: OrderStatus; total: number; item_count: number; payment_method: string; payment_status: string; promised_at: string | null; created_at: string }; store: { name: string; area: string; phone: string }; items: { name: string; quantity: number; pack_label: string | null; line_total: number }[]; history: OrderHistoryEntry[]; delivery_otp: string | null; rider: { name: string | null; vehicle_number: string | null } | null };
@@ -37,7 +37,7 @@ export function TrackByCode() {
             <ul className="mt-3 divide-y divide-line text-sm">{res.items.map((i, k) => <li key={k} className="flex justify-between py-1.5"><span className="text-ink-2">{i.quantity} × {i.name}</span><span className="tabular">{formatINR(i.line_total)}</span></li>)}</ul>
             <p className="mt-2 text-right text-sm font-bold">Total {formatINR(res.order.total, { precise: true })}</p>
           </div>
-          <div className="rounded-lg border border-line bg-card p-4"><OrderTimeline status={res.order.status} history={res.history} promisedAt={res.order.promised_at} /></div>
+          <div className="rounded-lg border border-line bg-card p-4"><CustomerOrderSteps status={res.order.status} history={res.history} promisedAt={["delivered", "completed", "cancelled", "rejected"].includes(res.order.status) ? null : res.order.promised_at} /></div>
         </div>
       ) : null}
     </div>

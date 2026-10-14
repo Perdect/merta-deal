@@ -27,11 +27,11 @@ export const DOC_TYPES: { value: string; label: string }[] = [
   { value: "owner_id", label: "Owner ID (Aadhaar / Voter ID)" },
 ];
 
-export type StoreOrderTab = "new" | "preparing" | "ready" | "on_the_way" | "completed" | "cancelled";
+export type StoreOrderTab = "new" | "ready" | "on_the_way" | "completed" | "cancelled";
 export const STORE_ORDER_TABS: { value: StoreOrderTab; label: string; statuses: Enums<"order_status">[] }[] = [
-  { value: "new", label: "New", statuses: ["placed"] },
-  { value: "preparing", label: "Preparing", statuses: ["store_confirmed", "preparing"] },
-  { value: "ready", label: "Ready", statuses: ["ready_for_pickup", "rider_assigned"] },
+  // Orders are confirmed automatically (quick commerce): everything not yet packed is one queue.
+  { value: "new", label: "To pack", statuses: ["placed", "store_confirmed", "preparing"] },
+  { value: "ready", label: "Packed", statuses: ["ready_for_pickup", "rider_assigned"] },
   { value: "on_the_way", label: "On the way", statuses: ["out_for_delivery"] },
   { value: "completed", label: "Completed", statuses: ["delivered", "completed"] },
   { value: "cancelled", label: "Cancelled", statuses: ["cancelled", "rejected"] },

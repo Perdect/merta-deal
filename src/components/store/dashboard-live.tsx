@@ -27,8 +27,8 @@ export function DashboardLive({ storeId, isOpen, storeActive, pending, pendingTo
 
       <section>
         <div className="mb-2 flex items-center justify-between gap-3">
-          <h2 className="text-base font-bold text-ink">New orders {pendingTotal > 0 ? <span className="ml-1 rounded-full bg-brand-100 px-2 py-0.5 text-xs text-brand-700 tabular">{pendingTotal}</span> : null}</h2>
-          <span className={cn("inline-flex items-center gap-1 text-[11px] font-semibold", connected ? "text-success" : "text-ink-4")}>{connected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}{connected ? "Live" : "Polling"}</span>
+          <h2 className="text-base font-bold text-ink">Orders to pack {pendingTotal > 0 ? <span className="ml-1 rounded-full bg-brand-100 px-2 py-0.5 text-xs text-brand-700 tabular">{pendingTotal}</span> : null}</h2>
+          <span className={cn("inline-flex items-center gap-1 text-[11px] font-semibold", connected ? "text-success" : "text-ink-4")}>{connected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}{connected ? "Live" : "Reconnecting…"}</span>
         </div>
         {pending.length === 0 ? (
           <EmptyState compact icon={<Inbox className="h-7 w-7" />} title="No new orders right now" description={storeActive ? "New orders appear here instantly and you will hear a notification." : "Orders start after the admin approves your store."} />
@@ -41,7 +41,7 @@ export function DashboardLive({ storeId, isOpen, storeActive, pending, pendingTo
             ))}
           </ul>
         )}
-        {pendingTotal > pending.length ? <div className="mt-3 text-center"><Button variant="outline" size="sm" href="/store/orders?tab=new">See all {pendingTotal} new orders</Button></div> : null}
+        {pendingTotal > pending.length ? <div className="mt-3 text-center"><Button variant="outline" size="sm" href="/store/orders?tab=new">See all {pendingTotal} orders to pack</Button></div> : null}
       </section>
     </>
   );

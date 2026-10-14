@@ -1,5 +1,5 @@
-// Security, rider-flow, product-save, search-visibility, grouped-category, failed-delivery and cash hand-over checks
-// (0023–0027). Loads every migration + seed into PGlite. Run from a folder with @electric-sql/pglite installed:
+// Security, rider-flow, product-save, search-visibility, grouped-category, failed-delivery, cash hand-over,
+// quick-commerce (auto-confirm, re-dispatch) and strict category filter checks (0023–0029). Loads every migration + seed into PGlite. Run from a folder with @electric-sql/pglite installed:
 //   node scripts/test-security.mjs "$PWD"
 import { PGlite } from "@electric-sql/pglite";
 import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
@@ -96,7 +96,7 @@ await q(`select public.add_to_cart($1::uuid, 2)`, [inv]);
 const addr = (await one(`select id from addresses where user_id = $1 limit 1`, [CUST])).id;
 const order = (await one(`select public.place_order($1::uuid, 'cod', 'standard', null) as r`, [addr])).r.order_id;
 await as(STORE_OWNER);
-for (const step of ['accept', 'preparing']) await q(`select public.store_update_order($1::uuid, $2)`, [order, step]);
+for (const step of ['preparing']) await q(`select public.store_update_order($1::uuid, $2)`, [order, step]);
 const asg = (await one(`select public.store_update_order($1::uuid, 'ready') as r`, [order])).r.assignment_id;
 const riderUser = (await one(`select dp.user_id from delivery_assignments a join delivery_partners dp on dp.id = a.rider_id where a.id = $1`, [asg])).user_id;
 const otherRider = (await one(`select user_id from delivery_partners where status = 'active' and user_id <> $1 limit 1`, [riderUser])).user_id;
@@ -171,7 +171,7 @@ const mkReady = async () => {
   await q(`select public.add_to_cart($1::uuid, 1)`, [inv]);
   const o = (await one(`select public.place_order($1::uuid, 'cod', 'standard', null) as r`, [addr])).r.order_id;
   await as(STORE_OWNER);
-  for (const step of ['accept', 'preparing']) await q(`select public.store_update_order($1::uuid, $2)`, [o, step]);
+  for (const step of ['preparing']) await q(`select public.store_update_order($1::uuid, $2)`, [o, step]);
   const a = (await one(`select public.store_update_order($1::uuid, 'ready') as r`, [o])).r.assignment_id;
   return { o, a };
 };
@@ -284,6 +284,108 @@ const bal = (await one(`select public.admin_rider_balances() r`)).r.find((x) => 
 ok("admin balances show cash collected / remitted / due", bal && Number(bal.cash_remitted) >= cod && Math.abs(Number(bal.cash_due) - (due0 - cod)) < 0.01, JSON.stringify(bal));
 ok("hand-over is audited", (await one(`select count(*)::int n from audit_logs where action = 'rider.cash_received' and entity_id = $1`, [fRider])).n >= 1);
 ok("rider can read own hand-over records only", (await rls(fUser, `select id from rider_cash_remittances where rider_id = $1`, [fRider])).length >= 1 && (await rls(otherR, `select id from rider_cash_remittances where rider_id = $1`, [fRider])).length === 0);
+
+console.log("Category filter never falls back to the whole catalogue (0029)");
+const all = (await anonQ(`select public.search_products() r`)).total;
+ok("unknown category returns nothing (not the whole catalogue)", (await tot('no-such-category')) === 0 && all > 0, JSON.stringify({ all }));
+ok("empty slug list returns nothing", (await tot(',')) === 0);
+const cats = await q(`select c.slug, (select count(*)::int from v_product_cards v where v.category_id = c.id and v.inventory_id is not null) own from categories c where c.parent_id is null and c.is_active`);
+for (const c of cats.slice(0, 4)) {
+  const r = await anonQ(`select public.search_products(p_category_slug => $1, p_page_size => 60) r`, [c.slug]);
+  const outside = await one(`with recursive t as (select id from categories where slug = $1 union select c.id from categories c join t on c.parent_id = t.id)
+    select count(*)::int n from jsonb_to_recordset($2::jsonb) x(category_id uuid) where x.category_id not in (select id from t)`, [c.slug, JSON.stringify(r.items)]);
+  ok(`/${c.slug}: every result belongs to ${c.slug} or its sub-categories`, outside.n === 0, JSON.stringify({ total: r.total, outside: outside.n }));
+}
+const g2 = (await anonQ(`select public.search_products(p_category_slug => 'grocery', p_page => 2, p_page_size => 5) r`)).items;
+ok("page 2 of a category stays in that category", (await one(`select count(*)::int n from products p join categories c on c.id = p.category_id left join categories pc on pc.id = c.parent_id where p.id = any($1::uuid[]) and 'grocery' not in (c.slug, coalesce(pc.slug, ''))`, [g2.map((x) => x.id)])).n === 0);
+
+console.log("Quick-commerce flow: auto-confirm, real ETA, missed offers re-offered (0028)");
+const placeCod = async (method = 'cod') => {
+  await as(CUST); await q(`select public.clear_cart()`);
+  await q(`select public.add_to_cart($1::uuid, 1)`, [inv]);
+  const etaMax = (await one(`select public.cart_summary($1::uuid, 'standard') r`, [addr])).r.eta_max_minutes;
+  const o = (await one(`select public.place_order($1::uuid, $2::payment_method, 'standard', null) as r`, [addr, method])).r;
+  return { ...o, etaMax };
+};
+const Q1 = await placeCod();
+const q1 = await one(`select status, eta_minutes, extract(epoch from promised_at - created_at)/60 as mins from orders where id = $1`, [Q1.order_id]);
+ok("COD order is confirmed the moment it is placed", q1.status === 'store_confirmed', JSON.stringify(q1));
+ok("promised time = window shown at checkout (no extra prep minutes)", q1.eta_minutes === Q1.etaMax && Math.round(Number(q1.mins)) === Q1.etaMax, JSON.stringify({ ...q1, etaMax: Q1.etaMax }));
+ok("history: placed → store_confirmed (automatic)", JSON.stringify((await q(`select status::text s, note from order_status_history where order_id = $1 order by created_at, status`, [Q1.order_id])).map((r) => r.s)) === '["placed","store_confirmed"]');
+const n1 = await q(`select type, title from notifications where user_id = $1 and data->>'order_id' = $2 and type in ('order_placed','order_status')`, [CUST, Q1.order_id]);
+ok("customer gets one combined 'Order confirmed' message (no duplicate)", n1.length === 1 && n1[0].title === 'Order confirmed', JSON.stringify(n1));
+await as(CUST);
+ok("customer can still cancel before packing", (await one(`select public.cancel_order($1::uuid, 'changed my mind') r`, [Q1.order_id])).r.ok === true);
+
+const Q2 = await placeCod();
+const stockBefore = (await one(`select stock_qty from inventory where id = $1`, [inv])).stock_qty;
+await as(STORE_OWNER);
+ok("store can reject an auto-confirmed order it can't fulfil (stock restored)", (await one(`select public.store_update_order($1::uuid, 'reject', 'Out of stock') r`, [Q2.order_id])).r.status === 'rejected' && (await one(`select stock_qty from inventory where id = $1`, [inv])).stock_qty === stockBefore + 1);
+
+await q(`update settings set value = 'false' where key = 'auto_accept_orders'`);
+const Q3 = await placeCod();
+ok("with auto-confirm off, order waits at placed", (await one(`select status from orders where id = $1`, [Q3.order_id])).status === 'placed');
+await as(STORE_OWNER);
+ok("…and the store's manual accept still works", (await one(`select public.store_update_order($1::uuid, 'accept') r`, [Q3.order_id])).r.status === 'store_confirmed');
+await q(`update settings set value = 'true' where key = 'auto_accept_orders'`);
+
+const Q4 = await placeCod('upi');
+ok("online order waits for payment before confirming", (await one(`select status, payment_status from orders where id = $1`, [Q4.order_id])).status === 'placed');
+await as(STORE_OWNER);
+ok("store cannot accept an unpaid online order", /PAYMENT_PENDING/.test(await err(`select public.store_update_order($1::uuid, 'accept')`, [Q4.order_id]) ?? ""));
+await db.query(`select set_config('request.jwt.claim.role', 'authenticated', false)`);
+ok("customer cannot fake the payment confirmation", /FORBIDDEN/.test((await as(CUST), await err(`select public.confirm_online_payment($1::uuid, 'o', 'p', 's')`, [Q4.order_id])) ?? ""));
+await db.query(`select set_config('request.jwt.claim.role', '', false)`);
+await as(ADMIN); await q(`select public.confirm_online_payment($1::uuid, 'order_test', 'pay_test', 'sig_test')`, [Q4.order_id]);
+ok("captured payment confirms the order automatically", (await one(`select status, payment_status from orders where id = $1`, [Q4.order_id])).status === 'store_confirmed');
+
+// Clean slate: earlier sections leave orders mid-delivery. One rider online, everyone else offline, nobody busy.
+await q(`update delivery_assignments set status = 'cancelled' where status in ('offered','accepted','picked_up')`);
+await q(`update orders set status = 'cancelled' where status in ('ready_for_pickup','rider_assigned','out_for_delivery')`);
+const X = await one(`select id, user_id from delivery_partners where status = 'active' order by id limit 1`);
+await q(`update delivery_partners set is_online = false`);
+await as(X.user_id); await q(`select public.rider_set_online(true, 26.6491, 74.0341)`);
+const Q5 = await placeCod();
+await as(STORE_OWNER);
+const packed = (await one(`select public.store_update_order($1::uuid, 'ready') r`, [Q5.order_id])).r;
+ok("store taps Packed → rider requested", packed.status === 'ready_for_pickup' && Boolean(packed.assignment_id), JSON.stringify(packed));
+await q(`update delivery_assignments set expires_at = now() - interval '1 second' where id = $1`, [packed.assignment_id]); // the offer times out unanswered
+await as(X.user_id);
+const list = (await one(`select public.rider_assignments(array['offered']) r`)).r;
+const old = await one(`select status from delivery_assignments where id = $1`, [packed.assignment_id]);
+const reoffer = await one(`select id, rider_id from delivery_assignments where order_id = $1 and status = 'offered'`, [Q5.order_id]);
+ok("missed offer expires and the order is re-offered (same rider, only one online)", old.status === 'expired' && reoffer && reoffer.rider_id === X.id && list.some((a) => a.id === reoffer.id), JSON.stringify({ old, reoffer }));
+await as(X.user_id); await q(`select public.rider_assignments()`); await q(`select public.rider_assignments()`);
+ok("repeated polling never creates a second live offer", (await one(`select count(*)::int n from delivery_assignments where order_id = $1 and status = 'offered'`, [Q5.order_id])).n === 1);
+ok("dispatch sweep is not callable by shoppers", /permission denied/.test(await asRole('authenticated', CUST, `select public.dispatch_pending()`) ?? "") && /permission denied/.test(await asRole('anon', null, `select public.dispatch_pending()`) ?? ""));
+
+await as(X.user_id); await q(`select public.rider_respond_assignment($1::uuid, false)`, [reoffer.id]);
+await q(`select public.rider_assignments()`);
+ok("a rider who declines is not offered the same order again", (await one(`select count(*)::int n from delivery_assignments where order_id = $1 and status = 'offered'`, [Q5.order_id])).n === 0);
+ok("order stays packed, waiting for a rider (not delivered, not cancelled)", (await one(`select status from orders where id = $1`, [Q5.order_id])).status === 'ready_for_pickup');
+
+// No rider online when packed → offered as soon as one comes online.
+await as(X.user_id); await q(`select public.rider_set_online(false)`);
+const Q6 = await placeCod();
+await as(STORE_OWNER);
+ok("packed with no rider online → waits (no fake assignment)", (await one(`select public.store_update_order($1::uuid, 'ready') r`, [Q6.order_id])).r.assignment_id === null);
+await as(X.user_id); await q(`select public.rider_set_online(true, 26.6491, 74.0341)`);
+const a6 = await one(`select id from delivery_assignments where order_id = $1 and status = 'offered' and rider_id = $2`, [Q6.order_id, X.id]);
+ok("rider going online receives the waiting order", Boolean(a6));
+
+// Complete it: accept → pickup → OTP + cash → delivered, earning credited once.
+await q(`select public.rider_respond_assignment($1::uuid, true)`, [a6.id]);
+await q(`select public.rider_pickup($1::uuid)`, [a6.id]);
+const otp6 = (await one(`select delivery_otp from order_secrets where order_id = $1`, [Q6.order_id])).delivery_otp;
+const wrong6 = String((Number(otp6) + 1) % 10000).padStart(4, '0');
+ok("wrong OTP does not deliver", (await one(`select public.verify_delivery_otp($1::uuid, $2, true) r`, [a6.id, wrong6])).r.ok === false);
+ok("COD needs the cash confirmation", (await one(`select public.verify_delivery_otp($1::uuid, $2, false) r`, [a6.id, otp6])).r.needs_cash === true);
+ok("still out for delivery after failed attempts", (await one(`select status from orders where id = $1`, [Q6.order_id])).status === 'out_for_delivery');
+ok("correct OTP + cash delivers", (await one(`select public.verify_delivery_otp($1::uuid, $2, true) r`, [a6.id, otp6])).r.ok === true && (await one(`select status from orders where id = $1`, [Q6.order_id])).status === 'delivered');
+const again6 = (await one(`select public.verify_delivery_otp($1::uuid, $2, true) r`, [a6.id, otp6])).r;
+ok("retrying completion is a no-op", again6.already === true);
+ok("rider earning credited exactly once", (await one(`select count(*)::int n from rider_earnings where assignment_id = $1`, [a6.id])).n === 1);
+ok("tracking shows delivered with no OTP exposed", await (async () => { await as(CUST); const t = (await one(`select public.order_tracking($1::uuid) r`, [Q6.order_id])).r; return t.order.status === 'delivered' && t.delivery_otp === null; })());
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -32,7 +32,7 @@ type BIPEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ out
 function Badge({ onClick, mark, top, name }: { onClick: () => void; mark: React.ReactNode; top: string; name: string }) {
   return (
     <button type="button" onClick={onClick} aria-label={`${top} ${name}`}
-      className="flex h-12 w-[164px] min-w-0 max-w-[calc(50%-4px)] items-center justify-center gap-2 rounded-lg border border-[#a6a6a6] bg-black px-2.5 text-left text-white transition-opacity hover:opacity-85 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 md:max-w-full">
+      className="flex h-12 w-[164px] min-w-0 max-w-[calc(50%-4px)] items-center justify-center gap-2 rounded-[5px] border border-[#a6a6a6] bg-black px-2.5 text-left text-white transition-opacity hover:opacity-85 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 md:max-w-full">
       {mark}
       <span className="min-w-0 leading-none">
         <span className="block whitespace-nowrap text-[9px] font-medium tracking-wide min-[380px]:text-[10px]">{top}</span>

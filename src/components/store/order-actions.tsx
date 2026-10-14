@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { Check, X, Package, PackageCheck, CreditCard } from "lucide-react";
+import { Check, X, PackageCheck, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/overlay";
 import { Textarea } from "@/components/ui/input";
@@ -16,7 +16,8 @@ export type OrderActionTarget = { id: string; status: Enums<"order_status">; pay
 
 /**
  * Store-side lifecycle buttons. Only the transitions the DB allows are shown:
- * placed → accept/reject · store_confirmed → preparing/ready · preparing → ready.
+ * placed → accept/reject (only when auto-confirm is off, or an online payment is pending) ·
+ * store_confirmed / preparing → "Packed" (requests a rider) or reject if it can't be fulfilled.
  * "Delivered" is never offered here: only the rider's OTP verification can set it.
  */
 export function OrderActions({ order, size = "md", compact, onDone, className }: { order: OrderActionTarget; size?: "sm" | "md"; compact?: boolean; onDone?: (status: Enums<"order_status">) => void; className?: string }) {
@@ -32,7 +33,7 @@ export function OrderActions({ order, size = "md", compact, onDone, className }:
     setBusy(null);
     if (!r.ok) { toast.error(r.error); return; }
     setRejectOpen(false);
-    toast.success(action === "accept" ? "Order accepted" : action === "reject" ? "Order rejected" : action === "preparing" ? "Marked as packing" : r.data.assignment_id ? "Ready · rider requested" : "Ready for pickup", action === "ready" && !r.data.assignment_id ? "No rider is online right now; dispatch will retry automatically." : undefined);
+    toast.success(action === "accept" ? "Order accepted" : action === "reject" ? "Order rejected" : action === "preparing" ? "Marked as packing" : r.data.assignment_id ? "Packed · rider requested" : "Packed", action === "ready" && !r.data.assignment_id ? "No rider is online right now; dispatch will retry automatically." : undefined);
     onDone?.(r.data.status);
   };
 
@@ -45,13 +46,11 @@ export function OrderActions({ order, size = "md", compact, onDone, className }:
           <Button size={size} variant="outline" className="text-danger" disabled={busy !== null} onClick={() => setRejectOpen(true)}><X className="h-4 w-4" /> Reject</Button>
           {unpaid ? <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#8a6300]"><CreditCard className="h-3.5 w-3.5" /> {compact ? "Payment pending" : "Accept unlocks once the online payment is received"}</span> : null}
         </>
-      ) : s === "store_confirmed" ? (
+      ) : s === "store_confirmed" || s === "preparing" ? (
         <>
-          <Button size={size} variant="secondary" loading={busy === "preparing"} disabled={busy !== null} onClick={() => run("preparing")}><Package className="h-4 w-4" /> Start packing</Button>
-          <Button size={size} variant="primary" loading={busy === "ready"} disabled={busy !== null} onClick={() => run("ready")}><PackageCheck className="h-4 w-4" /> Ready for pickup</Button>
+          <Button size={size} variant="primary" loading={busy === "ready"} disabled={busy !== null} onClick={() => run("ready")}><PackageCheck className="h-4 w-4" /> Packed · call rider</Button>
+          <Button size={size} variant="outline" className="text-danger" disabled={busy !== null} onClick={() => setRejectOpen(true)}><X className="h-4 w-4" /> {compact ? "Can't fulfil" : "Can't fulfil order"}</Button>
         </>
-      ) : s === "preparing" ? (
-        <Button size={size} variant="primary" loading={busy === "ready"} disabled={busy !== null} onClick={() => run("ready")}><PackageCheck className="h-4 w-4" /> Ready for pickup</Button>
       ) : null}
 
       <Modal open={rejectOpen} onClose={() => setRejectOpen(false)} title="Reject this order?" description="The customer is notified with your reason and any online payment is refunded automatically." size="sm"

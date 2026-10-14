@@ -5,10 +5,10 @@ export type OrderStatus = Enums<"order_status">;
 export const ORDER_FLOW: OrderStatus[] = ["placed", "store_confirmed", "preparing", "ready_for_pickup", "rider_assigned", "out_for_delivery", "delivered", "completed"];
 
 export const ORDER_STATUS_META: Record<OrderStatus, { label: string; short: string; description: string; tone: "neutral" | "info" | "warning" | "success" | "danger"; icon: string }> = {
-  placed: { label: "Order placed", short: "Placed", description: "Waiting for the store to confirm", tone: "info", icon: "receipt" },
-  store_confirmed: { label: "Store confirmed", short: "Confirmed", description: "The store has accepted your order", tone: "info", icon: "store" },
-  preparing: { label: "Preparing", short: "Packing", description: "Your items are being packed", tone: "info", icon: "package" },
-  ready_for_pickup: { label: "Ready for pickup", short: "Ready", description: "Packed and waiting for a rider", tone: "warning", icon: "package-check" },
+  placed: { label: "Order placed", short: "Placed", description: "Being confirmed", tone: "info", icon: "receipt" },
+  store_confirmed: { label: "Confirmed · packing", short: "Packing", description: "Confirmed; the store is packing it", tone: "info", icon: "store" },
+  preparing: { label: "Packing", short: "Packing", description: "Your items are being packed", tone: "info", icon: "package" },
+  ready_for_pickup: { label: "Packed", short: "Packed", description: "Packed; assigning a delivery partner", tone: "warning", icon: "package-check" },
   rider_assigned: { label: "Rider assigned", short: "Rider assigned", description: "Rider is heading to the store", tone: "info", icon: "bike" },
   out_for_delivery: { label: "Out for delivery", short: "On the way", description: "Rider is on the way to you", tone: "info", icon: "navigation" },
   delivered: { label: "Delivered", short: "Delivered", description: "Order handed over after OTP check", tone: "success", icon: "check-circle" },

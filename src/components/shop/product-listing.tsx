@@ -23,7 +23,11 @@ const DISCOUNTS = [10, 20, 30];
 export type ListingFilters = { brands: { name: string; slug: string }[]; stores?: { name: string; id: string }[]; categories?: { name: string; slug: string }[] };
 
 /** URL-driven filters + sorting + paged grid. Server fetches; this component only manipulates search params and renders. */
-export function ProductListing({ result, filters, signedIn, wished, loadMoreHref, hideCategoryChips, emptyTitle = "No products found", emptyHint }: { result: SearchResult; filters: ListingFilters; signedIn: boolean; wished: Set<string>; loadMoreHref?: string; hideCategoryChips?: boolean; emptyTitle?: string; emptyHint?: string }) {
+/**
+ * `scope` holds the params that define this page's result set but are not in the query string (e.g. the
+ * category of /c/grocery). They are always sent with "Load more", so page 2 comes from the same set.
+ */
+export function ProductListing({ result, filters, signedIn, wished, loadMoreHref, scope, hideCategoryChips, emptyTitle = "No products found", emptyHint }: { result: SearchResult; filters: ListingFilters; signedIn: boolean; wished: Set<string>; loadMoreHref?: string; scope?: Record<string, string>; hideCategoryChips?: boolean; emptyTitle?: string; emptyHint?: string }) {
   const router = useRouter(); const pathname = usePathname(); const sp = useSearchParams();
   const [filterOpen, setFilterOpen] = React.useState(false);
   const [sortOpen, setSortOpen] = React.useState(false);
@@ -32,8 +36,13 @@ export function ProductListing({ result, filters, signedIn, wished, loadMoreHref
   const [page, setPage] = React.useState(result.page);
   const [hasMore, setHasMore] = React.useState(result.has_more);
   const [loadingMore, setLoadingMore] = React.useState(false);
+  const [moreError, setMoreError] = React.useState(false);
   const [seen, setSeen] = React.useState(result);
-  if (seen !== result) { setSeen(result); setItems(result.items); setPage(result.page); setHasMore(result.has_more); }
+  // A new result set (other category, filter or sort): replace the list; any "Load more" still in flight
+  // belongs to the old set and is dropped when it lands.
+  const generation = React.useRef(0);
+  if (seen !== result) { setSeen(result); setItems(result.items); setPage(result.page); setHasMore(result.has_more); setLoadingMore(false); setMoreError(false); }
+  React.useEffect(() => { generation.current += 1; }, [result]);
 
   const set = (patch: Record<string, string | null>) => {
     const next = new URLSearchParams(sp.toString());
@@ -51,11 +60,23 @@ export function ProductListing({ result, filters, signedIn, wished, loadMoreHref
   const activeCount = [sp.get("brand"), sp.get("minPrice") ?? sp.get("maxPrice"), sp.get("minDiscount"), sp.get("inStock"), sp.get("store"), sp.get("local")].filter(Boolean).length;
 
   const loadMore = async () => {
-    setLoadingMore(true);
-    const next = new URLSearchParams(sp.toString()); next.set("page", String(page + 1));
-    const r = await fetch(`${loadMoreHref ?? "/api/search"}?${next.toString()}`);
-    const d = (await r.json()) as SearchResult;
-    setItems((cur) => [...cur, ...d.items]); setPage(d.page); setHasMore(d.has_more); setLoadingMore(false);
+    const gen = generation.current;
+    setLoadingMore(true); setMoreError(false);
+    const next = new URLSearchParams(sp.toString());
+    for (const [k, v] of Object.entries(scope ?? {})) next.set(k, v);
+    next.set("page", String(page + 1));
+    try {
+      const r = await fetch(`${loadMoreHref ?? "/api/search"}?${next.toString()}`);
+      if (!r.ok) throw new Error(String(r.status));
+      const d = (await r.json()) as SearchResult;
+      if (gen !== generation.current) return; // the shopper switched category/filters meanwhile
+      setItems((cur) => { const have = new Set(cur.map((x) => x.id)); return [...cur, ...d.items.filter((x) => !have.has(x.id))]; });
+      setPage(d.page); setHasMore(d.has_more);
+    } catch {
+      if (gen === generation.current) setMoreError(true);
+    } finally {
+      if (gen === generation.current) setLoadingMore(false);
+    }
   };
 
   return (
@@ -78,7 +99,7 @@ export function ProductListing({ result, filters, signedIn, wished, loadMoreHref
       ) : (
         <>
           <ProductGrid products={items} signedIn={signedIn} wished={wished} className={cn(pending && "opacity-60")} />
-          {hasMore ? <div className="mt-6 flex justify-center"><Button variant="outline" loading={loadingMore} onClick={loadMore}>Load more</Button></div> : null}
+          {hasMore ? <div className="mt-6 flex flex-col items-center gap-2">{moreError ? <p role="alert" className="text-sm text-danger">Couldn&apos;t load more products. Check your connection and try again.</p> : null}<Button variant="outline" loading={loadingMore} onClick={loadMore}>{moreError ? "Try again" : "Load more"}</Button></div> : null}
         </>
       )}
 
@@ -97,7 +118,7 @@ export function ProductListing({ result, filters, signedIn, wished, loadMoreHref
 
       <BottomSheet open={sortOpen} onClose={() => setSortOpen(false)} title="Sort by">
         <ul className="divide-y divide-line">
-          {SORTS.map((s) => <li key={s.value}><button type="button" onClick={() => { set({ sort: s.value === "relevance" ? null : s.value }); setSortOpen(false); }} className="flex min-h-12 w-full items-center justify-between py-3 text-left text-sm font-medium text-ink">{s.label}{sort === s.value ? <Check className="h-4 w-4 text-brand-600" /> : null}</button></li>)}
+          {SORTS.map((s) => <li key={s.value}><button type="button" onClick={() => { setSortOpen(false); afterOverlayClose(() => set({ sort: s.value === "relevance" ? null : s.value })); }} className="flex min-h-12 w-full items-center justify-between py-3 text-left text-sm font-medium text-ink">{s.label}{sort === s.value ? <Check className="h-4 w-4 text-brand-600" /> : null}</button></li>)}
         </ul>
       </BottomSheet>
     </div>

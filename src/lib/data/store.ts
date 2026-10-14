@@ -68,7 +68,7 @@ export const getStoreOrderTabCounts = cache(async (storeId: string): Promise<Par
 
 export const getPendingStoreOrders = cache(async (storeId: string, limit = 10): Promise<StoreOrderRow[]> => {
   const supabase = await createClient();
-  const { data } = await supabase.from("orders").select(ORDER_ROW_COLS).eq("store_id", storeId).eq("status", "placed").order("created_at", { ascending: true }).limit(limit);
+  const { data } = await supabase.from("orders").select(ORDER_ROW_COLS).eq("store_id", storeId).in("status", ["placed", "store_confirmed", "preparing"]).order("created_at", { ascending: true }).limit(limit);
   return (data ?? []) as StoreOrderRow[];
 });
 
