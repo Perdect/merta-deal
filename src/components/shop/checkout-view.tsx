@@ -30,6 +30,8 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
   const [payment, setPayment] = React.useState<PaymentMethod>(codEnabled ? "cod" : razorpayEnabled ? "upi" : "wallet");
   const [instructions, setInstructions] = React.useState("");
   const [summary, setSummary] = React.useState<CartSummary>(initial);
+  // Express can only stay selected while the delivery zone offers it.
+  if (deliveryType === "express" && summary && !summary.zone?.express_supported) setDeliveryType("standard");
   const [addOpen, setAddOpen] = React.useState(initialAddresses.length === 0);
   const [placing, setPlacing] = React.useState(false);
   const [refreshing, startRefresh] = React.useTransition();
@@ -103,8 +105,8 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
         </Section>
 
         <Section step={2} title="Delivery option">
-          <div className="grid gap-2 sm:grid-cols-3">
-            <Option active={deliveryType === "express"} disabled={!summary.zone?.express_supported} onClick={() => setDeliveryType("express")} icon={<Zap className="h-5 w-5 text-saffron-600" />} title="Express" subtitle={summary.zone?.express_supported ? `20–35 min · +${formatINR(summary.express_fee || 20)}` : "Not in your zone yet"} />
+          <div className={cn("grid gap-2", summary.zone?.express_supported ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
+            {summary.zone?.express_supported ? <Option active={deliveryType === "express"} disabled={!summary.zone?.express_supported} onClick={() => setDeliveryType("express")} icon={<Zap className="h-5 w-5 text-saffron-600" />} title="Express" subtitle={summary.zone?.express_supported ? `20–35 min · +${formatINR(summary.express_fee || 20)}` : "Not in your zone yet"} /> : null}
             <Option active={deliveryType === "standard"} onClick={() => setDeliveryType("standard")} icon={<Clock className="h-5 w-5 text-brand-600" />} title="Standard" subtitle={`${summary.eta_min_minutes}–${summary.eta_max_minutes} min`} />
             <Option active={deliveryType === "scheduled"} onClick={() => setDeliveryType("scheduled")} icon={<CalendarClock className="h-5 w-5 text-info" />} title="Scheduled" subtitle="Pick a slot" />
           </div>

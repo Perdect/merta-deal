@@ -100,6 +100,8 @@ export function CartDrawer({ signedIn, isGuest, addresses: initialAddresses, wal
   const [suggestions, setSuggestions] = React.useState<ProductCardType[]>([]);
 
   const s = summary;
+  // Express can only stay selected while the delivery zone offers it.
+  if (deliveryType === "express" && s && !s.zone?.express_supported) setDeliveryType("standard");
   const items = s?.items ?? [];
   const open = Boolean(step);
   React.useEffect(() => {
@@ -355,17 +357,23 @@ export function CartDrawer({ signedIn, isGuest, addresses: initialAddresses, wal
 
               <Card className="p-4">
                 <h3 className="font-display text-base font-bold text-ink">Delivery option</h3>
-                <div className="mt-2 grid grid-cols-3 gap-2">
-                  {([
-                    { id: "express" as const, icon: <Zap className="h-4 w-4 text-saffron-600" />, t: "Express", sub: s.zone?.express_supported ? `+${formatINR(s.express_fee || 20)}` : "Not in zone", off: !s.zone?.express_supported },
-                    { id: "standard" as const, icon: <Clock className="h-4 w-4 text-brand-600" />, t: "Standard", sub: `${s.eta_min_minutes}–${s.eta_max_minutes} min` },
-                    { id: "scheduled" as const, icon: <CalendarClock className="h-4 w-4 text-info" />, t: "Scheduled", sub: "Pick a slot", off: !slots.length },
-                  ]).map((o) => (
-                    <button key={o.id} type="button" disabled={o.off} onClick={() => setDeliveryType(o.id)} className={cn("rounded-xl border p-2.5 text-left disabled:opacity-50", deliveryType === o.id ? "border-brand-600 bg-brand-50" : "border-line bg-card")}>
-                      <span className="flex items-center gap-1.5 text-sm font-bold text-ink">{o.icon}{o.t}</span><span className="block text-[11px] text-ink-3">{o.sub}</span>
-                    </button>
-                  ))}
-                </div>
+                {(() => {
+                  // Express is offered only where the zone supports it (admins switch it per zone); otherwise it is not shown at all.
+                  const opts = ([
+                    { id: "express" as const, icon: <Zap className="h-4 w-4 text-saffron-600" aria-hidden />, t: "Express", sub: `+${formatINR(s.express_fee || 20)}`, show: Boolean(s.zone?.express_supported) },
+                    { id: "standard" as const, icon: <Clock className="h-4 w-4 text-brand-600" aria-hidden />, t: "Standard", sub: `${s.eta_min_minutes}–${s.eta_max_minutes} min`, show: true },
+                    { id: "scheduled" as const, icon: <CalendarClock className="h-4 w-4 text-info" aria-hidden />, t: "Scheduled", sub: "Pick a slot", show: slots.length > 0 },
+                  ]).filter((o) => o.show);
+                  return (
+                    <div className="mt-2 grid gap-2" style={{ gridTemplateColumns: `repeat(${opts.length}, minmax(0, 1fr))` }}>
+                      {opts.map((o) => (
+                        <button key={o.id} type="button" aria-pressed={deliveryType === o.id} onClick={() => setDeliveryType(o.id)} className={cn("min-h-11 rounded-xl border p-2.5 text-left", deliveryType === o.id ? "border-brand-600 bg-brand-50" : "border-line bg-card")}>
+                          <span className="flex items-center gap-1.5 text-sm font-bold text-ink">{o.icon}{o.t}</span><span className="block text-[11px] text-ink-3">{o.sub}</span>
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
                 {deliveryType === "scheduled" ? <div className="scroll-x mt-3">{slots.map((x) => <button key={x} type="button" onClick={() => setSlot(x)} className={cn("rounded-full border px-3.5 py-2 text-sm font-medium", slot === x ? "border-brand-600 bg-brand-50 text-brand-700" : "border-line-2 bg-card text-ink-2")}>{x.replace("-", " – ")}</button>)}</div> : null}
               </Card>
 
