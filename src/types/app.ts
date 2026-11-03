@@ -9,7 +9,11 @@ export type ProductCard = {
   tags?: string[]; created_at?: string;
   inventory_id: string | null; selling_price: number | null; mrp: number | null;
   stock_qty: number | null; stock_status: Enums<"inventory_status"> | null; max_order_qty: number | null; discount_pct: number | null;
+  /** Every listed size of this product (same name + brand), smallest first; empty or absent when it is the only size. */
+  variants?: ProductVariant[];
 };
+/** One size of a product family, as product_pack_options returns it. */
+export type ProductVariant = Pick<ProductCard, "id" | "name" | "slug" | "pack_label" | "weight_value" | "weight_unit" | "image_url" | "inventory_id" | "selling_price" | "mrp" | "stock_qty" | "stock_status" | "max_order_qty" | "discount_pct">;
 export type ProductCardRow = Views<"v_product_cards">;
 export type Category = Tables<"categories">;
 export type Address = Tables<"addresses">;

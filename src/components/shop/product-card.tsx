@@ -5,6 +5,7 @@ import { cn, formatINR } from "@/lib/utils";
 import { VegMark } from "@/components/ui/badge";
 import { ProductImage } from "./product-image";
 import { AddToCart } from "./add-to-cart";
+import { PackOptionsButton } from "./variant-sheet";
 import { WishlistButton } from "./wishlist-button";
 
 /**
@@ -18,6 +19,8 @@ export function ProductCard({ product, signedIn, wished, className, priority }: 
   const lowStock = product.stock_status === "low_stock";
   const soldOut = !product.inventory_id || product.stock_status === "out_of_stock";
   const href = `/p/${product.slug}`;
+  // Several sizes (5 kg / 10 kg…): one card, and ADD opens the size picker instead of adding straight away.
+  const options = (product.variants ?? []).filter((v) => v.inventory_id);
   return (
     <article className={cn("group relative flex flex-col rounded-[14px] border border-line bg-card p-2 transition-[border-color,box-shadow] duration-200 hover:border-line-2 hover:shadow-card", className)}>
       <div className="relative">
@@ -41,7 +44,9 @@ export function ProductCard({ product, signedIn, wished, className, priority }: 
             <span className="block text-[15px] font-bold text-ink">{formatINR(price)}</span>
             {mrp > price ? <span className="block text-[11px] text-ink-3 line-through"><span className="sr-only">MRP </span>{formatINR(mrp)}</span> : null}
           </p>
-          <AddToCart inventoryId={product.inventory_id} maxQty={product.max_order_qty} stockQty={product.stock_qty} size="sm" signedIn={signedIn} className="h-8 rounded-lg px-3.5 text-xs font-extrabold" stepperClassName="h-8 rounded-lg" />
+          {options.length > 1
+            ? <PackOptionsButton product={product} options={options} signedIn={signedIn} />
+            : <AddToCart inventoryId={product.inventory_id} maxQty={product.max_order_qty} stockQty={product.stock_qty} size="sm" signedIn={signedIn} className="h-8 rounded-lg px-3.5 text-xs font-extrabold" stepperClassName="h-8 rounded-lg" />}
         </div>
       </div>
     </article>

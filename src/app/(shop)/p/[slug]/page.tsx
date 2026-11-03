@@ -9,6 +9,7 @@ import { ProductHero, ShareButton } from "@/components/shop/product-hero";
 import { AppBar } from "@/components/shop/app-bar";
 import { ProductPurchase, EtaBadge } from "@/components/shop/product-purchase";
 import { ProductBuyBar } from "@/components/shop/product-buy-bar";
+import { PackChips } from "@/components/shop/pack-chips";
 import { DetailSection, type DetailRow } from "@/components/shop/product-details";
 import { ProductRail } from "@/components/shop/product-card";
 import { WishlistButton } from "@/components/shop/wishlist-button";
@@ -145,6 +146,7 @@ export default async function ProductPage({ params }: Props) {
             <ShareButton name={product.name} price={price} className="hidden shrink-0 md:flex" />
           </div>
           <EtaBadge className="mt-3" />
+          <PackChips current={product.id} options={product.variants ?? []} className="mt-4" />
           <div className="mt-4">
             <ProductPurchase product={product}>
               {brandHref && product.brand_name ? (
