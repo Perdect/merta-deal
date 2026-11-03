@@ -4,7 +4,7 @@ import { env } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
-/** QR image for any path on this site: /api/qr?path=/qr/<storeId>&format=svg|png&size=512 */
+/** QR image for any path on this site: /api/qr?path=/r/offers&format=svg|png&size=512 */
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   const path = sp.get("path") ?? "/start";

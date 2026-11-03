@@ -9,7 +9,7 @@ import { site } from "@/config/site";
 export function ReferralCard({ code }: { code: string | null }) {
   const [copied, setCopied] = React.useState(false);
   if (!code) return null;
-  const message = `Merta ki shopping, ab online! Order groceries from local kirana stores on Merta Deal. Use my referral code ${code} when you sign up. ${site.url}`;
+  const message = `Merta ki shopping, ab online! Order groceries, fruits and vegetables on Merta Deal. Use my referral code ${code} when you sign up. ${site.url}`;
 
   const copy = async () => {
     try { await navigator.clipboard.writeText(code); setCopied(true); toast.success("Referral code copied"); setTimeout(() => setCopied(false), 2000); }

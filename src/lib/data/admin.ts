@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Enums, Json, Tables } from "@/types/database";
-import type { AdminStats, Coupon, DeliveryZone, OrderTracking, Product, Setting, Store } from "@/types/app";
+import type { AdminStats, Coupon, DeliveryZone, OrderTracking, Product, Setting } from "@/types/app";
 
 /* ------------------------------------------------------------------------------------------------
  * Shared helpers
@@ -43,21 +43,19 @@ export const getAdminStats = cache(async (): Promise<AdminStats | null> => {
 });
 
 export type AttentionItems = {
-  pendingStores: Pick<Store, "id" | "name" | "area" | "created_at">[];
   pendingReviews: number;
   openTickets: { id: string; ticket_number: string; subject: string; priority: Enums<"ticket_priority">; created_at: string }[];
   refundsPending: { id: string; order_id: string; amount: number; refund_amount: number; created_at: string; order: { order_number: string } | null }[];
-  unassignedReady: { id: string; order_number: string; ready_at: string | null; created_at: string; store: { name: string } | null }[];
+  unassignedReady: { id: string; order_number: string; ready_at: string | null; created_at: string }[];
 };
 
 export const getAttentionItems = cache(async (): Promise<AttentionItems> => {
   const supabase = await createClient();
-  const [stores, reviews, tickets, refunds, ready] = await Promise.all([
-    supabase.from("stores").select("id, name, area, created_at").eq("status", "pending").order("created_at", { ascending: false }).limit(8),
+  const [reviews, tickets, refunds, ready] = await Promise.all([
     supabase.from("reviews").select("id", { count: "exact", head: true }).eq("status", "pending"),
     supabase.from("support_tickets").select("id, ticket_number, subject, priority, created_at").in("status", ["open", "in_progress"]).order("priority", { ascending: false }).order("created_at").limit(8),
     supabase.from("payments").select("id, order_id, amount, refund_amount, created_at, order:orders(order_number)").eq("refund_required", true).neq("status", "refunded").order("created_at").limit(8),
-    supabase.from("orders").select("id, order_number, ready_at, created_at, store:stores(name)").eq("status", "ready_for_pickup").order("ready_at", { ascending: true, nullsFirst: false }).limit(20),
+    supabase.from("orders").select("id, order_number, ready_at, created_at").eq("status", "ready_for_pickup").order("ready_at", { ascending: true, nullsFirst: false }).limit(20),
   ]);
   let unassignedReady = (ready.data ?? []) as unknown as AttentionItems["unassignedReady"];
   if (unassignedReady.length) {
@@ -66,7 +64,6 @@ export const getAttentionItems = cache(async (): Promise<AttentionItems> => {
     unassignedReady = unassignedReady.filter((o) => !busy.has(o.id));
   }
   return {
-    pendingStores: (stores.data ?? []) as AttentionItems["pendingStores"],
     pendingReviews: reviews.count ?? 0,
     openTickets: (tickets.data ?? []) as AttentionItems["openTickets"],
     refundsPending: (refunds.data ?? []) as unknown as AttentionItems["refundsPending"],
@@ -93,7 +90,7 @@ export const listUsers = cache(async (opts: { q?: string; role?: string; active?
 });
 
 export type UserStats = { addresses: number; orders: number; delivered_orders: number; cancelled_orders: number; spent: number; last_order_at: string | null; reviews: number; tickets: number; email_auth: string | null; last_sign_in_at: string | null };
-export type UserOrderRow = Pick<Tables<"orders">, "id" | "order_number" | "status" | "total" | "payment_method" | "payment_status" | "created_at" | "item_count"> & { store: { name: string } | null };
+export type UserOrderRow = Pick<Tables<"orders">, "id" | "order_number" | "status" | "total" | "payment_method" | "payment_status" | "created_at" | "item_count">;
 
 export const getUserDetail = cache(async (id: string) => {
   const supabase = await createClient();
@@ -101,12 +98,11 @@ export const getUserDetail = cache(async (id: string) => {
   // A failed query surfaces the route error screen (with Try again); only a missing row is "not found".
   if (error) throw new Error(`Could not load this user: ${error.message}`);
   if (!profile) return null;
-  const [stats, orders, wallet, rider, stores] = await Promise.all([
+  const [stats, orders, wallet, rider] = await Promise.all([
     adminRpc<UserStats>("admin_user_stats", { p_user_id: id }),
-    supabase.from("orders").select("id, order_number, status, total, payment_method, payment_status, created_at, item_count, store:stores(name)").eq("user_id", id).order("created_at", { ascending: false }).limit(10),
+    supabase.from("orders").select("id, order_number, status, total, payment_method, payment_status, created_at, item_count").eq("user_id", id).order("created_at", { ascending: false }).limit(10),
     supabase.from("wallet_transactions").select("*").eq("user_id", id).order("created_at", { ascending: false }).limit(10),
     supabase.from("delivery_partners").select("id, status, is_online, vehicle_type").eq("user_id", id).maybeSingle(),
-    supabase.from("stores").select("id, name, status").eq("owner_id", id),
   ]);
   return {
     profile: profile as ProfileRow,
@@ -114,78 +110,21 @@ export const getUserDetail = cache(async (id: string) => {
     orders: (orders.data ?? []) as unknown as UserOrderRow[],
     wallet: wallet.data ?? [],
     rider: rider.data,
-    stores: stores.data ?? [],
   };
 });
-
-/* ------------------------------------------------------------------------------------------------
- * Stores
- * ---------------------------------------------------------------------------------------------- */
-
-export type StoreListRow = Pick<Store, "id" | "name" | "slug" | "area" | "phone" | "owner_name" | "status" | "is_open" | "is_featured" | "rating_avg" | "rating_count" | "total_orders" | "commission_rate" | "created_at" | "logo_url">;
-
-export const listStores = cache(async (opts: { q?: string; status?: string; page?: number }): Promise<Paged<StoreListRow>> => {
-  const supabase = await createClient();
-  const page = opts.page ?? 1;
-  let q = supabase.from("stores").select("id, name, slug, area, phone, owner_name, status, is_open, is_featured, rating_avg, rating_count, total_orders, commission_rate, created_at, logo_url", { count: "exact" }).order("created_at", { ascending: false }).range(...pageRange(page));
-  if (opts.status) q = q.eq("status", opts.status as Enums<"store_status">);
-  if (opts.q) { const like = safeLike(opts.q); q = q.or(`name.ilike.${like},area.ilike.${like},phone.ilike.${like},owner_name.ilike.${like}`); }
-  const { data, count } = await q;
-  return { items: (data ?? []) as StoreListRow[], total: count ?? 0, page, pageSize: PAGE_SIZE };
-});
-
-export type StoreStatsAdmin = { orders: number; delivered: number; cancelled: number; active: number; gmv: number; store_revenue: number; commission: number; products: number; out_of_stock: number; pending_documents: number; payouts_pending: number; weekly: { day: string; orders: number; gmv: number }[] };
-export type StoreDocument = Tables<"store_documents">;
-export type StoreCommission = Tables<"store_commissions">;
-
-export const getStoreDetail = cache(async (id: string) => {
-  const supabase = await createClient();
-  const { data: store, error } = await supabase.from("stores").select("*").eq("id", id).maybeSingle();
-  if (error) throw new Error(`Could not load this store: ${error.message}`);
-  if (!store) return null;
-  const [stats, docs, commissions, zones, owner, staff, recentOrders] = await Promise.all([
-    adminRpc<StoreStatsAdmin>("admin_store_stats", { p_store_id: id }),
-    supabase.from("store_documents").select("*").eq("store_id", id).order("created_at"),
-    supabase.from("store_commissions").select("*").eq("store_id", id).order("effective_from", { ascending: false }).limit(10),
-    supabase.from("delivery_zones").select("id, name, area, city_id").order("name"),
-    supabase.from("profiles").select("id, full_name, email, phone").eq("id", store.owner_id).maybeSingle(),
-    supabase.from("store_staff").select("id, role, is_active, user:profiles(full_name, phone)").eq("store_id", id),
-    supabase.from("orders").select("id, order_number, status, total, created_at").eq("store_id", id).order("created_at", { ascending: false }).limit(8),
-  ]);
-  return {
-    store: store as Store,
-    stats: stats.data,
-    documents: (docs.data ?? []) as StoreDocument[],
-    commissions: (commissions.data ?? []) as StoreCommission[],
-    zones: (zones.data ?? []) as Pick<DeliveryZone, "id" | "name" | "area" | "city_id">[],
-    owner: owner.data,
-    staff: (staff.data ?? []) as unknown as { id: string; role: string; is_active: boolean; user: { full_name: string | null; phone: string | null } | null }[],
-    recentOrders: recentOrders.data ?? [],
-  };
-});
-
-/** Signed URL for a private store document (bucket store-documents). */
-export async function getDocumentSignedUrl(path: string) {
-  const supabase = await createClient();
-  const { data } = await supabase.storage.from("store-documents").createSignedUrl(path, 600);
-  return data?.signedUrl ?? null;
-}
 
 /* ------------------------------------------------------------------------------------------------
  * Products / categories / brands
  * ---------------------------------------------------------------------------------------------- */
 
-export type ProductListRow = Pick<Product, "id" | "name" | "slug" | "pack_label" | "mrp" | "image_url" | "is_active" | "is_approved" | "is_local" | "is_veg" | "popularity_score" | "created_at" | "created_by_store_id"> & { category: { name: string } | null; brand: { name: string } | null };
+export type ProductListRow = Pick<Product, "id" | "name" | "slug" | "pack_label" | "mrp" | "image_url" | "is_active" | "is_local" | "is_veg" | "popularity_score" | "created_at"> & { category: { name: string } | null; brand: { name: string } | null };
 
-export const listProducts = cache(async (opts: { q?: string; category?: string; brand?: string; approval?: string; active?: string; page?: number }): Promise<Paged<ProductListRow>> => {
+export const listProducts = cache(async (opts: { q?: string; category?: string; brand?: string; active?: string; page?: number }): Promise<Paged<ProductListRow>> => {
   const supabase = await createClient();
   const page = opts.page ?? 1;
-  let q = supabase.from("products").select("id, name, slug, pack_label, mrp, image_url, is_active, is_approved, is_local, is_veg, popularity_score, created_at, created_by_store_id, category:categories(name), brand:brands(name)", { count: "exact" }).order("created_at", { ascending: false }).range(...pageRange(page));
+  let q = supabase.from("products").select("id, name, slug, pack_label, mrp, image_url, is_active, is_local, is_veg, popularity_score, created_at, category:categories(name), brand:brands(name)", { count: "exact" }).order("created_at", { ascending: false }).range(...pageRange(page));
   if (opts.category) q = q.eq("category_id", opts.category);
   if (opts.brand) q = q.eq("brand_id", opts.brand);
-  if (opts.approval === "pending") q = q.eq("is_approved", false);
-  if (opts.approval === "approved") q = q.eq("is_approved", true);
-  if (opts.approval === "store") q = q.not("created_by_store_id", "is", null);
   if (opts.active === "1") q = q.eq("is_active", true);
   if (opts.active === "0") q = q.eq("is_active", false);
   if (opts.q) { const like = safeLike(opts.q); q = q.or(`name.ilike.${like},slug.ilike.${like},pack_label.ilike.${like}`); }
@@ -193,18 +132,15 @@ export const listProducts = cache(async (opts: { q?: string; category?: string; 
   return { items: (data ?? []) as unknown as ProductListRow[], total: count ?? 0, page, pageSize: PAGE_SIZE };
 });
 
-export type ProductOfferRow = Tables<"inventory"> & { store: { id: string; name: string; area: string; status: Enums<"store_status"> } | null };
+export type ProductOfferRow = Tables<"inventory">;
 
 export const getProductAdmin = cache(async (id: string) => {
   const supabase = await createClient();
   const { data: product, error } = await supabase.from("products").select("*").eq("id", id).maybeSingle();
   if (error) throw new Error(`Could not load this product: ${error.message}`);
   if (!product) return null;
-  const [offers, creator] = await Promise.all([
-    supabase.from("inventory").select("*, store:stores(id, name, area, status)").eq("product_id", id).order("selling_price"),
-    product.created_by_store_id ? supabase.from("stores").select("id, name").eq("id", product.created_by_store_id).maybeSingle() : Promise.resolve({ data: null }),
-  ]);
-  return { product: product as Product, offers: (offers.data ?? []) as unknown as ProductOfferRow[], creator: creator.data };
+  const offers = await supabase.from("inventory").select("*").eq("product_id", id);
+  return { product: product as Product, offers: (offers.data ?? []) as ProductOfferRow[] };
 });
 
 export type CategoryRow = Tables<"categories">;
@@ -241,15 +177,15 @@ export const getBrandProductCounts = cache(async (): Promise<Record<string, numb
  * Orders
  * ---------------------------------------------------------------------------------------------- */
 
-export type OrderListRow = Pick<Tables<"orders">, "id" | "order_number" | "short_code" | "status" | "payment_method" | "payment_status" | "total" | "item_count" | "delivery_type" | "created_at" | "promised_at" | "delivered_at" | "address_snapshot"> & { store: { id: string; name: string } | null; customer: { full_name: string | null; phone: string | null } | null };
+export type OrderListRow = Pick<Tables<"orders">, "id" | "order_number" | "short_code" | "status" | "payment_method" | "payment_status" | "total" | "item_count" | "delivery_type" | "created_at" | "promised_at" | "delivered_at" | "address_snapshot"> & { customer: { full_name: string | null; phone: string | null } | null };
 
-export type OrderFilters = { q?: string; status?: string; payment?: string; method?: string; store?: string; from?: string; to?: string; late?: string; delivery?: string };
+export type OrderFilters = { q?: string; status?: string; payment?: string; method?: string; from?: string; to?: string; late?: string; delivery?: string };
 
 /** Status tabs map to one or more raw statuses; a raw status value is also accepted. */
 export const ORDER_STATUS_GROUPS: Record<string, Enums<"order_status">[]> = {
-  active: ["placed", "store_confirmed", "preparing", "ready_for_pickup", "rider_assigned", "out_for_delivery"],
+  active: ["placed", "confirmed", "preparing", "ready_for_pickup", "rider_assigned", "out_for_delivery"],
   new: ["placed"],
-  packing: ["store_confirmed", "preparing"],
+  packing: ["placed", "confirmed", "preparing"],
   ready: ["ready_for_pickup"],
   on_the_way: ["rider_assigned", "out_for_delivery"],
   done: ["delivered", "completed"],
@@ -264,7 +200,6 @@ function applyOrderFilters<Q extends { in: any; eq: any; gte: any; lt: any; or: 
   if (opts.payment) q = q.eq("payment_status", opts.payment as Enums<"payment_status">);
   if (opts.method) q = q.eq("payment_method", opts.method as Enums<"payment_method">);
   if (opts.delivery) q = q.eq("delivery_type", opts.delivery);
-  if (opts.store) q = q.eq("store_id", opts.store);
   if (opts.from) q = q.gte("created_at", new Date(`${opts.from}T00:00:00+05:30`).toISOString());
   if (opts.to) q = q.lt("created_at", new Date(new Date(`${opts.to}T00:00:00+05:30`).getTime() + 86400000).toISOString());
   if (opts.q) { const like = safeLike(opts.q); q = q.or(`order_number.ilike.${like},short_code.ilike.${like},address_snapshot->>phone.ilike.${like},address_snapshot->>full_name.ilike.${like}`); }
@@ -274,7 +209,7 @@ function applyOrderFilters<Q extends { in: any; eq: any; gte: any; lt: any; or: 
 export const listOrders = cache(async (opts: OrderFilters & { page?: number }): Promise<Paged<OrderListRow>> => {
   const supabase = await createClient();
   const page = opts.page ?? 1;
-  const base = supabase.from("orders").select("id, order_number, short_code, status, payment_method, payment_status, total, item_count, delivery_type, created_at, promised_at, delivered_at, address_snapshot, store:stores(id, name), customer:profiles!orders_user_id_fkey(full_name, phone)", { count: "exact" }).order("created_at", { ascending: false }).range(...pageRange(page));
+  const base = supabase.from("orders").select("id, order_number, short_code, status, payment_method, payment_status, total, item_count, delivery_type, created_at, promised_at, delivered_at, address_snapshot, customer:profiles!orders_user_id_fkey(full_name, phone)", { count: "exact" }).order("created_at", { ascending: false }).range(...pageRange(page));
   const { data, count, error } = await applyOrderFilters(base, opts);
   if (error) console.error("listOrders", error.message);
   return { items: (data ?? []) as unknown as OrderListRow[], total: count ?? 0, page, pageSize: PAGE_SIZE };
@@ -304,15 +239,9 @@ export const getOrderAssignments = cache(async (orderId: string): Promise<Assign
   return (data ?? []) as unknown as AssignmentRow[];
 });
 
-export type LiveRider = { id: string; user_id: string; name: string | null; phone: string | null; avatar_url: string | null; vehicle_type: Enums<"vehicle_type">; vehicle_number: string | null; rating_avg: number; lat: number | null; lng: number | null; last_location_at: string | null; busy: boolean; current_order: { id: string; order_number: string; status: string; store_name: string } | null };
+export type LiveRider = { id: string; user_id: string; name: string | null; phone: string | null; avatar_url: string | null; vehicle_type: Enums<"vehicle_type">; vehicle_number: string | null; rating_avg: number; lat: number | null; lng: number | null; last_location_at: string | null; busy: boolean; current_order: { id: string; order_number: string; status: string } | null };
 export const getLiveRiders = cache(async (): Promise<LiveRider[]> => {
   const { data } = await adminRpc<LiveRider[]>("admin_live_riders");
-  return data ?? [];
-});
-
-export const getStoreOptions = cache(async () => {
-  const supabase = await createClient();
-  const { data } = await supabase.from("stores").select("id, name, area, status").order("name");
   return data ?? [];
 });
 
@@ -359,7 +288,7 @@ export const listRiders = cache(async (opts: { q?: string; status?: string; onli
   return { items: (data ?? []) as unknown as RiderRow[], total: count ?? 0, page, pageSize: PAGE_SIZE };
 });
 
-export type RiderAssignmentRow = Tables<"delivery_assignments"> & { order: { id: string; order_number: string; status: Enums<"order_status">; total: number; store: { name: string } | null } | null };
+export type RiderAssignmentRow = Tables<"delivery_assignments"> & { order: { id: string; order_number: string; status: Enums<"order_status">; total: number } | null };
 
 export const getRiderDetail = cache(async (id: string) => {
   const supabase = await createClient();
@@ -367,7 +296,7 @@ export const getRiderDetail = cache(async (id: string) => {
   if (error) throw new Error(`Could not load this rider: ${error.message}`);
   if (!rider) return null;
   const [assignments, reviews] = await Promise.all([
-    supabase.from("delivery_assignments").select("*, order:orders(id, order_number, status, total, store:stores(name))").eq("rider_id", id).order("created_at", { ascending: false }).limit(20),
+    supabase.from("delivery_assignments").select("*, order:orders(id, order_number, status, total)").eq("rider_id", id).order("created_at", { ascending: false }).limit(20),
     supabase.from("reviews").select("id, rating, comment, created_at, status").eq("rider_id", id).order("created_at", { ascending: false }).limit(10),
   ]);
   return { rider: rider as unknown as RiderRow & { user: { created_at: string } | null }, assignments: (assignments.data ?? []) as unknown as RiderAssignmentRow[], reviews: reviews.data ?? [] };
@@ -422,12 +351,12 @@ export const getProductOptions = cache(async (ids: string[]) => {
  * Payments / payouts
  * ---------------------------------------------------------------------------------------------- */
 
-export type PaymentRow = Tables<"payments"> & { order: { order_number: string; status: Enums<"order_status">; total: number; store: { name: string } | null } | null; user: { full_name: string | null; phone: string | null } | null };
+export type PaymentRow = Tables<"payments"> & { order: { order_number: string; status: Enums<"order_status">; total: number } | null; user: { full_name: string | null; phone: string | null } | null };
 
 export const listPayments = cache(async (opts: { q?: string; status?: string; provider?: string; method?: string; refunds?: boolean; from?: string; to?: string; page?: number }): Promise<Paged<PaymentRow>> => {
   const supabase = await createClient();
   const page = opts.page ?? 1;
-  let q = supabase.from("payments").select("*, order:orders(order_number, status, total, store:stores(name)), user:profiles!payments_user_id_fkey(full_name, phone)", { count: "exact" }).order("created_at", { ascending: false }).range(...pageRange(page));
+  let q = supabase.from("payments").select("*, order:orders(order_number, status, total), user:profiles!payments_user_id_fkey(full_name, phone)", { count: "exact" }).order("created_at", { ascending: false }).range(...pageRange(page));
   if (opts.refunds) q = q.eq("refund_required", true).neq("status", "refunded");
   if (opts.status) q = q.eq("status", opts.status as Enums<"payment_status">);
   if (opts.provider) q = q.eq("provider", opts.provider as Enums<"payment_provider">);
@@ -446,37 +375,17 @@ export const countPendingRefunds = cache(async () => {
   return count ?? 0;
 });
 
-export type PayoutRow = Tables<"payouts"> & { store: { name: string; bank_account_name: string | null; bank_account_number: string | null; bank_ifsc: string | null; upi_id: string | null } | null };
-
-export const listPayouts = cache(async (opts: { store?: string; status?: string; page?: number }): Promise<Paged<PayoutRow>> => {
-  const supabase = await createClient();
-  const page = opts.page ?? 1;
-  let q = supabase.from("payouts").select("*, store:stores(name, bank_account_name, bank_account_number, bank_ifsc, upi_id)", { count: "exact" }).order("created_at", { ascending: false }).range(...pageRange(page));
-  if (opts.store) q = q.eq("store_id", opts.store);
-  if (opts.status) q = q.eq("status", opts.status as Enums<"payout_status">);
-  const { data, count } = await q;
-  return { items: (data ?? []) as unknown as PayoutRow[], total: count ?? 0, page, pageSize: PAGE_SIZE };
-});
-
-export const getPayoutTotals = cache(async () => {
-  const supabase = await createClient();
-  const { data } = await supabase.from("payouts").select("status, net_amount");
-  const out: Record<string, { count: number; amount: number }> = {};
-  for (const r of data ?? []) { const o = (out[r.status] ??= { count: 0, amount: 0 }); o.count += 1; o.amount += Number(r.net_amount); }
-  return out;
-});
-
 /* ------------------------------------------------------------------------------------------------
  * Reports
  * ---------------------------------------------------------------------------------------------- */
 
 export type AdminReport = {
   range: { start: string; end: string };
-  orders: number; delivered: number; cancelled: number; gmv: number; commission: number; delivery_fees: number; platform_fees: number; taxes: number; rider_earnings: number; store_payouts: number; coupon_discounts: number; net_revenue: number; avg_order_value: number; avg_delivery_minutes: number | null; new_customers: number;
+  orders: number; delivered: number; cancelled: number; gmv: number; item_sales: number; delivery_fees: number; platform_fees: number; taxes: number; rider_earnings: number; coupon_discounts: number; net_revenue: number; avg_order_value: number; avg_delivery_minutes: number | null; new_customers: number;
   payment_methods: Record<string, number>;
   daily: { day: string; orders: number; gmv: number; cancelled: number }[];
   top_products: { product_id: string; name: string; quantity: number; revenue: number; orders: number }[];
-  top_stores: { store_id: string; name: string; orders: number; gmv: number; commission: number; cancelled: number }[];
+  top_categories: { category_id: string; name: string; quantity: number; revenue: number }[];
   riders: { rider_id: string; name: string | null; deliveries: number; earnings: number; avg_minutes: number | null; distance_km: number; rating: number }[];
 };
 
@@ -534,12 +443,12 @@ export const getTicketAdmin = cache(async (id: string) => {
   return { ticket: ticket as unknown as TicketRow, messages: (messages ?? []) as unknown as TicketMessage[] };
 });
 
-export type ReviewRow = Tables<"reviews"> & { user: { full_name: string | null } | null; product: { name: string; slug: string } | null; store: { name: string; slug: string } | null; rider: { id: string; user: { full_name: string | null } | null } | null; order: { order_number: string } | null };
+export type ReviewRow = Tables<"reviews"> & { user: { full_name: string | null } | null; product: { name: string; slug: string } | null; rider: { id: string; user: { full_name: string | null } | null } | null; order: { order_number: string } | null };
 
 export const listReviews = cache(async (opts: { status?: string; target?: string; page?: number }): Promise<Paged<ReviewRow>> => {
   const supabase = await createClient();
   const page = opts.page ?? 1;
-  let q = supabase.from("reviews").select("*, user:profiles!reviews_user_id_fkey(full_name), product:products(name, slug), store:stores(name, slug), rider:delivery_partners(id, user:profiles(full_name)), order:orders(order_number)", { count: "exact" }).order("created_at", { ascending: false }).range(...pageRange(page));
+  let q = supabase.from("reviews").select("*, user:profiles!reviews_user_id_fkey(full_name), product:products(name, slug), rider:delivery_partners(id, user:profiles(full_name)), order:orders(order_number)", { count: "exact" }).order("created_at", { ascending: false }).range(...pageRange(page));
   q = q.eq("status", (opts.status || "pending") as Enums<"review_status">);
   if (opts.target) q = q.eq("target", opts.target as Enums<"review_target">);
   const { data, count, error } = await q;

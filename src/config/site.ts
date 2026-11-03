@@ -19,6 +19,16 @@ export const site = {
   currency: "INR",
   supportPhone: "+91 88750 20202",
   supportEmail: "support@mertadeal.com",
+  /** The city as customers write it in Hindi (official spelling first; the common transliteration second). */
+  cityHindi: "मेड़ता सिटी",
+  cityHindiAlt: "मेरता सिटी",
+  /** Pincodes with at least one active delivery zone (kept in step with `delivery_zones`). */
+  servicePincodes: ["341510", "341511"],
+  /**
+   * Verified public profiles of the business (Instagram, Facebook, YouTube, WhatsApp channel, Google Business Profile
+   * URL…). Listed in Organization `sameAs` and the footer only once they exist; never guessed.
+   */
+  socialProfiles: [] as readonly string[],
 } as const;
 
 /** Mobile bottom navigation. Cart lives in the header and the floating cart bar; orders inside Account. */
@@ -36,15 +46,4 @@ export const riderNav = [
   { href: "/rider/profile", label: "Profile", icon: "user" },
 ] as const;
 
-export const storeNav = [
-  { href: "/store", label: "Dashboard", icon: "layout" },
-  { href: "/store/orders", label: "Orders", icon: "package" },
-  { href: "/store/products", label: "Products", icon: "box" },
-  { href: "/store/inventory", label: "Inventory", icon: "layers" },
-  { href: "/store/customers", label: "Customers", icon: "users" },
-  { href: "/store/payments", label: "Payments", icon: "credit-card" },
-  { href: "/store/earnings", label: "Earnings", icon: "wallet" },
-  { href: "/store/profile", label: "Store Profile", icon: "store" },
-  { href: "/store/settings", label: "Settings", icon: "settings" },
-] as const;
 

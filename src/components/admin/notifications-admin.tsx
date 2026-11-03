@@ -48,7 +48,7 @@ export function AdminNotificationList({ userId, initial, limit }: { userId: stri
       {shown.length === 0 ? (
         filter === "unread"
           ? <EmptyBlock icon={BellOff} title="No unread notifications" description="You're up to date. Switch to All to see earlier ones." />
-          : <EmptyBlock icon={Bell} title="Nothing here yet" description="Store applications, dispatch failures and support pings show up here as they happen." />
+          : <EmptyBlock icon={Bell} title="Nothing here yet" description="New orders, dispatch failures and support pings show up here as they happen." />
       ) : (
         <ul className="divide-y divide-line">
           {shown.map((n) => (
@@ -72,12 +72,11 @@ export function AdminNotificationList({ userId, initial, limit }: { userId: stri
  * Broadcast: validated form, then an explicit confirm because it messages real people.
  * ---------------------------------------------------------------------------------------------- */
 
-type Audience = "all" | "customers" | "stores" | "riders" | "user";
+type Audience = "all" | "customers" | "riders" | "user";
 const AUDIENCES: { value: Audience; label: string; who: string }[] = [
   { value: "customers", label: "All customers", who: "every customer" },
-  { value: "stores", label: "All store owners and staff", who: "every store owner and staff member" },
   { value: "riders", label: "All riders", who: "every rider" },
-  { value: "all", label: "Everyone", who: "every customer, store and rider" },
+  { value: "all", label: "Everyone", who: "every customer and rider" },
   { value: "user", label: "One user (by email)", who: "one user" },
 ];
 type Errs = { email?: string; title?: string; body?: string };

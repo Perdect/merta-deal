@@ -43,7 +43,7 @@ export default async function AdminRiderPage({ params }: { params: Promise<{ id:
             <DataTable caption="Recent assignments" rows={assignments} rowKey={(a) => a.id} maxHeight={null} className="rounded-none border-x-0 border-b-0 shadow-none"
               empty={<EmptyBlock icon={Bike} title="No delivery offers yet" description="Offers appear here once dispatch sends this rider an order." />}
               columns={[
-                { key: "order", header: "Order", render: (a) => (a.order ? <CellStack primary={a.order.order_number} secondary={a.order.store?.name ?? undefined} href={`/admin/orders/${a.order.id}`} /> : <span className="text-ink-3">—</span>) },
+                { key: "order", header: "Order", render: (a) => (a.order ? <CellStack primary={a.order.order_number} href={`/admin/orders/${a.order.id}`} /> : <span className="text-ink-3">—</span>) },
                 { key: "status", header: "Status", render: (a) => <StatusText value={a.status} /> },
                 { key: "km", header: "Distance", align: "right", hideBelow: "md", render: (a) => <span className="tabular text-ink-2">{a.distance_km != null ? `${a.distance_km} km` : "—"}</span> },
                 { key: "earning", header: "Earning", align: "right", render: (a) => <span className="tabular">{rupees(a.earning)}</span> },

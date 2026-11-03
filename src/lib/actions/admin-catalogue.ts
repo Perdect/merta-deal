@@ -9,16 +9,15 @@ import type { Json } from "@/types/database";
 
 /* ================================================================================================
  * Catalogue admin actions that admin.ts does not cover:
- *  - store offer quick edits (inventory price / MRP / offer on-off, stock via adjust_stock so every
- *    movement is logged in inventory_movements),
- *  - listing a product at the main store,
+ *  - listing quick edits (inventory price / MRP / on-off, stock via adjust_stock so every movement
+ *    is logged in inventory_movements),
+ *  - listing a catalogue product for sale (creating its inventory row),
  *  - the product "seller of record" + shelf-life fields (migration 0015) next to saveProductAction,
  *  - flags with customer-page revalidation.
  * Every action re-checks admin server-side, validates with zod, writes an audit row and
  * revalidates the admin pages plus the customer product page and home.
  * ============================================================================================== */
 
-const MAIN_STORE_SLUG = "merta-deal";
 const uuid = z.string().uuid("Invalid id");
 
 function fail(e: unknown): ActionResult<never> { return { ok: false, error: friendlyError(e) }; }
@@ -49,7 +48,7 @@ const price = (label: string) => z.coerce.number({ message: `Enter the ${label}`
 const STOCK_REASONS = ["restock", "manual_adjust", "damage"] as const;
 
 /* ------------------------------------------------------------------------------------------------
- * Store offer quick edit
+ * Listing quick edit
  * ---------------------------------------------------------------------------------------------- */
 
 const offerSchema = z.object({
@@ -64,17 +63,17 @@ const offerSchema = z.object({
 }).refine((d) => d.selling_price <= d.mrp, { message: "Selling price cannot be higher than MRP", path: ["selling_price"] });
 export type OfferInput = z.input<typeof offerSchema>;
 
-/** Update one store offer (inventory row). Stock changes go through adjust_stock so they are logged. */
-export async function updateStoreOfferAction(inventoryId: string, input: OfferInput): Promise<ActionResult<{ stock_qty: number }>> {
-  if (!uuid.safeParse(inventoryId).success) return { ok: false, error: "Invalid store offer" };
+/** Update one listing (inventory row). Stock changes go through adjust_stock so they are logged. */
+export async function updateListingAction(inventoryId: string, input: OfferInput): Promise<ActionResult<{ stock_qty: number }>> {
+  if (!uuid.safeParse(inventoryId).success) return { ok: false, error: "Invalid listing" };
   const parsed = offerSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
   const d = parsed.data;
   try {
     const supabase = await requireAdmin();
-    const { data: before, error: readErr } = await supabase.from("inventory").select("id, store_id, product_id, selling_price, mrp, stock_qty, is_active, low_stock_threshold, max_order_qty, product:products(slug)").eq("id", inventoryId).maybeSingle();
+    const { data: before, error: readErr } = await supabase.from("inventory").select("id, product_id, selling_price, mrp, stock_qty, is_active, low_stock_threshold, max_order_qty, product:products(slug)").eq("id", inventoryId).maybeSingle();
     if (readErr) return fail(readErr);
-    if (!before) return { ok: false, error: "This store offer no longer exists. Refresh the page." };
+    if (!before) return { ok: false, error: "This listing no longer exists. Refresh the page." };
     if (before.stock_qty + d.stock_delta < 0) return { ok: false, error: `Stock cannot go below zero (only ${before.stock_qty} in stock).` };
 
     let stockQty = before.stock_qty;
@@ -96,7 +95,7 @@ export async function updateStoreOfferAction(inventoryId: string, input: OfferIn
     }
 
     if (Object.keys(patch).length || d.stock_delta) {
-      const beforeRow = { selling_price: before.selling_price, mrp: before.mrp, stock_qty: before.stock_qty, is_active: before.is_active, low_stock_threshold: before.low_stock_threshold, max_order_qty: before.max_order_qty, store_id: before.store_id, product_id: before.product_id };
+      const beforeRow = { selling_price: before.selling_price, mrp: before.mrp, stock_qty: before.stock_qty, is_active: before.is_active, low_stock_threshold: before.low_stock_threshold, max_order_qty: before.max_order_qty, product_id: before.product_id };
       await audit(supabase, "inventory.update", "inventory", inventoryId, beforeRow, { ...patch, ...(d.stock_delta ? { stock_delta: d.stock_delta, stock_reason: d.stock_reason, stock_qty: stockQty } : {}) });
     }
     revalidateProduct(before.product_id, (before.product as { slug: string } | null)?.slug);
@@ -112,29 +111,25 @@ const newOfferSchema = z.object({
 }).refine((d) => d.selling_price <= d.mrp, { message: "Selling price cannot be higher than MRP", path: ["selling_price"] });
 export type NewOfferInput = z.input<typeof newOfferSchema>;
 
-/** List a catalogue product at the main store (Merta Deal). Opening stock is logged as a restock. */
-export async function createMainStoreOfferAction(productId: string, input: NewOfferInput): Promise<ActionResult<{ inventory_id: string }>> {
+/** Put a catalogue product on sale (creates its inventory row). Opening stock is logged as a restock. */
+export async function createListingAction(productId: string, input: NewOfferInput): Promise<ActionResult<{ inventory_id: string }>> {
   if (!uuid.safeParse(productId).success) return { ok: false, error: "Invalid product" };
   const parsed = newOfferSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: firstIssue(parsed.error) };
   const d = parsed.data;
   try {
     const supabase = await requireAdmin();
-    const [{ data: store }, { data: product }] = await Promise.all([
-      supabase.from("stores").select("id, name").eq("slug", MAIN_STORE_SLUG).maybeSingle(),
-      supabase.from("products").select("id, slug").eq("id", productId).maybeSingle(),
-    ]);
-    if (!store) return { ok: false, error: "The Merta Deal store is not set up yet. Add it under Stores first." };
+    const { data: product } = await supabase.from("products").select("id, slug").eq("id", productId).maybeSingle();
     if (!product) return { ok: false, error: "This product no longer exists." };
-    const { data: existing } = await supabase.from("inventory").select("id").eq("store_id", store.id).eq("product_id", productId).maybeSingle();
-    if (existing) return { ok: false, error: `${store.name} already lists this product. Refresh to edit it.` };
-    const { data: row, error } = await supabase.from("inventory").insert({ store_id: store.id, product_id: productId, selling_price: d.selling_price, mrp: d.mrp, stock_qty: 0, is_active: d.is_active }).select("id").single();
+    const { data: existing } = await supabase.from("inventory").select("id").eq("product_id", productId).maybeSingle();
+    if (existing) return { ok: false, error: "This product already has a price and stock. Refresh to edit it." };
+    const { data: row, error } = await supabase.from("inventory").insert({ product_id: productId, selling_price: d.selling_price, mrp: d.mrp, stock_qty: 0, is_active: d.is_active }).select("id").single();
     if (error) return fail(error);
     if (d.stock_qty > 0) {
       const { error: e } = await supabase.rpc("adjust_stock", { p_inventory_id: row.id, p_delta: d.stock_qty, p_reason: "restock", p_note: "Opening stock (admin)" });
-      if (e) return { ok: false, error: `Listed at ${store.name}, but the opening stock could not be added: ${friendlyError(e)}` };
+      if (e) return { ok: false, error: `Listed, but the opening stock could not be added: ${friendlyError(e)}` };
     }
-    await audit(supabase, "inventory.create", "inventory", row.id, null, { store_id: store.id, product_id: productId, ...d });
+    await audit(supabase, "inventory.create", "inventory", row.id, null, { product_id: productId, ...d });
     revalidateProduct(productId, product.slug);
     return { ok: true, data: { inventory_id: row.id } };
   } catch (e) { return fail(e); }
@@ -144,7 +139,7 @@ export async function createMainStoreOfferAction(productId: string, input: NewOf
  * Product flags (wraps setProductFlagsAction; adds customer-page revalidation)
  * ---------------------------------------------------------------------------------------------- */
 
-export async function setProductVisibilityAction(id: string, flags: { is_active?: boolean; is_approved?: boolean }): Promise<ActionResult> {
+export async function setProductVisibilityAction(id: string, flags: { is_active?: boolean }): Promise<ActionResult> {
   if (!uuid.safeParse(id).success) return { ok: false, error: "Invalid product" };
   const r = await setProductFlagsAction(id, flags);
   if (!r.ok) return r;

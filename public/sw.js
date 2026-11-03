@@ -1,5 +1,5 @@
 /* Merta Deal service worker: offline shell for navigations, cache-first static assets, web push. */
-const VERSION = "md-v4";
+const VERSION = "md-v5";
 const STATIC_CACHE = `${VERSION}-static`;
 const OFFLINE_URL = "/offline.html";
 
@@ -25,7 +25,9 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return; // never touch Supabase / Razorpay / Maps
   if (req.mode === "navigate") {
-    event.respondWith(fetch(req).catch(() => caches.match(OFFLINE_URL)));
+    // Pages are never cached (they are personal: cart, orders, prices). Offline, the branded
+    // offline page is served instead of the browser's error screen.
+    event.respondWith(fetch(req).catch(async () => (await caches.match(OFFLINE_URL)) || new Response("You're offline. Check your connection and try again.", { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } })));
     return;
   }
   if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/") || url.pathname === "/icon.svg") {

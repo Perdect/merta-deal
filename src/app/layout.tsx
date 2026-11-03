@@ -30,7 +30,7 @@ export const viewport: Viewport = { themeColor: "#329537", width: "device-width"
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-IN" className={`${inter.variable} ${jakarta.variable} h-full`}>
+    <html lang="en-IN" data-scroll-behavior="smooth" className={`${inter.variable} ${jakarta.variable} h-full`}>
       <body className="min-h-full flex flex-col">
         <LaunchSplash />
         {children}

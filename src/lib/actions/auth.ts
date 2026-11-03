@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { env } from "@/lib/env";
 import { safeNext } from "@/lib/safe-next";
 
-const ROLE_HOME: Record<string, string> = { store_owner: "/store", store_staff: "/store", rider: "/rider", admin: "/admin", super_admin: "/admin", customer: "/" };
+const ROLE_HOME: Record<string, string> = { rider: "/rider", admin: "/admin", super_admin: "/admin", customer: "/" };
 
 /** Indian mobile numbers are stored in E.164 without the plus sign, e.g. 919876543210. */
 const toE164 = (mobile: string) => `+91${mobile.replace(/\D/g, "").slice(-10)}`;
@@ -48,7 +48,7 @@ export async function signUpAction(_prev: AuthResult | null, formData: FormData)
   const parsed = signUpSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { ok: false, error: "Please check the form", fieldErrors: flatten(parsed.error) };
   const supabase = await createClient();
-  // Public sign-up creates customers only; store and rider accounts are set up by the admin.
+  // Public sign-up creates customers only; rider accounts are activated by the admin.
   const { fullName, mobile, password } = parsed.data;
   const role = "customer" as const;
   const { data, error } = await supabase.auth.signUp({

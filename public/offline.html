@@ -1,4 +1,63 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Offline — Merta Deal</title>
-<style>*{box-sizing:border-box}html,body{height:100%}body{margin:0;font-family:-apple-system,Segoe UI,Roboto,sans-serif;background:#F7F7F4;color:#17201C;display:flex;min-height:100%;align-items:center;justify-content:center;text-align:center;padding:24px}h1{font-size:22px;margin:16px 0 8px}p{color:#4B5550;max-width:320px;margin:0 auto}a{display:inline-block;margin-top:20px;background:#329537;color:#fff;text-decoration:none;padding:12px 20px;border-radius:12px;font-weight:600}</style></head>
-<body><div><svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#329537"/><g transform="translate(0 -2.5)"><path d="M12 18h6l5 22h22l5-16H21" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="26" cy="48" r="3.5" fill="#fff"/><circle cx="42" cy="48" r="3.5" fill="#fff"/><path d="M37 25l-6.5 9h5.5l-3 7.5 7.5-9.5h-5.5z" fill="#F2A93B"/></g></svg>
-<h1>You're offline</h1><p>Merta Deal needs a connection to show live prices and stock. Check your network and try again.</p><a href="/">Retry</a></div></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#329537">
+<title>You're offline — Merta Deal</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font-family:Inter,-apple-system,"Segoe UI",Roboto,sans-serif;background:#F7F7F4;color:#17201C;display:flex;flex-direction:column;min-height:100%;padding:calc(env(safe-area-inset-top,0px) + 24px) 16px calc(env(safe-area-inset-bottom,0px) + 24px);-webkit-font-smoothing:antialiased}
+  main{margin:auto;width:100%;max-width:360px;text-align:center}
+  .brand{display:inline-flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:-.01em;color:#17201C;text-decoration:none}
+  .brand svg{display:block}
+  .art{margin:36px auto 20px;width:88px;height:88px;border-radius:50%;background:#E6E6E1;display:flex;align-items:center;justify-content:center;color:#4B5550}
+  h1{font-size:24px;line-height:1.2;margin:0 0 10px;letter-spacing:-.01em}
+  p{color:#4B5550;font-size:15px;line-height:1.5;margin:0 auto}
+  .actions{display:flex;flex-direction:column;gap:10px;margin-top:28px}
+  .btn{display:flex;align-items:center;justify-content:center;min-height:48px;padding:0 20px;border-radius:12px;font:inherit;font-weight:700;font-size:15px;text-decoration:none;cursor:pointer;border:1px solid transparent}
+  .btn:focus-visible{outline:2px solid #15803D;outline-offset:2px}
+  .primary{background:#15803D;color:#fff}
+  .primary:active{background:#166534}
+  .secondary{background:#fff;color:#17201C;border-color:#D5D5CF}
+  .status{margin-top:16px;min-height:20px;font-size:13px;color:#646E69}
+  .tip{margin-top:28px;font-size:13px;color:#646E69}
+  @media (prefers-reduced-motion:no-preference){.spin{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}}
+</style>
+</head>
+<body>
+<main>
+  <a class="brand" href="/" aria-label="Merta Deal home">
+    <svg width="36" height="36" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#329537"/><g transform="translate(0 -2.5)"><path d="M12 18h6l5 22h22l5-16H21" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="26" cy="48" r="3.5" fill="#fff"/><circle cx="42" cy="48" r="3.5" fill="#fff"/><path d="M37 25l-6.5 9h5.5l-3 7.5 7.5-9.5h-5.5z" fill="#F2A93B"/></g></svg>
+    Merta Deal
+  </a>
+  <div class="art" aria-hidden="true">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h.01"/><path d="M8.5 16.4a5 5 0 0 1 7 0"/><path d="M5 12.9a10 10 0 0 1 5.2-2.7"/><path d="M19 12.9a10 10 0 0 0-2.1-1.6"/><path d="M1.4 9.4A15 15 0 0 1 8 5.6"/><path d="M22.6 9.4a15 15 0 0 0-6.9-3.9"/><path d="m2 2 20 20"/></svg>
+  </div>
+  <h1>You&rsquo;re offline</h1>
+  <p>This page isn&rsquo;t saved on your phone. Live prices, stock and your orders need an internet connection.</p>
+  <div class="actions">
+    <button class="btn primary" type="button" id="retry">Try again</button>
+    <a class="btn secondary" href="/">Go to home</a>
+  </div>
+  <p class="status" id="status" role="status" aria-live="polite"></p>
+  <p class="tip">Anything already in your cart is kept. Checkout and payment resume once you&rsquo;re back online.</p>
+</main>
+<script>
+  (function () {
+    var btn = document.getElementById("retry");
+    var status = document.getElementById("status");
+    function retry() {
+      btn.disabled = true;
+      status.textContent = "Reconnecting…";
+      location.reload();
+    }
+    btn.addEventListener("click", retry);
+    // Reload on its own as soon as the browser reports the network is back.
+    window.addEventListener("online", function () { status.textContent = "Back online — loading…"; location.reload(); });
+    if (!navigator.onLine) status.textContent = "No internet connection";
+  })();
+</script>
+</body>
+</html>

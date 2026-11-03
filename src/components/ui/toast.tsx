@@ -92,12 +92,12 @@ function ToastCard({ t }: { t: Toast }) {
           <p className="text-[14px] font-semibold leading-snug text-ink">{t.title}</p>
           {t.description ? <p className="mt-0.5 text-[13px] leading-snug text-ink-3">{t.description}</p> : null}
           {t.action ? (
-            <button type="button" onClick={() => { t.action?.onClick(); close(); }} className="mt-2 inline-flex h-8 items-center rounded-lg bg-ink px-3 text-xs font-semibold text-white transition-colors hover:bg-ink-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
+            <button type="button" onClick={() => { t.action?.onClick(); close(); }} className="tap mt-2 inline-flex h-9 items-center rounded-lg bg-ink px-3 text-xs font-semibold text-white transition-colors hover:bg-ink-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
               {t.action.label}
             </button>
           ) : null}
         </div>
-        <button type="button" onClick={close} aria-label="Dismiss notification" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-ink-4 transition-colors hover:bg-surface-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-600">
+        <button type="button" onClick={close} aria-label="Dismiss notification" className="-my-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-4 transition-colors hover:bg-surface-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-600">
           <X className="h-4 w-4" />
         </button>
       </div>

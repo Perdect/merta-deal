@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Search, SlidersHorizontal, X } from "lucide-react";
 import { useDebouncedValue } from "@/hooks/use-debounce";
 import { useBackToClose, afterOverlayClose } from "@/hooks/use-back-to-close";
+import { useKeyboardOpen } from "@/hooks/use-keyboard-open";
 import { cn } from "@/lib/utils";
 
 /* ------------------------------------------------------------------------------------------------
@@ -303,10 +304,14 @@ export function useUnsavedChanges(dirty: boolean) {
   return React.useCallback(() => !dirty || window.confirm(DISCARD), [dirty]);
 }
 
-/** Sticky Save / Cancel bar for long forms, with a visible unsaved-changes state. */
+/**
+ * Sticky Save / Cancel bar for long forms, with a visible unsaved-changes state. While the on-screen
+ * keyboard is up the bar stops sticking, so it never sits over the field being edited.
+ */
 export function FormActions({ dirty, saving, onCancel, submitLabel = "Save changes", cancelLabel = "Cancel", disabled, extra, inline }: { dirty: boolean; saving: boolean; onCancel?: () => void; submitLabel?: string; cancelLabel?: string; disabled?: boolean; extra?: React.ReactNode; /** Inside a side panel footer: no page-width bleed. */ inline?: boolean }) {
+  const keyboard = useKeyboardOpen();
   return (
-    <div className={inline ? "" : "sticky bottom-0 z-20 -mx-3 mt-4 border-t border-line bg-card/95 px-3 py-3 backdrop-blur pb-[calc(0.75rem+var(--safe-bottom))] sm:-mx-5 sm:px-5 lg:-mx-7 lg:px-7"}>
+    <div className={inline ? "" : cn("z-20 -mx-3 mt-4 border-t border-line bg-card/95 px-3 py-3 backdrop-blur pb-[calc(0.75rem+var(--safe-bottom))] sm:-mx-5 sm:px-5 lg:-mx-7 lg:px-7", keyboard ? "static" : "sticky bottom-0")}>
       <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-2">
         <p className="mr-auto text-xs text-ink-3" role="status">{saving ? "Saving…" : dirty ? <span className="font-medium text-[#8a6300]">Unsaved changes</span> : "All changes saved"}</p>
         {extra}

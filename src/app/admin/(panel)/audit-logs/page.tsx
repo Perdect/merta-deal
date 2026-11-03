@@ -9,7 +9,7 @@ import { formatDateTime, timeAgo } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Audit logs" };
 
-const ROLE_LABEL: Record<string, string> = { customer: "Customer", store_owner: "Store owner", store_staff: "Store staff", rider: "Rider", admin: "Admin", super_admin: "Super admin" };
+const ROLE_LABEL: Record<string, string> = { customer: "Customer", rider: "Rider", admin: "Admin", super_admin: "Super admin" };
 
 export default async function AdminAuditLogsPage({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
@@ -29,7 +29,7 @@ export default async function AdminAuditLogsPage({ searchParams }: { searchParam
     <>
       <AdminPageHeader title="Audit logs" description="Every admin change, dispatch decision and settings edit, newest first. Open an entry to see exactly what changed." />
 
-      <ListToolbar searchPlaceholder="Record id (order, store, user…)" dateRange={{ label: "Logged between (IST)" }} filters={[
+      <ListToolbar searchPlaceholder="Record id (order, product, user…)" dateRange={{ label: "Logged between (IST)" }} filters={[
         { key: "entity", label: "Record type", options: facets.entities.map((e) => ({ value: e, label: e })) },
         { key: "action", label: "Action", options: facets.actions.map((a) => ({ value: a, label: a })) },
         { key: "actor", label: "Done by", options: [{ value: "system", label: "System (automatic)" }, ...admins.map((a) => ({ value: a.id, label: `${a.full_name ?? "Unnamed admin"} (${ROLE_LABEL[a.role] ?? a.role})` }))] },

@@ -37,7 +37,6 @@ export default function PrivacyPage() {
       <section>
         <h2>3. Who we share it with</h2>
         <ul>
-          <li><b>The store preparing your order</b> receives your name, phone number, delivery address and the items ordered.</li>
           <li><b>The delivery partner</b> receives your name, phone number and delivery address. While your order is out for delivery, the partner&rsquo;s live location is shared with you for tracking.</li>
           <li><b>Service providers</b> who run parts of the service for us: Supabase (database and sign-in), Vercel (website hosting), Razorpay (online payments) and Google Maps (maps and address search). They may process data outside India under their own security commitments.</li>
           <li><b>Authorities</b>, when required by law or to protect our customers and partners.</li>
@@ -58,7 +57,7 @@ export default function PrivacyPage() {
       </section>
       <section>
         <h2>6. Security</h2>
-        <p>Data is sent over encrypted connections (HTTPS), access is limited to people who need it, and stores, delivery partners and staff can see only the orders they handle.</p>
+        <p>Data is sent over encrypted connections (HTTPS), access is limited to people who need it, and delivery partners and staff can see only the orders they handle.</p>
       </section>
       <section>
         <h2>7. Children</h2>

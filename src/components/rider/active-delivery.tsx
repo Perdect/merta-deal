@@ -19,7 +19,7 @@ import { addressLine, customerOf, formatKm, navigateUrl } from "./rider-utils";
 type StepKey = "accept" | "to_store" | "pickup" | "to_customer" | "deliver" | "otp" | "done";
 const STEPS: { key: StepKey; label: string }[] = [
   { key: "accept", label: "Accepted" },
-  { key: "to_store", label: "Go to store" },
+  { key: "to_store", label: "Go to pickup" },
   { key: "pickup", label: "Pickup" },
   { key: "to_customer", label: "Go to customer" },
   { key: "deliver", label: "Deliver" },
@@ -89,7 +89,7 @@ const FAIL_REASONS: { value: FailedDeliveryReason; label: string; hint: string }
   { value: "other", label: "Something else", hint: "Describe it below" },
 ];
 
-/** Report a handover that can't happen: the order goes back to the store and admin decides (retry or cancel). */
+/** Report a handover that can't happen: the order goes back for re-dispatch and admin decides (retry or cancel). */
 function CantDeliver({ a, onReported }: { a: RiderAssignment; onReported: () => void }) {
   const [open, setOpen] = React.useState(false);
   const [reason, setReason] = React.useState<FailedDeliveryReason | null>(null);
@@ -105,7 +105,7 @@ function CantDeliver({ a, onReported }: { a: RiderAssignment; onReported: () => 
     setBusy(false);
     if (!r.ok) { setError(r.error); return; }
     setOpen(false);
-    toast.info("Reported — bring the order back to the store", `${a.order.order_number}: Merta Deal will re-dispatch or cancel it. You're free for new requests.`);
+    toast.info("Reported — bring the order back to the pickup point", `${a.order.order_number}: Merta Deal will re-dispatch or cancel it. You're free for new requests.`);
     onReported();
   };
   return (
@@ -113,8 +113,8 @@ function CantDeliver({ a, onReported }: { a: RiderAssignment; onReported: () => 
       <button type="button" onClick={() => { setOpen(true); setError(null); }} className="mt-3 flex min-h-11 w-full items-center justify-center rounded-md text-sm font-semibold text-ink-2 underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-brand-600">
         Can&apos;t complete this delivery?
       </button>
-      <BottomSheet open={open} onClose={() => (busy ? undefined : setOpen(false))} title="Can't complete the delivery" description={`${a.order.order_number} · the order will go back to the store`}
-        footer={<Button fullWidth size="lg" variant="danger" loading={busy} disabled={!valid} onClick={submit}>{busy ? "Reporting…" : "Report and return to store"}</Button>}>
+      <BottomSheet open={open} onClose={() => (busy ? undefined : setOpen(false))} title="Can't complete the delivery" description={`${a.order.order_number} · the order will go back to the pickup point`}
+        footer={<Button fullWidth size="lg" variant="danger" loading={busy} disabled={!valid} onClick={submit}>{busy ? "Reporting…" : "Report and return the order"}</Button>}>
         <fieldset className="space-y-2">
           <legend className="sr-only">What went wrong?</legend>
           {FAIL_REASONS.map((r) => (
@@ -154,7 +154,7 @@ function Stepper({ current }: { current: number }) {
 function RiderMap({ a, leg }: { a: RiderAssignment; leg: "store" | "customer" }) {
   const fix = useRiderStore((s) => s.gps.fix);
   const customer = customerOf(a);
-  return <LiveMap store={{ lat: a.pickup_lat ?? a.store.lat, lng: a.pickup_lng ?? a.store.lng, name: a.store.name }} customer={leg === "customer" ? customer.point : null} rider={fixToTrackingLocation(fix)} trail={[]} showRoute={leg === "customer"} className="mt-3" />;
+  return <LiveMap store={{ lat: a.pickup_lat ?? a.pickup.lat, lng: a.pickup_lng ?? a.pickup.lng, name: a.pickup.name }} customer={leg === "customer" ? customer.point : null} rider={fixToTrackingLocation(fix)} trail={[]} showRoute={leg === "customer"} className="mt-3" />;
 }
 
 const anchorBtn = "inline-flex h-12 items-center justify-center gap-2 rounded-md px-4 text-base font-semibold select-none active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600";
@@ -175,14 +175,14 @@ function GoToStore({ a, onNext }: { a: RiderAssignment; onNext: () => void }) {
       <div className="flex items-start gap-3">
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700"><StoreIcon className="h-5 w-5" /></span>
         <div className="min-w-0">
-          <p className="text-base font-bold text-ink">{a.store.name}</p>
-          <p className="text-sm text-ink-2">{a.store.address_line1}, {a.store.area}</p>
+          <p className="text-base font-bold text-ink">{a.pickup.name}</p>
+          <p className="text-sm text-ink-2">{[a.pickup.address_line1, a.pickup.area].filter(Boolean).join(", ")}</p>
           <p className="mt-0.5 text-xs text-ink-3">{a.order.item_count} items · {formatKm(a.distance_km)} total trip{a.order.promised_at ? ` · promised by ${formatTime(a.order.promised_at)}` : ""}</p>
         </div>
       </div>
-      <ActionRow phone={a.store.phone} dest={{ lat: a.pickup_lat ?? a.store.lat, lng: a.pickup_lng ?? a.store.lng }} phoneLabel="Call store" />
+      <ActionRow phone={a.pickup.phone} dest={{ lat: a.pickup_lat ?? a.pickup.lat, lng: a.pickup_lng ?? a.pickup.lng }} phoneLabel="Call Merta Deal" />
       <RiderMap a={a} leg="store" />
-      <Button size="lg" fullWidth className="mt-3" onClick={onNext}>I&apos;ve reached the store <ChevronRight className="h-5 w-5" /></Button>
+      <Button size="lg" fullWidth className="mt-3" onClick={onNext}>I&apos;ve reached the pickup point <ChevronRight className="h-5 w-5" /></Button>
     </div>
   );
 }
@@ -192,6 +192,7 @@ function Pickup({ a, onBack, onChanged }: { a: RiderAssignment; onBack: () => vo
   const [error, setError] = React.useState<string | null>(null);
   const cod = a.order.payment_method === "cod" && Number(a.cod_amount) > 0;
   const confirm = async () => {
+    if (busy) return;
     setBusy(true); setError(null);
     const r = await pickupAction(a.id);
     setBusy(false);
@@ -211,7 +212,7 @@ function Pickup({ a, onBack, onChanged }: { a: RiderAssignment; onBack: () => vo
         ))}
       </ul>
       <Alert tone={cod ? "warning" : "success"} icon={<Banknote className="h-4 w-4" />} className="mt-3">
-        {cod ? <>Cash on delivery: collect <strong>{formatINR(a.cod_amount)}</strong> from the customer at handover. Don&apos;t pay the store.</> : <>Prepaid order — nothing to collect from the customer.</>}
+        {cod ? <>Cash on delivery: collect <strong>{formatINR(a.cod_amount)}</strong> from the customer at handover.</> : <>Prepaid order — nothing to collect from the customer.</>}
       </Alert>
       {error ? <Alert tone="danger" className="mt-3">{error}</Alert> : null}
       <div className="mt-3 flex gap-2">
@@ -299,7 +300,7 @@ export function DeliveryComplete({ completed, onDone }: { completed: CompletedDe
     <section className="rounded-lg border border-success/30 bg-card p-5 text-center shadow-card animate-pop" role="status">
       <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success text-white"><Check className="h-8 w-8" /></span>
       <h2 className="mt-3 font-display text-xl font-extrabold text-ink">Delivered!</h2>
-      <p className="text-sm text-ink-3">{a.order.order_number} · {a.store.name}</p>
+      <p className="text-sm text-ink-3">{a.order.order_number}</p>
       <p className="mt-4 text-[11px] font-semibold uppercase tracking-wide text-ink-3">Added to your earnings</p>
       <p className="font-display text-4xl font-extrabold tabular text-brand-700">{formatINR(a.earning)}</p>
       <p className="text-xs text-ink-3">Payout pending · see Earnings for payout status</p>

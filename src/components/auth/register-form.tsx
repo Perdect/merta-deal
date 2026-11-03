@@ -13,7 +13,7 @@ import { safeNext } from "@/lib/safe-next";
 /** Fields rise in one after another; `motion-safe` keeps them still for reduced-motion users. */
 const rise = (i: number) => ({ className: "motion-safe:animate-rise", style: { animationDelay: `${180 + i * 70}ms` } });
 
-/** Customer sign-up: name + mobile number + 6-digit PIN (no email). Stores and riders are onboarded by the admin. */
+/** Customer sign-up: name + mobile number + 6-digit PIN (no email). Riders are approved by the admin. */
 export function RegisterForm({ next }: { next?: string }) {
   const router = useRouter();
   const [state, formAction, pending] = React.useActionState<AuthResult | null, FormData>(signUpAction, null);

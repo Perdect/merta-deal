@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSessionUser } from "@/lib/supabase/server";
-import { getBrands, getCategoryBySlug, getWishlistIds, searchProducts } from "@/lib/data/catalog";
+import { getBrands, getCategoryBySlug, getPublicSettings, getWishlistIds, searchProducts } from "@/lib/data/catalog";
+import { paymentPhrase } from "@/lib/seo-copy";
 import { parseListingParams } from "@/lib/listing-params";
 import { ProductListing } from "@/components/shop/product-listing";
 import { ShopPageHeader } from "@/components/shop/shop-page-header";
@@ -14,12 +15,13 @@ type Props = { params: Promise<{ slug: string }>; searchParams: Promise<Record<s
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { slug } = await params; const sp = await searchParams;
-  const data = await getCategoryBySlug(slug);
+  const [data, settings] = await Promise.all([getCategoryBySlug(slug), getPublicSettings()]);
   if (!data) notFound(); // during metadata, so crawlers get a real 404 status, not a soft 404
   const seo = CATEGORY_SEO[slug];
   const name = data.category.name;
   const title = seo?.title ?? `${name} Online in ${site.city}`;
-  const description = seo?.description ?? `Buy ${name.toLowerCase()} online in ${site.city}, Rajasthan${data.category.description ? ` — ${data.category.description.toLowerCase()}` : ""}. Home delivery from ${site.seoName}; pay by UPI or cash on delivery.`;
+  const pay = paymentPhrase(settings);
+  const description = `${seo?.description ?? `Buy ${name.toLowerCase()} online in ${site.city}, Rajasthan${data.category.description ? ` — ${data.category.description.toLowerCase()}` : ""}. Home delivery from ${site.seoName}.`}${pay ? ` ${pay}` : ""}`;
   // Filtered/sorted variants are useful to shoppers but duplicate the listing: keep them out of the
   // index (still followed). Page 2+ is its own indexable page with a self-referencing canonical.
   const filtered = LISTING_FILTER_KEYS.some((k) => sp[k] != null && sp[k] !== "");
@@ -30,7 +32,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     description,
     alternates: { canonical },
     robots: filtered ? { index: false, follow: true } : undefined,
-    openGraph: { type: "website", title, description, url: `/c/${slug}`, images: data.category.image_url ? [{ url: data.category.image_url, alt: name }] : undefined },
+    openGraph: { type: "website", siteName: site.seoName, locale: "en_IN", title, description, url: `/c/${slug}`, images: data.category.image_url ? [{ url: data.category.image_url, alt: name }] : undefined },
   };
 }
 

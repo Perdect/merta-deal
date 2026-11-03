@@ -7,6 +7,7 @@ import { riderNav } from "@/config/site";
 import { createClient } from "@/lib/supabase/client";
 import { refreshRiderStatsAction } from "@/lib/actions/rider";
 import { useNotifications, notificationHref } from "@/hooks/use-notifications";
+import { useKeyboardOpen } from "@/hooks/use-keyboard-open";
 import { DynamicIcon } from "@/components/shared/dynamic-icon";
 import { PwaClient } from "@/components/pwa/pwa-client";
 import { LogoMark } from "@/components/ui/misc";
@@ -99,8 +100,9 @@ function RiderTopBar({ name, rider, isOnline, gpsOn }: { name: string | null; ri
           <p className="truncate text-sm font-bold leading-tight text-ink">{name ?? "Delivery partner"}</p>
           <p className="truncate text-[11px] leading-tight text-ink-3">
             Merta Deal delivery partner
-            <span className={cn("ml-1.5 inline-flex items-center gap-0.5 align-middle", realtime ? "text-success" : "text-ink-4")} title={realtime ? "Live updates connected" : "Live updates reconnecting"}>
-              {realtime ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+            <span className={cn("ml-1.5 inline-flex items-center gap-0.5 align-middle", realtime ? "text-success" : "text-ink-4")} title={realtime ? "Live updates connected" : "Live updates reconnecting"} role="status">
+              {realtime ? <Wifi className="h-3 w-3" aria-hidden /> : <WifiOff className="h-3 w-3" aria-hidden />}
+              <span className="sr-only">{realtime ? "Live updates connected" : "Live updates reconnecting"}</span>
             </span>
           </p>
         </div>
@@ -150,11 +152,16 @@ function RiderStatusBanner({ status }: { status: DeliveryPartner["status"] }) {
   );
 }
 
-/** Floating glass dock, same language as the customer app but four tabs and shown at every width (this is a phone app). */
+/**
+ * Floating glass dock, same language as the customer app but four tabs and shown at every width (this is a phone app).
+ * Hidden while the on-screen keyboard is up so it never covers the field being typed in or the form's submit button.
+ */
 function RiderBottomNav() {
   const pathname = usePathname();
   const newRequests = useRiderStore((s) => s.stats?.new_requests ?? 0);
   const active = useRiderStore((s) => s.activeDelivery);
+  const keyboard = useKeyboardOpen();
+  if (keyboard) return null;
   return (
     <nav className="fixed inset-x-3 z-40 mx-auto max-w-md" style={{ bottom: "calc(var(--safe-bottom) + 10px)" }} aria-label="Rider">
       <ul className="grid grid-cols-4 rounded-[26px] border border-white/60 bg-card/85 shadow-float backdrop-blur-2xl" style={{ height: "var(--bottom-nav-h)" }}>
@@ -168,7 +175,8 @@ function RiderBottomNav() {
                   <DynamicIcon name={item.icon} className="h-[18px] w-[18px]" />
                 </span>
                 {item.label}
-                {badge ? <span className={cn("absolute right-[16%] top-1 flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1 text-[10px] font-bold animate-pop", active ? "bg-brand-600 text-white" : "bg-saffron-500 text-ink")}>{badge}</span> : null}
+                {badge ? <span className={cn("absolute right-[16%] top-1 flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1 text-[10px] font-bold animate-pop", active ? "bg-brand-600 text-white" : "bg-saffron-500 text-ink")} aria-hidden>{badge}</span> : null}
+                {badge ? <span className="sr-only">{active ? ", delivery in progress" : `, ${newRequests} new ${newRequests === 1 ? "request" : "requests"}`}</span> : null}
               </Link>
             </li>
           );

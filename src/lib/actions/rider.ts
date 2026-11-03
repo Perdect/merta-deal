@@ -97,7 +97,7 @@ export async function pickupAction(assignmentId: string): Promise<ActionResult> 
   const supabase = await createClient();
   const { error } = await supabase.rpc("rider_pickup", { p_assignment_id: assignmentId });
   if (error) {
-    if (error.message.startsWith("ORDER_NOT_READY")) return { ok: false, error: "The store has not marked this order as ready for pickup yet. Please wait at the store or call them." };
+    if (error.message.startsWith("ORDER_NOT_READY")) return { ok: false, error: "This order is not packed yet. Please wait at the pickup point or call Merta Deal." };
     return { ok: false, error: friendlyError(error) };
   }
   revalidatePath("/rider");
@@ -160,7 +160,7 @@ export async function markRiderNotificationsReadAction(ids?: string[]): Promise<
 }
 
 export type FailedDeliveryReason = "customer_unreachable" | "address_problem" | "customer_refused" | "other";
-/** The handover couldn't happen: the order goes back to the store and admin re-dispatches or cancels it. */
+/** The handover couldn't happen: the order goes back for re-dispatch and admin re-dispatches or cancels it. */
 export async function reportFailedDeliveryAction(assignmentId: string, reason: FailedDeliveryReason, note?: string): Promise<ActionResult<{ order_status: string }>> {
   if (!/^[0-9a-f-]{36}$/.test(assignmentId)) return { ok: false, error: "Invalid delivery" };
   if (reason === "other" && (note ?? "").trim().length < 5) return { ok: false, error: "Describe what happened (at least 5 characters)." };

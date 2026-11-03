@@ -44,8 +44,8 @@ export function CitiesManager({ cities }: { cities: CityRow[] }) {
       <ConfirmChange open={Boolean(toggle)} onClose={() => setToggle(null)} loading={Boolean(toggle && busy === toggle.id)} tone={toggle?.is_active ? "danger" : "primary"}
         title={toggle ? (toggle.is_active ? `Pause ${toggle.name}?` : `Take ${toggle.name} live?`) : ""}
         confirmLabel={toggle?.is_active ? "Pause city" : "Go live"}
-        description={toggle?.is_active ? "Customers in this city can no longer place orders and see the launch note instead. Orders already placed carry on." : "Customers in this city can start ordering from active stores in its delivery zones."}
-        warning={toggle && !toggle.is_active ? "Make sure the city has at least one active delivery zone and an active store first." : undefined}
+        description={toggle?.is_active ? "Customers in this city can no longer place orders and see the launch note instead. Orders already placed carry on." : "Customers in this city can start ordering in its delivery zones."}
+        warning={toggle && !toggle.is_active ? "Make sure the city has at least one active delivery zone first." : undefined}
         onConfirm={async () => { if (!toggle) return; const r = await run(toggle.id, () => setCityActiveAction(toggle.id, !toggle.is_active, toggle.launch_note), toggle.is_active ? `${toggle.name} paused` : `${toggle.name} is live`); if (r.ok) setToggle(null); }} />
 
       <SidePanel open={Boolean(noteCity)} onClose={closeNote} title="Launch note" description={noteCity ? `${noteCity.name}, ${noteCity.state}` : undefined} width="sm"
@@ -211,7 +211,7 @@ export function ZoneManager({ zones, cities, defaults }: { zones: DeliveryZone[]
       </SidePanel>
 
       <ConfirmChange open={Boolean(del)} onClose={() => setDel(null)} tone="danger" title={`Delete zone “${del?.name ?? ""}”?`} confirmLabel="Delete zone" loading={busy === "delete"}
-        description="This can't be undone. Addresses inside it stop being serviceable unless another zone covers them. If stores or addresses still point to this zone the delete is refused — deactivate it instead."
+        description="This can't be undone. Addresses inside it stop being serviceable unless another zone covers them. If addresses or orders still point to this zone the delete is refused — deactivate it instead."
         onConfirm={async () => { if (!del) return; const r = await run("delete", () => deleteZoneAction(del.id), "Zone deleted"); if (r.ok) setDel(null); }}>
         {del?.is_active ? <Button size="sm" variant="outline" fullWidth loading={busy === "deactivate"} onClick={() => deactivate(del)}>Deactivate instead (keeps the zone)</Button> : null}
       </ConfirmChange>

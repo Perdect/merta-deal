@@ -8,10 +8,10 @@ export async function proxy(request: NextRequest) {
   const host = request.headers.get("host") ?? "";
   // Consolidate duplicate hosts onto mertadeal.com so search engines index one copy. Preview
   // deployments keep their own URLs, and /api stays put so webhooks and in-flight calls never bounce.
-  // Staff portals (admin, store, rider) and their sign-in stay reachable on vercel.app with no redirect;
+  // Staff portals (admin, rider) and their sign-in stay reachable on vercel.app with no redirect;
   // they are noindex, so this doesn't create duplicate pages for search engines.
   const path = request.nextUrl.pathname;
-  const staff = /^\/(admin|store|rider|login|forgot-password|api)(\/|$)/.test(path);
+  const staff = /^\/(admin|rider|login|forgot-password|api)(\/|$)/.test(path);
   if (process.env.VERCEL_ENV === "production" && CANONICAL_HOST && host !== CANONICAL_HOST && host.endsWith(".vercel.app") && !staff) {
     const url = new URL(request.nextUrl.pathname + request.nextUrl.search, `https://${CANONICAL_HOST}`);
     return NextResponse.redirect(url, 308);

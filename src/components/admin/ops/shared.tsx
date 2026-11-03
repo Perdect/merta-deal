@@ -8,7 +8,7 @@ import { Modal } from "@/components/ui/overlay";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 
-/* Small client helpers shared by the stores / riders / delivery / users admin pages. */
+/* Small client helpers shared by the riders / delivery / users admin pages. */
 
 type Result = { ok: boolean; error?: string };
 
@@ -36,7 +36,7 @@ export function useRunAction() {
 
 /**
  * Confirmation dialog for consequential changes (status, role, deactivation…). Optional note field
- * (e.g. a reason sent to the store owner or rider). The confirm button states the exact action.
+ * (e.g. a reason sent to the rider). The confirm button states the exact action.
  */
 export function ConfirmChange({ open, onClose, onConfirm, title, description, confirmLabel, tone = "primary", loading, note, warning, children }: {
   open: boolean; onClose: () => void; onConfirm: (note: string) => void; title: string; description?: React.ReactNode; confirmLabel: string;

@@ -18,7 +18,7 @@ export type CategorySeo = {
 export const CATEGORY_SEO: Record<string, CategorySeo> = {
   grocery: {
     title: "Online Kirana & Grocery Delivery in Merta City",
-    description: "Order atta, rice, dal, oil, ghee, sugar, salt, besan and dry fruits online in Merta City, Rajasthan, with home delivery. Pay by UPI or cash on delivery.",
+    description: "Order atta, rice, dal, oil, ghee, sugar, salt, besan and dry fruits online in Merta City, Rajasthan, with home delivery.",
     h1: "Grocery & kirana delivery in Merta City",
     intro: "Your monthly kirana list in one place — Aashirvaad and Fortune atta, basmati and daily rice, toor, chana and moong dal, sunflower, mustard and groundnut oil, ghee, sugar, salt, besan and dry fruits. Add what you need and we deliver it to your door in Merta City.",
     hindi: "मेड़ता सिटी में ऑनलाइन किराना — आटा, दाल, चावल, तेल और चीनी घर बैठे मंगवाएँ।",
@@ -40,4 +40,4 @@ export const CATEGORY_SEO: Record<string, CategorySeo> = {
 };
 
 /** Query keys that create filtered/sorted variants of a listing. Those variants are `noindex, follow`. */
-export const LISTING_FILTER_KEYS = ["q", "brand", "minPrice", "maxPrice", "minDiscount", "inStock", "local", "store", "sort", "category", "coupon"] as const;
+export const LISTING_FILTER_KEYS = ["q", "brand", "minPrice", "maxPrice", "minDiscount", "inStock", "local", "sort", "category", "coupon"] as const;

@@ -6,11 +6,11 @@ import { StatusPill, type Tone } from "./ui";
    and payment status are always separate cells, never merged into one label. */
 
 const ORDER_TONE: Record<OrderStatus, Tone> = {
-  placed: "blue", store_confirmed: "blue", preparing: "violet", ready_for_pickup: "amber", rider_assigned: "blue",
+  placed: "blue", confirmed: "blue", preparing: "violet", ready_for_pickup: "amber", rider_assigned: "blue",
   out_for_delivery: "blue", delivered: "green", completed: "green", cancelled: "red", rejected: "red",
 };
 export const ORDER_STATUS_COLOR: Record<OrderStatus, string> = {
-  placed: "#60a5fa", store_confirmed: "#3b82f6", preparing: "#8b5cf6", ready_for_pickup: "#e0a100", rider_assigned: "#2563eb",
+  placed: "#60a5fa", confirmed: "#3b82f6", preparing: "#8b5cf6", ready_for_pickup: "#e0a100", rider_assigned: "#2563eb",
   out_for_delivery: "#1d4ed8", delivered: "#329537", completed: "#329537", cancelled: "#d9342b", rejected: "#9f1d16",
 };
 
@@ -30,7 +30,7 @@ export function PaymentStatusPill({ status }: { status: Enums<"payment_status"> 
 const METHOD_SHORT: Record<Enums<"payment_method">, string> = { cod: "Cash", upi: "UPI", card: "Card", netbanking: "Net banking", wallet: "Wallet", razorpay: "Online" };
 export function paymentMethodLabel(m: Enums<"payment_method">, long = false) { return long ? PAYMENT_METHOD_LABEL[m] ?? m : METHOD_SHORT[m] ?? m; }
 
-/** Generic lookup for the smaller vocabularies (stores, riders, tickets, payouts, reviews, coupons). */
+/** Generic lookup for the smaller vocabularies (riders, tickets, payouts, reviews, coupons). */
 const GENERIC: Record<string, Tone> = {
   active: "green", approved: "green", paid: "green", verified: "green", resolved: "green", delivered: "green", accepted: "blue",
   pending: "amber", processing: "blue", in_progress: "blue", open: "amber", offered: "amber", picked_up: "blue",

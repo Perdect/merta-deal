@@ -1,26 +1,24 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { friendlyError } from "@/lib/utils";
 import type { CartSummary, DeliveryType, ReorderResult } from "@/types/app";
 
-export type ActionResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string; conflict?: { current_store: { id: string; name: string }; new_store: { id: string; name: string } } };
+export type ActionResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
 
 export async function getCartSummary(addressId?: string | null, deliveryType: DeliveryType = "standard"): Promise<CartSummary | null> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const [supabase, user] = await Promise.all([createClient(), getAuthUser()]);
   if (!user) return null;
   const { data, error } = await supabase.rpc("cart_summary", { p_address_id: addressId ?? undefined, p_delivery_type: deliveryType });
   if (error) return null;
   return data as unknown as CartSummary;
 }
 
-export async function addToCartAction(inventoryId: string, quantity: number, replace = false): Promise<ActionResult<{ quantity: number }>> {
+export async function addToCartAction(inventoryId: string, quantity: number): Promise<ActionResult<{ quantity: number }>> {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("add_to_cart", { p_inventory_id: inventoryId, p_quantity: quantity, p_replace: replace });
+  const { data, error } = await supabase.rpc("add_to_cart", { p_inventory_id: inventoryId, p_quantity: quantity });
   if (error) return { ok: false, error: friendlyError(error) };
-  const res = data as { ok: boolean; conflict?: boolean; current_store?: { id: string; name: string }; new_store?: { id: string; name: string }; quantity?: number };
-  if (!res.ok && res.conflict) return { ok: false, error: "Your cart has items from another store.", conflict: { current_store: res.current_store!, new_store: res.new_store! } };
+  const res = data as { ok: boolean; quantity?: number };
   revalidatePath("/cart");
   return { ok: true, data: { quantity: res.quantity ?? quantity } };
 }

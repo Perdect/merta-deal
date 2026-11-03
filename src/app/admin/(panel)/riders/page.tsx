@@ -113,7 +113,7 @@ export default async function AdminRidersPage({ searchParams }: { searchParams: 
                   <ul className="divide-y divide-line rounded-lg border border-line">
                     {view.assignments.slice(0, 5).map((a) => (
                       <li key={a.id} className="flex items-center gap-3 px-3 py-2 text-sm">
-                        <span className="min-w-0 flex-1">{a.order ? <Link href={`/admin/orders/${a.order.id}`} className="font-medium text-ink hover:underline">{a.order.order_number}</Link> : "Order"}<span className="block truncate text-xs text-ink-3">{a.order?.store?.name ?? ""} · {timeAgo(a.offered_at)}</span></span>
+                        <span className="min-w-0 flex-1">{a.order ? <Link href={`/admin/orders/${a.order.id}`} className="font-medium text-ink hover:underline">{a.order.order_number}</Link> : "Order"}<span className="block truncate text-xs text-ink-3">{timeAgo(a.offered_at)}</span></span>
                         <StatusText value={a.status} />
                         <span className="w-20 text-right text-xs tabular text-ink-3">{rupees(a.earning)}</span>
                       </li>

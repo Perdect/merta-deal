@@ -108,9 +108,9 @@ function buildReply(name: string | null, lines: MatchedLine[], checkoutUrl: stri
     if (!c) { rows.push(`${i + 1}. ${asked} — abhi stock mein nahi mila`); return; }
     const price = Number(c.selling_price ?? c.mrp ?? 0) * c.suggested_packs;
     total += price; matched++;
-    rows.push(`${i + 1}. ${c.name} (${c.pack_label ?? ""}) x${c.suggested_packs} — ${formatINR(price)}${c.store_name ? ` · ${c.store_name}` : ""}`);
+    rows.push(`${i + 1}. ${c.name} (${c.pack_label ?? ""}) x${c.suggested_packs} — ${formatINR(price)}`);
   });
-  const footer = matched ? `\nAndaazan total: ${formatINR(total)} (delivery alag). Har order ek hi store se aata hai — link par store select hoga.` : "";
+  const footer = matched ? `\nAndaazan total: ${formatINR(total)} (delivery alag).` : "";
   const via = source === "rules" ? "\n(List rule-based parser se bani hai.)" : "";
   return `${hello}\n\nAapki list:\n${rows.join("\n")}${footer}\n\nCart mein daal kar checkout karein: ${checkoutUrl}${via}`;
 }

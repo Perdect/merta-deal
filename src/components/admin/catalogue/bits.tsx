@@ -11,13 +11,12 @@ export function ProductThumb({ image, name, brand, pack, className }: { image: s
 }
 
 /** Customer visibility of a catalogue product: both flags must be on for customers to see it. */
-export function ProductStatusPill({ isActive, isApproved }: { isActive: boolean; isApproved: boolean }) {
-  if (!isApproved) return <StatusPill tone="amber">Awaiting approval</StatusPill>;
+export function ProductStatusPill({ isActive }: { isActive: boolean }) {
   if (!isActive) return <StatusPill tone="neutral">Inactive</StatusPill>;
   return <StatusPill tone="green">Active</StatusPill>;
 }
 
-/** Stock state of one store offer, in words. */
+/** Stock state of a listing, in words. */
 export function StockPill({ status, isActive, qty }: { status: "in_stock" | "low_stock" | "out_of_stock"; isActive: boolean; qty?: number }) {
   if (!isActive) return <StatusPill tone="neutral">Offer paused</StatusPill>;
   if (status === "out_of_stock") return <StatusPill tone="red">Out of stock</StatusPill>;
@@ -25,12 +24,12 @@ export function StockPill({ status, isActive, qty }: { status: "in_stock" | "low
   return <StatusPill tone="green">{qty != null ? `${qty} in stock` : "In stock"}</StatusPill>;
 }
 
-/** Kit-styled button classes for links and buttons in catalogue pages. */
+/** Kit-styled button classes for links and buttons in catalogue pages (44 px tall on touch screens). */
 export const btn = {
-  primary: "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-brand-600 px-3.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:opacity-60",
-  outline: "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-line-2 bg-card px-3.5 text-sm font-semibold text-ink-2 transition-colors duration-150 hover:bg-surface-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:opacity-50",
-  danger: "inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-danger/30 bg-card px-3.5 text-sm font-semibold text-danger transition-colors duration-150 hover:bg-danger-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger disabled:opacity-50",
-  small: "inline-flex h-8 items-center gap-1.5 rounded-lg border border-line-2 bg-card px-2.5 text-xs font-semibold text-ink-2 transition-colors duration-150 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-800 focus-visible:outline-2 focus-visible:outline-brand-600 disabled:opacity-50",
+  primary: "inline-flex h-9 pointer-coarse:h-11 items-center justify-center gap-1.5 rounded-lg bg-brand-600 px-3.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:opacity-60",
+  outline: "inline-flex h-9 pointer-coarse:h-11 items-center justify-center gap-1.5 rounded-lg border border-line-2 bg-card px-3.5 text-sm font-semibold text-ink-2 transition-colors duration-150 hover:bg-surface-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:opacity-50",
+  danger: "inline-flex h-9 pointer-coarse:h-11 items-center justify-center gap-1.5 rounded-lg border border-danger/30 bg-card px-3.5 text-sm font-semibold text-danger transition-colors duration-150 hover:bg-danger-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger disabled:opacity-50",
+  small: "inline-flex h-8 pointer-coarse:h-11 items-center gap-1.5 rounded-lg border border-line-2 bg-card px-2.5 text-xs font-semibold text-ink-2 transition-colors duration-150 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-800 focus-visible:outline-2 focus-visible:outline-brand-600 disabled:opacity-50",
 };
 
 /** Plain label + control wrapper for kit forms (SidePanel editors). */

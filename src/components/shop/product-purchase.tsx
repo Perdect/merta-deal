@@ -2,7 +2,6 @@
 import * as React from "react";
 import { Zap, Truck, RotateCcw } from "lucide-react";
 import type { ProductDetail } from "@/types/app";
-import { useCartStore } from "@/stores/cart-store";
 import { useLocationStore } from "@/stores/location-store";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { resolveOffer } from "./product-offer";
@@ -33,8 +32,7 @@ function Tile({ icon: Icon, label, sub }: { icon: typeof Truck; label: string; s
 
 /** Price block (selling price, struck MRP, savings), a divider and the policy tiles. */
 export function ProductPurchase({ product, children }: { product: ProductDetail; children?: React.ReactNode }) {
-  const cartStoreId = useCartStore((s) => s.summary?.store?.id ?? null);
-  const offer = React.useMemo(() => resolveOffer(product, cartStoreId), [product, cartStoreId]);
+  const offer = React.useMemo(() => resolveOffer(product), [product]);
   const eta = useEta();
   const soldOut = !offer || offer.status === "out_of_stock";
   const lowStock = offer?.status === "low_stock";

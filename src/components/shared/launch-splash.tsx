@@ -55,7 +55,7 @@ export const SPLASH_CSS = `
 `.replace(/\n/g, "");
 
 export const SPLASH_JS = `(function(){var s=document.getElementById("md-splash");if(!s)return;var p=location.pathname;
-if(/^\\/(store|rider)(\\/|$)/.test(p)){s.hidden=true;return}
+if(/^\\/(admin|rider)(\\/|$)/.test(p)){s.hidden=true;return}
 if(/^\\/admin(\\/|$)/.test(p))s.setAttribute("data-variant","admin");
 var done=false,mo=null,timer=0;
 function ready(){return !!document.querySelector("[data-md-shell-end]")&&!document.querySelector("[data-route-loading]")}

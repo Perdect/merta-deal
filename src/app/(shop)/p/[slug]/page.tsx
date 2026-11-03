@@ -3,7 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronRight, Star, Mail, Phone } from "lucide-react";
 import { getSessionUser } from "@/lib/supabase/server";
-import { getProductDetail, getWishlistIds, searchProducts, getPublicSettings } from "@/lib/data/catalog";
+import { getProductDetail, getWishlistIds, getPublicSettings } from "@/lib/data/catalog";
+import { paymentPhrase } from "@/lib/seo-copy";
 import { ProductHero, ShareButton } from "@/components/shop/product-hero";
 import { AppBar } from "@/components/shop/app-bar";
 import { ProductPurchase, EtaBadge } from "@/components/shop/product-purchase";
@@ -24,16 +25,18 @@ const compact = new Intl.NumberFormat("en-IN", { notation: "compact", maximumFra
 const str = (v: unknown, fallback: string) => (typeof v === "string" && v.trim() ? v : fallback);
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params; const p = await getProductDetail(slug);
+  const { slug } = await params;
+  const [p, settings] = await Promise.all([getProductDetail(slug), getPublicSettings()]);
   if (!p) notFound(); // during metadata, so crawlers get a real 404 status, not a soft 404
   const pack = p.pack_label ? ` ${p.pack_label}` : "";
   const price = p.selling_price ?? null;
   const title = `${p.name}${pack} – Price in ${site.city}`;
   const stock = !p.inventory_id ? "Currently unavailable" : p.stock_status === "out_of_stock" ? "Out of stock right now" : `₹${price} at ${site.seoName}`;
   const brandPrefix = p.brand_name && !p.name.toLowerCase().startsWith(p.brand_name.toLowerCase()) ? `${p.brand_name} ` : "";
-  const description = `${brandPrefix}${p.name}${pack}. ${stock}${p.mrp && price != null && p.mrp > price ? ` (MRP ₹${p.mrp})` : ""}. Home delivery across ${site.city}, Rajasthan — usually ${site.deliveryWindowShort}. Pay by UPI or cash on delivery.`;
+  const pay = paymentPhrase(settings);
+  const description = `${brandPrefix}${p.name}${pack}. ${stock}${p.mrp && price != null && p.mrp > price ? ` (MRP ₹${p.mrp})` : ""}. Home delivery across ${site.city}, Rajasthan — usually ${site.deliveryWindowShort}.${pay ? ` ${pay}` : ""}`;
   const image = p.image_url ? (p.image_url.startsWith("http") ? p.image_url : `${site.url}${p.image_url}`) : undefined;
-  return { title, description, alternates: { canonical: `/p/${slug}` }, openGraph: { type: "website", title, description, url: `/p/${slug}`, images: image ? [{ url: image, alt: `${p.name}${pack}` }] : undefined } };
+  return { title, description, alternates: { canonical: `/p/${slug}` }, openGraph: { type: "website", siteName: site.seoName, locale: "en_IN", title, description, url: `/p/${slug}`, images: image ? [{ url: image, alt: `${p.name}${pack}` }] : undefined } };
 }
 
 function Card({ title, children, className }: { title?: string; children: React.ReactNode; className?: string }) {
@@ -49,10 +52,8 @@ export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
   const [user, product, wished, settings] = await Promise.all([getSessionUser(), getProductDetail(slug), getWishlistIds(), getPublicSettings()]);
   if (!product) notFound();
-  // "More from <brand>" is a live catalog query, not a stored list.
-  const moreFromBrand = product.brand_slug
-    ? (await searchProducts({ brands: [product.brand_slug], inStock: true, pageSize: 12 })).items.filter((p) => p.id !== product.id)
-    : [];
+  // "More from <brand>" comes with the product (same round trip), filtered live by the database.
+  const moreFromBrand = product.more_from_brand ?? [];
   const images = [product.image_url, ...(product.images ?? [])].filter(Boolean) as string[];
   const price = product.selling_price ?? product.base_mrp;
   const mrp = product.mrp ?? product.base_mrp;
@@ -160,7 +161,7 @@ export default async function ProductPage({ params }: Props) {
 
       <div className="mt-4 space-y-4 px-4 sm:px-0 md:mt-6 md:grid md:grid-cols-[1.05fr_1fr] md:items-start md:gap-x-8 md:gap-y-4 md:space-y-0">
         <div className="space-y-4 md:col-start-2">
-          {/* The store's own description comes first: it is what an admin edits most. */}
+          {/* The product description comes first: it is what an admin edits most. */}
           {product.description ? <Card title="About this product"><p className="mt-3 text-[15px] leading-relaxed text-ink-2">{product.description}</p></Card> : null}
           <DetailSection title="Highlights" rows={highlights} initial={6} />
           {seller.length ? <DetailSection title="Seller Information" rows={seller} initial={3} /> : null}

@@ -1,12 +1,11 @@
 "use client";
 import { createClient } from "@/lib/supabase/client";
 
-export type Bucket = "product-images" | "store-photos" | "avatars" | "banners" | "store-documents";
+export type Bucket = "product-images" | "avatars" | "banners";
 
 /**
- * Uploads a file to Supabase Storage from the browser (RLS on storage.objects enforces ownership:
- * product/store files live under <storeId>/..., avatars under <userId>/...). Returns the public URL
- * (or the object path for private buckets).
+ * Uploads a file to Supabase Storage from the browser (RLS on storage.objects: product images and
+ * banners are admin-only, avatars live under <userId>/...). Returns the public URL.
  */
 export async function uploadFile(bucket: Bucket, folder: string, file: File, opts: { maxMb?: number } = {}) {
   const maxMb = opts.maxMb ?? 5;
@@ -16,7 +15,6 @@ export async function uploadFile(bucket: Bucket, folder: string, file: File, opt
   const supabase = createClient();
   const { error } = await supabase.storage.from(bucket).upload(path, file, { cacheControl: "31536000", upsert: false, contentType: file.type || undefined });
   if (error) throw new Error(error.message);
-  if (bucket === "store-documents") return { path, url: path };
   const { data } = supabase.storage.from(bucket).getPublicUrl(path);
   return { path, url: data.publicUrl };
 }

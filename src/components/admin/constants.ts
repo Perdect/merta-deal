@@ -1,10 +1,9 @@
 import type { BadgeTone } from "@/components/ui/badge";
 import { ORDER_STATUS_META } from "@/lib/order-status";
 
-export const ROLE_OPTIONS = [{ value: "customer", label: "Customer" }, { value: "store_owner", label: "Store owner" }, { value: "store_staff", label: "Store staff" }, { value: "rider", label: "Rider" }, { value: "admin", label: "Admin" }, { value: "super_admin", label: "Super admin" }];
-export const ROLE_TONE: Record<string, BadgeTone> = { customer: "neutral", store_owner: "brand", store_staff: "brand", rider: "saffron", admin: "dark", super_admin: "dark" };
+export const ROLE_OPTIONS = [{ value: "customer", label: "Customer" }, { value: "rider", label: "Rider" }, { value: "admin", label: "Admin" }, { value: "super_admin", label: "Super admin" }];
+export const ROLE_TONE: Record<string, BadgeTone> = { customer: "neutral", rider: "saffron", admin: "dark", super_admin: "dark" };
 
-export const STORE_STATUS_OPTIONS = [{ value: "pending", label: "Pending" }, { value: "active", label: "Active" }, { value: "suspended", label: "Suspended" }, { value: "closed", label: "Closed" }];
 export const STORE_STATUS_TONE: Record<string, BadgeTone> = { pending: "warning", active: "success", suspended: "danger", closed: "neutral" };
 
 export const ORDER_STATUS_OPTIONS = [{ value: "active", label: "All active" }, ...(Object.keys(ORDER_STATUS_META) as (keyof typeof ORDER_STATUS_META)[]).map((k) => ({ value: k, label: ORDER_STATUS_META[k].label }))];

@@ -8,5 +8,6 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const sp = Object.fromEntries(req.nextUrl.searchParams.entries());
   const res = await searchProducts(parseListingParams(sp));
+  if (res.error) return NextResponse.json(res, { status: 503, headers: { "Cache-Control": "no-store" } });
   return NextResponse.json(res, { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=120" } });
 }

@@ -35,14 +35,21 @@ export function PasswordForm({ highlight }: { highlight?: boolean }) {
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
   const submit = async (e: React.FormEvent) => {
-    e.preventDefault(); setError(null);
+    e.preventDefault();
+    if (busy) return;
+    setError(null);
     if (!/^\d{6}$/.test(password)) { setError("PIN must be exactly 6 digits"); return; }
     if (password !== confirm) { setError("PINs do not match"); return; }
     setBusy(true);
-    const { error: err } = await createClient().auth.updateUser({ password });
-    setBusy(false);
-    if (err) { setError(err.message); return; }
-    setPassword(""); setConfirm(""); toast.success("PIN updated");
+    try {
+      const { error: err } = await createClient().auth.updateUser({ password });
+      if (err) { setError(err.message); return; } // typed PINs stay so the customer can retry
+      setPassword(""); setConfirm(""); toast.success("PIN updated");
+    } catch {
+      setError("Could not reach the server. Check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
   };
   return (
     <SettingsCard icon={<KeyRound className="h-5 w-5" />} title="Change PIN" description="6 digits. You stay signed in on this device.">
@@ -50,7 +57,7 @@ export function PasswordForm({ highlight }: { highlight?: boolean }) {
       <form onSubmit={submit} className="space-y-3">
         <Input label="New 6-digit PIN" type="password" inputMode="numeric" required minLength={6} maxLength={6} pattern="[0-9]{6}" value={password} onChange={(e) => setPassword(e.target.value.replace(/\D/g, "").slice(0, 6))} autoComplete="new-password" />
         <Input label="Confirm new PIN" type="password" inputMode="numeric" required minLength={6} maxLength={6} pattern="[0-9]{6}" value={confirm} onChange={(e) => setConfirm(e.target.value.replace(/\D/g, "").slice(0, 6))} autoComplete="new-password" error={error ?? undefined} />
-        <Button type="submit" loading={busy}>Update PIN</Button>
+        <Button type="submit" loading={busy} disabled={busy}>Update PIN</Button>
       </form>
     </SettingsCard>
   );
@@ -72,12 +79,18 @@ export function PreferencesForm({ profile }: { profile: Profile }) {
   const canSave = Boolean(profile.full_name && profile.full_name.trim().length >= 2 && profile.phone && isValidIndianMobile(profile.phone));
   const set = <K extends keyof NotificationPrefs>(k: K, v: NotificationPrefs[K]) => { setPrefs((p) => ({ ...p, [k]: v })); setDirty(true); };
   const save = async () => {
+    if (busy) return;
     setBusy(true);
     const existing = (profile.preferences && typeof profile.preferences === "object" && !Array.isArray(profile.preferences) ? profile.preferences : {}) as Record<string, unknown>;
-    const r = await updateProfileAction({ full_name: profile.full_name ?? "", phone: profile.phone ?? "", avatar_url: profile.avatar_url, preferences: { ...existing, ...prefs } });
-    setBusy(false);
-    if (!r.ok) { toast.error(r.error); return; }
-    setDirty(false); toast.success("Preferences saved"); router.refresh();
+    try {
+      const r = await updateProfileAction({ full_name: profile.full_name ?? "", phone: profile.phone ?? "", avatar_url: profile.avatar_url, preferences: { ...existing, ...prefs } });
+      if (!r.ok) { toast.error(r.error); return; } // the switches keep their new positions; Save stays enabled
+      setDirty(false); toast.success("Preferences saved"); router.refresh();
+    } catch {
+      toast.error("Could not save preferences", "Check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
   };
   return (
     <>
@@ -93,7 +106,7 @@ export function PreferencesForm({ profile }: { profile: Profile }) {
         <Select aria-label="Language" value={prefs.language} onChange={(e) => set("language", e.target.value === "hi" ? "hi" : "en")} options={[{ value: "en", label: "English" }, { value: "hi", label: "हिन्दी (Hindi)" }]} />
         <p className="mt-2 text-xs text-ink-3">The app interface is currently in English; this preference is used for notifications and support.</p>
       </SettingsCard>
-      <Button fullWidth onClick={save} loading={busy} disabled={!dirty || !canSave}>Save preferences</Button>
+      <Button fullWidth onClick={save} loading={busy} disabled={busy || !dirty || !canSave}>Save preferences</Button>
     </>
   );
 }
@@ -109,6 +122,7 @@ export function SaveAccountForm({ profile }: { profile: Profile }) {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (busy) return;
     const errs: Record<string, string> = {};
     if (name.trim().length < 2) errs.name = "Enter your name";
     if (!isValidIndianMobile(phone)) errs.phone = "Enter a valid 10-digit mobile number";
@@ -116,11 +130,16 @@ export function SaveAccountForm({ profile }: { profile: Profile }) {
     setErrors(errs);
     if (Object.keys(errs).length) return;
     setBusy(true);
-    // Converts the anonymous session into a permanent mobile + PIN account (phone OTP only when the project requires confirmation).
-    const { error } = await createClient().auth.updateUser({ phone: `+91${phone}`, password, data: { full_name: name.trim(), phone } });
-    setBusy(false);
-    if (error) { toast.error("Could not save your account", error.message); return; }
-    setDone(phone);
+    try {
+      // Converts the anonymous session into a permanent mobile + PIN account (phone OTP only when the project requires confirmation).
+      const { error } = await createClient().auth.updateUser({ phone: `+91${phone}`, password, data: { full_name: name.trim(), phone } });
+      if (error) { toast.error("Could not save your account", error.message); return; } // name, number and PIN stay filled in
+      setDone(phone);
+    } catch {
+      toast.error("Could not save your account", "Check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   if (done) {
@@ -141,7 +160,7 @@ export function SaveAccountForm({ profile }: { profile: Profile }) {
           <Input label="6-digit PIN" type="password" inputMode="numeric" required minLength={6} maxLength={6} pattern="[0-9]{6}" value={password} onChange={(e) => setPassword(e.target.value.replace(/\D/g, "").slice(0, 6))} error={errors.password} autoComplete="new-password" wrapperClassName="sm:col-span-2" />
         </div>
         <p className="text-xs text-ink-3">Your mobile number becomes your login.</p>
-        <Button type="submit" fullWidth loading={busy}>Save my account</Button>
+        <Button type="submit" fullWidth loading={busy} disabled={busy}>Save my account</Button>
       </form>
     </SettingsCard>
   );
@@ -153,12 +172,18 @@ export function DeleteAccountRequest() {
   const [open, setOpen] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const request = async () => {
+    if (busy) return;
     setBusy(true);
-    const r = await createTicketAction({ subject: "Account deletion request", category: "account", message: "Please delete my Merta Deal account and personal data. Requested from Settings > Delete account. I understand in-progress orders must be completed or cancelled first." });
-    setBusy(false);
-    if (!r.ok) { toast.error(r.error); return; }
-    setOpen(false); toast.success("Deletion request received", "Our team will confirm on the ticket before deleting.");
-    router.push(`/account/support/${r.data}`);
+    try {
+      const r = await createTicketAction({ subject: "Account deletion request", category: "account", message: "Please delete my Merta Deal account and personal data. Requested from Settings > Delete account. I understand in-progress orders must be completed or cancelled first." });
+      if (!r.ok) { toast.error(r.error); return; }
+      setOpen(false); toast.success("Deletion request received", "Our team will confirm on the ticket before deleting.");
+      router.push(`/account/support/${r.data}`);
+    } catch {
+      toast.error("Could not send the request", "Check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
   };
   return (
     <SettingsCard icon={<Trash2 className="h-5 w-5" />} title="Delete account" description="Raises a support ticket. We confirm with you on the ticket, complete any open orders or refunds, then remove your data.">

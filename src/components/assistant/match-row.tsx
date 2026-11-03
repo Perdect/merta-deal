@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { SearchX, Store } from "lucide-react";
+import { SearchX } from "lucide-react";
 import type { MatchedLine } from "@/lib/ai/schemas";
 import { cn } from "@/lib/utils";
 import { VegMark } from "@/components/ui/badge";
@@ -16,7 +16,7 @@ function describe(line: MatchedLine) {
 }
 
 /** One list line: requested item, best match (or alternative), planned packs and the cart button. */
-export function MatchRow({ line, choice, onChange, signedIn, targetStoreId }: { line: MatchedLine; choice: LineChoice; onChange: (c: LineChoice) => void; signedIn: boolean; targetStoreId: string | null }) {
+export function MatchRow({ line, choice, onChange, signedIn }: { line: MatchedLine; choice: LineChoice; onChange: (c: LineChoice) => void; signedIn: boolean }) {
   const c = line.candidates[choice.candidate] ?? line.candidates[0];
   if (!c) {
     return (
@@ -29,10 +29,9 @@ export function MatchRow({ line, choice, onChange, signedIn, targetStoreId }: { 
       </li>
     );
   }
-  const otherStore = targetStoreId != null && c.store_id !== targetStoreId;
   const max = Math.max(1, Math.min(c.max_order_qty ?? 10, c.stock_qty ?? 99));
   return (
-    <li className={cn("rounded-md border border-line bg-card p-2.5 shadow-card sm:p-3", otherStore && "border-saffron-300")}>
+    <li className={cn("rounded-md border border-line bg-card p-2.5 shadow-card sm:p-3")}>
       <div className="flex gap-3">
         <Link href={`/p/${c.slug}`} className="shrink-0" aria-label={c.name}>
           <ProductImage image={c.image_url} brand={c.brand_name} productName={c.name} packSize={c.pack_label} className="h-16 w-16 rounded-md sm:h-20 sm:w-20" sizes="80px" />
@@ -46,7 +45,6 @@ export function MatchRow({ line, choice, onChange, signedIn, targetStoreId }: { 
           <p className="text-xs text-ink-3">{c.pack_label}{c.brand_name ? ` · ${c.brand_name}` : ""}</p>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
             <Price price={c.selling_price ?? c.mrp} mrp={c.mrp} size="sm" />
-            {c.store_name ? <span className={cn("inline-flex items-center gap-1 text-[11px]", otherStore ? "font-semibold text-saffron-700" : "text-ink-3")}><Store className="h-3 w-3" />{c.store_name}</span> : null}
             {c.stock_status === "low_stock" ? <span className="text-[11px] font-semibold text-saffron-700">Only {c.stock_qty} left</span> : null}
           </div>
         </div>
@@ -56,7 +54,7 @@ export function MatchRow({ line, choice, onChange, signedIn, targetStoreId }: { 
           <label className="flex min-w-0 flex-1 items-center gap-2 text-xs text-ink-3">
             <span className="shrink-0">Alternative</span>
             <select value={choice.candidate} onChange={(e) => { const idx = Number(e.target.value); onChange({ candidate: idx, packs: line.candidates[idx]?.suggested_packs ?? 1 }); }} className="h-8 min-w-0 flex-1 rounded-sm border border-line-2 bg-card px-2 text-xs text-ink focus:border-brand-500 focus:outline-none" aria-label={`Alternative products for ${line.item.query}`}>
-              {line.candidates.map((alt, i) => <option key={alt.inventory_id ?? alt.id} value={i}>{alt.name} · {alt.pack_label ?? ""} · ₹{Number(alt.selling_price ?? alt.mrp ?? 0)}{alt.store_name ? ` · ${alt.store_name}` : ""}</option>)}
+              {line.candidates.map((alt, i) => <option key={alt.inventory_id ?? alt.id} value={i}>{alt.name} · {alt.pack_label ?? ""} · ₹{Number(alt.selling_price ?? alt.mrp ?? 0)}</option>)}
             </select>
           </label>
         ) : <span className="flex-1 text-xs text-ink-4">Only match in stock</span>}

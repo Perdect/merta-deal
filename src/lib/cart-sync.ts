@@ -4,8 +4,7 @@ import { useCartStore } from "@/stores/cart-store";
 import { toast } from "@/components/ui/toast";
 import { maxPerOrderMessage, onlyAvailableMessage } from "@/lib/utils";
 
-type StoreRef = { id: string; name: string };
-export type SetQtyResult = { ok: true; quantity: number } | { ok: false; error: string; conflict?: { current_store: StoreRef; new_store: StoreRef } };
+export type SetQtyResult = { ok: true; quantity: number } | { ok: false; error: string };
 
 /** Other tabs listen on this channel and reload the cart after any change here. */
 export const CART_CHANNEL = "md-cart";
@@ -22,7 +21,7 @@ export function packLimit(maxQty?: number | null, stockQty?: number | null) {
   return { max: Math.max(0, Math.min(limit, stock)), byStock, message: byStock ? onlyAvailableMessage(stock) : maxPerOrderMessage(limit) };
 }
 
-const lines = new Map<string, { desired: number; replace: boolean; run: Promise<SetQtyResult> }>();
+const lines = new Map<string, { desired: number; run: Promise<SetQtyResult> }>();
 
 /**
  * Sets one cart line to `qty` packs (0 removes it). The screen updates at once; the server gets one
@@ -30,24 +29,22 @@ const lines = new Map<string, { desired: number; replace: boolean; run: Promise<
  * next one, so rapid taps are neither lost nor duplicated. The server enforces the limits; after
  * every change (or failure) the cart is reloaded from the server, which restores correct values.
  */
-export function setLineQuantity(inventoryId: string, qty: number, opts: { replace?: boolean; quiet?: boolean } = {}): Promise<SetQtyResult> {
+export function setLineQuantity(inventoryId: string, qty: number, opts: { quiet?: boolean } = {}): Promise<SetQtyResult> {
   useCartStore.getState().setPending(inventoryId, qty);
   const existing = lines.get(inventoryId);
   if (existing) {
     existing.desired = qty;
-    if (opts.replace) existing.replace = true;
     return existing.run;
   }
-  const line = { desired: qty, replace: Boolean(opts.replace), run: null as unknown as Promise<SetQtyResult> };
+  const line = { desired: qty, run: null as unknown as Promise<SetQtyResult> };
   lines.set(inventoryId, line);
   line.run = (async (): Promise<SetQtyResult> => {
     let result: SetQtyResult;
     try {
       for (;;) {
         const target = line.desired;
-        const replace = line.replace; line.replace = false;
-        const res = await addToCartAction(inventoryId, target, replace);
-        if (!res.ok) { result = { ok: false, error: res.error, conflict: res.conflict }; break; }
+        const res = await addToCartAction(inventoryId, target);
+        if (!res.ok) { result = { ok: false, error: res.error }; break; }
         if (line.desired !== target) continue;
         const summary = await getCartSummary();
         if (line.desired !== target) continue; // more taps arrived while refreshing
@@ -67,7 +64,7 @@ export function setLineQuantity(inventoryId: string, qty: number, opts: { replac
     const store = useCartStore.getState();
     if (summary) store.setSummary(summary);
     store.setPending(inventoryId, null);
-    if (!result.conflict && !opts.quiet) toast.error(result.error);
+    if (!opts.quiet) toast.error(result.error);
     return result;
   })();
   return line.run;

@@ -44,7 +44,7 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
   const walletOk = walletBalance >= summary.total;
   // The first reason the order cannot be placed, in the order a customer can fix it. Shown next
   // to the button so a greyed-out "Place order" is never a mystery. The rules themselves come from
-  // cart_summary (zone/store min order, serviceability), not from here.
+  // cart_summary (zone min order, serviceability), not from here.
   const blocker = !addressId ? "Select or add a delivery address to continue."
     : !summary.serviceable ? (summary.service_message ?? "We don't deliver to this address yet.")
     : !summary.meets_min_order ? `Minimum order is ${formatINR(summary.min_order_amount)} for your area. Add ${formatINR(summary.min_order_amount - summary.subtotal)} more to place this order.`
@@ -111,7 +111,7 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
             <Option active={deliveryType === "scheduled"} onClick={() => setDeliveryType("scheduled")} icon={<CalendarClock className="h-5 w-5 text-info" />} title="Scheduled" subtitle="Pick a slot" />
           </div>
           {deliveryType === "scheduled" ? <div className="scroll-x mt-3">{slots.map((s) => <button key={s} type="button" onClick={() => setSlot(s)} className={cn("rounded-full border px-3.5 py-2 text-sm font-medium", slot === s ? "border-brand-600 bg-brand-50 text-brand-700" : "border-line-2 bg-card text-ink-2")}>{s.replace("-", " – ")}</button>)}</div> : null}
-          <p className="mt-2 text-xs text-ink-3">ETA is based on the store&apos;s packing time and your zone. We show real estimates, never guarantees.</p>
+          <p className="mt-2 text-xs text-ink-3">ETA is based on packing time and your zone. We show real estimates, never guarantees.</p>
         </Section>
 
         <Section step={3} title="Payment">

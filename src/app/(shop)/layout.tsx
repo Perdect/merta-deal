@@ -8,7 +8,7 @@ import { BottomNav } from "@/components/shop/bottom-nav";
 import { ChromePart, NavHistory, NavSpacer } from "@/components/shop/app-view";
 import { CartProvider } from "@/components/shop/cart-provider";
 import { StickyCartBar } from "@/components/shop/sticky-cart-bar";
-import { CartDrawer } from "@/components/shop/cart-drawer";
+import { CartDrawerLazy } from "@/components/shop/cart-drawer-lazy";
 import { Footer } from "@/components/shop/footer";
 import { PwaClient } from "@/components/pwa/pwa-client";
 import { ConnectionIndicator } from "@/components/pwa/connection-indicator";
@@ -35,7 +35,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
       <ChromePart part="footer"><Footer /></ChromePart>
       <ChromePart part="cartBar"><StickyCartBar /></ChromePart>
       <NavSpacer />
-      <CartDrawer signedIn={Boolean(user)} isGuest={Boolean(profile?.is_guest)} addresses={addresses} walletBalance={Number(profile?.wallet_balance ?? 0)}
+      <CartDrawerLazy signedIn={Boolean(user)} isGuest={Boolean(profile?.is_guest)} addresses={addresses} walletBalance={Number(profile?.wallet_balance ?? 0)}
         razorpayEnabled={isRazorpayConfigured() && settings.online_payments_enabled !== false} codEnabled={settings.cod_enabled !== false} slots={slots}
         coupons={coupons.map((c) => ({ code: c.code, title: c.title, min_order_amount: Number(c.min_order_amount) }))}
         user={{ name: profile?.full_name ?? user?.fullName ?? null, phone: profile?.phone ?? user?.phone ?? null }} eta={defaultEta} />

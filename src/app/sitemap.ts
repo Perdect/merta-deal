@@ -4,11 +4,12 @@ import type { Database } from "@/types/database";
 import { env, isSupabaseConfigured } from "@/lib/env";
 import { site } from "@/config/site";
 
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 /**
  * Server-side anon client without request cookies: the sitemap only reads public catalogue rows (RLS allows anon),
- * and skipping `cookies()` keeps this route statically cacheable (ISR, hourly) instead of hitting Postgres on every crawl.
+ * and skipping `cookies()` keeps the route free of per-visitor state. It is generated on every request: the
+ * catalogue is small (under 100 URLs) and the earlier hourly ISR copy was found serving a two-week-old list.
  */
 function catalogueClient() {
   if (!isSupabaseConfigured()) return null;
@@ -26,6 +27,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const entries: MetadataRoute.Sitemap = [
     { url: `${base}/` },
     { url: `${base}/categories` },
+    { url: `${base}/about` },
     { url: `${base}/delivery-area` },
     { url: `${base}/deliver` },
     { url: `${base}/terms` },
@@ -37,7 +39,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const [categories, cards] = await Promise.all([
       supabase.from("categories").select("id, slug, parent_id, updated_at").eq("is_active", true).limit(500),
-      supabase.from("v_product_cards").select("slug, category_id").limit(5000),
+      supabase.from("v_product_cards").select("slug, category_id").not("inventory_id", "is", null).limit(5000),
     ]);
     const cats = categories.data ?? [];
     const withProducts = new Set<string>();

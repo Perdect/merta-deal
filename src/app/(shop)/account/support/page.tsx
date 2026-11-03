@@ -37,7 +37,7 @@ export default async function SupportPage({ searchParams }: { searchParams: Prom
   if (!user) redirect("/login?next=/account/support");
   const [ticketsAll, settings, { orders }] = await Promise.all([getMyTickets(), getPublicSettings(), getMyOrders({ limit: 20 })]);
   const tickets = ticketsAll.slice(0, 50);
-  const orderOptions: TicketOrderOption[] = orders.map((o) => ({ id: o.id, order_number: o.order_number, store_name: o.store?.name ?? null, total: Number(o.total), created_at: o.created_at }));
+  const orderOptions: TicketOrderOption[] = orders.map((o) => ({ id: o.id, order_number: o.order_number, total: Number(o.total), created_at: o.created_at }));
 
   const phone = str(settings.support_phone, site.supportPhone);
   const whatsapp = str(settings.support_whatsapp, "").replace(/\D/g, "");
@@ -48,11 +48,11 @@ export default async function SupportPage({ searchParams }: { searchParams: Prom
   const cod = settings.cod_enabled !== false; const online = isRazorpayConfigured() && settings.online_payments_enabled !== false;
 
   const faqs: FaqItem[] = [
-    { id: "delivery", q: "How long does delivery take?", a: `Standard delivery usually arrives in ${etaMin}–${etaMax} minutes, depending on the store's prep time and distance. Express (where your area supports it) is ${xMin}–${xMax} minutes, and scheduled orders arrive in the slot you pick at checkout. Your order page shows the live ETA and the rider on the map once they're on the way.${freeAbove ? ` Delivery is free above ${formatINR(freeAbove)}.` : ""}${minOrder ? ` Minimum order is ${formatINR(minOrder)}.` : ""}` },
+    { id: "delivery", q: "How long does delivery take?", a: `Standard delivery usually arrives in ${etaMin}–${etaMax} minutes, depending on packing time and distance. Express (where your area supports it) is ${xMin}–${xMax} minutes, and scheduled orders arrive in the slot you pick at checkout. Your order page shows the live ETA and the rider on the map once they're on the way.${freeAbove ? ` Delivery is free above ${formatINR(freeAbove)}.` : ""}${minOrder ? ` Minimum order is ${formatINR(minOrder)}.` : ""}` },
     { id: "payments", q: "Which payment methods can I use?", a: `${cod ? "Cash on Delivery is available — pay the rider when your order arrives." : "Cash on Delivery is currently switched off."} ${online ? "UPI, cards and net banking are available through Razorpay's secure checkout." : "Online payments (UPI, cards, net banking) will be available once Razorpay is enabled."} You can also pay from your Merta Deal wallet balance.` },
     { id: "otp", q: "What is the delivery OTP?", a: "Every order has a numeric delivery OTP shown on your order page. The rider enters it on their app to confirm the hand-over — that's what marks the order delivered. Share it only when the items are in your hands, and never over a phone call." },
     { id: "refunds", q: "How do refunds work?", a: "If a paid order is cancelled or an item is missing, the refund is issued to your original payment method (your bank usually posts it in 5–7 working days) or credited instantly to your Merta Deal wallet, depending on the case. COD orders have nothing to refund unless you paid the rider. Track refunds under Wallet, and raise a ticket if one is missing." },
-    { id: "cancel", q: "Can I cancel my order?", a: "Yes — from the order page while it's still 'Placed' or 'Confirmed by store'. Once the store starts preparing, the order can't be cancelled from the app; contact support and we'll check with the store." },
+    { id: "cancel", q: "Can I cancel my order?", a: "Yes — from the order page while it's still 'Placed' or 'Confirmed'. Once packing starts, the order can't be cancelled from the app; contact support and we'll sort it out." },
     { id: "contact", q: "How do I reach Merta Deal?", a: `Call ${phone}${whatsapp ? `, WhatsApp us on +${whatsapp}` : ""}, or email ${email}. For anything about a specific order, raise a ticket below so we can look it up straight away.` },
   ];
 

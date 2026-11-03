@@ -21,14 +21,15 @@ import { toast } from "@/components/ui/toast";
 import { formatINR, formatDateTime, formatTime, cn } from "@/lib/utils";
 import type { OrderStatus } from "@/lib/order-status";
 import { DeliveryOtpStrip } from "./delivery-otp-strip";
+import { PushOptInCard } from "@/components/pwa/push-opt-in-card";
 
 const TERMINAL: OrderStatus[] = ["delivered", "completed", "cancelled", "rejected"];
 
-/** Shopper-facing headline for each status (quick-commerce wording; store/admin keep the detailed labels). */
+/** Shopper-facing headline for each status (quick-commerce wording; admin keeps the detailed labels). */
 function headline(status: OrderStatus, paid: boolean) {
   switch (status) {
     case "placed": return paid ? "Confirming your order" : "Waiting for payment";
-    case "store_confirmed": case "preparing": return "Packing your order";
+    case "confirmed": case "preparing": return "Packing your order";
     case "ready_for_pickup": return "Packed · finding a rider";
     case "rider_assigned": return "Rider is picking up your order";
     case "out_for_delivery": return "On the way";
@@ -36,7 +37,7 @@ function headline(status: OrderStatus, paid: boolean) {
   }
 }
 
-export function OrderTrackingView({ initial, placed, paymentState }: { initial: OrderTracking; placed?: boolean; paymentState?: string }) {
+export function OrderTrackingView({ initial, placed, paymentState, push }: { initial: OrderTracking; placed?: boolean; paymentState?: string; /** Web-push availability (server-side check); the opt-in card shows after a fresh order. */ push?: { configured: boolean; vapidPublicKey: string } }) {
   const router = useRouter();
   const [t, setT] = React.useState(initial);
   const [trail, setTrail] = React.useState<{ lat: number; lng: number }[]>(initial.assignment?.last_location ? [{ lat: initial.assignment.last_location.lat, lng: initial.assignment.last_location.lng }] : []);
@@ -66,43 +67,64 @@ export function OrderTrackingView({ initial, placed, paymentState }: { initial: 
   const late = active && paid && eta != null && eta < 0;
   const addr = o.address_snapshot as unknown as { full_name: string; phone: string; house: string; street: string; area: string; landmark?: string; city: string; pincode: string; lat?: number; lng?: number };
 
-  const cancel = async (reason: string) => { setBusy(true); const r = await cancelOrderAction(o.id, reason); setBusy(false); setCancelOpen(false); if (r.ok) { toast.success("Order cancelled"); refresh(); } else toast.error(r.error); };
-  const complete = async () => { setBusy(true); const r = await completeOrderAction(o.id); setBusy(false); if (r.ok) { toast.success("Thanks for shopping local!"); refresh(); } else toast.error(r.error); };
+  // Server actions reject outright when the device is offline; the catch keeps the buttons usable
+  // and tells the customer what happened instead of leaving a spinner.
+  const cancel = async (reason: string) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const r = await cancelOrderAction(o.id, reason);
+      setCancelOpen(false);
+      if (r.ok) { toast.success("Order cancelled"); refresh(); } else toast.error(r.error);
+    } catch { toast.error("Could not cancel the order", "Check your connection and try again."); }
+    finally { setBusy(false); }
+  };
+  const complete = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const r = await completeOrderAction(o.id);
+      if (r.ok) { toast.success("Thanks for shopping local!"); refresh(); } else toast.error(r.error);
+    } catch { toast.error("Could not update the order", "Check your connection and try again."); }
+    finally { setBusy(false); }
+  };
 
   return (
     <div className="grid grid-cols-1 gap-5 px-4 sm:px-0 lg:grid-cols-[minmax(0,1fr)_380px]">
       <div className="space-y-4">
-        {placed && o.status !== "placed" && active ? <Alert tone="success" icon={<CheckCircle2 className="h-4 w-4" />} title={`Order ${o.order_number} confirmed`}>{t.store.name} is packing it now{o.promised_at ? `, arriving by ${formatTime(o.promised_at)}` : ""}.{o.payment_method === "cod" ? ` Keep ${formatINR(o.total, { precise: true })} cash ready for the rider.` : ""}</Alert> : null}
-        {placed && o.status === "placed" && paid ? <Alert tone="success" icon={<CheckCircle2 className="h-4 w-4" />} title={`Order ${o.order_number} placed`}>{t.store.name} has been notified and will confirm it shortly.</Alert> : null}
+        {placed && o.status !== "placed" && active ? <Alert tone="success" icon={<CheckCircle2 className="h-4 w-4" />} title={`Order ${o.order_number} confirmed`}>{t.pickup.name} is packing it now{o.promised_at ? `, arriving by ${formatTime(o.promised_at)}` : ""}.{o.payment_method === "cod" ? ` Keep ${formatINR(o.total, { precise: true })} cash ready for the rider.` : ""}</Alert> : null}
+        {placed && o.status === "placed" && paid ? <Alert tone="success" icon={<CheckCircle2 className="h-4 w-4" />} title={`Order ${o.order_number} placed`}>We&apos;ve got it and will confirm it as soon as your payment is received.</Alert> : null}
         {late ? (
           <Alert tone="warning" icon={<Clock className="h-4 w-4" />} title={`Running ${Math.abs(eta!)} min late`}>
-            {o.status === "ready_for_pickup" ? "Your order is packed and we're still finding a delivery partner." : o.status === "placed" ? "The store hasn't confirmed your order yet." : o.status === "out_for_delivery" || o.status === "rider_assigned" ? "Your delivery partner is taking longer than expected." : "The store is taking longer than usual to pack."} Sorry for the wait.
+            {o.status === "ready_for_pickup" ? "Your order is packed and we're still finding a delivery partner." : o.status === "placed" ? "Your order hasn't been confirmed yet." : o.status === "out_for_delivery" || o.status === "rider_assigned" ? "Your delivery partner is taking longer than expected." : "The store is taking longer than usual to pack."} Sorry for the wait.
             <span className="mt-2 flex flex-wrap gap-2">
-              <a href={`tel:${t.store.phone}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-line-2 bg-card px-3 text-sm font-semibold text-ink"><Phone className="h-4 w-4" /> Call store</a>
+              {t.pickup.phone ? <a href={`tel:${t.pickup.phone}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-line-2 bg-card px-3 text-sm font-semibold text-ink"><Phone className="h-4 w-4" /> Call us</a> : null}
               <Link href={`/account/support?order=${o.id}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-line-2 bg-card px-3 text-sm font-semibold text-ink"><HelpCircle className="h-4 w-4" /> Get help</Link>
               {canCustomerCancel(o.status) ? <button type="button" onClick={() => setCancelOpen(true)} className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-line-2 bg-card px-3 text-sm font-semibold text-danger"><XCircle className="h-4 w-4" /> Cancel order</button> : null}
             </span>
           </Alert>
         ) : null}
-        {paymentState === "pending" || (o.payment_status === "pending" && o.payment_method !== "cod") ? <Alert tone="warning" icon={<CreditCard className="h-4 w-4" />} title="Payment pending">Your order is saved but payment was not completed. The store will start packing once payment is received. <Link href={`/checkout`} className="font-semibold underline">Retry from checkout</Link> or contact support.</Alert> : null}
+        {paymentState === "pending" || (o.payment_status === "pending" && o.payment_method !== "cod") ? <Alert tone="warning" icon={<CreditCard className="h-4 w-4" />} title="Payment pending">Your order is saved but payment was not completed. Packing starts once payment is received. <Link href={`/checkout`} className="font-semibold underline">Retry from checkout</Link> or contact support.</Alert> : null}
         {paymentState === "setup" ? <Alert tone="warning" title="Online payment unavailable">Razorpay is not configured on this deployment yet. Your order is saved with payment pending; please contact support or choose Cash on Delivery next time.</Alert> : null}
         {paymentState === "failed" ? <Alert tone="danger" title="Payment failed">We could not verify the payment. If money was deducted it will be refunded automatically within 5–7 days.</Alert> : null}
+        {placed && active && push ? <PushOptInCard configured={push.configured} vapidPublicKey={push.vapidPublicKey} /> : null}
 
         <section className="rounded-lg border border-line bg-card p-4">
           <div className="flex items-start justify-between gap-3">
-            <div>
+            {/* Status changes arrive over Realtime; announce the new headline to screen readers. */}
+            <div aria-live="polite" aria-atomic="true">
               <p className="text-xs text-ink-3">Order {o.order_number}</p>
               <h1 className="text-xl font-bold text-ink">{headline(o.status, paid)}</h1>
               <p className="text-sm text-ink-3">{active && paid && eta != null && eta > 0 ? `Arriving in about ${eta} min · by ${formatTime(o.promised_at!)}` : meta.description}</p>
             </div>
-            <div className="flex flex-col items-end gap-1.5"><OrderStatusBadge status={o.status} size="md" />{active ? <span role="status" className={cn("inline-flex items-center gap-1 text-[11px] font-semibold", connected ? "text-success" : "text-ink-3")}>{connected ? <Wifi className="h-3 w-3" aria-hidden /> : <WifiOff className="h-3 w-3" aria-hidden />}{connected ? "Live" : "Reconnecting…"}</span> : null}</div>
+            <div className="flex flex-col items-end gap-1.5"><OrderStatusBadge status={o.status} size="md" />{active ? <span role="status" aria-live="polite" className={cn("inline-flex items-center gap-1 text-[11px] font-semibold", connected ? "text-success" : "text-ink-3")}>{connected ? <Wifi className="h-3 w-3" aria-hidden /> : <WifiOff className="h-3 w-3" aria-hidden />}{connected ? "Live updates" : "Reconnecting…"}</span> : null}</div>
           </div>
           {o.status === "out_for_delivery" ? <DeliveryOtpStrip otp={t.delivery_otp} locked={t.otp_locked} /> : null}
         </section>
 
         {live || o.status === "ready_for_pickup" ? (
           <section>
-            <LiveMap store={{ lat: t.store.lat, lng: t.store.lng, name: t.store.name }} customer={addr.lat && addr.lng ? { lat: addr.lat, lng: addr.lng } : null} rider={live ? rider : null} trail={trail} showRoute={Boolean(live)} />
+            <LiveMap store={{ lat: t.pickup.lat ?? 0, lng: t.pickup.lng ?? 0, name: t.pickup.name }} customer={addr.lat && addr.lng ? { lat: addr.lat, lng: addr.lng } : null} rider={live ? rider : null} trail={trail} showRoute={Boolean(live)} />
           </section>
         ) : null}
 
@@ -110,7 +132,7 @@ export function OrderTrackingView({ initial, placed, paymentState }: { initial: 
           <section className="flex items-center gap-3 rounded-lg border border-line bg-card p-4">
             <Avatar name={t.assignment.rider.name} src={t.assignment.rider.avatar_url} size={44} />
             <div className="min-w-0 flex-1"><p className="text-sm font-bold text-ink">{t.assignment.rider.name ?? "Delivery partner"}</p><p className="text-xs text-ink-3 capitalize">{t.assignment.rider.vehicle_type}{t.assignment.rider.vehicle_number ? ` · ${t.assignment.rider.vehicle_number}` : ""}</p><StarRating value={t.assignment.rider.rating_avg} size={12} /></div>
-            {t.assignment.rider.phone && live ? <a href={`tel:${t.assignment.rider.phone}`} className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-brand-700" aria-label="Call rider"><Phone className="h-5 w-5" /></a> : null}
+            {t.assignment.rider.phone && live ? <a href={`tel:${t.assignment.rider.phone}`} className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-50 text-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600" aria-label={`Call ${t.assignment.rider.name ?? "delivery partner"}`}><Phone className="h-5 w-5" aria-hidden /></a> : null}
           </section>
         ) : null}
 
@@ -137,8 +159,8 @@ export function OrderTrackingView({ initial, placed, paymentState }: { initial: 
           <p className="mt-3 text-xs text-ink-3">{PAYMENT_METHOD_LABEL[o.payment_method]} · {PAYMENT_STATUS_LABEL[o.payment_status]}</p>
         </section>
         <section className="rounded-lg border border-line bg-card p-4 text-sm">
-          <p className="flex items-center gap-2 font-bold text-ink"><StoreIcon className="h-4 w-4 text-brand-600" />{t.store.name}</p><p className="mt-0.5 text-xs text-ink-3">{t.store.address_line1}, {t.store.area}</p>
-          <a href={`tel:${t.store.phone}`} className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-brand-700"><Phone className="h-3 w-3" /> Call store</a>
+          <p className="flex items-center gap-2 font-bold text-ink"><StoreIcon className="h-4 w-4 text-brand-600" />{t.pickup.name}</p><p className="mt-0.5 text-xs text-ink-3">{[t.pickup.address_line1, t.pickup.area].filter(Boolean).join(", ")}</p>
+          {t.pickup.phone ? <a href={`tel:${t.pickup.phone}`} className="tap mt-1 inline-flex min-h-9 items-center gap-1 text-xs font-semibold text-brand-700"><Phone className="h-3 w-3" aria-hidden /> Call us</a> : null}
           <p className="mt-3 flex items-center gap-2 font-bold text-ink"><MapPin className="h-4 w-4 text-info" />Deliver to</p><p className="mt-0.5 text-xs text-ink-3">{addr.full_name} · {addr.phone}<br />{[addr.house, addr.street, addr.area, addr.landmark, `${addr.city} – ${addr.pincode}`].filter(Boolean).join(", ")}</p>
           {o.delivery_instructions ? <p className="mt-2 rounded-sm bg-surface px-2 py-1.5 text-xs text-ink-2">“{o.delivery_instructions}”</p> : null}
           <p className="mt-3 text-xs text-ink-3">Placed {formatDateTime(o.created_at)}</p>

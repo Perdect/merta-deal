@@ -14,14 +14,14 @@ export function AccountMenu({ items, title, className }: { items: AccountMenuIte
       <ul className="divide-y divide-line">
         {items.map((it) => (
           <li key={it.href}>
-            <Link href={it.href} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700"><DynamicIcon name={it.icon} className="h-4.5 w-4.5" /></span>
+            <Link href={it.href} className="flex min-h-14 items-center gap-3 px-4 py-3 transition-colors hover:bg-surface focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-brand-600">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700" aria-hidden="true"><DynamicIcon name={it.icon} className="h-4.5 w-4.5" /></span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-semibold text-ink">{it.label}</span>
                 {it.hint ? <span className="block truncate text-xs text-ink-3">{it.hint}</span> : null}
               </span>
               {it.badge}
-              <ChevronRight className="h-4 w-4 shrink-0 text-ink-4" />
+              <ChevronRight className="h-4 w-4 shrink-0 text-ink-4" aria-hidden />
             </Link>
           </li>
         ))}

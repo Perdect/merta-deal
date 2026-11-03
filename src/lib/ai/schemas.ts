@@ -23,7 +23,7 @@ export const parseOrderRequestSchema = z.object({ text: z.string().trim().min(2)
 
 export type AssistantSource = "claude" | "rules";
 
-export type MatchCandidate = Pick<ProductCard, "id" | "name" | "slug" | "pack_label" | "weight_value" | "weight_unit" | "image_url" | "category_slug" | "brand_name" | "is_veg" | "inventory_id" | "store_id" | "store_name" | "store_slug" | "selling_price" | "mrp" | "stock_qty" | "stock_status" | "max_order_qty" | "discount_pct"> & {
+export type MatchCandidate = Pick<ProductCard, "id" | "name" | "slug" | "pack_label" | "weight_value" | "weight_unit" | "image_url" | "category_slug" | "brand_name" | "is_veg" | "inventory_id" | "selling_price" | "mrp" | "stock_qty" | "stock_status" | "max_order_qty" | "discount_pct"> & {
   /** Packs suggested for this candidate given the requested quantity/unit (from suggestedPacks()). */
   suggested_packs: number;
 };

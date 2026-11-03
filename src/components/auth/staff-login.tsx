@@ -16,7 +16,7 @@ const COPY = {
     badge: "Admin",
     Icon: ShieldCheck,
     title: "Admin login",
-    intro: "Manage orders, stores, riders, payouts and settings.",
+    intro: "Manage orders, products, riders, payouts and settings.",
     submit: "Sign in to admin",
     denied: "You're signed in with an account that doesn't have admin access. Sign in with an admin account to continue.",
   },

@@ -29,13 +29,18 @@ export function TicketThread({ ticketId, status, initial, userName, userAvatar }
   const send = async (e: React.FormEvent) => {
     e.preventDefault();
     const body = text.trim();
-    if (!body) return;
+    if (!body || busy) return;
     setBusy(true);
-    const r = await replyTicketAction(ticketId, body);
-    setBusy(false);
-    if (!r.ok) { toast.error(r.error); return; }
-    setMessages((cur) => [...cur, { id: `tmp-${Date.now()}`, ticket_id: ticketId, sender_id: "me", message: body, is_staff: false, created_at: new Date().toISOString() }]);
-    setText(""); router.refresh();
+    try {
+      const r = await replyTicketAction(ticketId, body);
+      if (!r.ok) { toast.error(r.error); return; } // the draft stays in the box
+      setMessages((cur) => [...cur, { id: `tmp-${Date.now()}`, ticket_id: ticketId, sender_id: "me", message: body, is_staff: false, created_at: new Date().toISOString() }]);
+      setText(""); router.refresh();
+    } catch {
+      toast.error("Could not send your reply", "Check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -61,7 +66,7 @@ export function TicketThread({ ticketId, status, initial, userName, userAvatar }
           <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Write a reply…" maxLength={2000} className="min-h-20" aria-label="Reply" />
           <div className="mt-2 flex items-center justify-between gap-3">
             <p className="text-xs text-ink-3">{status === "resolved" ? "Marked resolved — replying reopens the conversation for our team." : "We usually reply within a few hours."}</p>
-            <Button type="submit" size="sm" loading={busy} disabled={!text.trim()}><Send className="h-4 w-4" /> Send</Button>
+            <Button type="submit" size="sm" loading={busy} disabled={busy || !text.trim()}><Send className="h-4 w-4" aria-hidden /> Send</Button>
           </div>
         </form>
       )}

@@ -7,7 +7,7 @@ import { getSessionUser } from "@/lib/supabase/server";
 import { AdminPageHeader, Panel, DetailList, DataTable, CellStack, EmptyBlock, MetricCard, OrderStatusPill, PaymentStatusPill, paymentMethodLabel, StatusPill, rupees, rupeesRounded } from "@/components/admin/kit";
 import { UserActions } from "@/components/admin/user-actions";
 import { ResetPinButton } from "@/components/admin/reset-pin";
-import { RolePill, ActivePill, RiderStatusPill, StoreStatusPill, VEHICLE_LABEL } from "@/components/admin/ops/pills";
+import { RolePill, ActivePill, RiderStatusPill, VEHICLE_LABEL } from "@/components/admin/ops/pills";
 import { Avatar } from "@/components/ui/misc";
 import { formatDate, formatDateTime, formatNumber, timeAgo } from "@/lib/utils";
 
@@ -18,7 +18,7 @@ export default async function AdminUserPage({ params }: { params: Promise<{ id: 
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const [detail, me] = await Promise.all([getUserDetail(id), getSessionUser()]);
   if (!detail) notFound();
-  const { profile: p, stats, orders, wallet, rider, stores } = detail;
+  const { profile: p, stats, orders, wallet, rider } = detail;
   const name = p.full_name ?? "Unnamed user";
   const ordersHref = p.phone ? `/admin/orders?q=${encodeURIComponent(p.phone)}` : null;
 
@@ -40,7 +40,7 @@ export default async function AdminUserPage({ params }: { params: Promise<{ id: 
             <DataTable caption="Recent orders" rows={orders} rowKey={(o) => o.id} maxHeight={null} className="rounded-none border-x-0 border-b-0 shadow-none"
               empty={<EmptyBlock icon={ShoppingBag} title="No orders yet" description="Orders this user places will appear here." />}
               columns={[
-                { key: "order", header: "Order", render: (o) => <CellStack primary={o.order_number} secondary={o.store?.name ?? undefined} href={`/admin/orders/${o.id}`} /> },
+                { key: "order", header: "Order", render: (o) => <CellStack primary={o.order_number} href={`/admin/orders/${o.id}`} /> },
                 { key: "status", header: "Order status", render: (o) => <OrderStatusPill status={o.status} /> },
                 { key: "method", header: "Method", hideBelow: "lg", render: (o) => <span className="text-ink-2">{paymentMethodLabel(o.payment_method)}</span> },
                 { key: "payment", header: "Payment", hideBelow: "md", render: (o) => <PaymentStatusPill status={o.payment_status} /> },
@@ -75,7 +75,7 @@ export default async function AdminUserPage({ params }: { params: Promise<{ id: 
             ]} />
           </Panel>
 
-          {rider || stores.length ? (
+          {rider ? (
             <Panel title="Linked accounts">
               <ul className="space-y-2 text-sm">
                 {rider ? (
@@ -85,13 +85,6 @@ export default async function AdminUserPage({ params }: { params: Promise<{ id: 
                     <span className="text-xs text-ink-3">{VEHICLE_LABEL[rider.vehicle_type] ?? rider.vehicle_type}{rider.is_online ? " · online" : ""}</span>
                   </li>
                 ) : null}
-                {stores.map((s) => (
-                  <li key={s.id} className="flex flex-wrap items-center gap-2">
-                    <Link href={`/admin/stores/${s.id}`} className="font-medium text-brand-700 hover:underline">{s.name}</Link>
-                    <StoreStatusPill status={s.status} />
-                    <span className="text-xs text-ink-3">Owner</span>
-                  </li>
-                ))}
               </ul>
             </Panel>
           ) : null}

@@ -78,7 +78,7 @@ export function EarningsView({ delivered, rider }: { delivered: RiderAssignment[
           { label: "This week", value: formatINR(week.cod) },
           { label: "This month", value: formatINR(month.cod), strong: true },
         ]} />
-        <Alert tone="neutral" icon={<Info className="h-4 w-4" />} className="mt-3">Cash you collect belongs to Merta Deal and the store. Deposit it as agreed with the admin team — deposits are reconciled by the admin, not tracked in this app yet.</Alert>
+        <Alert tone="neutral" icon={<Info className="h-4 w-4" />} className="mt-3">Cash you collect belongs to Merta Deal. Hand it over as agreed with the admin team; the admin records each hand-over.</Alert>
       </section>
 
       <section aria-labelledby="per-day">
@@ -86,7 +86,8 @@ export function EarningsView({ delivered, rider }: { delivered: RiderAssignment[
         {recent.length === 0 ? (
           <div className="rounded-lg border border-dashed border-line-2 bg-card"><EmptyState compact icon={<PackageCheck className="h-7 w-7" />} title="No completed deliveries yet" description="Your first delivery will start this list." /></div>
         ) : (
-          <table className="w-full overflow-hidden rounded-lg border border-line bg-card text-sm shadow-card">
+          <div className="overflow-x-auto rounded-lg border border-line bg-card shadow-card">
+          <table className="w-full min-w-[320px] text-sm">
             <caption className="sr-only">Earnings per day, most recent first</caption>
             <thead className="bg-surface-2 text-left text-[11px] uppercase tracking-wide text-ink-3">
               <tr><th scope="col" className="px-3 py-2 font-semibold">Day</th><th scope="col" className="px-3 py-2 text-right font-semibold">Trips</th><th scope="col" className="px-3 py-2 text-right font-semibold">COD</th><th scope="col" className="px-3 py-2 text-right font-semibold">Earned</th></tr>
@@ -102,6 +103,7 @@ export function EarningsView({ delivered, rider }: { delivered: RiderAssignment[
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </section>
     </div>

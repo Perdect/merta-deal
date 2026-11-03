@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { Mail, Phone, Truck, MapPin, Store, Bike, Megaphone } from "lucide-react";
+import { Mail, Phone, Truck, MapPin, Bike, Megaphone } from "lucide-react";
 import { site } from "@/config/site";
 import { Logo } from "@/components/ui/misc";
 import { InstallButtons } from "@/components/pwa/install-buttons";
 
 /**
- * Footer: brand + app badges, Shop, Help, For Partners (rider sign-up live; selling and ads coming soon), and a bottom bar with the
+ * Footer: brand + app badges, Shop, Help, For Partners (rider sign-up live; ads coming soon), and a bottom bar with the
  * legal links. Phones: brand on top, link columns two-up; desktop: four columns.
  */
 export function Footer() {
@@ -22,7 +22,7 @@ export function Footer() {
             <Logo />
             <p className="mt-3 max-w-xs text-sm text-ink-2">{site.tagline}</p>
             <ul className="mt-4 space-y-2 text-[13px] text-ink-3">
-              <li className="flex items-center gap-2"><MapPin className={icon} strokeWidth={1.75} aria-hidden />{site.city}, Rajasthan · 341510, 341511</li>
+              <li className="flex items-center gap-2"><MapPin className={icon} strokeWidth={1.75} aria-hidden />{site.city}, Rajasthan · {site.servicePincodes.join(", ")}</li>
               <li className="flex items-center gap-2"><Truck className={icon} strokeWidth={1.75} aria-hidden />{site.deliveryWindowShort} delivery across {site.city}</li>
             </ul>
             <h2 className={`${heading} mt-7`}>Download the app</h2>
@@ -45,6 +45,7 @@ export function Footer() {
             <ul className={list}>
               <li><a href={`mailto:${site.supportEmail}`} className={`${link} min-w-0`}><Mail className={icon} strokeWidth={1.75} aria-hidden /><span className="min-w-0">{site.supportEmail.split("@")[0]}@<wbr />{site.supportEmail.split("@")[1]}</span></a></li>
               <li><a href={tel} className={link}><Phone className={icon} strokeWidth={1.75} aria-hidden />{site.supportPhone}</a></li>
+              <li><Link href="/about" className={link}>About {site.seoName}</Link></li>
               <li><Link href="/account/support" className={link}>Help &amp; support</Link></li>
               <li><Link href="/track" className={link}>Track an order</Link></li>
             </ul>
@@ -55,14 +56,13 @@ export function Footer() {
             <ul className={list}>
               <li><Link href="/deliver" className={link}><Bike className={icon} strokeWidth={1.75} aria-hidden />Deliver with Merta Deal</Link></li>
               {[
-                { icon: Store, label: "Sell on Merta Deal" },
                 { icon: Megaphone, label: "Advertise with us" },
               ].map(({ icon: Icon, label }) => (
                 <li key={label} className="flex flex-wrap items-center gap-2 text-ink-3 pointer-coarse:min-h-11"><Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden />{label}
                   <span className="rounded-full bg-saffron-50 px-2 py-0.5 text-[10px] font-bold tracking-wide text-saffron-700 ring-1 ring-inset ring-saffron-200">Coming soon</span></li>
               ))}
             </ul>
-            <p className="mt-3 text-xs text-ink-3">Shop owner in {site.city}? Write to <a href={`mailto:${site.supportEmail}`} className="font-semibold text-brand-700 hover:underline">{site.supportEmail}</a> to join early.</p>
+            <p className="mt-3 text-xs text-ink-3">Want to work with us in {site.city}? Write to <a href={`mailto:${site.supportEmail}`} className="font-semibold text-brand-700 hover:underline">{site.supportEmail}</a>.</p>
           </section>
         </div>
       </div>

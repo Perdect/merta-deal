@@ -44,7 +44,7 @@ function initial(product: Product | null): Snapshot {
       weight_value: product?.weight_value ?? 1, weight_unit: (product?.weight_unit as ProductInput["weight_unit"]) ?? "kg", pack_label: product?.pack_label ?? "", mrp: product?.mrp ?? 0,
       image_url: product?.image_url ?? null, images: product?.images ?? [], tags: product?.tags ?? [], synonyms: product?.synonyms ?? [],
       nutrition: (product?.nutrition as Record<string, string | number> | null) ?? null,
-      is_local: product?.is_local ?? false, is_veg: product?.is_veg ?? true, is_active: product?.is_active ?? true, is_approved: product?.is_approved ?? true, popularity_score: product?.popularity_score ?? 0,
+      is_local: product?.is_local ?? false, is_veg: product?.is_veg ?? true, is_active: product?.is_active ?? true, popularity_score: product?.popularity_score ?? 0,
     },
     nutritionText: product?.nutrition ? JSON.stringify(product.nutrition, null, 2) : "",
     seller: { shelf_life: product?.shelf_life ?? "", seller_name: product?.seller_name ?? "", seller_address: product?.seller_address ?? "", seller_license: product?.seller_license ?? "" },
@@ -64,7 +64,7 @@ function parseNutrition(text: string): { ok: true; value: Record<string, string 
  * Full catalogue product form, grouped into labelled sections with a sticky Save / Cancel bar.
  * Saves through saveCatalogueProductAction = the existing saveProductAction (unchanged fields,
  * validation and audit) plus the seller-of-record / shelf-life columns.
- * Store prices and stock are NOT edited here; they live per store (see the product page).
+ * The selling price and stock are NOT edited here; they live on the product's listing (see the product page).
  */
 export function ProductForm({ product, categories, brands }: { product: Product | null; categories: Opt[]; brands: Opt[] }) {
   const router = useRouter();
@@ -76,12 +76,12 @@ export function ProductForm({ product, categories, brands }: { product: Product 
   const [showErrors, setShowErrors] = React.useState(false);
   const { f, nutritionText, seller } = state;
 
-  // Approve / activate in the page header change the flags server-side; mirror them here so a later save can't revert them.
-  const [prevFlags, setPrevFlags] = React.useState({ a: product?.is_active, b: product?.is_approved });
-  if (product && (prevFlags.a !== product.is_active || prevFlags.b !== product.is_approved)) {
-    setPrevFlags({ a: product.is_active, b: product.is_approved });
-    setState((s) => ({ ...s, f: { ...s.f, is_active: product.is_active, is_approved: product.is_approved } }));
-    setBase((s) => ({ ...s, f: { ...s.f, is_active: product.is_active, is_approved: product.is_approved } }));
+  // Activate / deactivate in the page header changes the flag server-side; mirror it here so a later save can't revert it.
+  const [prevActive, setPrevActive] = React.useState(product?.is_active);
+  if (product && prevActive !== product.is_active) {
+    setPrevActive(product.is_active);
+    setState((s) => ({ ...s, f: { ...s.f, is_active: product.is_active } }));
+    setBase((s) => ({ ...s, f: { ...s.f, is_active: product.is_active } }));
   }
 
   const dirty = JSON.stringify(state) !== JSON.stringify(base);
@@ -126,7 +126,7 @@ export function ProductForm({ product, categories, brands }: { product: Product 
     setBusy(null);
     if (!r.ok) { toast.error(product ? "Couldn't save the product" : "Couldn't create the product", r.error); return; }
     setBase(state); setShowErrors(false);
-    if (!product) { toast.success("Product created", "Next: list it at the store with a price and stock."); router.push(`/admin/products/${r.data.id}`); }
+    if (!product) { toast.success("Product created", "Next: set its selling price and stock."); router.push(`/admin/products/${r.data.id}`); }
     else { toast.success("Product saved"); router.refresh(); }
   };
 
@@ -142,7 +142,7 @@ export function ProductForm({ product, categories, brands }: { product: Product 
     <form onSubmit={(e) => { e.preventDefault(); void submit(); }} noValidate>
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-4">
-          <FormSection title="Basics" description="How the product is named and filed. The same for every store.">
+          <FormSection title="Basics" description="How the product is named and filed.">
             <div className="space-y-3">
               <Input id="pf-name" label="Product name" required value={f.name} error={err("name")}
                 onChange={(e) => { set("name", e.target.value); if (!slugTouched) set("slug", slugify(`${e.target.value} ${f.pack_label ?? ""}`)); }} />
@@ -155,7 +155,7 @@ export function ProductForm({ product, categories, brands }: { product: Product 
             </div>
           </FormSection>
 
-          <FormSection title="Pack and MRP" description="The catalogue pack size and printed MRP. Each store sets its own selling price and stock on the product page.">
+          <FormSection title="Pack and MRP" description="The pack size and printed MRP. The selling price and stock are set on the product page.">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <Input id="pf-weight_value" label="Weight / volume" type="number" step="0.001" min={0} required value={f.weight_value as number} error={err("weight_value")} onChange={(e) => set("weight_value", e.target.value === "" ? "" : Number(e.target.value))} />
               <Select id="pf-weight_unit" label="Unit" options={WEIGHT_UNIT_OPTIONS} value={f.weight_unit} onChange={(e) => set("weight_unit", e.target.value as ProductInput["weight_unit"])} />
@@ -199,16 +199,15 @@ export function ProductForm({ product, categories, brands }: { product: Product 
           <FormSection title="Images" description="Transparent cut-outs on white look best. The first image is the main photo.">
             <ProductImageManager primary={f.image_url ?? null} gallery={f.images ?? []} folder="admin" productName={f.name} brand={brands.find((b) => b.id === f.brand_id)?.name ?? null} packSize={f.pack_label ?? null} onChange={(n) => setState((s) => ({ ...s, f: { ...s.f, image_url: n.image_url, images: n.images } }))} />
           </FormSection>
-          <FormSection title="Visibility" description="Customers see the product only when it is both active and approved.">
+          <FormSection title="Visibility" description="Customers see the product only while it is active.">
             <div className="space-y-3">
               <Switch checked={Boolean(f.is_active)} onChange={(v) => set("is_active", v)} label="Active (visible)" />
-              <Switch checked={Boolean(f.is_approved)} onChange={(v) => set("is_approved", v)} label="Approved" />
               <Switch checked={Boolean(f.is_veg)} onChange={(v) => set("is_veg", v)} label="Vegetarian" />
               <Switch checked={Boolean(f.is_local)} onChange={(v) => set("is_local", v)} label="Local product of Merta" />
             </div>
           </FormSection>
           {product ? (
-            <FormSection title="Delete product" description="Products with past orders can't be deleted; deactivate them instead. Store offers for this product are removed.">
+            <FormSection title="Delete product" description="Products with past orders can't be deleted; deactivate them instead. Its price and stock are removed with it.">
               <button type="button" className={btn.danger} onClick={() => setDel(true)} disabled={busy !== null}><Trash2 className="h-4 w-4" aria-hidden />Delete product</button>
             </FormSection>
           ) : null}
@@ -218,7 +217,7 @@ export function ProductForm({ product, categories, brands }: { product: Product 
       <FormActions dirty={dirty} saving={busy === "save"} submitLabel={product ? "Save changes" : "Create product"} onCancel={() => { if (confirmDiscard()) leave(); }} />
 
       <ConfirmDialog open={del} onClose={() => setDel(false)} tone="danger" title={`Delete “${product?.name ?? "this product"}”?`}
-        description="This can't be undone. Products with past orders can't be deleted; deactivate them instead. Store prices and stock for this product will be removed."
+        description="This can't be undone. Products with past orders can't be deleted; deactivate them instead. Its price and stock will be removed."
         confirmLabel="Delete product" loading={busy === "delete"} onConfirm={remove} />
     </form>
   );

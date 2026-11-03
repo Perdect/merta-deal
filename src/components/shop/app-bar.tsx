@@ -46,5 +46,5 @@ export function AppBar({ title, subtitle, back = "/", actions, cart = false, chi
 /** Round Back control with the same smart behaviour (previous screen, else `fallback`). */
 export function BackButton({ fallback, className }: { fallback: string; className?: string }) {
   const goBack = useSmartBack(fallback);
-  return <button type="button" onClick={goBack} aria-label="Back" className={cn("tap flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink hover:bg-surface-2", className)}><ChevronLeft className="h-6 w-6 md:h-5 md:w-5" /></button>;
+  return <button type="button" onClick={goBack} aria-label="Back" className={cn("tap flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-brand-600", className)}><ChevronLeft className="h-6 w-6 md:h-5 md:w-5" aria-hidden /></button>;
 }

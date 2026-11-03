@@ -1,6 +1,6 @@
 import { cache } from "react";
-import { createClient } from "@/lib/supabase/server";
-import type { Category, HomeFeed, NearbyStore, ProductCard, ProductDetail, SearchResult, Store } from "@/types/app";
+import { createClient, getAuthUser } from "@/lib/supabase/server";
+import type { Category, HomeFeed, ProductCard, ProductDetail, SearchResult } from "@/types/app";
 
 export const getHomeFeed = cache(async (lat?: number | null, lng?: number | null): Promise<HomeFeed | null> => {
   const supabase = await createClient();
@@ -21,21 +21,25 @@ export const getCategoryBySlug = cache(async (slug: string) => {
   const { data, error } = await supabase.from("categories").select("*").eq("slug", slug).eq("is_active", true).maybeSingle();
   if (error) throw new Error(`category lookup failed: ${error.message}`);
   if (!data) return null;
-  const { data: children } = await supabase.from("categories").select("*").eq("parent_id", data.id).eq("is_active", true).order("sort_order");
-  const parent = data.parent_id ? (await supabase.from("categories").select("*").eq("id", data.parent_id).maybeSingle()).data : null;
-  return { category: data as Category, children: (children ?? []) as Category[], parent: parent as Category | null };
+  // Sub-categories and the parent are independent lookups: one round trip, not two.
+  const [{ data: children }, parentRes] = await Promise.all([
+    supabase.from("categories").select("*").eq("parent_id", data.id).eq("is_active", true).order("sort_order"),
+    data.parent_id ? supabase.from("categories").select("*").eq("id", data.parent_id).maybeSingle() : Promise.resolve({ data: null }),
+  ]);
+  return { category: data as Category, children: (children ?? []) as Category[], parent: (parentRes.data as Category | null) ?? null };
 });
 
-export type SearchParams = { q?: string; category?: string; brands?: string[]; minPrice?: number; maxPrice?: number; minDiscount?: number; inStock?: boolean; storeId?: string; localOnly?: boolean; sort?: string; page?: number; pageSize?: number };
+export type SearchParams = { q?: string; category?: string; brands?: string[]; minPrice?: number; maxPrice?: number; minDiscount?: number; inStock?: boolean; localOnly?: boolean; sort?: string; page?: number; pageSize?: number };
 
 export async function searchProducts(p: SearchParams): Promise<SearchResult> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("search_products", {
     p_query: p.q || undefined, p_category_slug: p.category || undefined, p_brand_slugs: p.brands?.length ? p.brands : undefined,
     p_min_price: p.minPrice, p_max_price: p.maxPrice, p_min_discount: p.minDiscount, p_in_stock: p.inStock ?? false,
-    p_store_id: p.storeId, p_local_only: p.localOnly ?? false, p_sort: p.sort ?? "relevance", p_page: p.page ?? 1, p_page_size: p.pageSize ?? 24,
+    p_local_only: p.localOnly ?? false, p_sort: p.sort ?? "relevance", p_page: p.page ?? 1, p_page_size: p.pageSize ?? 24,
   });
-  if (error) { console.error("search_products", error.message); return { items: [], total: 0, page: 1, page_size: 24, has_more: false }; }
+  // A failed query is reported as such (`error`), never shown to shoppers as "no products".
+  if (error) { console.error("search_products", error.message); return { items: [], total: 0, page: p.page ?? 1, page_size: p.pageSize ?? 24, has_more: false, error: true }; }
   return data as unknown as SearchResult;
 }
 
@@ -46,33 +50,13 @@ export const getProductDetail = cache(async (slug: string): Promise<ProductDetai
   // throwing renders the error screen with a retry instead. Only a missing/inactive product is null.
   if (error) throw new Error(`product_detail failed: ${error.message}`);
   if (!data) return null;
-  const detail = data as unknown as ProductDetail;
-  // Seller of record + shelf life live on the product row (0015); the RPC predates them.
-  const { data: extra } = await supabase.from("products").select("shelf_life, seller_name, seller_address, seller_license").eq("id", detail.id).maybeSingle();
-  return { ...detail, ...(extra ?? {}) };
+  // One round trip: the RPC also carries seller details, shelf life and "more from this brand".
+  return data as unknown as ProductDetail;
 });
 
 export const getBrands = cache(async () => {
   const supabase = await createClient();
   const { data } = await supabase.from("brands").select("id, name, slug").eq("is_active", true).order("name");
-  return data ?? [];
-});
-
-export const getStoreBySlug = cache(async (slug: string): Promise<Store | null> => {
-  const supabase = await createClient();
-  const { data } = await supabase.from("stores").select("*").eq("slug", slug).maybeSingle();
-  return (data as Store) ?? null;
-});
-
-export const getNearbyStores = cache(async (lat: number, lng: number, radius = 15, limit = 30): Promise<NearbyStore[]> => {
-  const supabase = await createClient();
-  const { data } = await supabase.rpc("nearby_stores", { p_lat: lat, p_lng: lng, p_radius_km: radius, p_limit: limit });
-  return (data ?? []) as NearbyStore[];
-});
-
-export const getStoreReviews = cache(async (storeId: string) => {
-  const supabase = await createClient();
-  const { data } = await supabase.from("reviews").select("id, rating, title, comment, created_at, user_id").eq("store_id", storeId).eq("status", "approved").order("created_at", { ascending: false }).limit(20);
   return data ?? [];
 });
 
@@ -83,8 +67,7 @@ export const getPublicSettings = cache(async (): Promise<Record<string, unknown>
 });
 
 export const getWishlistIds = cache(async (): Promise<Set<string>> => {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const [supabase, user] = await Promise.all([createClient(), getAuthUser()]);
   if (!user) return new Set();
   const { data } = await supabase.from("wishlists").select("product_id").eq("user_id", user.id);
   return new Set((data ?? []).map((w) => w.product_id));

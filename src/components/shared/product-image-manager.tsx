@@ -8,7 +8,7 @@ import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 
 /**
- * Product image manager for admin and store portals.
+ * Product image manager for the admin panel.
  * Primary image = products.image_url; gallery = products.images[]. Uploads are compressed on-device
  * (max 1200 px, WebP) before going to Supabase Storage; next/image serves AVIF/WebP at request time.
  */

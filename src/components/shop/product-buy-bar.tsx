@@ -7,7 +7,6 @@ import { useCartStore } from "@/stores/cart-store";
 import { packLimit, setLineQuantity } from "@/lib/cart-sync";
 import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/ui/overlay";
 import { QuantityStepper } from "@/components/ui/misc";
 import { ShoppingCart } from "lucide-react";
 import { resolveOffer } from "./product-offer";
@@ -20,19 +19,17 @@ import { formatINR } from "@/lib/utils";
  */
 export function ProductBuyBar({ product, signedIn }: { product: ProductDetail; signedIn: boolean }) {
   const router = useRouter();
-  const cartStoreId = useCartStore((s) => s.summary?.store?.id ?? null);
-  const offer = React.useMemo(() => resolveOffer(product, cartStoreId), [product, cartStoreId]);
+  const offer = React.useMemo(() => resolveOffer(product), [product]);
   const qty = useCartStore((s) => (offer ? s.qtyFor(offer.inventory_id) : 0));
   const subtotal = useCartStore((s) => s.summary?.subtotal ?? 0);
   const count = useCartStore((s) => s.totalCount());
   const syncing = useCartStore((s) => (offer ? offer.inventory_id in s.pending : false));
   const openDrawer = useCartStore((s) => s.openDrawer);
   const [busy, setBusy] = React.useState(false);
-  const [conflict, setConflict] = React.useState<{ current: string; next: string } | null>(null);
 
   const limit = packLimit(offer?.max_order_qty, offer?.stock_qty);
 
-  const add = async (replace = false) => {
+  const add = async () => {
     if (!offer) return;
     setBusy(true);
     if (!signedIn) {
@@ -40,9 +37,8 @@ export function ProductBuyBar({ product, signedIn }: { product: ProductDetail; s
       if (!g.ok) { setBusy(false); router.push(`/login?next=${encodeURIComponent(`/p/${product.slug}`)}`); return; }
       if (g.created) router.refresh();
     }
-    const res = await setLineQuantity(offer.inventory_id, Math.min(qty + 1, Math.max(limit.max, 1)), { replace });
+    await setLineQuantity(offer.inventory_id, Math.min(qty + 1, Math.max(limit.max, 1)));
     setBusy(false);
-    if (!res.ok) { if (res.conflict) setConflict({ current: res.conflict.current_store.name, next: res.conflict.new_store.name }); return; }
     // No "Added to cart" toast: the bar switches to the quantity stepper and the cart badge updates.
   };
   const setQty = (v: number) => {
@@ -76,9 +72,6 @@ export function ProductBuyBar({ product, signedIn }: { product: ProductDetail; s
           )}
         </div>
       </div>
-      <ConfirmDialog open={Boolean(conflict)} onClose={() => setConflict(null)} title="Replace cart items?" confirmLabel="Replace cart"
-        description={conflict ? `Your cart has items from ${conflict.current}. Orders are delivered from one store at a time, so we'll replace them with items from ${conflict.next}.` : null}
-        onConfirm={() => { setConflict(null); add(true); }} />
     </>
   );
 }

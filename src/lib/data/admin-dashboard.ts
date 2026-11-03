@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Enums } from "@/types/database";
 import { getReport, type AdminReport } from "./admin";
 
-export const ACTIVE_STATUSES = ["placed", "store_confirmed", "preparing", "ready_for_pickup", "rider_assigned", "out_for_delivery"] as const;
+export const ACTIVE_STATUSES = ["placed", "confirmed", "preparing", "ready_for_pickup", "rider_assigned", "out_for_delivery"] as const;
 export const RANGE_OPTIONS = [
   { value: "7d", label: "7 days", days: 7 },
   { value: "14d", label: "14 days", days: 14 },
@@ -63,7 +63,7 @@ export const getLateOrders = cache(async (): Promise<LateOrder[]> => {
   return (data ?? []) as LateOrder[];
 });
 
-/** Placed orders nobody has confirmed for more than `minutes`. */
+/** Orders still at "placed" after `minutes` (online payment not received yet, or auto-confirm switched off). */
 export const getUnconfirmed = cache(async (minutes = 5) => {
   const supabase = await createClient();
   const { data, count } = await supabase.from("orders").select("id, order_number, created_at", { count: "exact" }).eq("status", "placed").lt("created_at", new Date(Date.now() - minutes * 60000).toISOString()).order("created_at").limit(5);

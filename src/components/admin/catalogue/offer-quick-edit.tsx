@@ -2,16 +2,16 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { PackagePlus, SlidersHorizontal, Store as StoreIcon } from "lucide-react";
+import { PackagePlus, SlidersHorizontal, Tag } from "lucide-react";
 import { SidePanel, IconAction, EmptyBlock, StatusPill, rupees, useUnsavedChanges } from "@/components/admin/kit";
 import { Switch } from "@/components/ui/input";
 import { toast } from "@/components/ui/toast";
-import { updateStoreOfferAction, createMainStoreOfferAction, setProductVisibilityAction } from "@/lib/actions/admin-catalogue";
-import type { StoreOffer } from "@/lib/data/admin-catalogue";
+import { updateListingAction, createListingAction, setProductVisibilityAction } from "@/lib/actions/admin-catalogue";
+import type { Listing } from "@/lib/data/admin-catalogue";
 import { cn } from "@/lib/utils";
 import { ProductThumb, ProductStatusPill, StockPill, Field, inputCls, btn } from "./bits";
 
-export type QuickEditProduct = { id: string; name: string; slug: string; pack_label: string | null; image_url: string | null; brand: string | null; mrp: number; is_active: boolean; is_approved: boolean };
+export type QuickEditProduct = { id: string; name: string; slug: string; pack_label: string | null; image_url: string | null; brand: string | null; mrp: number; is_active: boolean };
 
 type Mode = "add" | "remove" | "set";
 type Reason = "restock" | "manual_adjust" | "damage";
@@ -25,25 +25,25 @@ const num = (v: string) => (v.trim() === "" ? NaN : Number(v));
 const isWhole = (v: string) => /^\d+$/.test(v.trim());
 
 /**
- * Quick edit for one product's offer at the main store: selling price, MRP, stock (via adjust_stock,
- * so each change is logged with a reason) and offer on/off; optionally the catalogue visibility flags.
+ * Quick edit for one product's listing: selling price, MRP, stock (via adjust_stock, so each change is
+ * logged with a reason) and on/off; optionally the catalogue visibility flag.
  * Catalogue details (name, pack, photos…) stay on the full product page.
  */
-export function OfferQuickEdit({ product, offer, storeName, showFlags = true, variant = "icon" }: {
-  product: QuickEditProduct; offer: StoreOffer | null; storeName: string | null; showFlags?: boolean; variant?: "icon" | "button";
+export function OfferQuickEdit({ product, offer, showFlags = true, variant = "icon" }: {
+  product: QuickEditProduct; offer: Listing | null; showFlags?: boolean; variant?: "icon" | "button";
 }) {
   const [open, setOpen] = React.useState(false);
   return (
     <>
       {variant === "icon"
         ? <IconAction label={`Quick edit price and stock for ${product.name}`} onClick={() => setOpen(true)}><SlidersHorizontal className="h-4 w-4" strokeWidth={1.9} aria-hidden /></IconAction>
-        : <button type="button" onClick={() => setOpen(true)} className={btn.small}><SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />{offer ? "Quick edit" : "List at store"}</button>}
-      {open ? <QuickEditPanel product={product} offer={offer} storeName={storeName} showFlags={showFlags} onClose={() => setOpen(false)} /> : null}
+        : <button type="button" onClick={() => setOpen(true)} className={btn.small}><SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />{offer ? "Quick edit" : "Set price & stock"}</button>}
+      {open ? <QuickEditPanel product={product} offer={offer} showFlags={showFlags} onClose={() => setOpen(false)} /> : null}
     </>
   );
 }
 
-function QuickEditPanel({ product, offer, storeName, showFlags, onClose }: { product: QuickEditProduct; offer: StoreOffer | null; storeName: string | null; showFlags: boolean; onClose: () => void }) {
+function QuickEditPanel({ product, offer, showFlags, onClose }: { product: QuickEditProduct; offer: Listing | null; showFlags: boolean; onClose: () => void }) {
   const router = useRouter();
   const init = React.useMemo(() => ({
     selling_price: offer ? String(Number(offer.selling_price)) : "",
@@ -53,7 +53,7 @@ function QuickEditPanel({ product, offer, storeName, showFlags, onClose }: { pro
     opening: "",
     low: offer ? String(offer.low_stock_threshold) : "5",
     max: offer ? String(offer.max_order_qty) : "5",
-    is_active: product.is_active, is_approved: product.is_approved,
+    is_active: product.is_active,
   }), [offer, product]);
   const [f, setF] = React.useState(init);
   const [saving, setSaving] = React.useState(false);
@@ -63,7 +63,7 @@ function QuickEditPanel({ product, offer, storeName, showFlags, onClose }: { pro
   const offerDirty = offer
     ? f.selling_price !== init.selling_price || f.mrp !== init.mrp || f.offer_active !== init.offer_active || f.amount.trim() !== "" || f.low !== init.low || f.max !== init.max
     : listing && (f.selling_price !== "" || f.opening !== "");
-  const flagsDirty = showFlags && (f.is_active !== init.is_active || f.is_approved !== init.is_approved);
+  const flagsDirty = showFlags && f.is_active !== init.is_active;
   const dirty = offerDirty || flagsDirty;
 
   const confirmDiscard = useUnsavedChanges(dirty && !saving);
@@ -99,23 +99,20 @@ function QuickEditPanel({ product, offer, storeName, showFlags, onClose }: { pro
     setSaving(true);
     const done: string[] = [];
     if (offerDirty && offer) {
-      const r = await updateStoreOfferAction(offer.id, {
+      const r = await updateListingAction(offer.id, {
         selling_price: sp, mrp, is_active: f.offer_active, stock_delta: delta, stock_reason: f.mode === "set" ? "manual_adjust" : f.reason, stock_note: f.note,
         low_stock_threshold: Number(f.low), max_order_qty: Number(f.max),
       });
-      if (!r.ok) { setSaving(false); toast.error("Couldn't save the store offer", r.error); return; }
-      done.push(delta ? `stock now ${r.data.stock_qty}` : "price and offer saved");
+      if (!r.ok) { setSaving(false); toast.error("Couldn't save the listing", r.error); return; }
+      done.push(delta ? `stock now ${r.data.stock_qty}` : "price saved");
     } else if (offerDirty && !offer) {
-      const r = await createMainStoreOfferAction(product.id, { selling_price: sp, mrp, stock_qty: f.opening.trim() ? Number(f.opening) : 0, is_active: f.offer_active });
-      if (!r.ok) { setSaving(false); toast.error(`Couldn't list at ${storeName ?? "the store"}`, r.error); return; }
-      done.push(`listed at ${storeName ?? "the store"}`);
+      const r = await createListingAction(product.id, { selling_price: sp, mrp, stock_qty: f.opening.trim() ? Number(f.opening) : 0, is_active: f.offer_active });
+      if (!r.ok) { setSaving(false); toast.error("Couldn't put the product on sale", r.error); return; }
+      done.push("now on sale");
     }
     if (flagsDirty) {
-      const patch: { is_active?: boolean; is_approved?: boolean } = {};
-      if (f.is_active !== init.is_active) patch.is_active = f.is_active;
-      if (f.is_approved !== init.is_approved) patch.is_approved = f.is_approved;
-      const r = await setProductVisibilityAction(product.id, patch);
-      if (!r.ok) { setSaving(false); toast.error(done.length ? "Store offer saved, but visibility was not" : "Couldn't update visibility", r.error); router.refresh(); return; }
+      const r = await setProductVisibilityAction(product.id, { is_active: f.is_active });
+      if (!r.ok) { setSaving(false); toast.error(done.length ? "Listing saved, but visibility was not" : "Couldn't update visibility", r.error); router.refresh(); return; }
       done.push("visibility updated");
     }
     setSaving(false);
@@ -142,22 +139,20 @@ function QuickEditPanel({ product, offer, storeName, showFlags, onClose }: { pro
             <p className="truncate text-sm font-semibold text-ink">{product.name}</p>
             <p className="truncate text-xs text-ink-3">{[product.brand, product.pack_label, `Catalogue MRP ${rupees(product.mrp)}`].filter(Boolean).join(" · ")}</p>
           </div>
-          <ProductStatusPill isActive={product.is_active} isApproved={product.is_approved} />
+          <ProductStatusPill isActive={product.is_active} />
         </div>
 
         <section aria-labelledby="qe-offer" className="space-y-3 rounded-[12px] border border-line p-3.5">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <h3 id="qe-offer" className="flex items-center gap-1.5 text-sm font-semibold text-ink"><StoreIcon className="h-4 w-4 text-ink-3" aria-hidden />Store price and stock</h3>
-              <p className="text-xs text-ink-3">{storeName ? `What customers pay at ${storeName}. Doesn't change the catalogue.` : "Store-specific price and stock."}</p>
+              <h3 id="qe-offer" className="flex items-center gap-1.5 text-sm font-semibold text-ink"><Tag className="h-4 w-4 text-ink-3" aria-hidden />Price and stock</h3>
+              <p className="text-xs text-ink-3">What customers pay and what&apos;s on the shelf. Doesn&apos;t change the catalogue MRP.</p>
             </div>
             {offer ? <StockPill status={offer.status} isActive={offer.is_active} qty={offer.stock_qty} /> : null}
           </div>
 
-          {!offer && !storeName ? (
-            <EmptyBlock icon={StoreIcon} title="The Merta Deal store isn't set up" description="Create or reopen the store under Stores, then list this product there." action={<Link href="/admin/stores" className={btn.outline}>Go to stores</Link>} />
-          ) : !offer && !listing ? (
-            <EmptyBlock icon={PackagePlus} title={`Not listed at ${storeName}`} description="Customers can't buy this product until a store lists it with a price and stock." action={<button type="button" onClick={() => setListing(true)} className={btn.primary}>List at {storeName}</button>} />
+          {!offer && !listing ? (
+            <EmptyBlock icon={PackagePlus} title="Not on sale yet" description="Customers can't buy this product until it has a selling price and stock." action={<button type="button" onClick={() => setListing(true)} className={btn.primary}>Set price &amp; stock</button>} />
           ) : (
             <>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -210,7 +205,7 @@ function QuickEditPanel({ product, offer, storeName, showFlags, onClose }: { pro
               )}
 
               <div className="rounded-lg bg-surface-2 px-3 py-2.5">
-                <Switch checked={f.offer_active} onChange={(v) => set("offer_active", v)} label={f.offer_active ? "Offer active: customers can buy it here" : "Offer paused: hidden at this store"} />
+                <Switch checked={f.offer_active} onChange={(v) => set("offer_active", v)} label={f.offer_active ? "On sale: customers can buy it" : "Paused: hidden from customers"} />
               </div>
             </>
           )}
@@ -220,11 +215,10 @@ function QuickEditPanel({ product, offer, storeName, showFlags, onClose }: { pro
           <section aria-labelledby="qe-flags" className="space-y-3 rounded-[12px] border border-line p-3.5">
             <div>
               <h3 id="qe-flags" className="text-sm font-semibold text-ink">Catalogue visibility</h3>
-              <p className="text-xs text-ink-3">Customers see the product only when it is both active and approved.</p>
+              <p className="text-xs text-ink-3">Customers see the product only while it is active.</p>
             </div>
             <Switch checked={f.is_active} onChange={(v) => set("is_active", v)} label="Active" />
-            <Switch checked={f.is_approved} onChange={(v) => set("is_approved", v)} label="Approved" />
-            {!f.is_active || !f.is_approved ? <StatusPill tone="neutral">Hidden from customers after saving</StatusPill> : null}
+            {!f.is_active ? <StatusPill tone="neutral">Hidden from customers after saving</StatusPill> : null}
           </section>
         ) : null}
 

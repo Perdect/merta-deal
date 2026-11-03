@@ -10,7 +10,6 @@ export function parseListingParams(sp: Record<string, string | string[] | undefi
     brands: get("brand")?.split(",").filter(Boolean),
     minPrice: num("minPrice"), maxPrice: num("maxPrice"), minDiscount: num("minDiscount"),
     inStock: get("inStock") === "1", localOnly: get("local") === "1",
-    storeId: get("store") || undefined,
     sort: get("sort") || "relevance",
     page: Math.max(1, num("page") ?? 1), pageSize: 24,
     ...overrides,

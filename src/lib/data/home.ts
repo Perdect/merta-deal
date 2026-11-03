@@ -32,9 +32,9 @@ export const getHomeData = cache(async (essentialSlugs: string[], welcomeCode: s
   const [cats, cards, coupon] = await Promise.all([
     supabase.from("categories").select("id, name, slug, color, image_url, parent_id, sort_order").eq("is_active", true).order("sort_order"),
     supabase.from("v_product_cards").select("*").not("inventory_id", "is", null).order("popularity_score", { ascending: false }).limit(150),
-    // Every live, site-wide coupon (the welcome code is shown first). Store-specific codes are excluded.
-    supabase.from("coupons").select("code, title, type, value, min_order_amount, max_discount, expires_at, usage_limit, used_count, store_id")
-      .eq("is_active", true).is("store_id", null).lte("starts_at", nowIso).order("min_order_amount").limit(10),
+    // Every live coupon (the welcome code is shown first).
+    supabase.from("coupons").select("code, title, type, value, min_order_amount, max_discount, expires_at, usage_limit, used_count")
+      .eq("is_active", true).lte("starts_at", nowIso).order("min_order_amount").limit(10),
   ]);
 
   const allCats = cats.data ?? [];

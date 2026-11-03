@@ -6,7 +6,6 @@ import { ensureGuestSessionAction } from "@/lib/actions/guest";
 import { packLimit, setLineQuantity } from "@/lib/cart-sync";
 import { useCartStore } from "@/stores/cart-store";
 import { toast } from "@/components/ui/toast";
-import { ConfirmDialog } from "@/components/ui/overlay";
 import { QuantityStepper } from "@/components/ui/misc";
 import { cn } from "@/lib/utils";
 import { track } from "@/lib/analytics";
@@ -24,11 +23,10 @@ export function AddToCart({ inventoryId, maxQty, stockQty, size = "md", classNam
   const qty = useCartStore((s) => (inventoryId ? s.qtyFor(inventoryId) : 0));
   const syncing = useCartStore((s) => (inventoryId ? inventoryId in s.pending : false));
   const [starting, setStarting] = React.useState(false);
-  const [conflict, setConflict] = React.useState<{ current: string; next: string; qty: number } | null>(null);
   const outOfStock = !inventoryId || (stockQty != null && stockQty <= 0);
   const limit = packLimit(maxQty, stockQty);
 
-  const update = async (next: number, replace = false) => {
+  const update = async (next: number) => {
     if (!inventoryId) return;
     if (!signedIn && qty === 0) {
       setStarting(true);
@@ -39,10 +37,9 @@ export function AddToCart({ inventoryId, maxQty, stockQty, size = "md", classNam
     }
     const first = qty === 0 && next > 0;
     if (next === limit.max && next > qty) toast.info(limit.message, "That's the most you can add of this item.");
-    const res = await setLineQuantity(inventoryId, next, { replace });
-    if (!res.ok && res.conflict) setConflict({ current: res.conflict.current_store.name, next: res.conflict.new_store.name, qty: next });
+    const res = await setLineQuantity(inventoryId, next);
     // No toast: the button turns into the quantity stepper and the cart bar/badge update (a toast covered the header).
-    else if (res.ok && first) track("add_to_cart", { items: [{ item_id: inventoryId, quantity: next }] });
+    if (res.ok && first) track("add_to_cart", { items: [{ item_id: inventoryId, quantity: next }] });
   };
 
   if (outOfStock) {
@@ -59,9 +56,6 @@ export function AddToCart({ inventoryId, maxQty, stockQty, size = "md", classNam
           {label}<Plus className="h-3.5 w-3.5" />
         </button>
       )}
-      <ConfirmDialog open={Boolean(conflict)} onClose={() => setConflict(null)} title="Replace cart items?"
-        description={conflict ? `Your cart has items from ${conflict.current}. Each order is delivered from one store, so adding this item will replace them with items from ${conflict.next}.` : null}
-        confirmLabel="Replace cart" onConfirm={() => { const c = conflict; setConflict(null); if (c) update(c.qty, true); }} />
     </>
   );
 }

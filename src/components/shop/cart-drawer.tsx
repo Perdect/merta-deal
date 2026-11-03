@@ -118,16 +118,14 @@ export function CartDrawer({ signedIn, isGuest, addresses: initialAddresses, wal
     getCartSummary(step === "pay" ? addressId : null, step === "pay" ? deliveryType : "standard").then((s) => { if (s) setSummary(s); });
   }, [open, step, addressId, deliveryType, signedIn, setSummary]);
 
-  // "You might also like": popular in-stock items from the same store as the cart (one store per
-  // order, so a cross-store suggestion would only trigger the replace-cart prompt).
-  const storeId = s?.store?.id ?? null;
-  const [suggestedFor, setSuggestedFor] = React.useState<string | null>(null);
+  // "You might also like": popular in-stock items, loaded once per drawer session.
+  const suggestedRef = React.useRef(false);
+  const hasItems = items.length > 0;
   React.useEffect(() => {
-    if (step !== "cart" || !storeId || suggestedFor === storeId) return;
-    // search_products' store filter means "the store carries it" while each card still points at the
-    // product's best offer, so keep only cards whose offer really is this store's.
-    fetch(`/api/search?sort=popular&inStock=1&store=${storeId}`).then((r) => r.json()).then((d: { items?: ProductCardType[] }) => { setSuggestions((d.items ?? []).filter((p) => p.store_id === storeId)); setSuggestedFor(storeId); }).catch(() => {});
-  }, [step, storeId, suggestedFor]);
+    if (step !== "cart" || suggestedRef.current || !hasItems) return;
+    suggestedRef.current = true;
+    fetch(`/api/search?sort=popular&inStock=1`).then((r) => r.json()).then((d: { items?: ProductCardType[] }) => setSuggestions(d.items ?? [])).catch(() => {});
+  }, [step, hasItems]);
 
   const refresh = async () => setSummary(await getCartSummary(step === "pay" ? addressId : null, step === "pay" ? deliveryType : "standard"));
   // Quantity changes go through the shared queue (optimistic, merged taps, server-checked limits).

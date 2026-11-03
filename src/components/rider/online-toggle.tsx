@@ -66,7 +66,7 @@ export function OnlineToggle() {
       </button>
       {error ? <Alert tone="danger" icon={<MapPinOff className="h-4 w-4" />}>{error}</Alert> : null}
       {!error && isOnline && (gps.status === "denied" || gps.status === "unavailable") ? (
-        <Alert tone="danger" icon={<MapPinOff className="h-4 w-4" />} title="GPS is off">{gps.error} Customers and the store can&apos;t see where you are until it&apos;s back.</Alert>
+        <Alert tone="danger" icon={<MapPinOff className="h-4 w-4" />} title="GPS is off">{gps.error} Customers and Merta Deal can&apos;t see where you are until it&apos;s back.</Alert>
       ) : null}
     </section>
   );

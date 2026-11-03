@@ -65,11 +65,10 @@ function HistoryRow({ a }: { a: RiderAssignment }) {
     <li className="flex items-center gap-3 px-4 py-3">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <p className="truncate text-sm font-semibold text-ink">{a.store.name}</p>
+          <p className="truncate text-sm font-semibold text-ink">{a.order.order_number}</p>
           <Badge tone={meta.tone} size="xs">{meta.label}</Badge>
         </div>
         <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-ink-3">
-          <span className="tabular">{a.order.order_number}</span>
           <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" />{formatTime(assignmentWhen(a))}</span>
           <span className="inline-flex items-center gap-1"><Route className="h-3 w-3" />{formatKm(a.distance_km)}</span>
           {delivered && cod ? <span className="inline-flex items-center gap-1 text-saffron-700"><Banknote className="h-3 w-3" />COD {formatINR(a.cod_amount)}</span> : null}

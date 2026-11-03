@@ -11,7 +11,6 @@ insert into public.settings (key, value, "group", label, description, is_public)
 ('support_phone', '"+91 98290 12345"', 'general', 'Support phone', null, true),
 ('support_email', '"help@mertadeal.in"', 'general', 'Support email', null, true),
 ('support_whatsapp', '"+919829012345"', 'general', 'Support WhatsApp number', null, true),
-('commission_default_percent', '10', 'business', 'Default store commission (%)', 'Applied when a store has no specific commission rate', false),
 ('platform_fee', '2', 'fees', 'Platform fee (₹ per order)', null, true),
 ('tax_rate_percent', '18', 'fees', 'GST on fees (%)', 'GST applied on delivery + platform fees (grocery MRP is tax-inclusive)', true),
 ('delivery_fee_base', '25', 'delivery', 'Base delivery fee (₹)', 'Fallback when a zone has no fee configured', true),
@@ -29,14 +28,16 @@ insert into public.settings (key, value, "group", label, description, is_public)
 ('dispatch_offer_timeout_seconds', '180', 'delivery', 'Rider offer timeout (seconds)', null, false),
 ('rider_base_earning', '20', 'delivery', 'Rider base earning per delivery (₹)', null, false),
 ('rider_per_km_earning', '5', 'delivery', 'Rider earning per km (₹)', null, false),
-('store_accept_window_minutes', '5', 'orders', 'Store acceptance window (minutes)', null, false),
 ('otp_max_attempts', '5', 'orders', 'Max delivery OTP attempts', null, false),
 ('cod_enabled', 'true', 'payments', 'Cash on Delivery enabled', null, true),
 ('online_payments_enabled', 'true', 'payments', 'Online payments (Razorpay) enabled', 'Also requires Razorpay keys in environment', true),
 ('reward_points_per_100', '1', 'rewards', 'Reward points per ₹100', null, true),
-('require_product_approval', 'false', 'catalog', 'Require admin approval for store-created products', null, false),
 ('plus_membership_enabled', 'false', 'business', 'Merta Deal Plus subscription', 'Future: free delivery membership', true),
-('plus_membership_price', '99', 'business', 'Plus monthly price (₹)', null, true);
+('plus_membership_price', '99', 'business', 'Plus monthly price (₹)', null, true),
+('business_open', 'true', 'business', 'Accepting orders', 'Switch off to stop taking new orders (scheduled orders still queue up).', true),
+('business_hours', '{"open":"06:00","close":"23:00"}', 'business', 'Business hours', 'Orders are accepted between these times (IST).', true),
+('pickup_point', '{"name":"Merta Deal","phone":"8875020202","address_line1":"Gandhi Chowk","area":"Merta Central","pincode":"341510","lat":26.6478,"lng":74.0322,"city_id":"a0000000-0000-4000-8000-000000000001"}', 'business', 'Pickup point', 'Where riders collect orders: name, phone, address, area, pincode, lat, lng, city_id.', false)
+on conflict (key) do update set value = excluded.value, "group" = excluded."group", label = excluded.label, description = excluded.description, is_public = excluded.is_public;
 
 -- ------------------------------------------------------------------ CITIES --
 insert into public.cities (id, name, slug, state, center_lat, center_lng, is_active, launch_note) values
@@ -166,21 +167,11 @@ insert into public.brands (name, slug) values
 ('Prestige','prestige'),('Milton','milton'),('Lakmé','lakme'),('Nivea','nivea'),('Gillette','gillette'),('Whisper','whisper');
 
 -- ------------------------------------------------------------------ USERS ---
--- Deterministic ids: 1xx admins, 2xx store owners, 3xx customers, 4xx riders
+-- Deterministic ids: 1xx admins, 3xx customers, 4xx riders
 drop table if exists seed_users; create temp table seed_users (id uuid, email text, phone text, full_name text, role text);
 insert into seed_users values
 ('10000000-0000-4000-8000-000000000001', 'admin@mertadeal.in', '9829000001', 'Sameer Khan', 'super_admin'),
 ('10000000-0000-4000-8000-000000000002', 'ops@mertadeal.in', '9829000002', 'Priya Sharma', 'admin'),
-('20000000-0000-4000-8000-000000000001', 'jain.kirana@mertadeal.in', '9414100001', 'Mahaveer Jain', 'store_owner'),
-('20000000-0000-4000-8000-000000000002', 'balaji.store@mertadeal.in', '9414100002', 'Ramesh Vyas', 'store_owner'),
-('20000000-0000-4000-8000-000000000003', 'maheshwari.store@mertadeal.in', '9414100003', 'Suresh Maheshwari', 'store_owner'),
-('20000000-0000-4000-8000-000000000004', 'agarwal.bazaar@mertadeal.in', '9414100004', 'Vinod Agarwal', 'store_owner'),
-('20000000-0000-4000-8000-000000000005', 'rathore.dairy@mertadeal.in', '9414100005', 'Bhanwar Singh Rathore', 'store_owner'),
-('20000000-0000-4000-8000-000000000006', 'mahalaxmi.store@mertadeal.in', '9414100006', 'Kailash Soni', 'store_owner'),
-('20000000-0000-4000-8000-000000000007', 'gupta.mart@mertadeal.in', '9414100007', 'Anil Gupta', 'store_owner'),
-('20000000-0000-4000-8000-000000000008', 'sharma.masala@mertadeal.in', '9414100008', 'Girdhari Sharma', 'store_owner'),
-('20000000-0000-4000-8000-000000000009', 'fresh.mart@mertadeal.in', '9414100009', 'Deepak Choudhary', 'store_owner'),
-('20000000-0000-4000-8000-000000000010', 'chaudhary.kirana@mertadeal.in', '9414100010', 'Hanuman Chaudhary', 'store_owner'),
 ('30000000-0000-4000-8000-000000000001', 'customer@mertadeal.in', '9876500001', 'Rahul Bishnoi', 'customer'),
 ('30000000-0000-4000-8000-000000000002', 'pooja.sharma@example.com', '9876500002', 'Pooja Sharma', 'customer'),
 ('30000000-0000-4000-8000-000000000003', 'amit.jangid@example.com', '9876500003', 'Amit Jangid', 'customer'),
@@ -216,7 +207,7 @@ insert into auth.users (instance_id, id, aud, role, email, encrypted_password, e
 select '00000000-0000-0000-0000-000000000000', id, 'authenticated', 'authenticated', email,
        extensions.crypt('Merta@123', extensions.gen_salt('bf')), now(), '91' || phone, now(),
        '{"provider":"email","providers":["email"]}'::jsonb,
-       jsonb_build_object('full_name', full_name, 'phone', phone, 'role', case when role in ('store_owner','rider') then role else 'customer' end),
+       jsonb_build_object('full_name', full_name, 'phone', phone, 'role', case when role = 'rider' then role else 'customer' end),
        now() - interval '90 days', now(), '', '', '', '', ''
 from seed_users;
 
@@ -227,29 +218,6 @@ from seed_users;
 -- Admin roles are never self-assignable; set them here explicitly.
 update public.profiles p set role = su.role::public.user_role, phone = su.phone, full_name = su.full_name
 from seed_users su where su.id = p.id;
-
--- ------------------------------------------------------------------ STORES --
-insert into public.stores (id, owner_id, city_id, zone_id, name, slug, tagline, description, owner_name, phone, email, address_line1, area, landmark, pincode, lat, lng, gstin, pan, bank_account_name, bank_account_number, bank_ifsc, upi_id, delivery_radius_km, commission_rate, status, is_open, avg_prep_minutes, is_featured, opening_time, closing_time) values
-('d0000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001','a0000000-0000-4000-8000-000000000001','b0000000-0000-4000-8000-000000000001','Jain Kirana Store','jain-kirana-store','Merta ka bharosemand kirana since 1987','Family-run kirana in the heart of Sadar Bazaar. Wholesale rates on atta, dal and oil. Fresh stock daily.','Mahaveer Jain','9414100001','jain.kirana@mertadeal.in','Shop 12, Sadar Bazaar','Sadar Bazaar','Near Ghanti Ghar','341510',26.6491,74.0341,'08AABCJ1234K1Z5','AABCJ1234K','Mahaveer Jain','50100123456789','SBIN0031421','jainkirana@upi',5,8,'active',true,12,true,'07:00','22:00'),
-('d0000000-0000-4000-8000-000000000002','20000000-0000-4000-8000-000000000002','a0000000-0000-4000-8000-000000000001','b0000000-0000-4000-8000-000000000001','Shree Balaji General Store','shree-balaji-general-store','Ghar ka saara saaman, ek jagah','Everything for the home: grocery, personal care, household. Known for quick packing.','Ramesh Vyas','9414100002','balaji.store@mertadeal.in','Gandhi Chowk Main Road','Gandhi Chowk','Opposite Balaji Mandir','341510',26.6478,74.0322,'08AACCB2345L1Z9','AACCB2345L','Ramesh Vyas','30200456789012','HDFC0002314','balajistore@upi',5,null,'active',true,10,true,'08:00','21:30'),
-('d0000000-0000-4000-8000-000000000003','20000000-0000-4000-8000-000000000003','a0000000-0000-4000-8000-000000000001','b0000000-0000-4000-8000-000000000002','Maheshwari Provision Store','maheshwari-provision-store','Quality provisions, honest prices','Trusted provision store on Station Road serving Railway Colony for 20 years.','Suresh Maheshwari','9414100003','maheshwari.store@mertadeal.in','Station Road, Near Railway Crossing','Station Road','Near Bus Stand','341510',26.6425,74.0258,'08AADCM3456M1Z3','AADCM3456M','Suresh Maheshwari','61000789012345','ICIC0001432','maheshwariprov@upi',4,null,'active',true,15,false,'07:30','21:00'),
-('d0000000-0000-4000-8000-000000000004','20000000-0000-4000-8000-000000000004','a0000000-0000-4000-8000-000000000001','b0000000-0000-4000-8000-000000000003','Agarwal Super Bazaar','agarwal-super-bazaar','Merta ka pehla self-service bazaar','Supermarket-style store with 2000+ SKUs, branded snacks, beverages and imported items.','Vinod Agarwal','9414100004','agarwal.bazaar@mertadeal.in','Nagaur Road, Housing Board','Nagaur Road','Near Housing Board Park','341510',26.6612,74.0308,'08AAECA4567N1Z7','AAECA4567N','Agarwal Super Bazaar','20340012345678','PUNB0123400','agarwalbazaar@upi',6,12,'active',true,18,true,'09:00','22:00'),
-('d0000000-0000-4000-8000-000000000005','20000000-0000-4000-8000-000000000005','a0000000-0000-4000-8000-000000000001','b0000000-0000-4000-8000-000000000004','Rathore Kirana & Dairy','rathore-kirana-dairy','Taaza doodh, dahi aur ghar ka saaman','Fresh Saras and Amul dairy every morning plus daily grocery.','Bhanwar Singh Rathore','9414100005','rathore.dairy@mertadeal.in','Jodhpur Road, Bhagat Singh Colony','Jodhpur Road','Near Petrol Pump','341510',26.6395,74.0431,'08AAFCR5678P1Z1','AAFCR5678P','Bhanwar Singh','40500345678901','BARB0MERTAX','rathoredairy@upi',4,null,'active',true,10,false,'06:00','21:00'),
-('d0000000-0000-4000-8000-000000000006','20000000-0000-4000-8000-000000000006','a0000000-0000-4000-8000-000000000001','b0000000-0000-4000-8000-000000000001','Mahalaxmi Departmental Store','mahalaxmi-departmental-store','Branded, packed, delivered','Departmental store for branded groceries, cosmetics and baby care.','Kailash Soni','9414100006','mahalaxmi.store@mertadeal.in','Ghanti Ghar Circle','Ghanti Ghar','Beside SBI ATM','341510',26.6499,74.0327,'08AAGCM6789Q1Z5','AAGCM6789Q','Kailash Soni','12340098765432','SBIN0031421','mahalaxmi@upi',5,null,'active',true,14,false,'09:00','21:30'),
-('d0000000-0000-4000-8000-000000000007','20000000-0000-4000-8000-000000000007','a0000000-0000-4000-8000-000000000001','b0000000-0000-4000-8000-000000000002','Gupta Grocery Mart','gupta-grocery-mart','Sasta, achha, apna','Value grocery mart near the bus stand with combo offers on monthly ration.','Anil Gupta','9414100007','gupta.mart@mertadeal.in','Bus Stand Road','Bus Stand','Near Roadways Bus Stand','341510',26.6412,74.0241,'08AAHCG7890R1Z9','AAHCG7890R','Anil Gupta','78900123456780','UBIN0530123','guptamart@upi',5,null,'active',true,12,false,'07:00','22:00'),
-('d0000000-0000-4000-8000-000000000008','20000000-0000-4000-8000-000000000008','a0000000-0000-4000-8000-000000000001','b0000000-0000-4000-8000-000000000001','Sharma Masala Bhandar','sharma-masala-bhandar','Asli Rajasthani masale, chakki-fresh','Specialist in whole and ground spices, Mathania mirch, papad and local pickles.','Girdhari Sharma','9414100008','sharma.masala@mertadeal.in','Masala Gali, Sadar Bazaar','Sadar Bazaar','Behind Jain Mandir','341510',26.6484,74.0350,'08AAICS8901S1Z3','AAICS8901S','Girdhari Sharma','56780012345670','SBIN0031421','sharmamasala@upi',5,null,'active',true,10,true,'08:00','20:30'),
-('d0000000-0000-4000-8000-000000000009','20000000-0000-4000-8000-000000000009','a0000000-0000-4000-8000-000000000001','b0000000-0000-4000-8000-000000000003','New Merta Fresh Mart','new-merta-fresh-mart','Farm-fresh sabzi aur phal, roz subah','Fresh fruits and vegetables sourced daily from Merta mandi.','Deepak Choudhary','9414100009','fresh.mart@mertadeal.in','Sabzi Mandi Road, Indira Colony','Nagaur Road','Near Sabzi Mandi','341510',26.6585,74.0292,null,'AAJCN9012T','Deepak Choudhary','98760012345671','RJSB0000123','freshmart@upi',4,null,'active',true,8,false,'06:00','20:00'),
-('d0000000-0000-4000-8000-000000000010','20000000-0000-4000-8000-000000000010','a0000000-0000-4000-8000-000000000001','b0000000-0000-4000-8000-000000000005','Chaudhary Kirana Store','chaudhary-kirana-store','Merta Road ka apna kirana','Neighbourhood kirana serving Merta Road junction and Dangawas Road.','Hanuman Chaudhary','9414100010','chaudhary.kirana@mertadeal.in','Main Road, Merta Road','Merta Road','Near Railway Station Merta Road','341511',26.6905,74.0012,null,'AAKCC0123U','Hanuman Chaudhary','11220012345672','SBIN0011234','chaudharykirana@upi',6,null,'pending',true,15,false,'07:00','21:00');
-
-insert into public.store_commissions (store_id, rate, effective_from, note) values
-('d0000000-0000-4000-8000-000000000001', 8, '2026-06-01', 'Launch partner rate'),
-('d0000000-0000-4000-8000-000000000004', 12, '2026-06-01', 'Supermarket tier');
-
-insert into public.store_documents (store_id, doc_type, file_path, status) values
-('d0000000-0000-4000-8000-000000000001', 'gst_certificate', 'd0000000-0000-4000-8000-000000000001/gst.pdf', 'verified'),
-('d0000000-0000-4000-8000-000000000001', 'pan_card', 'd0000000-0000-4000-8000-000000000001/pan.jpg', 'verified'),
-('d0000000-0000-4000-8000-000000000010', 'pan_card', 'd0000000-0000-4000-8000-000000000010/pan.jpg', 'pending'),
-('d0000000-0000-4000-8000-000000000010', 'shop_license', 'd0000000-0000-4000-8000-000000000010/license.pdf', 'pending');
 
 -- ---------------------------------------------------------------- PRODUCTS --
 create or replace function pg_temp.add_product(
@@ -469,27 +437,16 @@ do $seed$ begin
 end $seed$;
 
 -- --------------------------------------------------------------- INVENTORY --
--- Deterministic pseudo-random assignment: each product listed by 3-6 stores at 0-15% discount.
-insert into public.inventory (store_id, product_id, selling_price, mrp, stock_qty, low_stock_threshold, max_order_qty, sold_count)
-select s.id, p.id,
+-- One listing per product at 0-15% off MRP; a few products start low or out of stock.
+insert into public.inventory (product_id, selling_price, mrp, stock_qty, low_stock_threshold, max_order_qty, sold_count)
+select p.id,
   round(p.mrp * (1 - (h % 16) / 100.0), 0) as selling_price,
   p.mrp,
   case when (h / 16) % 23 = 0 then 0 when (h / 16) % 11 = 0 then 3 else 12 + (h / 16) % 60 end as stock_qty,
-  5, case when p.mrp > 500 then 3 else 10 end,
+  5, case when p.mrp > 500 then 3 else 5 end,
   (h / 100) % 90
 from public.products p
-cross join public.stores s
-cross join lateral (select abs(('x' || substr(md5(s.id::text || p.id::text), 1, 8))::bit(32)::int) as h) hh
-where s.status = 'active'
-  and (
-    -- specialist assortments
-    (s.slug = 'sharma-masala-bhandar' and (select slug from public.categories c where c.id = p.category_id) in ('turmeric','red-chilli','coriander','cumin','garam-masala','whole-spices','rajasthani-specials','namkeen'))
-    or (s.slug = 'new-merta-fresh-mart' and (select parent_id from public.categories c where c.id = p.category_id) = 'c0000000-0000-4000-8000-000000000008')
-    or (s.slug = 'rathore-kirana-dairy' and ((select parent_id from public.categories c where c.id = p.category_id) in ('c0000000-0000-4000-8000-000000000003','c0000000-0000-4000-8000-000000000001') or h % 3 = 0))
-    or (s.slug = 'agarwal-super-bazaar' and h % 10 < 8)
-    or (s.slug in ('jain-kirana-store','shree-balaji-general-store','mahalaxmi-departmental-store','gupta-grocery-mart','maheshwari-provision-store')
-        and (select parent_id from public.categories c where c.id = p.category_id) not in ('c0000000-0000-4000-8000-000000000008') and h % 10 < 6)
-  );
+cross join lateral (select abs(('x' || substr(md5(p.id::text), 1, 8))::bit(32)::int) as h) hh;
 
 -- ---------------------------------------------------------------- ADDRESSES -
 insert into public.addresses (user_id, type, full_name, phone, house, street, area, landmark, city, pincode, lat, lng, zone_id, is_default)
@@ -526,19 +483,18 @@ from (select id, row_number() over (order by id) as n from seed_users where role
 where dp.user_id = su.id;
 
 -- ------------------------------------------------------------------ COUPONS -
-insert into public.coupons (code, title, description, type, value, min_order_amount, max_discount, first_order_only, usage_limit, per_user_limit, expires_at, store_id, category_id) values
-('WELCOME50', 'Flat ₹50 off your first order', 'New to Merta Deal? Get ₹50 off on orders above ₹299.', 'fixed', 50, 299, null, true, 1000, 1, now() + interval '180 days', null, null),
-('MERTA10', '10% off up to ₹75', 'Save 10% on every order above ₹399.', 'percentage', 10, 399, 75, false, null, 5, now() + interval '90 days', null, null),
-('FRESH20', '20% off fruits & vegetables', 'Fresh from Merta mandi.', 'percentage', 20, 149, 60, false, 500, 3, now() + interval '30 days', null, 'c0000000-0000-4000-8000-000000000008'),
-('MASALA15', '15% off at Sharma Masala Bhandar', 'Store special.', 'percentage', 15, 199, 100, false, 200, 2, now() + interval '60 days', 'd0000000-0000-4000-8000-000000000008', null),
-('FLAT30', 'Flat ₹30 off', 'On orders above ₹249.', 'fixed', 30, 249, null, false, 2000, 3, now() + interval '45 days', null, null),
-('EXPIRED5', 'Old campaign', 'Expired coupon (for testing).', 'fixed', 5, 0, null, false, null, 1, now() - interval '1 day', null, null);
+insert into public.coupons (code, title, description, type, value, min_order_amount, max_discount, first_order_only, usage_limit, per_user_limit, expires_at, category_id) values
+('WELCOME50', 'Flat ₹50 off your first order', 'New to Merta Deal? Get ₹50 off on orders above ₹299.', 'fixed', 50, 299, null, true, 1000, 1, now() + interval '180 days', null),
+('MERTA10', '10% off up to ₹75', 'Save 10% on every order above ₹399.', 'percentage', 10, 399, 75, false, null, 5, now() + interval '90 days', null),
+('FRESH20', '20% off fruits & vegetables', 'Fresh from Merta mandi.', 'percentage', 20, 149, 60, false, 500, 3, now() + interval '30 days', 'c0000000-0000-4000-8000-000000000008'),
+('FLAT30', 'Flat ₹30 off', 'On orders above ₹249.', 'fixed', 30, 249, null, false, 2000, 3, now() + interval '45 days', null),
+('EXPIRED5', 'Old campaign', 'Expired coupon (for testing).', 'fixed', 5, 0, null, false, null, 1, now() - interval '1 day', null);
 
 -- ------------------------------------------------------------------ BANNERS -
 insert into public.banners (title, subtitle, cta_label, link_url, bg_color, text_color, placement, sort_order) values
 ('Merta Ki Shopping, Ab Online.', 'Kirana essentials delivered in 30–60 minutes across Merta City.', 'Shop now', '/c/grocery', '#0B6E4F', '#FFFFFF', 'home_hero', 1),
 ('Flat ₹50 off your first order', 'Use code WELCOME50 on orders above ₹299.', 'Claim offer', '/c/grocery?coupon=WELCOME50', '#F2A93B', '#1B1B1B', 'home_hero', 2),
-('Asli Rajasthani masale', 'Mathania mirch, Nagauri methi & more from Sharma Masala Bhandar.', 'Explore', '/s/sharma-masala-bhandar', '#B23A2E', '#FFFFFF', 'home_hero', 3),
+('Asli Rajasthani masale', 'Mathania mirch, Nagauri methi & more — chakki-fresh.', 'Explore', '/c/masala-spices', '#B23A2E', '#FFFFFF', 'home_hero', 3),
 ('Free delivery above ₹499', 'Stock up on monthly ration and save on delivery.', 'Shop atta & dal', '/c/grocery', '#1F3A5F', '#FFFFFF', 'home_mid', 1);
 
 insert into public.promotions (title, description, promo_type, category_id, discount_percent, sort_order) values
@@ -548,30 +504,29 @@ insert into public.promotions (title, description, promo_type, category_id, disc
 -- -------------------------------------------------------------------- ORDERS
 -- Helper to create a fully consistent historical order with items, payment, history, assignment.
 create or replace function pg_temp.seed_order(
-  p_customer uuid, p_store uuid, p_items text[], p_qtys int[], p_status public.order_status, p_hours_ago numeric,
+  p_customer uuid, p_items text[], p_qtys int[], p_status public.order_status, p_hours_ago numeric,
   p_pay public.payment_method, p_rider_n int default null, p_coupon text default null
 ) returns uuid language plpgsql as $$
 declare
-  v_addr public.addresses; v_store public.stores; v_oid uuid; v_no text; v_sub numeric := 0; v_mrp numeric := 0; v_cnt int := 0;
-  v_pid uuid; v_inv public.inventory; i int; v_price numeric; v_delivery numeric; v_platform numeric := 2; v_tax numeric; v_total numeric;
-  v_created timestamptz := now() - (p_hours_ago * interval '1 hour'); v_comm numeric; v_rate numeric; v_rider uuid; v_aid uuid; v_dist numeric;
+  v_addr public.addresses; v_oid uuid; v_no text; v_sub numeric := 0; v_mrp numeric := 0; v_cnt int := 0;
+  v_pid uuid; v_inv public.inventory; i int; v_delivery numeric; v_platform numeric := 2; v_tax numeric; v_total numeric;
+  v_created timestamptz := now() - (p_hours_ago * interval '1 hour'); v_rider uuid; v_aid uuid; v_dist numeric;
   v_coupon public.coupons; v_cdisc numeric := 0; v_zone public.delivery_zones; v_otp text; v_pstatus public.payment_status; v_earn numeric;
+  v_plat double precision := (public.pickup_point() ->> 'lat')::double precision; v_plng double precision := (public.pickup_point() ->> 'lng')::double precision;
 begin
   select * into v_addr from public.addresses where user_id = p_customer order by is_default desc limit 1;
-  select * into v_store from public.stores where id = p_store;
   v_zone := public.find_zone(v_addr.pincode, v_addr.lat, v_addr.lng);
   v_no := public.generate_order_number();
   v_otp := lpad(((abs(('x' || substr(md5(v_no),1,8))::bit(32)::int)) % 10000)::text, 4, '0');
-  v_rate := coalesce(v_store.commission_rate, 10);
-  v_dist := public.haversine_km(v_store.lat, v_store.lng, v_addr.lat, v_addr.lng);
+  v_dist := public.haversine_km(v_plat, v_plng, v_addr.lat, v_addr.lng);
   v_earn := 20 + ceil(v_dist) * 5;
 
   -- compute totals first
   for i in 1..array_length(p_items,1) loop
     select p.id into v_pid from public.products p where p.name = p_items[i] limit 1;
-    select * into v_inv from public.inventory where store_id = p_store and product_id = v_pid;
+    select * into v_inv from public.inventory where product_id = v_pid;
     if v_inv.id is null then
-      insert into public.inventory (store_id, product_id, selling_price, mrp, stock_qty) select p_store, v_pid, mrp, mrp, 25 from public.products where id = v_pid returning * into v_inv;
+      insert into public.inventory (product_id, selling_price, mrp, stock_qty) select v_pid, mrp, mrp, 25 from public.products where id = v_pid returning * into v_inv;
     end if;
     v_sub := v_sub + v_inv.selling_price * p_qtys[i]; v_mrp := v_mrp + v_inv.mrp * p_qtys[i]; v_cnt := v_cnt + p_qtys[i];
   end loop;
@@ -582,17 +537,16 @@ begin
   v_delivery := case when v_sub >= coalesce(v_zone.free_delivery_threshold, 499) then 0 else coalesce(v_zone.delivery_fee, 25) end;
   v_tax := round((v_delivery + v_platform) * 0.18, 2);
   v_total := v_sub - v_cdisc + v_delivery + v_platform + v_tax;
-  v_comm := round((v_sub - v_cdisc) * v_rate / 100, 2);
   v_pstatus := (case
     when p_status in ('cancelled','rejected') then (case when p_pay = 'cod' then 'cod_pending' else 'refunded' end)
     when p_pay = 'cod' then (case when p_status in ('delivered','completed') then 'cod_collected' else 'cod_pending' end)
     else 'paid' end)::public.payment_status;
 
-  insert into public.orders (order_number, user_id, store_id, zone_id, status, delivery_type, address_snapshot, delivery_lat, delivery_lng, payment_method, payment_status,
-    subtotal, item_discount, coupon_id, coupon_code, coupon_discount, delivery_fee, platform_fee, tax_amount, total, commission_rate, commission_amount, store_payout_amount, rider_earning, item_count, eta_minutes, promised_at,
-    store_confirmed_at, ready_at, picked_up_at, delivered_at, completed_at, cancelled_at, created_at, updated_at, delivery_instructions)
-  values (v_no, p_customer, p_store, v_zone.id, p_status, 'standard', to_jsonb(v_addr) - 'user_id', v_addr.lat, v_addr.lng, p_pay, v_pstatus,
-    v_sub, v_mrp - v_sub, v_coupon.id, v_coupon.code, v_cdisc, v_delivery, v_platform, v_tax, v_total, v_rate, v_comm, v_sub - v_cdisc - v_comm, v_earn, v_cnt, 45, v_created + interval '45 minutes',
+  insert into public.orders (order_number, user_id, zone_id, status, delivery_type, address_snapshot, delivery_lat, delivery_lng, payment_method, payment_status,
+    subtotal, item_discount, coupon_id, coupon_code, coupon_discount, delivery_fee, platform_fee, tax_amount, total, rider_earning, item_count, eta_minutes, promised_at,
+    confirmed_at, ready_at, picked_up_at, delivered_at, completed_at, cancelled_at, created_at, updated_at, delivery_instructions)
+  values (v_no, p_customer, v_zone.id, p_status, 'standard', to_jsonb(v_addr) - 'user_id', v_addr.lat, v_addr.lng, p_pay, v_pstatus,
+    v_sub, v_mrp - v_sub, v_coupon.id, v_coupon.code, v_cdisc, v_delivery, v_platform, v_tax, v_total, v_earn, v_cnt, 45, v_created + interval '45 minutes',
     case when p_status not in ('placed','cancelled','rejected') then v_created + interval '3 minutes' end,
     case when p_status in ('ready_for_pickup','rider_assigned','out_for_delivery','delivered','completed') then v_created + interval '14 minutes' end,
     case when p_status in ('out_for_delivery','delivered','completed') then v_created + interval '22 minutes' end,
@@ -607,7 +561,7 @@ begin
 
   for i in 1..array_length(p_items,1) loop
     select p.id into v_pid from public.products p where p.name = p_items[i] limit 1;
-    select * into v_inv from public.inventory where store_id = p_store and product_id = v_pid;
+    select * into v_inv from public.inventory where product_id = v_pid;
     insert into public.order_items (order_id, product_id, inventory_id, product_name, brand_name, pack_label, image_url, quantity, unit_price, unit_mrp, line_total)
     select v_oid, p.id, v_inv.id, p.name, b.name, p.pack_label, p.image_url, p_qtys[i], v_inv.selling_price, v_inv.mrp, v_inv.selling_price * p_qtys[i]
     from public.products p left join public.brands b on b.id = p.brand_id where p.id = v_pid;
@@ -621,11 +575,11 @@ begin
 
   -- history
   insert into public.order_status_history (order_id, status, actor_role, created_at) values (v_oid, 'placed', 'customer', v_created);
-  if p_status = 'rejected' then insert into public.order_status_history (order_id, status, actor_role, note, created_at) values (v_oid, 'rejected', 'store_owner', 'Out of stock', v_created + interval '6 minutes'); end if;
+  if p_status = 'rejected' then insert into public.order_status_history (order_id, status, actor_role, note, created_at) values (v_oid, 'rejected', 'admin', 'Out of stock', v_created + interval '6 minutes'); end if;
   if p_status = 'cancelled' then insert into public.order_status_history (order_id, status, actor_role, note, created_at) values (v_oid, 'cancelled', 'customer', 'Ordered by mistake', v_created + interval '6 minutes'); end if;
-  if p_status not in ('placed','cancelled','rejected') then insert into public.order_status_history (order_id, status, actor_role, created_at) values (v_oid, 'store_confirmed', 'store_owner', v_created + interval '3 minutes'); end if;
-  if p_status in ('preparing','ready_for_pickup','rider_assigned','out_for_delivery','delivered','completed') then insert into public.order_status_history (order_id, status, actor_role, created_at) values (v_oid, 'preparing', 'store_owner', v_created + interval '5 minutes'); end if;
-  if p_status in ('ready_for_pickup','rider_assigned','out_for_delivery','delivered','completed') then insert into public.order_status_history (order_id, status, actor_role, created_at) values (v_oid, 'ready_for_pickup', 'store_owner', v_created + interval '14 minutes'); end if;
+  if p_status not in ('placed','cancelled','rejected') then insert into public.order_status_history (order_id, status, note, created_at) values (v_oid, 'confirmed', 'Confirmed automatically', v_created + interval '3 minutes'); end if;
+  if p_status in ('preparing','ready_for_pickup','rider_assigned','out_for_delivery','delivered','completed') then insert into public.order_status_history (order_id, status, actor_role, created_at) values (v_oid, 'preparing', 'admin', v_created + interval '5 minutes'); end if;
+  if p_status in ('ready_for_pickup','rider_assigned','out_for_delivery','delivered','completed') then insert into public.order_status_history (order_id, status, actor_role, created_at) values (v_oid, 'ready_for_pickup', 'admin', v_created + interval '14 minutes'); end if;
   if p_status in ('rider_assigned','out_for_delivery','delivered','completed') then insert into public.order_status_history (order_id, status, actor_role, created_at) values (v_oid, 'rider_assigned', 'rider', v_created + interval '15 minutes'); end if;
   if p_status in ('out_for_delivery','delivered','completed') then insert into public.order_status_history (order_id, status, actor_role, created_at) values (v_oid, 'out_for_delivery', 'rider', v_created + interval '22 minutes'); end if;
   if p_status in ('delivered','completed') then insert into public.order_status_history (order_id, status, actor_role, created_at) values (v_oid, 'delivered', 'rider', v_created + interval '38 minutes'); end if;
@@ -642,19 +596,18 @@ begin
       case when p_status = 'ready_for_pickup' then now() + interval '3 minutes' else v_created + interval '17 minutes' end,
       case when p_status in ('out_for_delivery','delivered','completed') then v_created + interval '22 minutes' end,
       case when p_status in ('delivered','completed') then v_created + interval '38 minutes' end,
-      v_store.lat, v_store.lng, v_addr.lat, v_addr.lng, round(v_dist::numeric,2), v_earn, case when p_pay = 'cod' then v_total else 0 end, v_created + interval '14 minutes')
+      v_plat, v_plng, v_addr.lat, v_addr.lng, round(v_dist::numeric,2), v_earn, case when p_pay = 'cod' then v_total else 0 end, v_created + interval '14 minutes')
     returning id into v_aid;
     if p_status in ('delivered','completed') then
       update public.delivery_partners set total_deliveries = total_deliveries + 1, total_earnings = total_earnings + v_earn where id = v_rider;
     end if;
-    -- GPS breadcrumbs for the live one (real-looking path between store and customer; recorded by rider device in production)
+    -- GPS breadcrumbs for the live one (recorded by the rider's device in production)
     if p_status = 'out_for_delivery' then
       insert into public.delivery_locations (assignment_id, rider_id, lat, lng, accuracy_m, speed_mps, recorded_at)
-      select v_aid, v_rider, v_store.lat + (v_addr.lat - v_store.lat) * k / 10.0, v_store.lng + (v_addr.lng - v_store.lng) * k / 10.0, 8, 6.5, v_created + interval '22 minutes' + (k * 40 || ' seconds')::interval
+      select v_aid, v_rider, v_plat + (v_addr.lat - v_plat) * k / 10.0, v_plng + (v_addr.lng - v_plng) * k / 10.0, 8, 6.5, v_created + interval '22 minutes' + (k * 40 || ' seconds')::interval
       from generate_series(0, 6) k;
     end if;
   end if;
-  update public.stores set total_orders = total_orders + 1 where id = p_store;
   if p_status in ('delivered','completed') then
     update public.profiles set reward_points = reward_points + floor(v_sub/100) where id = p_customer;
     insert into public.reward_transactions (user_id, points, reason, order_id, created_at) values (p_customer, floor(v_sub/100), 'Order ' || v_no, v_oid, v_created + interval '38 minutes');
@@ -664,50 +617,44 @@ end $$;
 
 -- 20 orders across statuses (rider_n indexes delivery_partners ordered by id)
 do $seed$ begin
-  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000001','d0000000-0000-4000-8000-000000000001', array['Aashirvaad Shudh Chakki Atta','Tata Salt Iodised','Fortune Sunlite Refined Sunflower Oil','Sugar (Sulphurless)'], array[1,1,2,2], 'completed', 240, 'cod', 1, 'WELCOME50');
-  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000001','d0000000-0000-4000-8000-000000000008', array['Mathania Red Chilli Powder','MDH Garam Masala','Catch Cumin Seeds (Jeera)','Merta Special Papad (Moong)'], array[1,1,1,2], 'completed', 120, 'upi', 2, null);
-  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000001','d0000000-0000-4000-8000-000000000005', array['Amul Taaza Toned Milk','Amul Masti Dahi','Amul Fresh Paneer'], array[2,1,1], 'delivered', 26, 'cod', 3, null);
-  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000001','d0000000-0000-4000-8000-000000000004', array['Red Label Tea','Parle-G Gold Biscuits','Haldiram''s Aloo Bhujia','Bisleri Mineral Water'], array[1,1,1,4], 'out_for_delivery', 0.6, 'cod', 1, null);
-  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000002','d0000000-0000-4000-8000-000000000002', array['Surf Excel Easy Wash Detergent Powder','Vim Dishwash Bar','Colgate Strong Teeth Toothpaste','Lifebuoy Total 10 Soap'], array[1,1,1,1], 'completed', 200, 'upi', 4, 'MERTA10');
-  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000003','d0000000-0000-4000-8000-000000000009', array['Onion (Pyaz)','Potato (Aloo)','Tomato (Tamatar)','Coriander Leaves (Dhaniya Patta)','Green Chilli (Hari Mirch)'], array[2,2,1,1,1], 'delivered', 30, 'cod', 5, 'FRESH20');
-  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000004','d0000000-0000-4000-8000-000000000001', array['Tata Sampann Toor Dal (Arhar)','Rajdhani Besan','India Gate Basmati Rice Classic'], array[2,1,1], 'completed', 300, 'cod', 2, null);
-  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000005','d0000000-0000-4000-8000-000000000004', array['Maggi 2-Minute Masala Noodles','Kurkure Masala Munch','Thums Up','Lay''s Magic Masala'], array[1,3,2,2], 'delivered', 50, 'card', 6, null);
-  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000006','d0000000-0000-4000-8000-000000000006', array['Pampers All Round Protection Pants M','Johnson''s Baby Wipes','Nestlé Cerelac Wheat Apple'], array[1,2,1], 'completed', 400, 'upi', 3, null);
-  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000007','d0000000-0000-4000-8000-000000000007', array['Ghadi Detergent Powder','Nirma Washing Powder','Harpic Power Plus Toilet Cleaner'], array[2,1,1], 'cancelled', 72, 'cod', null, null);
-  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000008','d0000000-0000-4000-8000-000000000003', array['Fortune Kachi Ghani Mustard Oil','Everest Turmeric Powder','Everest Coriander Powder','Tata Salt Iodised'], array[2,1,1,1], 'completed', 500, 'cod', 7, null);
-  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000009','d0000000-0000-4000-8000-000000000001', array['Aashirvaad Shudh Chakki Atta','Amul Pure Ghee'], array[1,1], 'rejected', 90, 'upi', null, null);
-  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000010','d0000000-0000-4000-8000-000000000005', array['Saras Gold Milk','Saras Dahi','Saras Desi Ghee'], array[4,2,1], 'delivered', 20, 'cod', 4, null);
-  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000011','d0000000-0000-4000-8000-000000000002', array['Dove Cream Beauty Bathing Bar','Clinic Plus Strong & Long Shampoo','Dabur Amla Hair Oil'], array[1,1,1], 'completed', 600, 'netbanking', 8, null);
-  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000012','d0000000-0000-4000-8000-000000000008', array['Ker Sangri (Dried)','Rajasthani Mirchi Achar (Pickle)','Nagauri Methi Dana'], array[1,1,2], 'completed', 150, 'upi', 1, 'MASALA15');
-  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000013','d0000000-0000-4000-8000-000000000004', array['Daawat Rozana Super Basmati','Tata Sampann Moong Dal','Kabuli Chana','Rajma Chitra'], array[1,1,1,1], 'preparing', 0.3, 'cod', null, null);
-  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000014','d0000000-0000-4000-8000-000000000006', array['Cadbury Dairy Milk Silk','Britannia Good Day Cashew Cookies','Real Mixed Fruit Juice'], array[2,1,1], 'store_confirmed', 0.2, 'upi', null, null);
-  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000015','d0000000-0000-4000-8000-000000000001', array['Fortune Chakki Fresh Atta','Chana Dal (Loose)','Gemini Refined Soyabean Oil','Sugar (Sulphurless)'], array[1,1,1,1], 'placed', 0.1, 'cod', null, null);
-  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000016','d0000000-0000-4000-8000-000000000009', array['Banana (Kela)','Apple Shimla','Pomegranate (Anar)','Lemon (Nimbu)'], array[1,1,1,1], 'ready_for_pickup', 0.4, 'cod', 6, null);
-  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000017','d0000000-0000-4000-8000-000000000007', array['Tata Tea Gold','Parle-G Original','Britannia Marie Gold','Bru Instant Coffee'], array[1,2,1,1], 'rider_assigned', 0.5, 'upi', 2, null);
+  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000001', array['Aashirvaad Shudh Chakki Atta','Tata Salt Iodised','Fortune Sunlite Refined Sunflower Oil','Sugar (Sulphurless)'], array[1,1,2,2], 'completed', 240, 'cod', 1, 'WELCOME50');
+  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000001', array['Mathania Red Chilli Powder','MDH Garam Masala','Catch Cumin Seeds (Jeera)','Merta Special Papad (Moong)'], array[1,1,1,2], 'completed', 120, 'upi', 2, null);
+  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000001', array['Amul Taaza Toned Milk','Amul Masti Dahi','Amul Fresh Paneer'], array[2,1,1], 'delivered', 26, 'cod', 3, null);
+  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000001', array['Red Label Tea','Parle-G Gold Biscuits','Haldiram''s Aloo Bhujia','Bisleri Mineral Water'], array[1,1,1,4], 'out_for_delivery', 0.6, 'cod', 1, null);
+  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000002', array['Surf Excel Easy Wash Detergent Powder','Vim Dishwash Bar','Colgate Strong Teeth Toothpaste','Lifebuoy Total 10 Soap'], array[1,1,1,1], 'completed', 200, 'upi', 4, 'MERTA10');
+  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000003', array['Onion (Pyaz)','Potato (Aloo)','Tomato (Tamatar)','Coriander Leaves (Dhaniya Patta)','Green Chilli (Hari Mirch)'], array[2,2,1,1,1], 'delivered', 30, 'cod', 5, 'FRESH20');
+  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000004', array['Tata Sampann Toor Dal (Arhar)','Rajdhani Besan','India Gate Basmati Rice Classic'], array[2,1,1], 'completed', 300, 'cod', 2, null);
+  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000005', array['Maggi 2-Minute Masala Noodles','Kurkure Masala Munch','Thums Up','Lay''s Magic Masala'], array[1,3,2,2], 'delivered', 50, 'card', 6, null);
+  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000006', array['Pampers All Round Protection Pants M','Johnson''s Baby Wipes','Nestlé Cerelac Wheat Apple'], array[1,2,1], 'completed', 400, 'upi', 3, null);
+  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000007', array['Ghadi Detergent Powder','Nirma Washing Powder','Harpic Power Plus Toilet Cleaner'], array[2,1,1], 'cancelled', 72, 'cod', null, null);
+  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000008', array['Fortune Kachi Ghani Mustard Oil','Everest Turmeric Powder','Everest Coriander Powder','Tata Salt Iodised'], array[2,1,1,1], 'completed', 500, 'cod', 7, null);
+  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000009', array['Aashirvaad Shudh Chakki Atta','Amul Pure Ghee'], array[1,1], 'rejected', 90, 'upi', null, null);
+  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000010', array['Saras Gold Milk','Saras Dahi','Saras Desi Ghee'], array[4,2,1], 'delivered', 20, 'cod', 4, null);
+  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000011', array['Dove Cream Beauty Bathing Bar','Clinic Plus Strong & Long Shampoo','Dabur Amla Hair Oil'], array[1,1,1], 'completed', 600, 'netbanking', 8, null);
+  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000012', array['Ker Sangri (Dried)','Rajasthani Mirchi Achar (Pickle)','Nagauri Methi Dana'], array[1,1,2], 'completed', 150, 'upi', 1, null);
+  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000013', array['Daawat Rozana Super Basmati','Tata Sampann Moong Dal','Kabuli Chana','Rajma Chitra'], array[1,1,1,1], 'preparing', 0.3, 'cod', null, null);
+  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000014', array['Cadbury Dairy Milk Silk','Britannia Good Day Cashew Cookies','Real Mixed Fruit Juice'], array[2,1,1], 'confirmed', 0.2, 'upi', null, null);
+  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000015', array['Fortune Chakki Fresh Atta','Chana Dal (Loose)','Gemini Refined Soyabean Oil','Sugar (Sulphurless)'], array[1,1,1,1], 'placed', 0.1, 'cod', null, null);
+  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000016', array['Banana (Kela)','Apple Shimla','Pomegranate (Anar)','Lemon (Nimbu)'], array[1,1,1,1], 'ready_for_pickup', 0.4, 'cod', 6, null);
+  perform pg_temp.seed_order('30000000-0000-4000-8000-000000000017', array['Tata Tea Gold','Parle-G Original','Britannia Marie Gold','Bru Instant Coffee'], array[1,2,1,1], 'rider_assigned', 0.5, 'upi', 2, null);
 end $seed$;
 
 -- ------------------------------------------------------------------ REVIEWS -
-insert into public.reviews (user_id, order_id, target, product_id, store_id, rider_id, rating, title, comment, status, created_at)
-select o.user_id, o.id, 'store', null, o.store_id, null, 5, 'Fast and fresh', 'Order aaya 35 minute mein, packing bahut acchi thi. Jain Kirana is our go-to now.', 'approved', o.delivered_at + interval '1 hour'
-from public.orders o where o.user_id = '30000000-0000-4000-8000-000000000001' and o.store_id = 'd0000000-0000-4000-8000-000000000001' and o.status = 'completed' limit 1;
-insert into public.reviews (user_id, order_id, target, product_id, store_id, rider_id, rating, title, comment, status, created_at)
-select o.user_id, o.id, 'product', oi.product_id, null, null, 5, 'Best atta', 'Rotis come out really soft. Same as market price with home delivery.', 'approved', o.delivered_at + interval '1 hour'
+insert into public.reviews (user_id, order_id, target, product_id, rider_id, rating, title, comment, status, created_at)
+select o.user_id, o.id, 'product', oi.product_id, null, 5, 'Best atta', 'Rotis come out really soft. Same as market price with home delivery.', 'approved', o.delivered_at + interval '1 hour'
 from public.orders o join public.order_items oi on oi.order_id = o.id and oi.product_name = 'Aashirvaad Shudh Chakki Atta'
 where o.user_id = '30000000-0000-4000-8000-000000000001' and o.status = 'completed' limit 1;
-insert into public.reviews (user_id, order_id, target, product_id, store_id, rider_id, rating, title, comment, status, created_at)
-select o.user_id, o.id, 'delivery', null, null, a.rider_id, 5, 'Polite rider', 'Rider called before arriving and handled the milk carefully.', 'approved', o.delivered_at + interval '2 hours'
+insert into public.reviews (user_id, order_id, target, product_id, rider_id, rating, title, comment, status, created_at)
+select o.user_id, o.id, 'delivery', null, a.rider_id, 5, 'Polite rider', 'Rider called before arriving and handled the milk carefully.', 'approved', o.delivered_at + interval '2 hours'
 from public.orders o join public.delivery_assignments a on a.order_id = o.id where o.user_id = '30000000-0000-4000-8000-000000000001' and o.status = 'completed' limit 1;
-insert into public.reviews (user_id, order_id, target, product_id, store_id, rider_id, rating, title, comment, status, created_at)
-select o.user_id, o.id, 'product', oi.product_id, null, null, 4, 'Asli Mathania taste', 'Colour and heat are exactly like the one we bring from Jodhpur.', 'approved', o.delivered_at + interval '3 hours'
+insert into public.reviews (user_id, order_id, target, product_id, rider_id, rating, title, comment, status, created_at)
+select o.user_id, o.id, 'product', oi.product_id, null, 4, 'Asli Mathania taste', 'Colour and heat are exactly like the one we bring from Jodhpur.', 'approved', o.delivered_at + interval '3 hours'
 from public.orders o join public.order_items oi on oi.order_id = o.id and oi.product_name = 'Mathania Red Chilli Powder' where o.status = 'completed' limit 1;
-insert into public.reviews (user_id, order_id, target, product_id, store_id, rider_id, rating, title, comment, status, created_at)
-select o.user_id, o.id, 'store', null, o.store_id, null, 4, 'Good variety', 'Sabzi was fresh. Tomatoes slightly soft but overall good.', 'pending', o.delivered_at + interval '1 hour'
-from public.orders o where o.user_id = '30000000-0000-4000-8000-000000000003' and o.status = 'delivered' limit 1;
-insert into public.reviews (user_id, order_id, target, product_id, store_id, rider_id, rating, title, comment, status, created_at)
-select o.user_id, o.id, 'store', null, o.store_id, null, 5, 'Great masala shop', 'Ker sangri quality is superb. Will order again for Diwali.', 'approved', o.delivered_at + interval '1 hour'
-from public.orders o where o.user_id = '30000000-0000-4000-8000-000000000012' and o.status = 'completed' limit 1;
-insert into public.reviews (user_id, order_id, target, product_id, store_id, rider_id, rating, title, comment, status, created_at)
-select o.user_id, o.id, 'product', oi.product_id, null, null, 2, 'Packet was dented', 'Tea packet came slightly dented. Taste fine though.', 'pending', o.delivered_at + interval '1 hour'
+insert into public.reviews (user_id, order_id, target, product_id, rider_id, rating, title, comment, status, created_at)
+select o.user_id, o.id, 'delivery', null, a.rider_id, 4, 'Quick delivery', 'Sabzi was fresh and came in 30 minutes. Tomatoes slightly soft but overall good.', 'pending', o.delivered_at + interval '1 hour'
+from public.orders o join public.delivery_assignments a on a.order_id = o.id and a.status = 'delivered' where o.user_id = '30000000-0000-4000-8000-000000000003' and o.status = 'delivered' limit 1;
+insert into public.reviews (user_id, order_id, target, product_id, rider_id, rating, title, comment, status, created_at)
+select o.user_id, o.id, 'product', oi.product_id, null, 2, 'Packet was dented', 'Tea packet came slightly dented. Taste fine though.', 'pending', o.delivered_at + interval '1 hour'
 from public.orders o join public.order_items oi on oi.order_id = o.id and oi.product_name = 'Red Label Tea' where o.status in ('delivered','completed') limit 1;
 
 -- ------------------------------------------------------------- NOTIFICATIONS
@@ -720,11 +667,11 @@ from public.orders o where o.status in ('delivered','completed');
 insert into public.notifications (user_id, type, title, body, data, is_read, created_at) values
 ('30000000-0000-4000-8000-000000000001', 'promo', 'Flat ₹30 off this weekend', 'Use FLAT30 on orders above ₹249. Valid till Sunday.', '{"coupon":"FLAT30"}', false, now() - interval '5 hours');
 insert into public.notifications (user_id, type, title, body, data, is_read, created_at)
-select s.owner_id, 'new_order', 'New order ' || o.order_number, format('%s items · ₹%s · %s', o.item_count, o.total, upper(o.payment_method::text)), jsonb_build_object('order_id', o.id), false, o.created_at
-from public.orders o join public.stores s on s.id = o.store_id where o.status in ('placed','store_confirmed','preparing');
+select pr.id, 'new_order', 'New order ' || o.order_number, format('%s items · ₹%s · %s', o.item_count, o.total, upper(o.payment_method::text)), jsonb_build_object('order_id', o.id), false, o.created_at
+from public.orders o cross join public.profiles pr where pr.role in ('admin','super_admin') and o.status in ('placed','confirmed','preparing');
 insert into public.notifications (user_id, type, title, body, data, is_read, created_at)
-select dp.user_id, 'delivery_offer', 'New delivery request', format('Pickup from %s · Earn ₹%s', s.name, a.earning), jsonb_build_object('assignment_id', a.id, 'order_id', o.id), false, a.offered_at
-from public.delivery_assignments a join public.orders o on o.id = a.order_id join public.stores s on s.id = o.store_id join public.delivery_partners dp on dp.id = a.rider_id where a.status = 'offered';
+select dp.user_id, 'delivery_offer', 'New delivery request', format('Pickup from %s · Earn ₹%s', public.pickup_point() ->> 'name', a.earning), jsonb_build_object('assignment_id', a.id, 'order_id', o.id), false, a.offered_at
+from public.delivery_assignments a join public.orders o on o.id = a.order_id join public.delivery_partners dp on dp.id = a.rider_id where a.status = 'offered';
 
 -- ------------------------------------------------------------------ SUPPORT -
 insert into public.support_tickets (user_id, order_id, subject, category, status, priority)
@@ -732,20 +679,10 @@ select '30000000-0000-4000-8000-000000000007', o.id, 'Cancelled order still show
 insert into public.support_messages (ticket_id, sender_id, message, is_staff)
 select t.id, t.user_id, 'I cancelled my order but the app still shows amount due. Please check.', false from public.support_tickets t limit 1;
 insert into public.support_tickets (user_id, subject, category, status, priority) values
-('30000000-0000-4000-8000-000000000009', 'Store rejected my order — when will refund come?', 'refund', 'in_progress', 'high');
+('30000000-0000-4000-8000-000000000009', 'My order was rejected — when will the refund come?', 'refund', 'in_progress', 'high');
 insert into public.support_messages (ticket_id, sender_id, message, is_staff)
 select t.id, '10000000-0000-4000-8000-000000000002', 'Hi Irfan, the refund for your UPI payment has been initiated and will reflect in 5-7 working days.', true
 from public.support_tickets t where t.user_id = '30000000-0000-4000-8000-000000000009';
-
--- ------------------------------------------------------------------ PAYOUTS -
-insert into public.payouts (store_id, period_start, period_end, gross_sales, commission_amount, net_amount, order_count, status, reference_no, paid_at)
-select store_id, (date_trunc('week', now()) - interval '7 days')::date, (date_trunc('week', now()) - interval '1 day')::date,
-       sum(subtotal - coupon_discount), sum(commission_amount), sum(store_payout_amount), count(*), 'paid', 'NEFT' || to_char(now(),'YYMMDD') || '001', now() - interval '1 day'
-from public.orders where status in ('delivered','completed') and created_at < date_trunc('week', now()) group by store_id;
-insert into public.payouts (store_id, period_start, period_end, gross_sales, commission_amount, net_amount, order_count, status)
-select store_id, date_trunc('week', now())::date, (date_trunc('week', now()) + interval '6 days')::date,
-       sum(subtotal - coupon_discount), sum(commission_amount), sum(store_payout_amount), count(*), 'pending'
-from public.orders where status in ('delivered','completed') and created_at >= date_trunc('week', now()) group by store_id;
 
 -- Wallet demo balance for the demo customer
 update public.profiles set wallet_balance = 150 where id = '30000000-0000-4000-8000-000000000001';
@@ -754,10 +691,6 @@ insert into public.wallet_transactions (user_id, type, amount, balance_after, de
 
 -- Wishlist for demo customer
 insert into public.wishlists (user_id, product_id) select '30000000-0000-4000-8000-000000000001', id from public.products where name in ('Amul Pure Ghee','Ker Sangri (Dried)','Happilo Premium Almonds');
-
--- Store staff example
-insert into public.store_staff (store_id, user_id, role) values ('d0000000-0000-4000-8000-000000000004', '30000000-0000-4000-8000-000000000020', 'staff');
-update public.profiles set role = 'store_staff' where id = '30000000-0000-4000-8000-000000000020';
 
 -- Rebuild search vectors (brand/category joins) & keep popularity in sync with sales
 update public.products set updated_at = now();

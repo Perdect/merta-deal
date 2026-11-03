@@ -2,7 +2,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Enums } from "@/types/database";
 import type { Coupon } from "@/types/app";
-import { PAGE_SIZE, pageRange, safeLike, type AuditRow, type Paged, type PaymentRow, type PayoutRow, type ReviewRow, type TicketRow } from "./admin";
+import { PAGE_SIZE, pageRange, safeLike, type AuditRow, type Paged, type PaymentRow, type ReviewRow, type TicketRow } from "./admin";
 
 /* ================================================================================================
  * Read helpers for the marketing, finance, customer-care and system admin pages: list queries with
@@ -97,7 +97,7 @@ function paymentFilter(q: Q, f: PaymentFilters, orderIds: string[]): Q {
   return x;
 }
 
-const PAYMENT_SELECT = "*, order:orders(order_number, status, total, store:stores(name)), user:profiles!payments_user_id_fkey(full_name, phone)";
+const PAYMENT_SELECT = "*, order:orders(order_number, status, total), user:profiles!payments_user_id_fkey(full_name, phone)";
 
 export const listPaymentsAdmin = cache(async (f: PaymentFilters & { page?: number }): Promise<Paged<PaymentRow> & { error: boolean }> => {
   const supabase = await createClient();
@@ -119,42 +119,8 @@ export type PaymentDetail = PaymentRow & { order: (PaymentRow["order"] & { id: s
 
 export const getPaymentAdmin = cache(async (id: string): Promise<PaymentDetail | null> => {
   const supabase = await createClient();
-  const { data } = await supabase.from("payments").select("*, order:orders(id, order_number, status, total, payment_method, payment_status, created_at, store:stores(name)), user:profiles!payments_user_id_fkey(full_name, phone)").eq("id", id).maybeSingle();
+  const { data } = await supabase.from("payments").select("*, order:orders(id, order_number, status, total, payment_method, payment_status, created_at), user:profiles!payments_user_id_fkey(full_name, phone)").eq("id", id).maybeSingle();
   return (data as unknown as PaymentDetail) ?? null;
-});
-
-/* ------------------------------------------------------------------------------------------------
- * Payouts
- * ---------------------------------------------------------------------------------------------- */
-
-export const PAYOUT_TABS = ["", "pending", "processing", "paid", "failed"] as const;
-const PAYOUT_SELECT = "*, store:stores(name, bank_account_name, bank_account_number, bank_ifsc, upi_id)";
-
-export const listPayoutsAdmin = cache(async (f: { store?: string; status?: string; page?: number }): Promise<Paged<PayoutRow> & { error: boolean }> => {
-  const supabase = await createClient();
-  const page = f.page ?? 1;
-  let q = supabase.from("payouts").select(PAYOUT_SELECT, { count: "exact" }).order("created_at", { ascending: false }).range(...pageRange(page));
-  if (f.store) q = q.eq("store_id", f.store);
-  if (f.status) q = q.eq("status", f.status as Enums<"payout_status">);
-  const { data, count, error } = await q;
-  if (error) console.error("listPayoutsAdmin", error.message);
-  return { items: (data ?? []) as unknown as PayoutRow[], total: count ?? 0, page, pageSize: PAGE_SIZE, error: Boolean(error) };
-});
-
-export const countPayouts = cache(async (store: string) => {
-  const supabase = await createClient();
-  return headCounts([...PAYOUT_TABS], (t) => {
-    let q = supabase.from("payouts").select("id", { count: "exact", head: true });
-    if (t) q = q.eq("status", t as Enums<"payout_status">);
-    if (store) q = q.eq("store_id", store);
-    return q;
-  });
-});
-
-export const getPayoutAdmin = cache(async (id: string): Promise<PayoutRow | null> => {
-  const supabase = await createClient();
-  const { data } = await supabase.from("payouts").select(PAYOUT_SELECT).eq("id", id).maybeSingle();
-  return (data as unknown as PayoutRow) ?? null;
 });
 
 /* ------------------------------------------------------------------------------------------------
@@ -208,7 +174,7 @@ function reviewFilter(q: Q, status: string, f: ReviewFilters): Q {
 export const listReviewsAdmin = cache(async (f: ReviewFilters & { status: string; page?: number }): Promise<Paged<ReviewRow> & { error: boolean }> => {
   const supabase = await createClient();
   const page = f.page ?? 1;
-  const base = supabase.from("reviews").select("*, user:profiles!reviews_user_id_fkey(full_name), product:products(name, slug), store:stores(name, slug), rider:delivery_partners(id, user:profiles(full_name)), order:orders(order_number)", { count: "exact" }).order("created_at", { ascending: false }).range(...pageRange(page));
+  const base = supabase.from("reviews").select("*, user:profiles!reviews_user_id_fkey(full_name), product:products(name, slug), rider:delivery_partners(id, user:profiles(full_name)), order:orders(order_number)", { count: "exact" }).order("created_at", { ascending: false }).range(...pageRange(page));
   const { data, count, error } = await reviewFilter(base, f.status, f);
   if (error) console.error("listReviewsAdmin", error.message);
   return { items: (data ?? []) as unknown as ReviewRow[], total: count ?? 0, page, pageSize: PAGE_SIZE, error: Boolean(error) };

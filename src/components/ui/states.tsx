@@ -31,14 +31,14 @@ export function LoadingState({ label = "Loading…", className, rows = 3 }: { la
 
 export function ProductGridSkeleton({ count = 6 }: { count?: number }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6" aria-hidden>
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="rounded-lg border border-line bg-card p-2.5">
-          <Skeleton className="aspect-square w-full rounded-md" />
-          <Skeleton className="mt-3 h-3 w-1/3" />
-          <Skeleton className="mt-2 h-4 w-5/6" />
-          <Skeleton className="mt-2 h-4 w-1/2" />
-          <Skeleton className="mt-3 h-9 w-full rounded-sm" />
+        <div key={i} className="rounded-[14px] border border-line bg-card p-2">
+          <Skeleton className="aspect-square w-full rounded-[10px]" />
+          <Skeleton className="mt-2.5 h-3.5 w-5/6" />
+          <Skeleton className="mt-1.5 h-3.5 w-3/5" />
+          <Skeleton className="mt-2 h-3 w-1/3" />
+          <div className="mt-3 flex items-end justify-between gap-2"><Skeleton className="h-5 w-14" /><Skeleton className="h-8 w-[72px] rounded-lg" /></div>
         </div>
       ))}
     </div>

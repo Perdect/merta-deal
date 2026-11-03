@@ -52,7 +52,7 @@ function revalidate(...paths: string[]) { for (const p of paths) revalidatePath(
  * ---------------------------------------------------------------------------------------------- */
 
 export async function setUserRoleAction(userId: string, role: Enums<"user_role">): Promise<ActionResult> {
-  const parsed = z.object({ userId: uuid, role: z.enum(["customer", "store_owner", "store_staff", "rider", "admin", "super_admin"]) }).safeParse({ userId, role });
+  const parsed = z.object({ userId: uuid, role: z.enum(["customer", "rider", "admin", "super_admin"]) }).safeParse({ userId, role });
   if (!parsed.success) return invalid(parsed);
   try {
     const supabase = await requireAdmin();
@@ -90,82 +90,6 @@ export async function creditWalletAction(userId: string, amount: number, descrip
 }
 
 /* ------------------------------------------------------------------------------------------------
- * Stores
- * ---------------------------------------------------------------------------------------------- */
-
-export async function setStoreStatusAction(storeId: string, status: Enums<"store_status">, note?: string): Promise<ActionResult> {
-  const parsed = z.object({ storeId: uuid, status: z.enum(["pending", "active", "suspended", "closed"]), note: optionalText }).safeParse({ storeId, status, note });
-  if (!parsed.success) return invalid(parsed);
-  try {
-    const supabase = await requireAdmin();
-    const { data: store } = await supabase.from("stores").select("owner_id, name, status").eq("id", storeId).maybeSingle();
-    if (!store) return { ok: false, error: "Store not found" };
-    const { error } = await supabase.from("stores").update({ status: parsed.data.status }).eq("id", storeId);
-    if (error) return fail(error);
-    // stores has an audit trigger; also tell the owner.
-    const msg: Record<string, [string, string]> = {
-      active: ["Store approved", `${store.name} is now live on Merta Deal. Start adding stock and accepting orders.`],
-      suspended: ["Store suspended", `${store.name} has been suspended.${parsed.data.note ? ` Reason: ${parsed.data.note}` : ""} Contact support for help.`],
-      closed: ["Store closed", `${store.name} has been marked closed on Merta Deal.`],
-      pending: ["Store under review", `${store.name} is back under review by the Merta Deal team.`],
-    };
-    const [title, body] = msg[parsed.data.status];
-    await supabase.rpc("admin_notify_user", { p_user_id: store.owner_id, p_type: "store_status", p_title: title, p_body: body, p_data: { store_id: storeId, status: parsed.data.status } });
-    revalidate("/admin/stores", `/admin/stores/${storeId}`, "/admin");
-    return { ok: true, data: undefined };
-  } catch (e) { return fail(e); }
-}
-
-export async function updateStoreAdminAction(storeId: string, input: { is_featured?: boolean; delivery_radius_km?: number; zone_id?: string | null; min_order_amount?: number | null; avg_prep_minutes?: number; is_open?: boolean }): Promise<ActionResult> {
-  const parsed = z.object({
-    is_featured: z.boolean().optional(), delivery_radius_km: z.coerce.number().min(0.5).max(50).optional(), zone_id: z.string().uuid().nullable().optional(),
-    min_order_amount: z.coerce.number().min(0).nullable().optional(), avg_prep_minutes: z.coerce.number().int().min(1).max(240).optional(), is_open: z.boolean().optional(),
-  }).safeParse(input);
-  if (!parsed.success) return invalid(parsed);
-  if (!uuid.safeParse(storeId).success) return { ok: false, error: "Invalid store" };
-  try {
-    const supabase = await requireAdmin();
-    const { error } = await supabase.from("stores").update(parsed.data as TablesUpdate<"stores">).eq("id", storeId);
-    if (error) return fail(error);
-    revalidate("/admin/stores", `/admin/stores/${storeId}`);
-    return { ok: true, data: undefined };
-  } catch (e) { return fail(e); }
-}
-
-export async function setStoreCommissionAction(storeId: string, rate: number | null, note?: string): Promise<ActionResult> {
-  const parsed = z.object({ storeId: uuid, rate: z.coerce.number().min(0).max(100).nullable(), note: optionalText }).safeParse({ storeId, rate, note });
-  if (!parsed.success) return invalid(parsed);
-  try {
-    const supabase = await requireAdmin();
-    const { data: { user } } = await supabase.auth.getUser();
-    const { error } = await supabase.from("stores").update({ commission_rate: parsed.data.rate }).eq("id", storeId);
-    if (error) return fail(error);
-    if (parsed.data.rate != null) {
-      const { error: e2 } = await supabase.from("store_commissions").insert({ store_id: storeId, rate: parsed.data.rate, note: parsed.data.note, created_by: user?.id ?? null });
-      if (e2) return fail(e2);
-    }
-    revalidate(`/admin/stores/${storeId}`);
-    return { ok: true, data: undefined };
-  } catch (e) { return fail(e); }
-}
-
-export async function reviewStoreDocumentAction(docId: string, status: "verified" | "rejected", note?: string): Promise<ActionResult> {
-  const parsed = z.object({ docId: uuid, status: z.enum(["verified", "rejected"]), note: optionalText }).safeParse({ docId, status, note });
-  if (!parsed.success) return invalid(parsed);
-  try {
-    const supabase = await requireAdmin();
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data: before } = await supabase.from("store_documents").select("store_id, doc_type, status").eq("id", docId).maybeSingle();
-    if (!before) return { ok: false, error: "Document not found" };
-    const { error } = await supabase.from("store_documents").update({ status: parsed.data.status, review_note: parsed.data.note, reviewed_by: user?.id ?? null }).eq("id", docId);
-    if (error) return fail(error);
-    await audit(`store_document.${parsed.data.status}`, "store_documents", docId, before, { status: parsed.data.status, note: parsed.data.note });
-    revalidate(`/admin/stores/${before.store_id}`);
-    return { ok: true, data: undefined };
-  } catch (e) { return fail(e); }
-}
-
-/* ------------------------------------------------------------------------------------------------
  * Products
  * ---------------------------------------------------------------------------------------------- */
 
@@ -185,7 +109,7 @@ const productSchema = z.object({
   tags: z.array(z.string().trim().min(1).max(40)).max(30).default([]),
   synonyms: z.array(z.string().trim().min(1).max(40)).max(50).default([]),
   nutrition: z.record(z.string(), z.union([z.string(), z.number()])).nullable().optional(),
-  is_local: z.boolean().default(false), is_veg: z.boolean().default(true), is_active: z.boolean().default(true), is_approved: z.boolean().default(true),
+  is_local: z.boolean().default(false), is_veg: z.boolean().default(true), is_active: z.boolean().default(true),
   popularity_score: z.coerce.number().int().min(0).default(0),
 });
 export type ProductInput = z.input<typeof productSchema>;
@@ -213,8 +137,8 @@ export async function saveProductAction(id: string | null, input: ProductInput):
   } catch (e) { return fail(e); }
 }
 
-export async function setProductFlagsAction(id: string, flags: { is_active?: boolean; is_approved?: boolean; is_local?: boolean }): Promise<ActionResult> {
-  const parsed = z.object({ is_active: z.boolean().optional(), is_approved: z.boolean().optional(), is_local: z.boolean().optional() }).safeParse(flags);
+export async function setProductFlagsAction(id: string, flags: { is_active?: boolean; is_local?: boolean }): Promise<ActionResult> {
+  const parsed = z.object({ is_active: z.boolean().optional(), is_local: z.boolean().optional() }).safeParse(flags);
   if (!parsed.success || !uuid.safeParse(id).success) return { ok: false, error: "Invalid input" };
   try {
     const supabase = await requireAdmin();
@@ -373,7 +297,7 @@ export async function redispatchAction(orderId: string): Promise<ActionResult<{ 
 }
 
 export async function adminCancelOrderAction(orderId: string, reason: string): Promise<ActionResult> {
-  const parsed = z.object({ orderId: uuid, reason: z.string().trim().min(3, "Give a reason for the customer and store").max(300) }).safeParse({ orderId, reason });
+  const parsed = z.object({ orderId: uuid, reason: z.string().trim().min(3, "Give a reason for the customer").max(300) }).safeParse({ orderId, reason });
   if (!parsed.success) return invalid(parsed);
   try {
     const supabase = await requireAdmin();
@@ -381,6 +305,22 @@ export async function adminCancelOrderAction(orderId: string, reason: string): P
     if (error) return fail(error);
     revalidate(`/admin/orders/${orderId}`, "/admin/orders", "/admin", `/orders/${orderId}`);
     return { ok: true, data: undefined };
+  } catch (e) { return fail(e); }
+}
+
+export type FulfilAction = "accept" | "reject" | "preparing" | "ready";
+
+/** Packing flow (fulfil_order): accept/reject, mark packing, or "ready" = packed, which requests a rider. */
+export async function fulfilOrderAction(orderId: string, action: FulfilAction, note?: string): Promise<ActionResult<{ status: Enums<"order_status">; assignment_id: string | null }>> {
+  const parsed = z.object({ orderId: uuid, action: z.enum(["accept", "reject", "preparing", "ready"]), note: optionalText }).safeParse({ orderId, action, note });
+  if (!parsed.success) return invalid(parsed);
+  try {
+    const supabase = await requireAdmin();
+    const { data, error } = await supabase.rpc("fulfil_order", { p_order_id: orderId, p_action: parsed.data.action, p_note: parsed.data.note ?? undefined });
+    if (error) return fail(error);
+    const r = data as { status: Enums<"order_status">; assignment_id: string | null };
+    revalidate("/admin/orders", `/admin/orders/${orderId}`, "/admin", `/orders/${orderId}`);
+    return { ok: true, data: { status: r.status, assignment_id: r.assignment_id ?? null } };
   } catch (e) { return fail(e); }
 }
 
@@ -462,7 +402,7 @@ export async function deleteZoneAction(id: string): Promise<ActionResult> {
   try {
     const supabase = await requireAdmin();
     const { error } = await supabase.from("delivery_zones").delete().eq("id", id);
-    if (error) return { ok: false, error: error.code === "23503" ? "Stores or addresses still reference this zone; deactivate it instead." : friendlyError(error) };
+    if (error) return { ok: false, error: error.code === "23503" ? "Addresses or orders still reference this zone; deactivate it instead." : friendlyError(error) };
     revalidate("/admin/delivery");
     return { ok: true, data: undefined };
   } catch (e) { return fail(e); }
@@ -542,7 +482,7 @@ export async function updateRiderAdminAction(riderId: string, input: { vehicle_t
 const couponSchema = z.object({
   code: z.string().trim().toUpperCase().regex(/^[A-Z0-9_-]{3,24}$/, "Code: 3–24 letters/numbers"), title: z.string().trim().min(2).max(100), description: optionalText,
   type: z.enum(["percentage", "fixed"]), value: z.coerce.number().positive("Value must be positive"), min_order_amount: money.default(0), max_discount: z.coerce.number().positive().nullable().optional(),
-  first_order_only: z.boolean().default(false), store_id: z.string().uuid().nullable().optional(), category_id: z.string().uuid().nullable().optional(),
+  first_order_only: z.boolean().default(false), category_id: z.string().uuid().nullable().optional(),
   usage_limit: z.coerce.number().int().positive().nullable().optional(), per_user_limit: z.coerce.number().int().min(1).default(1),
   starts_at: z.string().min(1, "Start date required").transform((v) => new Date(v).toISOString()), expires_at: optionalDate, is_active: z.boolean().default(true),
 }).refine((c) => c.type !== "percentage" || c.value <= 100, { message: "Percentage cannot exceed 100", path: ["value"] });
@@ -660,45 +600,11 @@ export async function deletePromotionAction(id: string): Promise<ActionResult> {
 }
 
 /* ------------------------------------------------------------------------------------------------
- * Payouts (audit trigger)
- * ---------------------------------------------------------------------------------------------- */
-
-export async function generatePayoutsAction(periodStart: string, periodEnd: string): Promise<ActionResult<{ created: number; total_amount: number }>> {
-  const parsed = z.object({ periodStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), periodEnd: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }).safeParse({ periodStart, periodEnd });
-  if (!parsed.success) return { ok: false, error: "Pick a valid date range" };
-  try {
-    await requireAdmin();
-    const { data, error } = await adminRpc<{ created: number; total_amount: number }>("admin_generate_payouts", { p_period_start: periodStart, p_period_end: periodEnd });
-    if (error) return fail(error);
-    revalidate("/admin/payouts");
-    return { ok: true, data: { created: Number(data?.created ?? 0), total_amount: Number(data?.total_amount ?? 0) } };
-  } catch (e) { return fail(e); }
-}
-
-export async function setPayoutStatusAction(payoutId: string, status: Enums<"payout_status">, reference?: string, note?: string): Promise<ActionResult> {
-  const parsed = z.object({ payoutId: uuid, status: z.enum(["pending", "processing", "paid", "failed"]), reference: z.string().trim().max(120).optional().nullable(), note: optionalText }).safeParse({ payoutId, status, reference, note });
-  if (!parsed.success) return invalid(parsed);
-  if (parsed.data.status === "paid" && !parsed.data.reference) return { ok: false, error: "Enter the bank / UPI reference number" };
-  try {
-    const supabase = await requireAdmin();
-    const { data: payout } = await supabase.from("payouts").select("store_id, net_amount, period_start, period_end").eq("id", payoutId).maybeSingle();
-    if (!payout) return { ok: false, error: "Payout not found" };
-    const patch: TablesUpdate<"payouts"> = { status: parsed.data.status, reference_no: parsed.data.reference || null, note: parsed.data.note ?? undefined };
-    if (parsed.data.status === "paid") patch.paid_at = new Date().toISOString();
-    const { error } = await supabase.from("payouts").update(patch).eq("id", payoutId);
-    if (error) return fail(error);
-    if (parsed.data.status === "paid") await supabase.rpc("admin_notify_store", { p_store_id: payout.store_id, p_type: "payout_paid", p_title: "Payout sent", p_body: `₹${Number(payout.net_amount).toFixed(2)} for ${payout.period_start} to ${payout.period_end} has been transferred. Ref: ${parsed.data.reference}`, p_data: { payout_id: payoutId } });
-    revalidate("/admin/payouts", `/admin/stores/${payout.store_id}`);
-    return { ok: true, data: undefined };
-  } catch (e) { return fail(e); }
-}
-
-/* ------------------------------------------------------------------------------------------------
  * Notifications
  * ---------------------------------------------------------------------------------------------- */
 
-export async function broadcastAction(input: { audience: "all" | "customers" | "stores" | "riders" | "user"; title: string; body: string; email?: string }): Promise<ActionResult<{ recipients: number }>> {
-  const parsed = z.object({ audience: z.enum(["all", "customers", "stores", "riders", "user"]), title: z.string().trim().min(3, "Title is too short").max(120), body: z.string().trim().min(5, "Message is too short").max(1000), email: z.string().trim().email("Enter a valid email").optional().or(z.literal("")) })
+export async function broadcastAction(input: { audience: "all" | "customers" | "riders" | "user"; title: string; body: string; email?: string }): Promise<ActionResult<{ recipients: number }>> {
+  const parsed = z.object({ audience: z.enum(["all", "customers", "riders", "user"]), title: z.string().trim().min(3, "Title is too short").max(120), body: z.string().trim().min(5, "Message is too short").max(1000), email: z.string().trim().email("Enter a valid email").optional().or(z.literal("")) })
     .refine((v) => v.audience !== "user" || Boolean(v.email), { message: "Enter the user's email", path: ["email"] }).safeParse(input);
   if (!parsed.success) return invalid(parsed);
   try {

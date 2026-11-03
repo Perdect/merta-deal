@@ -53,7 +53,7 @@ export default async function AdminPaymentsPage({ searchParams }: { searchParams
               ? <EmptyBlock icon={SearchX} title="No payments match" description="Try another tab, remove a filter chip, or search by a different order number or id." />
               : <EmptyBlock icon={CreditCard} title="No payments yet" description="A payment record is created when a customer checks out." />}
           columns={[
-            { key: "order", header: "Order", render: (p) => <CellStack primary={p.order?.order_number ?? "Order"} secondary={[p.user?.full_name, p.order?.store?.name].filter(Boolean).join(" · ") || undefined} href={viewHref(p.id)} scroll={false} /> },
+            { key: "order", header: "Order", render: (p) => <CellStack primary={p.order?.order_number ?? "Order"} secondary={p.user?.full_name ?? undefined} href={viewHref(p.id)} scroll={false} /> },
             { key: "method", header: "Method", hideBelow: "md", render: (p) => <CellStack primary={paymentMethodLabel(p.method)} secondary={PROVIDER_LABEL[p.provider] ?? p.provider} /> },
             { key: "status", header: "Payment status", render: (p) => <span className="flex flex-col items-start gap-1"><PaymentStatusPill status={p.status} />{refundDue(p) ? <StatusPill tone="red">Refund due</StatusPill> : null}</span> },
             { key: "amount", header: "Amount", align: "right", render: (p) => <span className="block text-right"><span className="font-semibold tabular text-ink">{rupees(p.amount)}</span>{Number(p.refund_amount) ? <span className="block text-xs tabular text-ink-3">Refunded {rupees(p.refund_amount)}</span> : null}</span> },
@@ -90,7 +90,6 @@ export default async function AdminPaymentsPage({ searchParams }: { searchParams
                   { label: "Order", value: <Link href={`/admin/orders/${view.order_id}`} className="font-semibold text-brand-700 hover:underline">{view.order?.order_number ?? "View order"}</Link> },
                   { label: "Order status", value: view.order ? ORDER_STATUS_META[view.order.status]?.label ?? view.order.status : "—" },
                   { label: "Order total", value: view.order ? rupees(view.order.total) : "—" },
-                  { label: "Store", value: view.order?.store?.name ?? "—" },
                   { label: "Customer", value: view.user?.full_name ? <Link href={`/admin/users/${view.user_id}`} className="text-brand-700 hover:underline">{view.user.full_name}</Link> : "—" },
                   { label: "Phone", value: view.user?.phone ?? "—" },
                 ]} />

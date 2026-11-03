@@ -41,19 +41,29 @@ export function AddressForm({ initial, onSaved, onCancel, defaultName, defaultPh
     }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 });
   };
 
+  // Typed values stay in `form` whatever the outcome: a failed save only adds field errors. `busy`
+  // blocks a second submit (Enter + tap) while the first is in flight, and a network failure
+  // (server actions reject when offline) is reported instead of leaving the button spinning.
   const submit = async (e: React.FormEvent) => {
-    e.preventDefault(); setBusy(true); setErrors({});
-    const r = await saveAddressAction(form);
-    setBusy(false);
-    if (!r.ok) { setErrors(r.fieldErrors ?? {}); toast.error(r.error); return; }
-    toast.success("Address saved"); onSaved(r.data);
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true); setErrors({});
+    try {
+      const r = await saveAddressAction(form);
+      if (!r.ok) { setErrors(r.fieldErrors ?? {}); toast.error(r.error); return; }
+      toast.success("Address saved"); onSaved(r.data);
+    } catch {
+      toast.error("Could not save the address", "Check your connection and try again. Nothing you typed was lost.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-2" role="group" aria-label="Address type">
         {TYPES.map(({ v, label, icon: Icon }) => (
-          <button key={v} type="button" onClick={() => set("type", v)} className={cn("flex h-11 items-center justify-center gap-2 rounded-sm border text-sm font-semibold", form.type === v ? "border-brand-600 bg-brand-50 text-brand-700" : "border-line-2 bg-card text-ink-2")}><Icon className="h-4 w-4" />{label}</button>
+          <button key={v} type="button" aria-pressed={form.type === v} onClick={() => set("type", v)} className={cn("flex h-11 items-center justify-center gap-2 rounded-sm border text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600", form.type === v ? "border-brand-600 bg-brand-50 text-brand-700" : "border-line-2 bg-card text-ink-2")}><Icon className="h-4 w-4" aria-hidden />{label}</button>
         ))}
       </div>
       <Button type="button" variant="secondary" fullWidth loading={locating} onClick={locate}><LocateFixed className="h-4 w-4" /> {form.lat ? "Location pinned · Update GPS" : "Use current location (GPS)"}</Button>
@@ -69,8 +79,8 @@ export function AddressForm({ initial, onSaved, onCancel, defaultName, defaultPh
       </div>
       <Checkbox label="Make this my default address" checked={Boolean(form.is_default)} onChange={(e) => set("is_default", e.target.checked)} />
       <div className="flex gap-2">
-        {onCancel ? <Button type="button" variant="outline" onClick={onCancel} className="flex-1">Cancel</Button> : null}
-        <Button type="submit" loading={busy} className="flex-1">Save address</Button>
+        {onCancel ? <Button type="button" variant="outline" onClick={onCancel} disabled={busy} className="flex-1">Cancel</Button> : null}
+        <Button type="submit" loading={busy} disabled={busy} className="flex-1">{busy ? "Saving…" : "Save address"}</Button>
       </div>
     </form>
   );

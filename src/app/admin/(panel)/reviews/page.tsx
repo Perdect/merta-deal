@@ -11,12 +11,11 @@ import { formatDateTime, timeAgo } from "@/lib/utils";
 export const metadata: Metadata = { title: "Reviews" };
 
 const TAB_LABEL: Record<string, string> = { pending: "To moderate", approved: "Approved", rejected: "Rejected" };
-const TARGET_LABEL: Record<string, string> = { product: "Product", store: "Store", delivery: "Delivery" };
+const TARGET_LABEL: Record<string, string> = { product: "Product", delivery: "Delivery" };
 
 function Target({ r }: { r: ReviewRow }) {
   const link = r.target === "product" && r.product ? <Link href={`/p/${r.product.slug}`} className="font-medium text-brand-700 hover:underline">{r.product.name}</Link>
-    : r.target === "store" && r.store ? <Link href={`/s/${r.store.slug}`} className="font-medium text-brand-700 hover:underline">{r.store.name}</Link>
-      : r.target === "delivery" && r.rider ? <Link href={`/admin/riders/${r.rider.id}`} className="font-medium text-brand-700 hover:underline">{r.rider.user?.full_name ?? "Rider"}</Link>
+    : r.target === "delivery" && r.rider ? <Link href={`/admin/riders/${r.rider.id}`} className="font-medium text-brand-700 hover:underline">{r.rider.user?.full_name ?? "Rider"}</Link>
         : <span className="text-ink-4">Removed</span>;
   return <span className="block min-w-0 max-w-[220px] truncate text-sm"><span className="text-ink-3">{TARGET_LABEL[r.target] ?? r.target}: </span>{link}</span>;
 }
@@ -30,11 +29,11 @@ export default async function AdminReviewsPage({ searchParams }: { searchParams:
 
   return (
     <>
-      <AdminPageHeader title="Reviews" description="Approved reviews appear on product and store pages and count towards ratings. Pending ones are hidden until you decide." />
+      <AdminPageHeader title="Reviews" description="Approved reviews appear on product pages and count towards ratings. Pending ones are hidden until you decide." />
 
       <StatusTabs defaultValue="pending" items={REVIEW_TABS.map((t) => ({ value: t, label: TAB_LABEL[t], count: counts[t] ?? null }))} />
       <ListToolbar searchPlaceholder="Search review text" filters={[
-        { key: "target", label: "Reviewed", options: [{ value: "product", label: "Product" }, { value: "store", label: "Store" }, { value: "delivery", label: "Delivery" }] },
+        { key: "target", label: "Reviewed", options: [{ value: "product", label: "Product" }, { value: "delivery", label: "Delivery" }] },
         { key: "rating", label: "Rating", options: [5, 4, 3, 2, 1].map((n) => ({ value: String(n), label: `${n} ${n === 1 ? "star" : "stars"}` })) },
       ]} />
 

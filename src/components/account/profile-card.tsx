@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/toast";
 import { isValidIndianMobile } from "@/lib/utils";
 
-const ROLE_LABEL: Record<string, string> = { customer: "Customer", store_owner: "Store owner", store_staff: "Store staff", rider: "Delivery partner", admin: "Admin", super_admin: "Super admin" };
+const ROLE_LABEL: Record<string, string> = { customer: "Customer", rider: "Delivery partner", admin: "Admin", super_admin: "Super admin" };
 
 /** Avatar + name/phone/email with an inline edit modal (avatar uploads to `avatars/<userId>/`). */
 export function ProfileCard({ profile, email }: { profile: Profile; email: string | null }) {
@@ -60,7 +60,7 @@ export function ProfileCard({ profile, email }: { profile: Profile; email: strin
         </div>
       </section>
 
-      <Modal open={open} onClose={close} title="Edit profile" description="Your name and number are shared with the store and rider for deliveries.">
+      <Modal open={open} onClose={close} title="Edit profile" description="Your name and number are shared with the rider for deliveries.">
         <form onSubmit={save} className="space-y-4">
           <div className="flex items-center gap-4">
             <ImageUpload bucket="avatars" folder={profile.id} value={avatar} onChange={(url) => setAvatar(url)} label="Photo" className="h-24 w-24 shrink-0 rounded-full" maxMb={3} />

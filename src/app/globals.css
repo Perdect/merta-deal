@@ -142,7 +142,6 @@
   --safe-top: env(safe-area-inset-top, 0px);
   --bottom-nav-h: 58px;
   --cart-bar-h: 52px;
-  --store-tabs-h: 64px;
 }
 
 @layer base {
@@ -151,7 +150,11 @@
   @media (pointer: coarse) { input:not([type=checkbox]):not([type=radio]):not([type=range]), select, textarea { font-size: max(16px, 1em); } }
   /* Landscape phones with a notch: keep page content inside the safe area. */
   body { padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
-  html { -webkit-tap-highlight-color: transparent; scroll-behavior: smooth; }
+  html { -webkit-tap-highlight-color: transparent; }
+  /* Smooth scrolling only for in-page jumps (anchor links, "scroll to top" controls). A page-wide
+     `scroll-behavior: smooth` also animates the browser's own history restoration, so Back to a
+     listing visibly slid from the top instead of landing where the shopper was. */
+  html:focus-within { scroll-behavior: smooth; }
   body { background: var(--color-surface); color: var(--color-ink); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
   h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.01em; }
   input, textarea, select, button { font: inherit; }
@@ -204,4 +207,16 @@
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+/* Body scroll lock behind dialogs (useScrollLock in components/ui/overlay.tsx). iOS Safari ignores
+   `overflow: hidden` on <body>, so the page is pinned with position: fixed; the hook sets
+   `body.style.top = -scrollY` so nothing moves, and scrolls back to that offset on release. */
+html.md-scroll-lock { overflow: hidden; }
+html.md-scroll-lock body { position: fixed; left: 0; right: 0; overflow: hidden; overscroll-behavior: none; }
+
+/* Keyboard focus is always visible. In the base layer so a component's own focus-visible: utilities
+   (Button's ring, outline-none) still win. */
+@layer base {
+  :where(a, button, [role="button"], input, select, textarea, summary, [tabindex]):focus-visible { outline: 2px solid var(--color-brand-600); outline-offset: 2px; }
 }

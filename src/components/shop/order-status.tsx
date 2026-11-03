@@ -44,10 +44,10 @@ export function OrderTimeline({ status, history, promisedAt, className }: { stat
   );
 }
 
-/** Quick-commerce steps shown to shoppers: placed → packing → on the way → delivered (store/admin keep the full timeline). */
+/** Quick-commerce steps shown to shoppers: placed → packing → on the way → delivered (admin keeps the full timeline). */
 const CUSTOMER_STEPS: { key: string; label: string; icon: string; statuses: OrderStatusType[] }[] = [
   { key: "placed", label: "Order placed", icon: "receipt", statuses: ["placed"] },
-  { key: "packing", label: "Packing", icon: "package", statuses: ["store_confirmed", "preparing", "ready_for_pickup"] },
+  { key: "packing", label: "Packing", icon: "package", statuses: ["confirmed", "preparing", "ready_for_pickup"] },
   { key: "on_the_way", label: "On the way", icon: "bike", statuses: ["rider_assigned", "out_for_delivery"] },
   { key: "delivered", label: "Delivered", icon: "check-circle", statuses: ["delivered", "completed"] },
 ];
@@ -55,7 +55,7 @@ const CUSTOMER_STEPS: { key: string; label: string; icon: string; statuses: Orde
 function stepNote(status: OrderStatusType, paid: boolean) {
   switch (status) {
     case "placed": return paid ? "Confirming your order" : "Waiting for your online payment";
-    case "store_confirmed": case "preparing": return "The store is packing your items";
+    case "confirmed": case "preparing": return "Merta Deal is packing your items";
     case "ready_for_pickup": return "Packed · assigning a delivery partner";
     case "rider_assigned": return "Delivery partner is picking up your order";
     case "out_for_delivery": return "On the way to you · share the OTP at your door";

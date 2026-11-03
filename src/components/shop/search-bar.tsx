@@ -2,7 +2,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Search, X, Mic, ArrowUpRight, Tag, LayoutGrid, Store } from "lucide-react";
+import { Search, X, Mic, ArrowUpRight, Tag, LayoutGrid } from "lucide-react";
 import { useDebouncedValue } from "@/hooks/use-debounce";
 import type { SearchSuggest } from "@/types/app";
 import { cn, formatINR } from "@/lib/utils";
@@ -35,7 +35,10 @@ export function SearchBar({ className, autoFocus, initial = "", compact, scope }
   const active = debounced.trim().length >= 2;
   React.useEffect(() => {
     if (!active) return;
+    // Each keystroke (after the debounce) cancels the previous request; an aborted or superseded
+    // response is dropped, so results always belong to the latest text.
     const ctrl = new AbortController();
+    let current = true;
     const run = async () => {
       setLoading(true);
       try {
@@ -43,15 +46,17 @@ export function SearchBar({ className, autoFocus, initial = "", compact, scope }
           // Scoped typeahead: products from this category only (no cross-category chips).
           const r = await fetch(`/api/search?q=${encodeURIComponent(debounced.trim())}&category=${encodeURIComponent(scope.slug)}`, { signal: ctrl.signal });
           const d = (await r.json()) as { items: SearchSuggest["products"] };
-          setData({ products: d.items.slice(0, 6), brands: [], categories: [], stores: [] } as unknown as SearchSuggest);
+          if (current) setData({ products: d.items.slice(0, 6), brands: [], categories: [] } as unknown as SearchSuggest);
         } else {
-          const r = await fetch(`/api/search/suggest?q=${encodeURIComponent(debounced.trim())}`, { signal: ctrl.signal }); setData(await r.json());
+          const r = await fetch(`/api/search/suggest?q=${encodeURIComponent(debounced.trim())}`, { signal: ctrl.signal });
+          const d = (await r.json()) as SearchSuggest;
+          if (current) setData(d);
         }
-      } catch {}
-      setLoading(false);
+      } catch { /* aborted or offline: keep what is shown */ }
+      if (current) setLoading(false);
     };
     void run();
-    return () => ctrl.abort();
+    return () => { current = false; ctrl.abort(); };
   }, [debounced, active, scope?.slug]); // eslint-disable-line react-hooks/exhaustive-deps
   React.useEffect(() => {
     const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
@@ -60,7 +65,7 @@ export function SearchBar({ className, autoFocus, initial = "", compact, scope }
 
   const submit = (term = q) => { const t = term.trim(); if (!t) return; setOpen(false); router.push(`/search?q=${encodeURIComponent(t)}${scope ? `&category=${encodeURIComponent(scope.slug)}` : ""}`); };
   const shown = active ? data : null;
-  const hasResults = shown && (shown.products.length || shown.brands.length || shown.categories.length || shown.stores.length);
+  const hasResults = shown && (shown.products.length || shown.brands.length || shown.categories.length);
 
   return (
     <div ref={ref} className={cn("relative", className)}>
@@ -102,11 +107,10 @@ export function SearchBar({ className, autoFocus, initial = "", compact, scope }
               ))}
             </ul>
           ) : null}
-          {(shown?.categories.length || shown?.brands.length || shown?.stores.length) ? (
+          {(shown?.categories.length || shown?.brands.length) ? (
             <div className="flex flex-wrap gap-2 border-t border-line bg-surface px-3 py-2.5">
               {shown.categories.map((c) => <Link key={c.id} href={`/c/${c.slug}`} onClick={() => setOpen(false)} className="inline-flex items-center gap-1 rounded-full border border-line-2 bg-card px-2.5 py-1 text-xs font-medium text-ink"><LayoutGrid className="h-3 w-3 text-brand-600" />{c.name}</Link>)}
               {shown.brands.map((b) => <Link key={b.id} href={`/search?brand=${b.slug}`} onClick={() => setOpen(false)} className="inline-flex items-center gap-1 rounded-full border border-line-2 bg-card px-2.5 py-1 text-xs font-medium text-ink"><Tag className="h-3 w-3 text-saffron-600" />{b.name}</Link>)}
-              {shown.stores.map((s) => <Link key={s.id} href={`/s/${s.slug}`} onClick={() => setOpen(false)} className="inline-flex items-center gap-1 rounded-full border border-line-2 bg-card px-2.5 py-1 text-xs font-medium text-ink"><Store className="h-3 w-3 text-info" />{s.name}</Link>)}
             </div>
           ) : null}
           <button type="button" onClick={() => submit()} className="flex w-full items-center justify-between border-t border-line px-4 py-2.5 text-sm font-semibold text-brand-700 hover:bg-brand-50">See all results for “{q.trim()}”{scope ? ` in ${scope.name}` : ""} <ArrowUpRight className="h-4 w-4" /></button>

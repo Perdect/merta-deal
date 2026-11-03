@@ -12,8 +12,6 @@ export const metadata: Metadata = { title: "Users" };
 const TABS = [
   { value: "", label: "All" },
   { value: "customer", label: "Customers" },
-  { value: "store_owner", label: "Store owners" },
-  { value: "store_staff", label: "Store staff" },
   { value: "rider", label: "Riders" },
   { value: "admins", label: "Admins" },
 ];
@@ -29,7 +27,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
 
   return (
     <>
-      <AdminPageHeader title="Users" description="Every account on Merta Deal: customers, store teams, riders and admins. Open a user to change their role, credit their wallet or deactivate them." />
+      <AdminPageHeader title="Users" description="Every account on Merta Deal: customers, riders and admins. Open a user to change their role, credit their wallet or deactivate them." />
 
       <StatusTabs param="role" items={TABS.map((t) => ({ ...t, count: counts[t.value] ?? null }))} />
       {rawRole ? <p className="-mt-1 mb-3 text-xs text-ink-3">Showing role: <span className="font-medium text-ink">{ROLE_LABEL[rawRole as keyof typeof ROLE_LABEL] ?? rawRole}</span></p> : null}

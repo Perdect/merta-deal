@@ -10,14 +10,14 @@ import { formatDateTime, formatNumber, timeAgo } from "@/lib/utils";
 export const metadata: Metadata = { title: "Notifications" };
 
 const LIMIT = 60;
-const AUDIENCE_LABEL: Record<string, string> = { customers: "All customers", stores: "All stores", riders: "All riders", all: "Everyone", user: "One user" };
+const AUDIENCE_LABEL: Record<string, string> = { customers: "All customers", riders: "All riders", all: "Everyone", user: "One user" };
 
 export default async function AdminNotificationsPage() {
   const [user, { items }, raw] = await Promise.all([getSessionUser(), getAdminNotifications(LIMIT), getRecentBroadcasts()]);
   const broadcasts = raw.map(toBroadcastLog);
   return (
     <>
-      <AdminPageHeader title="Notifications" description="Your inbox, and broadcasts to customers, stores and riders." />
+      <AdminPageHeader title="Notifications" description="Your inbox, and broadcasts to customers and riders." />
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_400px]">
         {user ? <AdminNotificationList userId={user.id} initial={items} limit={LIMIT} /> : <ErrorBlock title="Couldn't load your inbox" description="Your session could not be read. Sign in again if this keeps happening." retryHref="/admin/notifications" />}
         <div className="space-y-4">

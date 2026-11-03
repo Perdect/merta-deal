@@ -10,7 +10,7 @@ const CONCURRENCY = 4;
 function toCandidate(p: ProductCard, item: ShoppingItem): MatchCandidate {
   return {
     id: p.id, name: p.name, slug: p.slug, pack_label: p.pack_label, weight_value: p.weight_value, weight_unit: p.weight_unit, image_url: p.image_url, category_slug: p.category_slug,
-    brand_name: p.brand_name, is_veg: p.is_veg, inventory_id: p.inventory_id, store_id: p.store_id, store_name: p.store_name, store_slug: p.store_slug,
+    brand_name: p.brand_name, is_veg: p.is_veg, inventory_id: p.inventory_id,
     selling_price: p.selling_price, mrp: p.mrp, stock_qty: p.stock_qty, stock_status: p.stock_status, max_order_qty: p.max_order_qty, discount_pct: p.discount_pct,
     suggested_packs: Math.min(p.max_order_qty ?? 99, suggestedPacks({ raw: item.query, query: item.query, quantity: item.quantity, unit: item.unit }, p.weight_value, p.weight_unit)),
   };

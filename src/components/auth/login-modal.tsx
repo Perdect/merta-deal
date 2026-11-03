@@ -12,7 +12,7 @@ import { Alert } from "@/components/ui/states";
 import { LogoMark } from "@/components/ui/misc";
 import { InstallButtons } from "@/components/pwa/install-buttons";
 import { useHydrated } from "@/hooks/use-hydrated";
-import { useBackToClose } from "@/hooks/use-back-to-close";
+import { useDialog } from "@/components/ui/overlay";
 import { LoginArt } from "./login-art";
 
 /**
@@ -33,22 +33,16 @@ export function LoginModal({ open, onClose, eta, guest, onGuestContinue }: { ope
     if (!open || !guest) return;
     createClient().auth.getUser().then(({ data }) => setGuestId(data.user?.id ?? "")).catch(() => {});
   }, [open, guest]);
-  React.useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
-  useBackToClose(open, onClose);
+  // Scroll lock (iOS-safe), Escape, focus trap, focus return and Back-closes-it — shared with Modal.
+  const dialogRef = useDialog(open, onClose);
   if (!open || !hydrated) return null;
   const fieldErr = (k: string) => (state && !state.ok ? state.fieldErrors?.[k] : undefined);
 
   return createPortal(
-    <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label="Sign in">
-      <div className="absolute inset-0 bg-ink/50 animate-fade-in" onClick={onClose} />
-      <div className="relative grid w-full max-h-[92dvh] overflow-y-auto overscroll-contain rounded-t-3xl bg-card shadow-float animate-slide-up sm:max-w-3xl sm:grid-cols-[1fr_1.05fr] sm:overflow-hidden sm:rounded-2xl">
-        <button type="button" onClick={onClose} aria-label="Close" className="tap absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-ink-2 shadow-sm hover:bg-surface-2 sm:shadow-none"><X className="h-5 w-5" /></button>
+    <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center">
+      <div className="absolute inset-0 bg-ink/50 animate-fade-in motion-reduce:animate-none" onClick={onClose} aria-hidden="true" />
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="login-modal-title" tabIndex={-1} className="relative grid w-full max-h-[92dvh] overflow-y-auto overscroll-contain rounded-t-3xl bg-card shadow-float outline-none animate-slide-up motion-reduce:animate-none sm:max-w-3xl sm:grid-cols-[1fr_1.05fr] sm:overflow-hidden sm:rounded-2xl">
+        <button type="button" onClick={onClose} aria-label="Close" className="tap absolute right-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/90 text-ink-2 shadow-sm hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-brand-600 sm:shadow-none"><X className="h-5 w-5" aria-hidden /></button>
         {/* Illustration: a short banner on phones, a full panel beside the form from sm up */}
         <div className="relative h-48 overflow-hidden bg-white sm:h-auto sm:min-h-[460px]">
           <LoginArt className="absolute inset-0 h-full w-full" />
@@ -61,7 +55,7 @@ export function LoginModal({ open, onClose, eta, guest, onGuestContinue }: { ope
         <div className="relative px-5 pb-[calc(1.5rem+var(--safe-bottom))] pt-5 sm:px-8 sm:py-8">
           <div className="flex justify-center"><LogoMark size={52} /></div>
           <p className="mt-3 text-center text-xs font-bold uppercase tracking-wide text-brand-700 sm:mt-4">Customer login</p>
-          <h2 className="mt-1 text-center font-display text-xl font-bold leading-tight text-ink sm:text-2xl">Login to start ordering</h2>
+          <h2 id="login-modal-title" className="mt-1 text-center font-display text-xl font-bold leading-tight text-ink sm:text-2xl">Login to start ordering</h2>
 
           <form action={formAction} className="mt-6 space-y-4">
             <input type="hidden" name="next" value={pathname} />
@@ -75,10 +69,10 @@ export function LoginModal({ open, onClose, eta, guest, onGuestContinue }: { ope
             ) : (
               <>
                 <input type="hidden" name="mobile" value={mobile} />
-                <button type="button" onClick={() => setStep("mobile")} className="inline-flex items-center gap-1 text-sm font-semibold text-ink-2"><ChevronLeft className="h-4 w-4" /> +91 {mobile}</button>
+                <button type="button" onClick={() => setStep("mobile")} aria-label={`Change mobile number +91 ${mobile}`} className="tap inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-ink-2"><ChevronLeft className="h-4 w-4" aria-hidden /> +91 {mobile}</button>
                 <Input name="password" type="password" inputMode="numeric" maxLength={6} pattern="[0-9]{6}" autoComplete="current-password" required autoFocus onInput={(e) => { const t = e.currentTarget; t.value = t.value.replace(/\D/g, "").slice(0, 6); }}
                   leftIcon={<Lock className="h-4 w-4" />} className="h-14 text-base tracking-[0.3em]" placeholder="6-digit PIN" aria-label="PIN" error={fieldErr("password")} />
-                {state && !state.ok && !state.fieldErrors ? <Alert tone="danger">{state.error}</Alert> : null}
+                {state && !state.ok && !state.fieldErrors ? <div role="alert"><Alert tone="danger">{state.error}</Alert></div> : null}
                 <Button type="submit" size="lg" fullWidth className="h-13 rounded-xl text-base" loading={pending}><Zap className="h-4 w-4" /> Sign in</Button>
                 <p className="text-center text-xs"><Link href="/forgot-password" className="font-semibold text-brand-700">Forgot PIN?</Link></p>
               </>

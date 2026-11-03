@@ -5,13 +5,13 @@ import { cn, formatDate } from "@/lib/utils";
 
 /* Server-safe helpers shared by the marketing, finance, care and system admin pages. */
 
-/** Kit-style buttons (h-9, rounded-lg) for places that need a plain <button>/<a>. */
+/** Kit-style buttons (h-9, rounded-lg; 44 px tall on touch screens) for places that need a plain <button>/<a>. */
 export const btn = {
-  primary: "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-brand-600 px-3.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:pointer-events-none disabled:opacity-50",
-  secondary: "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-line-2 bg-card px-3.5 text-sm font-semibold text-ink-2 transition-colors duration-150 hover:bg-surface-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:pointer-events-none disabled:opacity-50",
-  danger: "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-danger px-3.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-[#c02c24] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger disabled:pointer-events-none disabled:opacity-50",
-  dangerOutline: "inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-danger/30 bg-card px-3.5 text-sm font-semibold text-danger transition-colors duration-150 hover:bg-danger-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger disabled:pointer-events-none disabled:opacity-50",
-  small: "h-8 px-2.5 text-xs",
+  primary: "inline-flex h-9 pointer-coarse:h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-brand-600 px-3.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:pointer-events-none disabled:opacity-50",
+  secondary: "inline-flex h-9 pointer-coarse:h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-line-2 bg-card px-3.5 text-sm font-semibold text-ink-2 transition-colors duration-150 hover:bg-surface-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:pointer-events-none disabled:opacity-50",
+  danger: "inline-flex h-9 pointer-coarse:h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-danger px-3.5 text-sm font-semibold text-white transition-colors duration-150 hover:bg-[#c02c24] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger disabled:pointer-events-none disabled:opacity-50",
+  dangerOutline: "inline-flex h-9 pointer-coarse:h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-danger/30 bg-card px-3.5 text-sm font-semibold text-danger transition-colors duration-150 hover:bg-danger-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger disabled:pointer-events-none disabled:opacity-50",
+  small: "h-8 pointer-coarse:h-11 px-2.5 text-xs",
 };
 
 /** Rebuilds the current list URL (all string params) with a patch; null removes a key. */

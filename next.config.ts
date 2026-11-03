@@ -20,6 +20,7 @@ const nextConfig: NextConfig = {
       { source: "/grocery-merta-city", destination: "/c/grocery", permanent: true },
       { source: "/fresh-grocery-merta", destination: "/c/vegetables", permanent: true },
       { source: "/masala-merta", destination: "/c/grocery", permanent: true },
+      { source: "/kirana-store-merta", destination: "/c/grocery", permanent: true },
       { source: "/grocery-delivery-merta", destination: "/delivery-area", permanent: true },
       { source: "/stores", destination: "/categories", permanent: true },
       { source: "/s/:slug", destination: "/categories", permanent: true },

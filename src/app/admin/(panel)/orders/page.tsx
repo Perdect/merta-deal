@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { ShoppingBag, SearchX } from "lucide-react";
-import { listOrders, countOrdersByTab, getStoreOptions, getOrderAdmin, getLiveRiders, spGet, spPage, type SP, type OrderFilters } from "@/lib/data/admin";
+import { listOrders, countOrdersByTab, getOrderAdmin, getLiveRiders, spGet, spPage, type SP, type OrderFilters } from "@/lib/data/admin";
 import { serverEnv } from "@/lib/env";
 import { AdminPageHeader, DataTable, CellStack, RowLink, EmptyBlock, ListToolbar, StatusTabs, ListPagination, QuickView, OrderStatusPill, PaymentStatusPill, paymentMethodLabel, StatusPill, rupees } from "@/components/admin/kit";
 import { OrderFacts } from "@/components/admin/order-summary";
@@ -13,9 +13,8 @@ export const metadata: Metadata = { title: "Orders" };
 const TABS = [
   { value: "", label: "All" },
   { value: "active", label: "Active" },
-  { value: "new", label: "New" },
-  { value: "packing", label: "Packing" },
-  { value: "ready", label: "Ready" },
+  { value: "packing", label: "To pack" },
+  { value: "ready", label: "Packed" },
   { value: "on_the_way", label: "On the way" },
   { value: "done", label: "Delivered" },
   { value: "cancelled_all", label: "Cancelled" },
@@ -24,20 +23,19 @@ const TERMINAL = ["delivered", "completed", "cancelled", "rejected"];
 
 export default async function AdminOrdersPage({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
-  const filters: OrderFilters = { q: spGet(sp, "q"), status: spGet(sp, "status"), payment: spGet(sp, "payment"), method: spGet(sp, "method"), store: spGet(sp, "store"), from: spGet(sp, "from"), to: spGet(sp, "to"), late: spGet(sp, "late"), delivery: spGet(sp, "delivery") };
+  const filters: OrderFilters = { q: spGet(sp, "q"), status: spGet(sp, "status"), payment: spGet(sp, "payment"), method: spGet(sp, "method"), from: spGet(sp, "from"), to: spGet(sp, "to"), late: spGet(sp, "late"), delivery: spGet(sp, "delivery") };
   const viewId = spGet(sp, "view");
   const validView = /^[0-9a-f-]{36}$/.test(viewId);
-  const [{ items, total, page, pageSize }, counts, stores, view, riders] = await Promise.all([
+  const [{ items, total, page, pageSize }, counts, view, riders] = await Promise.all([
     listOrders({ ...filters, page: spPage(sp) }),
     countOrdersByTab(filters, TABS.map((t) => t.value)),
-    getStoreOptions(),
     validView ? getOrderAdmin(viewId) : Promise.resolve(null),
     validView ? getLiveRiders() : Promise.resolve([]),
   ]);
   const tabIsKnown = !filters.status || TABS.some((t) => t.value === filters.status);
   const { razorpayKeyId, razorpayKeySecret, serviceRoleKey } = serverEnv();
   const viewHref = (id: string) => { const q = new URLSearchParams(Object.entries(sp).flatMap(([k, v]) => (typeof v === "string" && k !== "view" ? [[k, v]] : []))); q.set("view", id); return `/admin/orders?${q}`; };
-  const filtered = Boolean(filters.q || filters.payment || filters.method || filters.store || filters.from || filters.to || filters.late || filters.delivery);
+  const filtered = Boolean(filters.q || filters.payment || filters.method || filters.from || filters.to || filters.late || filters.delivery);
 
   return (
     <>
@@ -51,7 +49,6 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
         { key: "method", label: "Payment method", options: PAYMENT_METHOD_OPTIONS },
         { key: "delivery", label: "Delivery type", options: [{ value: "standard", label: "Standard" }, { value: "express", label: "Express" }, { value: "scheduled", label: "Scheduled" }] },
         { key: "late", label: "Timing", options: [{ value: "1", label: "Past promised time" }] },
-        ...(stores.length > 1 ? [{ key: "store", label: "Store", options: stores.map((s) => ({ value: s.id, label: s.name })) }] : []),
       ]} />
 
       <DataTable caption="Orders" rows={items} rowKey={(o) => o.id} selectedKey={validView ? viewId : null}

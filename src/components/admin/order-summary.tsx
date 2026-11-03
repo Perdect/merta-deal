@@ -54,9 +54,9 @@ export function OrderFacts({ t, compact }: { t: OrderTracking; compact?: boolean
           <p className="mt-1 text-xs capitalize text-ink-3">{o.delivery_type} delivery{o.scheduled_slot_start ? ` · ${formatDateTime(o.scheduled_slot_start)}–${formatTime(o.scheduled_slot_end)}` : ""}</p>
         </div>
         <div>
-          <h3 className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-3"><StoreIcon className="h-3.5 w-3.5" aria-hidden />Fulfilled by</h3>
-          <Link href={`/admin/stores/${t.store.id}`} className="text-sm font-medium text-ink hover:underline">{t.store.name}</Link>
-          <p className="text-xs text-ink-3">{t.store.area}</p>
+          <h3 className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-3"><StoreIcon className="h-3.5 w-3.5" aria-hidden />Pickup point</h3>
+          <p className="text-sm font-medium text-ink">{t.pickup.name}</p>
+          <p className="text-xs text-ink-3">{[t.pickup.address_line1, t.pickup.area].filter(Boolean).join(", ")}</p>
         </div>
         <div>
           <h3 className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-3"><Bike className="h-3.5 w-3.5" aria-hidden />Rider</h3>
@@ -96,7 +96,7 @@ export function OrderFacts({ t, compact }: { t: OrderTracking; compact?: boolean
           ...(Number(o.tax_amount) > 0 ? [{ label: "GST on fees", value: formatINR(o.tax_amount, { precise: true }) }] : []),
           { label: "Total", value: formatINR(o.total, { precise: true }), strong: true },
         ]} />
-        {!compact ? <p className="mt-2 text-xs text-ink-3">Commission {o.commission_rate}% = {formatINR(o.commission_amount, { precise: true })} · Store payout {formatINR(o.store_payout_amount, { precise: true })} · Rider earning {formatINR(o.rider_earning)}</p> : null}
+        {!compact ? <p className="mt-2 text-xs text-ink-3">Rider earning {formatINR(o.rider_earning)}</p> : null}
         {t.payment ? <p className="mt-1 text-xs text-ink-3">Provider {t.payment.provider}{t.payment.provider_order_id ? ` · ${t.payment.provider_order_id}` : ""}{t.payment.refund_required ? " · refund required" : ""}</p> : null}
       </section>
 

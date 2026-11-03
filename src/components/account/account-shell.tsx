@@ -23,10 +23,10 @@ const MORE = [
 function Item({ href, label, icon: Icon, compact, current }: { href: string; label: string; icon: LucideIcon; compact?: boolean; current: boolean }) {
   return (
     <li>
-      <Link href={href} aria-current={current ? "page" : undefined} className={cn("flex items-center gap-4 px-6 transition-colors", compact ? "min-h-11 py-2.5 text-sm" : "min-h-12 py-4 text-[15px]", current ? "bg-surface-2 font-semibold text-ink" : "font-medium text-ink-2 hover:bg-surface")}>
-        <Icon className={cn("shrink-0 text-ink-2", compact ? "h-4 w-4" : "h-5 w-5")} strokeWidth={1.75} />
+      <Link href={href} aria-current={current ? "page" : undefined} className={cn("flex items-center gap-4 px-6 transition-colors focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-brand-600", compact ? "min-h-11 py-2.5 text-sm" : "min-h-12 py-4 text-[15px]", current ? "bg-surface-2 font-semibold text-ink" : "font-medium text-ink-2 hover:bg-surface")}>
+        <Icon className={cn("shrink-0 text-ink-2", compact ? "h-4 w-4" : "h-5 w-5")} strokeWidth={1.75} aria-hidden />
         <span className="flex-1">{label}</span>
-        <ChevronRight className="h-4 w-4 text-ink-4 md:hidden" />
+        <ChevronRight className="h-4 w-4 text-ink-4 md:hidden" aria-hidden />
       </Link>
     </li>
   );
@@ -73,7 +73,7 @@ export function AccountShell({ name, phone, avatarUrl, walletBalance, isGuest, w
         </nav>
 
         <div className="flex flex-col items-center gap-6 px-6 py-8">
-          <form action={signOutAction}><button type="submit" className="rounded-xl border-2 border-danger/70 px-8 py-2.5 text-sm font-bold text-danger transition-colors hover:bg-danger-50">Log Out</button></form>
+          <form action={signOutAction}><button type="submit" className="min-h-11 rounded-xl border-2 border-danger/70 px-8 py-2.5 text-sm font-bold text-danger transition-colors hover:bg-danger-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger">Log Out</button></form>
           <Logo size="md" className="opacity-40 grayscale" />
         </div>
       </aside>

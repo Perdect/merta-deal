@@ -36,7 +36,7 @@ export function ReviewModerationButtons({ reviewId, status, who }: { reviewId: s
         </button>
       ) : null}
       <Modal open={rejecting} onClose={() => busy === null && setRejecting(false)} size="sm" title={status === "approved" ? "Unpublish this review?" : "Reject this review?"}
-        description="It's hidden from the product or store page and stops counting towards the rating."
+        description="It's hidden from the product page and stops counting towards the rating."
         footer={<div className="flex gap-2"><button type="button" className={cn(btn.secondary, "flex-1")} disabled={busy !== null} onClick={() => setRejecting(false)}>Cancel</button><button type="button" className={cn(btn.danger, "flex-1")} disabled={busy !== null} onClick={() => run("rejected", note.trim() || undefined)}>{busy === "rejected" ? "Rejecting…" : status === "approved" ? "Unpublish review" : "Reject review"}</button></div>}>
         <Textarea label="Internal note (optional)" value={note} onChange={(e) => setNote(e.target.value)} maxLength={2000} placeholder="e.g. Contains a phone number, abusive language" hint="Only admins see this note." />
       </Modal>

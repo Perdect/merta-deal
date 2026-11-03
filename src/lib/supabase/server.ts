@@ -4,8 +4,11 @@ import { cache } from "react";
 import type { Database } from "@/types/database";
 import { env } from "@/lib/env";
 
-/** Server Supabase client bound to the request cookies (Server Components, Route Handlers, Server Actions). */
-export async function createClient() {
+/**
+ * Server Supabase client bound to the request cookies (Server Components, Route Handlers, Server Actions).
+ * Built once per request: every data helper in a render shares the same client.
+ */
+export const createClient = cache(async () => {
   const cookieStore = await cookies();
   return createServerClient<Database>(env.supabaseUrl, env.supabaseAnonKey, {
     cookies: {
@@ -21,14 +24,24 @@ export async function createClient() {
       },
     },
   });
-}
+});
+
+/**
+ * The signed-in auth user, fetched once per request. `auth.getUser()` is a network call to Supabase
+ * Auth; without this cache a page that needs the user in several places (layout, wishlist, cart,
+ * addresses…) paid for it several times over.
+ */
+export const getAuthUser = cache(async () => {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
+});
 
 export type SessionUser = { id: string; email: string | null; role: Database["public"]["Enums"]["user_role"]; fullName: string | null; phone: string | null; avatarUrl: string | null };
 
 /** Cached per request: the signed-in user + profile role, or null. */
 export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const [supabase, user] = await Promise.all([createClient(), getAuthUser()]);
   if (!user) return null;
   const { data: profile } = await supabase.from("profiles").select("role, full_name, phone, avatar_url").eq("id", user.id).maybeSingle();
   return {

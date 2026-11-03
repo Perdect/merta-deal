@@ -285,7 +285,6 @@ export type Database = {
         Row: {
           id: string
           user_id: string
-          store_id: string | null
           coupon_id: string | null
           status: Database["public"]["Enums"]["cart_status"]
           created_at: string
@@ -294,7 +293,6 @@ export type Database = {
         Insert: {
           id?: string
           user_id: string
-          store_id?: string | null
           coupon_id?: string | null
           status?: Database["public"]["Enums"]["cart_status"]
           created_at?: string
@@ -303,7 +301,6 @@ export type Database = {
         Update: {
           id?: string
           user_id?: string
-          store_id?: string | null
           coupon_id?: string | null
           status?: Database["public"]["Enums"]["cart_status"]
           created_at?: string
@@ -315,13 +312,6 @@ export type Database = {
             columns: ["coupon_id"]
             isOneToOne: false
             referencedRelation: "coupons"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "carts_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
           {
@@ -490,7 +480,6 @@ export type Database = {
           min_order_amount: number
           max_discount: number | null
           first_order_only: boolean
-          store_id: string | null
           category_id: string | null
           usage_limit: number | null
           per_user_limit: number
@@ -512,7 +501,6 @@ export type Database = {
           min_order_amount?: number
           max_discount?: number | null
           first_order_only?: boolean
-          store_id?: string | null
           category_id?: string | null
           usage_limit?: number | null
           per_user_limit?: number
@@ -534,7 +522,6 @@ export type Database = {
           min_order_amount?: number
           max_discount?: number | null
           first_order_only?: boolean
-          store_id?: string | null
           category_id?: string | null
           usage_limit?: number | null
           per_user_limit?: number
@@ -561,13 +548,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "coupons_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          }
         ]
       }
       delivery_assignments: {
@@ -854,7 +834,6 @@ export type Database = {
       inventory: {
         Row: {
           id: string
-          store_id: string
           product_id: string
           selling_price: number
           mrp: number
@@ -869,7 +848,6 @@ export type Database = {
         }
         Insert: {
           id?: string
-          store_id: string
           product_id: string
           selling_price: number
           mrp: number
@@ -884,7 +862,6 @@ export type Database = {
         }
         Update: {
           id?: string
-          store_id?: string
           product_id?: string
           selling_price?: number
           mrp?: number
@@ -905,13 +882,6 @@ export type Database = {
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "inventory_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          }
         ]
       }
       inventory_movements: {
@@ -1158,7 +1128,6 @@ export type Database = {
           id: string
           order_number: string
           user_id: string
-          store_id: string
           zone_id: string | null
           status: Database["public"]["Enums"]["order_status"]
           delivery_type: Database["public"]["Enums"]["delivery_type"]
@@ -1179,14 +1148,11 @@ export type Database = {
           platform_fee: number
           tax_amount: number
           total: number
-          commission_rate: number
-          commission_amount: number
-          store_payout_amount: number
           rider_earning: number
           item_count: number
           eta_minutes: number | null
           promised_at: string | null
-          store_confirmed_at: string | null
+          confirmed_at: string | null
           ready_at: string | null
           picked_up_at: string | null
           delivered_at: string | null
@@ -1204,7 +1170,6 @@ export type Database = {
           id?: string
           order_number: string
           user_id: string
-          store_id: string
           zone_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           delivery_type?: Database["public"]["Enums"]["delivery_type"]
@@ -1225,14 +1190,11 @@ export type Database = {
           platform_fee?: number
           tax_amount?: number
           total?: number
-          commission_rate?: number
-          commission_amount?: number
-          store_payout_amount?: number
           rider_earning?: number
           item_count?: number
           eta_minutes?: number | null
           promised_at?: string | null
-          store_confirmed_at?: string | null
+          confirmed_at?: string | null
           ready_at?: string | null
           picked_up_at?: string | null
           delivered_at?: string | null
@@ -1250,7 +1212,6 @@ export type Database = {
           id?: string
           order_number?: string
           user_id?: string
-          store_id?: string
           zone_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           delivery_type?: Database["public"]["Enums"]["delivery_type"]
@@ -1271,14 +1232,11 @@ export type Database = {
           platform_fee?: number
           tax_amount?: number
           total?: number
-          commission_rate?: number
-          commission_amount?: number
-          store_payout_amount?: number
           rider_earning?: number
           item_count?: number
           eta_minutes?: number | null
           promised_at?: string | null
-          store_confirmed_at?: string | null
+          confirmed_at?: string | null
           ready_at?: string | null
           picked_up_at?: string | null
           delivered_at?: string | null
@@ -1305,13 +1263,6 @@ export type Database = {
             columns: ["coupon_id"]
             isOneToOne: false
             referencedRelation: "coupons"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "orders_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
           {
@@ -1421,78 +1372,6 @@ export type Database = {
           }
         ]
       }
-      payouts: {
-        Row: {
-          id: string
-          store_id: string
-          period_start: string
-          period_end: string
-          gross_sales: number
-          commission_amount: number
-          adjustments: number
-          net_amount: number
-          order_count: number
-          status: Database["public"]["Enums"]["payout_status"]
-          reference_no: string | null
-          paid_at: string | null
-          note: string | null
-          created_by: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          store_id: string
-          period_start: string
-          period_end: string
-          gross_sales?: number
-          commission_amount?: number
-          adjustments?: number
-          net_amount?: number
-          order_count?: number
-          status?: Database["public"]["Enums"]["payout_status"]
-          reference_no?: string | null
-          paid_at?: string | null
-          note?: string | null
-          created_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          store_id?: string
-          period_start?: string
-          period_end?: string
-          gross_sales?: number
-          commission_amount?: number
-          adjustments?: number
-          net_amount?: number
-          order_count?: number
-          status?: Database["public"]["Enums"]["payout_status"]
-          reference_no?: string | null
-          paid_at?: string | null
-          note?: string | null
-          created_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "payouts_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payouts_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
       products: {
         Row: {
           id: string
@@ -1500,7 +1379,6 @@ export type Database = {
           slug: string
           brand_id: string | null
           category_id: string
-          created_by_store_id: string | null
           description: string | null
           ingredients: string | null
           nutrition: Json | null
@@ -1521,7 +1399,6 @@ export type Database = {
           is_local: boolean
           is_veg: boolean
           is_active: boolean
-          is_approved: boolean
           popularity_score: number
           rating_avg: number
           rating_count: number
@@ -1535,7 +1412,6 @@ export type Database = {
           slug: string
           brand_id?: string | null
           category_id: string
-          created_by_store_id?: string | null
           description?: string | null
           ingredients?: string | null
           nutrition?: Json | null
@@ -1556,7 +1432,6 @@ export type Database = {
           is_local?: boolean
           is_veg?: boolean
           is_active?: boolean
-          is_approved?: boolean
           popularity_score?: number
           rating_avg?: number
           rating_count?: number
@@ -1570,7 +1445,6 @@ export type Database = {
           slug?: string
           brand_id?: string | null
           category_id?: string
-          created_by_store_id?: string | null
           description?: string | null
           ingredients?: string | null
           nutrition?: Json | null
@@ -1591,7 +1465,6 @@ export type Database = {
           is_local?: boolean
           is_veg?: boolean
           is_active?: boolean
-          is_approved?: boolean
           popularity_score?: number
           rating_avg?: number
           rating_count?: number
@@ -1614,13 +1487,6 @@ export type Database = {
             referencedRelation: "categories"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "products_created_by_store_id_fkey"
-            columns: ["created_by_store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          }
         ]
       }
       profiles: {
@@ -1789,7 +1655,6 @@ export type Database = {
           order_id: string | null
           target: Database["public"]["Enums"]["review_target"]
           product_id: string | null
-          store_id: string | null
           rider_id: string | null
           rating: number
           title: string | null
@@ -1806,7 +1671,6 @@ export type Database = {
           order_id?: string | null
           target: Database["public"]["Enums"]["review_target"]
           product_id?: string | null
-          store_id?: string | null
           rider_id?: string | null
           rating: number
           title?: string | null
@@ -1823,7 +1687,6 @@ export type Database = {
           order_id?: string | null
           target?: Database["public"]["Enums"]["review_target"]
           product_id?: string | null
-          store_id?: string | null
           rider_id?: string | null
           rating?: number
           title?: string | null
@@ -1861,13 +1724,6 @@ export type Database = {
             columns: ["rider_id"]
             isOneToOne: false
             referencedRelation: "delivery_partners"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "reviews_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
           {
@@ -1981,298 +1837,6 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      store_commissions: {
-        Row: {
-          id: string
-          store_id: string
-          rate: number
-          effective_from: string
-          note: string | null
-          created_by: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          store_id: string
-          rate: number
-          effective_from?: string
-          note?: string | null
-          created_by?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          store_id?: string
-          rate?: number
-          effective_from?: string
-          note?: string | null
-          created_by?: string | null
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "store_commissions_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "store_commissions_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      store_documents: {
-        Row: {
-          id: string
-          store_id: string
-          doc_type: string
-          file_path: string
-          status: Database["public"]["Enums"]["document_status"]
-          reviewed_by: string | null
-          review_note: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          store_id: string
-          doc_type: string
-          file_path: string
-          status?: Database["public"]["Enums"]["document_status"]
-          reviewed_by?: string | null
-          review_note?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          store_id?: string
-          doc_type?: string
-          file_path?: string
-          status?: Database["public"]["Enums"]["document_status"]
-          reviewed_by?: string | null
-          review_note?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "store_documents_reviewed_by_fkey"
-            columns: ["reviewed_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "store_documents_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      store_staff: {
-        Row: {
-          id: string
-          store_id: string
-          user_id: string
-          role: Database["public"]["Enums"]["store_staff_role"]
-          is_active: boolean
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          store_id: string
-          user_id: string
-          role?: Database["public"]["Enums"]["store_staff_role"]
-          is_active?: boolean
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          store_id?: string
-          user_id?: string
-          role?: Database["public"]["Enums"]["store_staff_role"]
-          is_active?: boolean
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "store_staff_store_id_fkey"
-            columns: ["store_id"]
-            isOneToOne: false
-            referencedRelation: "stores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "store_staff_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      stores: {
-        Row: {
-          id: string
-          owner_id: string
-          city_id: string
-          zone_id: string | null
-          name: string
-          slug: string
-          tagline: string | null
-          description: string | null
-          owner_name: string
-          phone: string
-          email: string | null
-          address_line1: string
-          address_line2: string | null
-          area: string
-          landmark: string | null
-          pincode: string
-          lat: number
-          lng: number
-          gstin: string | null
-          pan: string | null
-          bank_account_name: string | null
-          bank_account_number: string | null
-          bank_ifsc: string | null
-          upi_id: string | null
-          logo_url: string | null
-          cover_url: string | null
-          photos: string[]
-          delivery_radius_km: number
-          min_order_amount: number | null
-          commission_rate: number | null
-          status: Database["public"]["Enums"]["store_status"]
-          is_open: boolean
-          opening_time: string
-          closing_time: string
-          avg_prep_minutes: number
-          rating_avg: number
-          rating_count: number
-          total_orders: number
-          is_featured: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          owner_id: string
-          city_id: string
-          zone_id?: string | null
-          name: string
-          slug: string
-          tagline?: string | null
-          description?: string | null
-          owner_name: string
-          phone: string
-          email?: string | null
-          address_line1: string
-          address_line2?: string | null
-          area: string
-          landmark?: string | null
-          pincode: string
-          lat: number
-          lng: number
-          gstin?: string | null
-          pan?: string | null
-          bank_account_name?: string | null
-          bank_account_number?: string | null
-          bank_ifsc?: string | null
-          upi_id?: string | null
-          logo_url?: string | null
-          cover_url?: string | null
-          photos?: string[]
-          delivery_radius_km?: number
-          min_order_amount?: number | null
-          commission_rate?: number | null
-          status?: Database["public"]["Enums"]["store_status"]
-          is_open?: boolean
-          opening_time?: string
-          closing_time?: string
-          avg_prep_minutes?: number
-          rating_avg?: number
-          rating_count?: number
-          total_orders?: number
-          is_featured?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          owner_id?: string
-          city_id?: string
-          zone_id?: string | null
-          name?: string
-          slug?: string
-          tagline?: string | null
-          description?: string | null
-          owner_name?: string
-          phone?: string
-          email?: string | null
-          address_line1?: string
-          address_line2?: string | null
-          area?: string
-          landmark?: string | null
-          pincode?: string
-          lat?: number
-          lng?: number
-          gstin?: string | null
-          pan?: string | null
-          bank_account_name?: string | null
-          bank_account_number?: string | null
-          bank_ifsc?: string | null
-          upi_id?: string | null
-          logo_url?: string | null
-          cover_url?: string | null
-          photos?: string[]
-          delivery_radius_km?: number
-          min_order_amount?: number | null
-          commission_rate?: number | null
-          status?: Database["public"]["Enums"]["store_status"]
-          is_open?: boolean
-          opening_time?: string
-          closing_time?: string
-          avg_prep_minutes?: number
-          rating_avg?: number
-          rating_count?: number
-          total_orders?: number
-          is_featured?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "stores_city_id_fkey"
-            columns: ["city_id"]
-            isOneToOne: false
-            referencedRelation: "cities"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stores_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stores_zone_id_fkey"
-            columns: ["zone_id"]
-            isOneToOne: false
-            referencedRelation: "delivery_zones"
             referencedColumns: ["id"]
           }
         ]
@@ -2560,9 +2124,6 @@ export type Database = {
           tags: string[] | null
           created_at: string | null
           inventory_id: string | null
-          store_id: string | null
-          store_name: string | null
-          store_slug: string | null
           selling_price: number | null
           mrp: number | null
           stock_qty: number | null
@@ -2574,6 +2135,27 @@ export type Database = {
       }
     }
     Functions: {
+      notify_admins: {
+        Args: {
+          p_type: string
+          p_title: string
+          p_body: string
+          p_data?: Json
+        }
+        Returns: undefined
+      }
+      pickup_point: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      is_business_open: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      dispatch_pending: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       add_to_cart: {
         Args: {
           p_inventory_id: string
@@ -2623,13 +2205,6 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
-      admin_generate_payouts: {
-        Args: {
-          p_period_start: string
-          p_period_end: string
-        }
-        Returns: Json
-      }
       admin_live_riders: {
         Args: Record<PropertyKey, never>
         Returns: Json
@@ -2647,12 +2222,6 @@ export type Database = {
           p_role: Database["public"]["Enums"]["user_role"]
         }
         Returns: undefined
-      }
-      admin_store_stats: {
-        Args: {
-          p_store_id: string
-        }
-        Returns: Json
       }
       admin_user_stats: {
         Args: {
@@ -2680,16 +2249,6 @@ export type Database = {
           p_entity_id: string
           p_before?: Json
           p_after?: Json
-        }
-        Returns: undefined
-      }
-      admin_notify_store: {
-        Args: {
-          p_store_id: string
-          p_type: string
-          p_title: string
-          p_body: string
-          p_data?: Json
         }
         Returns: undefined
       }
@@ -2866,12 +2425,6 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
-      is_store_member: {
-        Args: {
-          p_store_id: string
-        }
-        Returns: boolean
-      }
       is_super_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
@@ -2915,43 +2468,6 @@ export type Database = {
       my_rider_id: {
         Args: Record<PropertyKey, never>
         Returns: string
-      }
-      my_store_ids: {
-        Args: Record<PropertyKey, never>
-        Returns: string[]
-      }
-      nearby_stores: {
-        Args: {
-          p_lat: number
-          p_lng: number
-          p_radius_km?: number
-          p_limit?: number
-        }
-        Returns: {
-          id: string
-          name: string
-          slug: string
-          tagline: string
-          area: string
-          logo_url: string
-          cover_url: string
-          rating_avg: number
-          rating_count: number
-          is_open: boolean
-          avg_prep_minutes: number
-          distance_km: number
-          product_count: number
-        }[]
-      }
-      notify_store: {
-        Args: {
-          p_store_id: string
-          p_type: string
-          p_title: string
-          p_body: string
-          p_data?: Json
-        }
-        Returns: undefined
       }
       notify_user: {
         Args: {
@@ -3056,7 +2572,6 @@ export type Database = {
           p_max_price?: number
           p_min_discount?: number
           p_in_stock?: boolean
-          p_store_id?: string
           p_local_only?: boolean
           p_sort?: string
           p_page?: number
@@ -3078,33 +2593,7 @@ export type Database = {
         }
         Returns: string
       }
-      store_add_staff: {
-        Args: {
-          p_store_id: string
-          p_email: string
-          p_role?: Database["public"]["Enums"]["store_staff_role"]
-        }
-        Returns: Json
-      }
-      store_dashboard_stats: {
-        Args: {
-          p_store_id: string
-        }
-        Returns: Json
-      }
-      store_list_staff: {
-        Args: {
-          p_store_id: string
-        }
-        Returns: Json
-      }
-      store_remove_staff: {
-        Args: {
-          p_staff_id: string
-        }
-        Returns: undefined
-      }
-      store_update_order: {
+      fulfil_order: {
         Args: {
           p_order_id: string
           p_action: string
@@ -3136,9 +2625,8 @@ export type Database = {
         }
         Returns: Json
       }
-      upsert_store_product: {
+      upsert_product: {
         Args: {
-          p_store_id: string
           p_name: string
           p_category_id: string
           p_brand_name: string
@@ -3162,7 +2650,6 @@ export type Database = {
       validate_coupon: {
         Args: {
           p_code: string
-          p_store_id: string
           p_subtotal: number
           p_category_ids?: string[]
           p_user_id?: string
@@ -3184,22 +2671,19 @@ export type Database = {
       cart_status: "active" | "converted" | "abandoned"
       coupon_type: "percentage" | "fixed"
       delivery_type: "express" | "standard" | "scheduled"
-      document_status: "pending" | "verified" | "rejected"
       inventory_status: "in_stock" | "low_stock" | "out_of_stock"
       notification_channel: "in_app" | "push" | "whatsapp" | "sms" | "email"
-      order_status: "placed" | "store_confirmed" | "preparing" | "ready_for_pickup" | "rider_assigned" | "out_for_delivery" | "delivered" | "completed" | "cancelled" | "rejected"
+      order_status: "placed" | "confirmed" | "preparing" | "ready_for_pickup" | "rider_assigned" | "out_for_delivery" | "delivered" | "completed" | "cancelled" | "rejected"
       payment_method: "cod" | "upi" | "card" | "netbanking" | "wallet" | "razorpay"
       payment_provider: "cod" | "razorpay" | "wallet"
       payment_status: "pending" | "authorized" | "paid" | "failed" | "refunded" | "partially_refunded" | "cod_pending" | "cod_collected"
       payout_status: "pending" | "processing" | "paid" | "failed"
       review_status: "pending" | "approved" | "rejected"
-      review_target: "product" | "store" | "delivery"
+      review_target: "product" | "delivery"
       rider_status: "pending" | "active" | "suspended"
-      store_staff_role: "manager" | "staff"
-      store_status: "pending" | "active" | "suspended" | "closed"
       ticket_priority: "low" | "medium" | "high" | "urgent"
       ticket_status: "open" | "in_progress" | "resolved" | "closed"
-      user_role: "customer" | "store_owner" | "store_staff" | "rider" | "admin" | "super_admin"
+      user_role: "customer" | "rider" | "admin" | "super_admin"
       vehicle_type: "bicycle" | "bike" | "scooter" | "auto" | "van"
       wallet_txn_type: "credit" | "debit" | "refund" | "cashback"
     }

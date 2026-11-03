@@ -31,9 +31,9 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
           <Panel><OrderFacts t={t} /></Panel>
 
           {(live || o.status === "ready_for_pickup") ? (
-            <Panel title="Live location" description={live ? "Rider GPS, store and customer" : "Store and customer; rider appears once assigned"} flush>
+            <Panel title="Live location" description={live ? "Rider GPS, pickup point and customer" : "Pickup point and customer; rider appears once assigned"} flush>
               <div className="overflow-hidden rounded-b-[14px] border-t border-line">
-                <LiveMap store={{ lat: t.store.lat, lng: t.store.lng, name: t.store.name }} customer={addr.lat && addr.lng ? { lat: addr.lat, lng: addr.lng } : null} rider={live ? t.assignment!.last_location : null} trail={t.assignment?.last_location ? [{ lat: t.assignment.last_location.lat, lng: t.assignment.last_location.lng }] : []} showRoute={Boolean(live)} />
+                <LiveMap store={{ lat: t.pickup.lat ?? 0, lng: t.pickup.lng ?? 0, name: t.pickup.name }} customer={addr.lat && addr.lng ? { lat: addr.lat, lng: addr.lng } : null} rider={live ? t.assignment!.last_location : null} trail={t.assignment?.last_location ? [{ lat: t.assignment.last_location.lat, lng: t.assignment.last_location.lng }] : []} showRoute={Boolean(live)} />
               </div>
             </Panel>
           ) : null}

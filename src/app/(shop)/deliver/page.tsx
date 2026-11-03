@@ -10,7 +10,7 @@ import { site } from "@/config/site";
 const title = `Deliver with Merta Deal in ${site.city}`;
 const description = `Become a Merta Deal delivery partner in ${site.city}: deliver groceries on your bike or cycle, choose when you go online, and see your earning before you accept each delivery.`;
 
-export const metadata: Metadata = { title, description, alternates: { canonical: "/deliver" }, openGraph: { type: "website", title, description, url: "/deliver" } };
+export const metadata: Metadata = { title, description, alternates: { canonical: "/deliver" }, openGraph: { type: "website", siteName: site.seoName, locale: "en_IN", title, description, url: "/deliver" } };
 export const dynamic = "force-dynamic";
 
 const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : null; };
@@ -22,22 +22,19 @@ const time12 = (t: string | null | undefined) => {
 
 /**
  * Delivery partner recruitment (orange rider theme). Pay rates and hours come from the same settings and
- * store hours the order system uses — nothing here is hard-coded. Applying needs a real Merta Deal account;
+ * business hours the order system uses — nothing here is hard-coded. Applying needs a real Merta Deal account;
  * the application is reviewed by an admin, and only approval grants the delivery partner role.
  */
 export default async function DeliverPage() {
   const supabase = await createClient();
-  const [settings, user, storeRes] = await Promise.all([
-    getPublicSettings(),
-    getSessionUser(),
-    supabase.from("stores").select("opening_time, closing_time").eq("slug", "merta-deal").maybeSingle(),
-  ]);
+  const [settings, user] = await Promise.all([getPublicSettings(), getSessionUser()]);
+  const hours = (settings.business_hours ?? {}) as { open?: string; close?: string };
   const { data: { user: authUser } } = await supabase.auth.getUser();
   const signedIn = Boolean(user && authUser && !authUser.is_anonymous);
   const { data: application } = signedIn ? await supabase.from("delivery_partners").select("status").eq("user_id", user!.id).maybeSingle() : { data: null };
 
   const base = num(settings.rider_base_earning); const perKm = num(settings.rider_per_km_earning);
-  const opens = time12(storeRes.data?.opening_time); const closes = time12(storeRes.data?.closing_time);
+  const opens = time12(hours.open); const closes = time12(hours.close);
 
   const cta = !signedIn
     ? { primary: { href: "/register?next=%2Frider", label: "Create account to apply", Icon: UserPlus }, secondary: { href: "/login?next=%2Frider", label: "I already have a Merta Deal account" } }
@@ -60,7 +57,7 @@ export default async function DeliverPage() {
       <section className="mt-3 overflow-hidden rounded-lg border border-brand-100 bg-brand-50 p-5 sm:p-7">
         <p className="inline-flex items-center gap-1.5 rounded-full bg-card px-2.5 py-1 text-xs font-bold text-brand-700 ring-1 ring-inset ring-brand-200"><Bike className="h-3.5 w-3.5" aria-hidden /> Delivery partners · {site.city}</p>
         <h1 className="mt-3 font-display text-2xl font-extrabold leading-tight text-ink sm:text-3xl">Deliver groceries in {site.city}. Earn on your own time.</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-2">Short trips inside the city, from Merta Deal&apos;s store to homes nearby. You choose when to go online, and every request shows your earning before you accept.</p>
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-2">Short trips inside the city, from Merta Deal&apos;s pickup point to homes nearby. You choose when to go online, and every request shows your earning before you accept.</p>
         <div className="mt-5 flex flex-col gap-2 sm:flex-row">
           <Button href={cta.primary.href} size="lg"><cta.primary.Icon className="h-5 w-5" aria-hidden /> {cta.primary.label}</Button>
           {cta.secondary ? <Button href={cta.secondary.href} size="lg" variant="outline">{cta.secondary.label}</Button> : null}

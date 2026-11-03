@@ -9,13 +9,12 @@ export const metadata: Metadata = { title: "Settings" };
 
 const GROUP_META: Record<string, { title: string; description: string; order: number }> = {
   general: { title: "Brand and support", description: "Name, tagline and how customers reach you.", order: 1 },
-  business: { title: "Business", description: "Default commission and membership.", order: 2 },
+  business: { title: "Business", description: "Opening hours, the pickup point riders collect from, and membership.", order: 2 },
   fees: { title: "Fees and taxes", description: "Platform fee and GST on fees.", order: 3 },
   payments: { title: "Payments", description: "Turn cash on delivery and online payments on or off (online also needs Razorpay keys).", order: 4 },
   delivery: { title: "Delivery", description: "Fallback fees, ETAs, scheduled slots, dispatch and rider pay. Zones can override these per area.", order: 5 },
-  orders: { title: "Orders", description: "Store acceptance window and delivery OTP attempts.", order: 6 },
+  orders: { title: "Orders", description: "Automatic confirmation, per-product limits and delivery OTP attempts.", order: 6 },
   rewards: { title: "Rewards", description: "Loyalty points.", order: 7 },
-  catalog: { title: "Catalogue", description: "Approval for products that stores create.", order: 8 },
   marketing: { title: "Marketing and QR links", description: "Editable short links behind printed QR codes.", order: 9 },
 };
 const titleCase = (g: string) => g.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());

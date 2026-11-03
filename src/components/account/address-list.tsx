@@ -51,30 +51,41 @@ export function AddressList({ initial, defaultName, defaultPhone, openNew = fals
   };
 
   const remove = async () => {
-    if (!deleting) return;
+    if (!deleting || busyId) return;
     setBusyId(deleting.id);
-    const r = await deleteAddressAction(deleting.id);
-    setBusyId(null);
-    if (!r.ok) { toast.error(r.error); return; }
-    setItems((cur) => cur.filter((x) => x.id !== deleting.id));
-    setDeleting(null); toast.success("Address removed"); router.refresh();
+    try {
+      const r = await deleteAddressAction(deleting.id);
+      if (!r.ok) { toast.error(r.error); return; }
+      setItems((cur) => cur.filter((x) => x.id !== deleting.id));
+      setDeleting(null); toast.success("Address removed"); router.refresh();
+    } catch {
+      toast.error("Could not remove the address", "Check your connection and try again.");
+    } finally {
+      setBusyId(null);
+    }
   };
 
   const makeDefault = async (id: string) => {
+    if (busyId) return;
     setBusyId(id);
-    const r = await setDefaultAddressAction(id);
-    setBusyId(null);
-    if (!r.ok) { toast.error(r.error); return; }
-    setItems((cur) => cur.map((x) => ({ ...x, is_default: x.id === id })));
-    toast.success("Default address updated"); router.refresh();
+    try {
+      const r = await setDefaultAddressAction(id);
+      if (!r.ok) { toast.error(r.error); return; }
+      setItems((cur) => cur.map((x) => ({ ...x, is_default: x.id === id })));
+      toast.success("Default address updated"); router.refresh();
+    } catch {
+      toast.error("Could not update the default address", "Check your connection and try again.");
+    } finally {
+      setBusyId(null);
+    }
   };
 
   return (
     <div className="space-y-3">
-      <button type="button" onClick={() => setEditing("new")} className="flex w-full items-center gap-3 rounded-2xl border border-line bg-card px-4 py-4 text-left shadow-card transition-colors hover:bg-surface">
-        <Plus className="h-5 w-5 text-brand-700" strokeWidth={2.2} />
+      <button type="button" onClick={() => setEditing("new")} className="flex w-full items-center gap-3 rounded-2xl border border-line bg-card px-4 py-4 text-left shadow-card transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
+        <Plus className="h-5 w-5 text-brand-700" strokeWidth={2.2} aria-hidden />
         <span className="flex-1 text-[15px] font-bold text-brand-700">Add New Address</span>
-        <ChevronRight className="h-5 w-5 text-ink-3" />
+        <ChevronRight className="h-5 w-5 text-ink-3" aria-hidden />
       </button>
       <h2 className="px-1 pt-3 text-base font-bold text-ink">Saved Addresses</h2>
       {sorted.length === 0 ? (
@@ -101,9 +112,9 @@ export function AddressList({ initial, defaultName, defaultPhone, openNew = fals
                   </div>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
-                  <Button variant="ghost" size="sm" onClick={() => setEditing(a)}><Pencil className="h-4 w-4" /> Edit</Button>
-                  <Button variant="ghost" size="sm" className="text-danger hover:text-danger" onClick={() => setDeleting(a)}><Trash2 className="h-4 w-4" /> Delete</Button>
-                  {!a.is_default ? <Button variant="outline" size="sm" className="ml-auto" loading={busyId === a.id} onClick={() => makeDefault(a.id)}>Set as default</Button> : null}
+                  <Button variant="ghost" size="md" className="px-3" aria-label={`Edit ${a.type === "other" && a.label ? a.label : TYPE_LABEL[a.type]} address`} onClick={() => setEditing(a)}><Pencil className="h-4 w-4" aria-hidden /> Edit</Button>
+                  <Button variant="ghost" size="md" className="px-3 text-danger hover:text-danger" aria-label={`Delete ${a.type === "other" && a.label ? a.label : TYPE_LABEL[a.type]} address`} onClick={() => setDeleting(a)}><Trash2 className="h-4 w-4" aria-hidden /> Delete</Button>
+                  {!a.is_default ? <Button variant="outline" size="md" className="ml-auto px-3" loading={busyId === a.id} disabled={busyId !== null} onClick={() => makeDefault(a.id)}>Set as default</Button> : null}
                 </div>
               </li>
             );

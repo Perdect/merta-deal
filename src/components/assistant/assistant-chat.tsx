@@ -104,8 +104,7 @@ export function AssistantChat({ signedIn, aiConfigured, autoVoice, waId }: { sig
     if (!turn.result || !turn.choices) return;
     if (!signedIn) { router.push(`/login?next=${encodeURIComponent("/assistant")}`); return; }
     const cart = useCartStore.getState();
-    const cartStoreId = cart.summary && !cart.summary.empty ? cart.summary.store?.id ?? null : null;
-    const plan = planAddAll(turn.result.lines, turn.choices, cartStoreId);
+    const plan = planAddAll(turn.result.lines, turn.choices);
     if (!plan.adds.length) { toast.warning("Nothing to add", plan.skipped[0]?.reason ? `Skipped: ${plan.skipped.map((s) => s.name).join(", ")}` : undefined); return; }
     setAdding(turn.id);
     let added = 0; const failed: string[] = []; const reduced: string[] = [];
@@ -119,15 +118,14 @@ export function AssistantChat({ signedIn, aiConfigured, autoVoice, waId }: { sig
       if (target <= existing) continue;
       const res = await addToCartAction(a.inventoryId, target);
       if (res.ok) added++;
-      else failed.push(`${a.name} (${res.conflict ? "another store is in your cart" : res.error})`);
+      else failed.push(`${a.name} (${res.error})`);
     }
     const summary = await getCartSummary();
     cart.setSummary(summary);
     setAdding(null);
     if (reduced.length) { cart.setNotice({ title: "Some quantities were reduced", lines: reduced }); cart.openDrawer("cart"); }
-    if (plan.adds.some((a) => a.switched)) setTurns((t) => t.map((x) => (x.id === turn.id && x.choices ? { ...x, choices: x.choices.map((c, i) => { const sw = plan.adds.find((a) => a.lineIdx === i && a.switched); return sw ? { candidate: sw.candidateIdx, packs: sw.packs } : c; }) } : x)));
     const skippedNote = [...plan.skipped.map((s) => `${s.name} — ${s.reason}`), ...failed];
-    if (added) toast.success(`Added ${added} item${added > 1 ? "s" : ""}${plan.targetStoreName ? ` from ${plan.targetStoreName}` : ""}`, skippedNote.length ? `Skipped ${skippedNote.length}: ${skippedNote.slice(0, 3).join("; ")}${skippedNote.length > 3 ? "…" : ""}` : undefined);
+    if (added) toast.success(`Added ${added} item${added > 1 ? "s" : ""}`, skippedNote.length ? `Skipped ${skippedNote.length}: ${skippedNote.slice(0, 3).join("; ")}${skippedNote.length > 3 ? "…" : ""}` : undefined);
     else toast.error("Could not add items", skippedNote.slice(0, 3).join("; "));
   };
 
@@ -181,10 +179,10 @@ export function AssistantChat({ signedIn, aiConfigured, autoVoice, waId }: { sig
                   {turn.result.lines.length ? (
                     <>
                       <ul className="space-y-2">
-                        {turn.result.lines.map((line, i) => <MatchRow key={`${turn.id}-${i}`} line={line} choice={turn.choices![i]!} onChange={(c) => updateChoice(turn.id, i, c)} signedIn={signedIn} targetStoreId={null} />)}
+                        {turn.result.lines.map((line, i) => <MatchRow key={`${turn.id}-${i}`} line={line} choice={turn.choices![i]!} onChange={(c) => updateChoice(turn.id, i, c)} signedIn={signedIn} />)}
                       </ul>
                       <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-line bg-surface-2/60 px-3 py-2.5">
-                        <p className="text-xs text-ink-3">Each order comes from one store — “Add all” picks the store that covers the most items and skips the rest with a note.</p>
+                        <p className="text-xs text-ink-3">“Add all” puts every matched item in your cart and tells you about anything it had to skip.</p>
                         <Button size="sm" onClick={() => addAll(turn)} loading={adding === turn.id} disabled={adding != null}><ShoppingCart className="h-4 w-4" />{signedIn ? "Add all to cart" : "Sign in to add all"}</Button>
                       </div>
                     </>

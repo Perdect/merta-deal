@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { Bell, CheckCheck, LifeBuoy, LogOut, Info, Phone, Mail, ShieldCheck } from "lucide-react";
 import type { DeliveryPartner, Notification } from "@/types/app";
@@ -59,22 +60,29 @@ export function RiderProfile({ user, rider: initialRider, notifications }: { use
 
       <section className="rounded-lg border border-line bg-card p-4 shadow-card">
         <h2 className="flex items-center gap-2 text-sm font-bold text-ink"><Info className="h-4 w-4 text-info" /> About location tracking</h2>
-        <p className="mt-2 text-sm text-ink-2">While you&apos;re online or on a delivery, this app streams your real GPS position every few seconds so the store and customer can see you. Browsers only allow this while Merta Deal is open on screen — if you switch apps or lock the phone, updates pause until you come back. Continuous background tracking needs the native app wrapper, which isn&apos;t part of this web app yet.</p>
+        <p className="mt-2 text-sm text-ink-2">While you&apos;re online or on a delivery, this app streams your real GPS position every few seconds so Merta Deal and the customer can see you. Browsers only allow this while Merta Deal is open on screen — if you switch apps or lock the phone, updates pause until you come back. Continuous background tracking needs the native app wrapper, which isn&apos;t part of this web app yet.</p>
         <p className="mt-2 text-xs text-ink-3">Tip: add Merta Deal to your home screen and keep it open during deliveries. The screen stays awake automatically while you&apos;re on a trip.</p>
       </section>
 
       <div className="grid grid-cols-2 gap-2">
         <Link href="/account/support" className="inline-flex h-12 items-center justify-center gap-2 rounded-md border border-line-2 bg-card px-4 text-sm font-semibold text-ink active:scale-[0.98]"><LifeBuoy className="h-5 w-5 text-brand-600" /> Support</Link>
-        <form action={staffSignOutAction} className="contents"><input type="hidden" name="portal" value="rider" /><Button type="submit" variant="outline" size="lg" className="text-danger"><LogOut className="h-5 w-5" /> Sign out</Button></form>
+        <form action={staffSignOutAction} className="contents"><input type="hidden" name="portal" value="rider" /><SignOutButton /></form>
       </div>
     </div>
   );
+}
+
+/** Submit button for the sign-out form: shows the pending state so a second tap can't fire the action twice. */
+function SignOutButton() {
+  const { pending } = useFormStatus();
+  return <Button type="submit" variant="outline" size="lg" className="text-danger" loading={pending}><LogOut className="h-5 w-5" /> {pending ? "Signing out…" : "Sign out"}</Button>;
 }
 
 function NotificationsSection({ userId, initial }: { userId: string; initial: Notification[] }) {
   const { items, unread, setItems } = useNotifications(userId, initial, { toastNew: false });
   const [busy, setBusy] = React.useState(false);
   const markAll = async () => {
+    if (busy) return;
     setBusy(true);
     const r = await markRiderNotificationsReadAction();
     setBusy(false);

@@ -20,7 +20,7 @@ export default async function RewardsPage() {
   const [{ points, referralCode, transactions }, settings] = await Promise.all([getRewards(), getPublicSettings()]);
   const per100 = Number(settings.reward_points_per_100 ?? 1) || 1;
   const steps = [
-    { icon: <ShoppingBag className="h-4 w-4" />, title: "Shop from any store", body: "Every order counts, whether it is COD, UPI or wallet." },
+    { icon: <ShoppingBag className="h-4 w-4" />, title: "Shop anything", body: "Every order counts, whether it is COD, UPI or wallet." },
     { icon: <PackageCheck className="h-4 w-4" />, title: "Get it delivered", body: "Points are credited once the rider confirms delivery with your OTP." },
     { icon: <Coins className="h-4 w-4" />, title: `Earn ${per100} point${per100 === 1 ? "" : "s"} per ₹100`, body: "Calculated on the item subtotal (before fees and coupons), rounded down." },
   ];

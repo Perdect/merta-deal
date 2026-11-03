@@ -26,12 +26,12 @@ export function couponState(c: Pick<Coupon, "is_active" | "starts_at" | "expires
 
 type Form = {
   code: string; title: string; description: string; type: "percentage" | "fixed"; value: string; min_order_amount: string; max_discount: string;
-  usage_limit: string; per_user_limit: string; store_id: string; category_id: string; starts_at: string; expires_at: string; first_order_only: boolean; is_active: boolean;
+  usage_limit: string; per_user_limit: string; category_id: string; starts_at: string; expires_at: string; first_order_only: boolean; is_active: boolean;
 };
 type Key = keyof Form;
 
-const blank = (): Form => ({ code: "", title: "", description: "", type: "percentage", value: "10", min_order_amount: "0", max_discount: "", usage_limit: "", per_user_limit: "1", store_id: "", category_id: "", starts_at: toLocalInput(new Date().toISOString()), expires_at: "", first_order_only: false, is_active: true });
-const fromCoupon = (c: Coupon): Form => ({ code: c.code, title: c.title, description: c.description ?? "", type: c.type, value: String(c.value), min_order_amount: String(c.min_order_amount ?? 0), max_discount: c.max_discount != null ? String(c.max_discount) : "", usage_limit: c.usage_limit != null ? String(c.usage_limit) : "", per_user_limit: String(c.per_user_limit ?? 1), store_id: c.store_id ?? "", category_id: c.category_id ?? "", starts_at: toLocalInput(c.starts_at), expires_at: toLocalInput(c.expires_at), first_order_only: c.first_order_only, is_active: c.is_active });
+const blank = (): Form => ({ code: "", title: "", description: "", type: "percentage", value: "10", min_order_amount: "0", max_discount: "", usage_limit: "", per_user_limit: "1", category_id: "", starts_at: toLocalInput(new Date().toISOString()), expires_at: "", first_order_only: false, is_active: true });
+const fromCoupon = (c: Coupon): Form => ({ code: c.code, title: c.title, description: c.description ?? "", type: c.type, value: String(c.value), min_order_amount: String(c.min_order_amount ?? 0), max_discount: c.max_discount != null ? String(c.max_discount) : "", usage_limit: c.usage_limit != null ? String(c.usage_limit) : "", per_user_limit: String(c.per_user_limit ?? 1), category_id: c.category_id ?? "", starts_at: toLocalInput(c.starts_at), expires_at: toLocalInput(c.expires_at), first_order_only: c.first_order_only, is_active: c.is_active });
 
 const num = (s: string) => (s.trim() === "" ? null : Number(s));
 function validate(f: Form): Errors<Key> {
@@ -55,8 +55,8 @@ function validate(f: Form): Errors<Key> {
   return e;
 }
 
-export function CouponWorkspace({ coupons, stats, stores, categories, counts, total, page, pageSize, nowIso, filtered, error, retryHref }: {
-  coupons: Coupon[]; stats: CouponStats; stores: Opt[]; categories: Opt[]; counts: Record<string, number>; total: number; page: number; pageSize: number;
+export function CouponWorkspace({ coupons, stats, categories, counts, total, page, pageSize, nowIso, filtered, error, retryHref }: {
+  coupons: Coupon[]; stats: CouponStats; categories: Opt[]; counts: Record<string, number>; total: number; page: number; pageSize: number;
   nowIso: string; filtered: boolean; error: boolean; retryHref: string;
 }) {
   const router = useRouter();
@@ -80,7 +80,7 @@ export function CouponWorkspace({ coupons, stats, stores, categories, counts, to
     setSaving(true);
     const r = await saveCouponAction(editing.id, {
       code: f.code, title: f.title.trim(), description: f.description.trim() || null, type: f.type, value: Number(f.value), min_order_amount: num(f.min_order_amount) ?? 0,
-      max_discount: num(f.max_discount), first_order_only: f.first_order_only, store_id: f.store_id || null, category_id: f.category_id || null,
+      max_discount: num(f.max_discount), first_order_only: f.first_order_only, category_id: f.category_id || null,
       usage_limit: num(f.usage_limit), per_user_limit: Number(f.per_user_limit), starts_at: fromLocalInput(f.starts_at), expires_at: fromLocalInput(f.expires_at) || null, is_active: f.is_active,
     });
     setSaving(false);
@@ -94,7 +94,7 @@ export function CouponWorkspace({ coupons, stats, stores, categories, counts, to
   };
 
   const f = editing?.form;
-  const scope = (c: Coupon) => [c.first_order_only ? "First order only" : null, c.store_id ? stores.find((s) => s.id === c.store_id)?.name ?? "One store" : null, c.category_id ? categories.find((x) => x.id === c.category_id)?.name ?? "One category" : null].filter(Boolean).join(" · ") || "All orders";
+  const scope = (c: Coupon) => [c.first_order_only ? "First order only" : null, c.category_id ? categories.find((x) => x.id === c.category_id)?.name ?? "One category" : null].filter(Boolean).join(" · ") || "All orders";
 
   return (
     <>
@@ -150,7 +150,6 @@ export function CouponWorkspace({ coupons, stats, stores, categories, counts, to
               <div className="grid gap-3 sm:grid-cols-2">
                 <Input label="Total uses" type="number" inputMode="numeric" min={1} step={1} placeholder="Unlimited" value={f.usage_limit} error={errors.usage_limit} onChange={(e) => set("usage_limit", e.target.value)} />
                 <Input label="Uses per customer" required type="number" inputMode="numeric" min={1} step={1} value={f.per_user_limit} error={errors.per_user_limit} onChange={(e) => set("per_user_limit", e.target.value)} />
-                <Select label="Store" placeholder="All stores" options={stores.map((s) => ({ value: s.id, label: s.name }))} value={f.store_id} onChange={(e) => set("store_id", e.target.value)} />
                 <Select label="Category" placeholder="All categories" options={categories.map((c) => ({ value: c.id, label: c.name }))} value={f.category_id} onChange={(e) => set("category_id", e.target.value)} />
               </div>
               <Switch checked={f.first_order_only} onChange={(v) => set("first_order_only", v)} label="Only on a customer's first order" />

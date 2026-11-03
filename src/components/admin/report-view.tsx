@@ -51,10 +51,10 @@ export function ReportExportButton({ report, start, end }: { report: AdminReport
     const r = report;
     const rows: Cell[][] = [
       ["Merta Deal report", `${r.range.start} to ${r.range.end}`], [],
-      ["Metric", "Value"], ["Orders", r.orders], ["Delivered", r.delivered], ["Cancelled", r.cancelled], ["GMV", r.gmv], ["Commission", r.commission], ["Delivery fees", r.delivery_fees], ["Platform fees", r.platform_fees], ["GST on fees", r.taxes], ["Rider earnings", r.rider_earnings], ["Store payouts", r.store_payouts], ["Coupon discounts", r.coupon_discounts], ["Net platform revenue", r.net_revenue], ["Avg order value", r.avg_order_value], ["Avg delivery minutes", r.avg_delivery_minutes ?? ""], ["New customers", r.new_customers], [],
+      ["Metric", "Value"], ["Orders", r.orders], ["Delivered", r.delivered], ["Cancelled", r.cancelled], ["GMV", r.gmv], ["Item sales", r.item_sales], ["Delivery fees", r.delivery_fees], ["Platform fees", r.platform_fees], ["GST on fees", r.taxes], ["Rider earnings", r.rider_earnings], ["Coupon discounts", r.coupon_discounts], ["Net revenue", r.net_revenue], ["Avg order value", r.avg_order_value], ["Avg delivery minutes", r.avg_delivery_minutes ?? ""], ["New customers", r.new_customers], [],
       ["Day", "Orders", "GMV", "Cancelled"], ...r.daily.map((d) => [d.day, d.orders, d.gmv, d.cancelled]), [],
       ["Top products", "Quantity", "Revenue", "Orders"], ...r.top_products.map((p) => [p.name, p.quantity, p.revenue, p.orders]), [],
-      ["Top stores", "Orders", "GMV", "Commission", "Cancelled"], ...r.top_stores.map((t) => [t.name, t.orders, t.gmv, t.commission, t.cancelled]), [],
+      ["Top categories", "Quantity", "Revenue"], ...r.top_categories.map((c) => [c.name, c.quantity, c.revenue]), [],
       ["Rider", "Deliveries", "Earnings", "Avg minutes", "Distance km", "Rating"], ...r.riders.map((x) => [x.name ?? "", x.deliveries, x.earnings, x.avg_minutes ?? "", x.distance_km, x.rating]), [],
       ["Payment method", "Orders"], ...Object.entries(r.payment_methods).map(([k, v]) => [k, v]),
     ];

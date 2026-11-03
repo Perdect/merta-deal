@@ -28,7 +28,7 @@ export function OfferCard({ offer, onChanged }: { offer: RiderAssignment; onChan
     const r = await respondAssignmentAction(offer.id, accept);
     setBusy(null); setConfirmReject(false);
     if (!r.ok) { toast.error(r.error); onChanged(); return; }
-    if (accept) toast.success("Delivery accepted", `Head to ${offer.store.name} for pickup.`); else toast.info("Request declined");
+    if (accept) toast.success("Delivery accepted", `Head to ${offer.pickup.name} for pickup.`); else toast.info("Request declined");
     onChanged();
   };
 
@@ -42,8 +42,8 @@ export function OfferCard({ offer, onChanged }: { offer: RiderAssignment; onChan
         <div className="flex min-w-0 items-start gap-2.5">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700"><StoreIcon className="h-5 w-5" /></span>
           <div className="min-w-0">
-            <h3 id={`offer-${offer.id}`} className="truncate text-base font-bold text-ink">{offer.store.name}</h3>
-            <p className="truncate text-xs text-ink-3">{offer.store.area} · {offer.order.order_number}</p>
+            <h3 id={`offer-${offer.id}`} className="truncate text-base font-bold text-ink">{offer.pickup.name}</h3>
+            <p className="truncate text-xs text-ink-3">{[offer.pickup.area, offer.order.order_number].filter(Boolean).join(" · ")}</p>
           </div>
         </div>
         <span className={cn("inline-flex h-8 shrink-0 items-center gap-1 rounded-full px-2.5 text-sm font-bold tabular", expired ? "bg-surface-2 text-ink-3" : urgent ? "bg-danger-50 text-danger" : "bg-saffron-100 text-saffron-700")} aria-live="polite" aria-label={expired ? "Expired" : now ? `Expires in ${mmss(msLeft)}` : "Expires soon"}>

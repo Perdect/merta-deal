@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   title,
   description,
   alternates: { canonical: "/delivery-area" },
-  openGraph: { type: "website", title, description, url: "/delivery-area" },
+  openGraph: { type: "website", siteName: site.seoName, locale: "en_IN", title, description, url: "/delivery-area" },
 };
 
 type Zone = { name: string; area: string | null; pincode: string | null; delivery_fee: number; min_order_amount: number; free_delivery_threshold: number; eta_min_minutes: number; eta_max_minutes: number; express_supported: boolean };
@@ -26,20 +26,20 @@ const time12 = (t: string | null | undefined) => {
 };
 
 /**
- * Generated from the same data checkout uses (delivery_zones, settings, the Merta Deal store), so the
+ * Generated from the same data checkout uses (delivery_zones, settings), so the
  * areas, charges and times shown here can never drift from what customers are actually charged.
  */
 export default async function DeliveryAreaPage() {
   const supabase = await createClient();
-  const [zonesRes, storeRes, settings, citiesRes] = await Promise.all([
+  const [zonesRes, settings, citiesRes] = await Promise.all([
     supabase.from("delivery_zones").select("name, area, pincode, delivery_fee, min_order_amount, free_delivery_threshold, eta_min_minutes, eta_max_minutes, express_supported").eq("is_active", true).order("delivery_fee"),
-    supabase.from("stores").select("opening_time, closing_time, address_line1, area").eq("slug", "merta-deal").maybeSingle(),
     getPublicSettings(),
     supabase.from("cities").select("name, is_active, launch_note").eq("is_active", false),
   ]);
   if (zonesRes.error) throw new Error(`delivery zones: ${zonesRes.error.message}`);
   const zones = (zonesRes.data ?? []) as Zone[];
-  const opens = time12(storeRes.data?.opening_time); const closes = time12(storeRes.data?.closing_time);
+  const hours = (settings.business_hours ?? {}) as { open?: string; close?: string };
+  const opens = time12(hours.open); const closes = time12(hours.close);
   const extraKm = num(settings.delivery_fee_per_extra_km, 8); const includedKm = num(settings.delivery_included_km, 3);
   const expressFee = num(settings.express_delivery_fee, 20);
   const expressEta = `${num(settings.express_eta_min_minutes, 12)}–${num(settings.express_eta_max_minutes, 18)} min`;
@@ -101,7 +101,7 @@ export default async function DeliveryAreaPage() {
           </div>
         ) : <p className="mt-2 text-sm text-ink-3">Delivery areas are being updated. Call us to check your address.</p>}
         <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-ink-2">
-          <li>Addresses more than {includedKm} km from our store add {formatINR(extraKm)} per extra km to the delivery fee.</li>
+          <li>Addresses more than {includedKm} km from our pickup point add {formatINR(extraKm)} per extra km to the delivery fee.</li>
           {zones.some((z) => z.express_supported) ? <li>Express delivery ({expressEta}, +{formatINR(expressFee)}) is offered in {zones.filter((z) => z.express_supported).map((z) => z.name).join(", ")}.</li> : null}
           {slots.length ? <li>You can also pick a delivery slot: {slots.join(", ")}.</li> : null}
           {upcoming.length ? <li>Not available yet: {upcoming.join(", ")}.</li> : null}

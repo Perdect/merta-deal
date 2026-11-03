@@ -15,14 +15,14 @@ export default function TermsPage() {
       intro={<>These terms apply when you use mertadeal.com or the {site.name} app to order groceries, fruits, vegetables and other products for delivery in {site.city}, Rajasthan. By creating an account or placing an order you agree to them. Please also read our <Link href="/privacy">Privacy Policy</Link>.</>}>
       <section>
         <h2>1. The service</h2>
-        <p>{site.name} is a local online marketplace. Products are sold and packed by {site.name} or by the partner store named on your order, and delivered by our delivery partners within our <Link href="/delivery-area">delivery areas</Link>.</p>
+        <p>{site.name} is a local online grocery service. Products are sold and packed by {site.name} and delivered by our delivery partners within our <Link href="/delivery-area">delivery areas</Link>.</p>
       </section>
       <section>
         <h2>2. Your account</h2>
         <ul>
           <li>You sign in with your mobile number and a 6-digit PIN. Keep your PIN private; you are responsible for orders placed from your account.</li>
           <li>Give correct contact and address details so we can deliver. You must be 18 or older, or use the service with a parent or guardian.</li>
-          <li>We may suspend accounts used for fraud, abuse of offers, or harassment of stores or delivery partners.</li>
+          <li>We may suspend accounts used for fraud, abuse of offers, or harassment of our staff or delivery partners.</li>
         </ul>
       </section>
       <section>
@@ -35,7 +35,7 @@ export default function TermsPage() {
       </section>
       <section>
         <h2>4. Orders</h2>
-        <p>An order is confirmed when the store accepts it. A store may decline an order (for example, if an item has run out); you are told immediately and any payment is refunded as described below. Product photos are for reference; packaging may vary.</p>
+        <p>Cash-on-delivery orders are confirmed as soon as they are placed; online orders are confirmed once payment is received. We may decline an order (for example, if an item has run out); you are told immediately and any payment is refunded as described below. Product photos are for reference; packaging may vary.</p>
       </section>
       <section>
         <h2>5. Payment</h2>
@@ -47,7 +47,7 @@ export default function TermsPage() {
       </section>
       <section>
         <h2>7. Cancellations</h2>
-        <p>You can cancel an order from the order page until the store starts preparing it. After that, cancellation is not available, but you can contact support.</p>
+        <p>You can cancel an order from the order page until it has been packed. After that, cancellation is not available, but you can contact support.</p>
       </section>
       <section>
         <h2>8. Refunds, damaged or wrong items</h2>
@@ -63,7 +63,7 @@ export default function TermsPage() {
       </section>
       <section>
         <h2>10. Acceptable use</h2>
-        <p>Do not misuse the service: no false orders, payment fraud, scraping, attempts to break security, or abuse of staff, stores or delivery partners.</p>
+        <p>Do not misuse the service: no false orders, payment fraud, scraping, attempts to break security, or abuse of staff or delivery partners.</p>
       </section>
       <section>
         <h2>11. Liability</h2>

@@ -1,5 +1,5 @@
 // Security, rider-flow, product-save, search-visibility, grouped-category, failed-delivery, cash hand-over,
-// quick-commerce (auto-confirm, re-dispatch) and strict category filter checks (0023–0029). Loads every migration + seed into PGlite. Run from a folder with @electric-sql/pglite installed:
+// quick-commerce (auto-confirm, re-dispatch), strict category filter and single-operator checks (0023–0030). Loads every migration + seed into PGlite. Run from a folder with @electric-sql/pglite installed:
 //   node scripts/test-security.mjs "$PWD"
 import { PGlite } from "@electric-sql/pglite";
 import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
@@ -23,10 +23,6 @@ for (const f of migrations) {
   await exec(f, sql);
 }
 await exec("seed", read("supabase/seed.sql"));
-// Production order: data already exists when 0019 runs, so apply it again after the seed.
-await exec("0019 after seed", read("supabase/migrations/0019_cart_limits.sql"));
-// …and the later migrations that redefine 0019 functions, so the final state matches production.
-await exec("0024 after 0019", read("supabase/migrations/0024_product_save_keeps_stock.sql"));
 console.log(`loaded ${migrations.length} migrations + seed`);
 
 let pass = 0, fail = 0;
@@ -37,7 +33,7 @@ const as = async (uid) => db.query(`select set_config('request.jwt.claim.sub', $
 const err = async (sql, params) => { try { await db.query(sql, params); return null; } catch (e) { return e.message; } };
 // Run a query as the 'authenticated' DB role so RLS applies (the harness user is a superuser).
 const rls = async (uid, sql, params) => { await as(uid); await db.exec(`set role authenticated`); try { return (await db.query(sql, params)).rows; } finally { await db.exec(`reset role`); } };
-const CUST = '30000000-0000-4000-8000-000000000002', STORE_OWNER = '20000000-0000-4000-8000-000000000001', ADMIN = '10000000-0000-4000-8000-000000000001', STORE = 'd0000000-0000-4000-8000-000000000001';
+const CUST = '30000000-0000-4000-8000-000000000002', ADMIN = '10000000-0000-4000-8000-000000000001';
 const newUser = async (meta, anon = false) => (await one(`insert into auth.users (id, phone, raw_user_meta_data, is_anonymous) values (gen_random_uuid(), null, $1::jsonb, $2) returning id`, [JSON.stringify(meta), anon])).id;
 
 console.log("Sign-up can never grant a staff role");
@@ -91,13 +87,13 @@ ok("deactivated admin cannot run admin RPCs", /FORBIDDEN/.test(await err(`select
 
 console.log("Rider privacy and isolation");
 await as(CUST); await q(`select public.clear_cart()`);
-const inv = (await one(`select i.id from inventory i where i.store_id = $1 and i.is_active and i.stock_qty > 20 and i.selling_price > 100 limit 1`, [STORE])).id;
+const inv = (await one(`select i.id from inventory i where i.is_active and i.stock_qty > 40 and i.selling_price >= 200 limit 1`)).id;
 await q(`select public.add_to_cart($1::uuid, 2)`, [inv]);
 const addr = (await one(`select id from addresses where user_id = $1 limit 1`, [CUST])).id;
 const order = (await one(`select public.place_order($1::uuid, 'cod', 'standard', null) as r`, [addr])).r.order_id;
-await as(STORE_OWNER);
-for (const step of ['preparing']) await q(`select public.store_update_order($1::uuid, $2)`, [order, step]);
-const asg = (await one(`select public.store_update_order($1::uuid, 'ready') as r`, [order])).r.assignment_id;
+await as(ADMIN);
+for (const step of ['preparing']) await q(`select public.fulfil_order($1::uuid, $2)`, [order, step]);
+const asg = (await one(`select public.fulfil_order($1::uuid, 'ready') as r`, [order])).r.assignment_id;
 const riderUser = (await one(`select dp.user_id from delivery_assignments a join delivery_partners dp on dp.id = a.rider_id where a.id = $1`, [asg])).user_id;
 const otherRider = (await one(`select user_id from delivery_partners where status = 'active' and user_id <> $1 limit 1`, [riderUser])).user_id;
 
@@ -148,31 +144,31 @@ console.log("Internal helpers are not callable from outside");
 const asRole = async (role, uid, sql, params) => { await as(uid ?? ''); await db.exec(`set role ${role}`); try { await db.query(sql, params); return null; } catch (e) { return e.message; } finally { await db.exec(`reset role`); } };
 ok("visitor (anon) cannot call notify_user", /permission denied/.test(await asRole('anon', null, `select public.notify_user($1::uuid, 'x', 'Pay now', 'phish')`, [CUST]) ?? ""));
 ok("customer cannot call notify_user", /permission denied/.test(await asRole('authenticated', cust2, `select public.notify_user($1::uuid, 'x', 'Pay now', 'phish')`, [CUST]) ?? ""));
-ok("customer cannot call notify_store", /permission denied/.test(await asRole('authenticated', cust2, `select public.notify_store($1::uuid, 'x', 't', 'b')`, [STORE]) ?? ""));
+ok("customer cannot call notify_admins", /permission denied/.test(await asRole('authenticated', cust2, `select public.notify_admins('x', 't', 'b')`) ?? ""));
 ok("customer cannot write audit rows", /permission denied/.test(await asRole('authenticated', cust2, `select public.audit('x', 'y', 'z')`) ?? ""));
 ok("customer cannot use admin_notify_user", /FORBIDDEN/.test(await asRole('authenticated', CUST, `select public.admin_notify_user($1::uuid, 'x', 't', 'b')`, [cust2]) ?? ""));
 ok("admin can use admin_notify_user", (await asRole('authenticated', ADMIN, `select public.admin_notify_user($1::uuid, 'test', 'Hello', 'From admin')`, [cust2])) === null);
 ok("admin can use admin_audit", (await asRole('authenticated', ADMIN, `select public.admin_audit('test.action', 'test', '1')`)) === null);
 ok("internal callers still notify (place_order path)", (await one(`select count(*)::int n from notifications where data->>'order_id' = $1`, [order])).n >= 1);
 
-console.log("Store payout details: owner only");
-const staffUser = await newUser({ full_name: 'Store Staff' });
-await q(`insert into store_staff (store_id, user_id, is_active) values ($1, $2, true)`, [STORE, staffUser]).catch((e) => console.log("    (staff insert: " + e.message + ")"));
-const before = await one(`select bank_account_number, upi_id from stores where id = $1`, [STORE]);
-await as(staffUser); await q(`update stores set bank_account_number = '999999999', upi_id = 'thief@upi', tagline = 'staff edit' where id = $1`, [STORE]);
-const after = await one(`select bank_account_number, upi_id, tagline from stores where id = $1`, [STORE]);
-ok("staff cannot change bank account / UPI", after.bank_account_number === before.bank_account_number && after.upi_id === before.upi_id, JSON.stringify(after));
-await as(STORE_OWNER); await q(`update stores set upi_id = 'owner.new@upi' where id = $1`, [STORE]);
-ok("owner can change UPI", (await one(`select upi_id from stores where id = $1`, [STORE])).upi_id === 'owner.new@upi');
+console.log("Business settings (0030): admin only");
+const openBefore = (await one(`select value from settings where key = 'business_open'`)).value;
+await rls(cust2, `update settings set value = 'false' where key = 'business_open'`).catch(() => []);
+ok("customer cannot change business settings", JSON.stringify((await one(`select value from settings where key = 'business_open'`)).value) === JSON.stringify(openBefore));
+await as(ADMIN); await q(`update settings set value = 'false' where key = 'business_open'`);
+await as(CUST); await q(`select public.clear_cart()`); await q(`select public.add_to_cart($1::uuid, 1)`, [inv]);
+ok("orders are refused while the business is closed", /CLOSED/.test(await err(`select public.place_order($1::uuid, 'cod', 'standard', null)`, [addr]) ?? ""));
+await as(ADMIN); await q(`update settings set value = 'true' where key = 'business_open'`);
+ok("pickup point is configured", Boolean((await one(`select public.pickup_point() p`)).p.lat));
 
 console.log("Rejection, reassignment and a failed handover");
 const mkReady = async () => {
   await as(CUST); await q(`select public.clear_cart()`);
   await q(`select public.add_to_cart($1::uuid, 1)`, [inv]);
   const o = (await one(`select public.place_order($1::uuid, 'cod', 'standard', null) as r`, [addr])).r.order_id;
-  await as(STORE_OWNER);
-  for (const step of ['preparing']) await q(`select public.store_update_order($1::uuid, $2)`, [o, step]);
-  const a = (await one(`select public.store_update_order($1::uuid, 'ready') as r`, [o])).r.assignment_id;
+  await as(ADMIN);
+  for (const step of ['preparing']) await q(`select public.fulfil_order($1::uuid, $2)`, [o, step]);
+  const a = (await one(`select public.fulfil_order($1::uuid, 'ready') as r`, [o])).r.assignment_id;
   return { o, a };
 };
 const R1 = await mkReady();
@@ -195,9 +191,9 @@ await as(next.user_id);
 ok("rider cannot complete a cancelled order", /./.test(await err(`select public.verify_delivery_otp($1::uuid, '0000', true)`, [next.id]) ?? (await one(`select (public.verify_delivery_otp($1::uuid, '0000', true)->>'ok') r`, [next.id])).r === 'false' ? 'x' : ''));
 
 console.log("Product form saves (0024): stock and visibility are never clobbered");
-await as(STORE_OWNER);
+await as(ADMIN);
 const cat = (await one(`select id from categories where parent_id is not null limit 1`)).id;
-const up = (args) => one(`select public.upsert_store_product($1::uuid, $2, $3::uuid, '', 500, 'g', '500 g', $4, $5, $6, 5, null, null, false, true, $7::uuid, 5, $8) r`, [STORE, args.name ?? 'Regression Test Dal', cat, args.mrp ?? 100, args.sp ?? 90, args.stock, args.pid ?? null, args.active ?? null]).then((x) => x.r);
+const up = (args) => one(`select public.upsert_product($1, $2::uuid, '', 500, 'g', '500 g', $3, $4, $5, 5, null, null, false, true, $6::uuid, 5, $7) r`, [args.name ?? 'Regression Test Dal', cat, args.mrp ?? 100, args.sp ?? 90, args.stock, args.pid ?? null, args.active ?? null]).then((x) => x.r);
 const created = await up({ stock: 20 });
 let pinv = await one(`select stock_qty, is_active from inventory where id = $1`, [created.inventory_id]);
 ok("new listing: opening stock 20, visible by default", pinv.stock_qty === 20 && pinv.is_active === true, JSON.stringify(pinv));
@@ -212,25 +208,26 @@ await up({ pid: created.product_id, stock: null, active: true });
 ok("form can switch visibility on explicitly", (await one(`select is_active from inventory where id = $1`, [created.inventory_id])).is_active === true);
 const hiddenNew = await up({ name: 'Regression Hidden Item', stock: 5, active: false });
 ok("new listing can start hidden", (await one(`select is_active from inventory where id = $1`, [hiddenNew.inventory_id])).is_active === false);
-ok("negative stock rejected", /INVALID_STOCK/.test(await err(`select public.upsert_store_product($1::uuid, 'Neg', $2::uuid, '', 1, 'g', '1 g', 10, 9, -1)`, [STORE, cat]) ?? ""));
-ok("price above MRP rejected", /PRICE_ABOVE_MRP/.test(await err(`select public.upsert_store_product($1::uuid, 'Bad price', $2::uuid, '', 1, 'g', '1 g', 10, 12, 1)`, [STORE, cat]) ?? ""));
+ok("negative stock rejected", /INVALID_STOCK/.test(await err(`select public.upsert_product('Neg', $1::uuid, '', 1, 'g', '1 g', 10, 9, -1)`, [cat]) ?? ""));
+ok("price above MRP rejected", /PRICE_ABOVE_MRP/.test(await err(`select public.upsert_product('Bad price', $1::uuid, '', 1, 'g', '1 g', 10, 12, 1)`, [cat]) ?? ""));
 await as(cust2);
-ok("a customer cannot write another store's products", /FORBIDDEN/.test(await err(`select public.upsert_store_product($1::uuid, 'Hack', $2::uuid, '', 1, 'g', '1 g', 10, 9, 1)`, [STORE, cat]) ?? ""));
-await as(staffUser);
-ok("store staff can save products (no stock overwrite)", (await err(`select public.upsert_store_product($1::uuid, 'Regression Test Dal', $2::uuid, '', 500, 'g', '500 g', 100, 70, null, 5, null, null, false, true, $3::uuid, 5, null)`, [STORE, cat, created.product_id])) === null && (await one(`select stock_qty from inventory where id = $1`, [created.inventory_id])).stock_qty === 17);
+ok("a customer cannot write products", /FORBIDDEN/.test(await err(`select public.upsert_product('Hack', $1::uuid, '', 1, 'g', '1 g', 10, 9, 1)`, [cat]) ?? ""));
+await as(riderUser);
+ok("a rider cannot write products", /FORBIDDEN/.test(await err(`select public.upsert_product('Hack', $1::uuid, '', 1, 'g', '1 g', 10, 9, 1)`, [cat]) ?? ""));
+ok("a rider cannot adjust stock", /FORBIDDEN/.test(await err(`select public.adjust_stock($1::uuid, 1)`, [created.inventory_id]) ?? ""));
 
 console.log("Hidden products stay out of shopper search (0025)");
-await as(STORE_OWNER);
+await as(ADMIN);
 const qa = await up({ name: 'Zzqa Hidden Probe', stock: 4, active: false });
 const anonSearch = async (term) => { await db.exec(`set role anon`); try { return (await one(`select public.search_products(p_query => $1) r`, [term])).r; } finally { await db.exec(`reset role`); } };
 const anonSuggest = async (term) => { await db.exec(`set role anon`); try { return (await one(`select public.search_suggest($1, 8) r`, [term])).r; } finally { await db.exec(`reset role`); } };
 ok("hidden product not in shopper search", !(await anonSearch('Zzqa Hidden Probe')).items.some((x) => x.name === 'Zzqa Hidden Probe'));
 ok("hidden product not in typeahead", !(await anonSuggest('Zzqa Hidden')).products.some((x) => x.name === 'Zzqa Hidden Probe'));
-await as(STORE_OWNER); await q(`update inventory set is_active = true where id = $1`, [qa.inventory_id]);
+await as(ADMIN); await q(`update inventory set is_active = true where id = $1`, [qa.inventory_id]);
 ok("visible product appears in shopper search", (await anonSearch('Zzqa Hidden Probe')).items.some((x) => x.name === 'Zzqa Hidden Probe'));
 await q(`update inventory set is_active = false where id = $1`, [qa.inventory_id]);
-await as(STORE_OWNER);
-ok("store catalog picker still finds unlisted products", (await one(`select public.search_products(p_query => 'Zzqa Hidden Probe', p_include_unlisted => true) r`)).r.items.some((x) => x.name === 'Zzqa Hidden Probe'));
+await as(ADMIN);
+ok("admin catalogue picker still finds unlisted products", (await one(`select public.search_products(p_query => 'Zzqa Hidden Probe', p_include_unlisted => true) r`)).r.items.some((x) => x.name === 'Zzqa Hidden Probe'));
 
 console.log("Grouped category tiles (0026)");
 const anonQ = async (sql, params) => { await db.exec(`set role anon`); try { return (await one(sql, params)).r; } finally { await db.exec(`reset role`); } };
@@ -259,7 +256,7 @@ ok("order returns to ready for pickup", fr.ok === true && fa.order_status === 'r
 ok("no earning for a failed attempt", (await one(`select count(*)::int n from rider_earnings where assignment_id = $1`, [F.a])).n === 0);
 ok("rider is free again (no active delivery)", (await one(`select count(*)::int n from delivery_assignments where rider_id = $1 and status in ('accepted','picked_up')`, [fRider])).n === 0);
 ok("reporting twice is rejected", /INVALID_STATE/.test(await err(`select public.rider_report_failed_delivery($1::uuid, 'customer_unreachable')`, [F.a]) ?? ""));
-ok("customer, store and admins notified", (await one(`select count(distinct user_id)::int n from notifications where type = 'delivery_failed' and data->>'order_id' = $1`, [F.o])).n >= 2);
+ok("customer and admins notified", (await one(`select count(distinct user_id)::int n from notifications where type = 'delivery_failed' and data->>'order_id' = $1`, [F.o])).n >= 2);
 await as(ADMIN);
 const re = (await one(`select public.admin_assign_rider($1::uuid, $2::uuid) r`, [F.o, fRider])).r;
 const newAsg = (await one(`select id from delivery_assignments where order_id = $1 and status in ('offered','accepted') order by created_at desc limit 1`, [F.o])).id;
@@ -309,9 +306,9 @@ const placeCod = async (method = 'cod') => {
 };
 const Q1 = await placeCod();
 const q1 = await one(`select status, eta_minutes, extract(epoch from promised_at - created_at)/60 as mins from orders where id = $1`, [Q1.order_id]);
-ok("COD order is confirmed the moment it is placed", q1.status === 'store_confirmed', JSON.stringify(q1));
+ok("COD order is confirmed the moment it is placed", q1.status === 'confirmed', JSON.stringify(q1));
 ok("promised time = window shown at checkout (no extra prep minutes)", q1.eta_minutes === Q1.etaMax && Math.round(Number(q1.mins)) === Q1.etaMax, JSON.stringify({ ...q1, etaMax: Q1.etaMax }));
-ok("history: placed → store_confirmed (automatic)", JSON.stringify((await q(`select status::text s, note from order_status_history where order_id = $1 order by created_at, status`, [Q1.order_id])).map((r) => r.s)) === '["placed","store_confirmed"]');
+ok("history: placed → confirmed (automatic)", JSON.stringify((await q(`select status::text s, note from order_status_history where order_id = $1 order by created_at, status`, [Q1.order_id])).map((r) => r.s)) === '["placed","confirmed"]');
 const n1 = await q(`select type, title from notifications where user_id = $1 and data->>'order_id' = $2 and type in ('order_placed','order_status')`, [CUST, Q1.order_id]);
 ok("customer gets one combined 'Order confirmed' message (no duplicate)", n1.length === 1 && n1[0].title === 'Order confirmed', JSON.stringify(n1));
 await as(CUST);
@@ -319,25 +316,25 @@ ok("customer can still cancel before packing", (await one(`select public.cancel_
 
 const Q2 = await placeCod();
 const stockBefore = (await one(`select stock_qty from inventory where id = $1`, [inv])).stock_qty;
-await as(STORE_OWNER);
-ok("store can reject an auto-confirmed order it can't fulfil (stock restored)", (await one(`select public.store_update_order($1::uuid, 'reject', 'Out of stock') r`, [Q2.order_id])).r.status === 'rejected' && (await one(`select stock_qty from inventory where id = $1`, [inv])).stock_qty === stockBefore + 1);
+await as(ADMIN);
+ok("admin can reject an auto-confirmed order it can't fulfil (stock restored)", (await one(`select public.fulfil_order($1::uuid, 'reject', 'Out of stock') r`, [Q2.order_id])).r.status === 'rejected' && (await one(`select stock_qty from inventory where id = $1`, [inv])).stock_qty === stockBefore + 1);
 
 await q(`update settings set value = 'false' where key = 'auto_accept_orders'`);
 const Q3 = await placeCod();
 ok("with auto-confirm off, order waits at placed", (await one(`select status from orders where id = $1`, [Q3.order_id])).status === 'placed');
-await as(STORE_OWNER);
-ok("…and the store's manual accept still works", (await one(`select public.store_update_order($1::uuid, 'accept') r`, [Q3.order_id])).r.status === 'store_confirmed');
+await as(ADMIN);
+ok("…and manual accept still works", (await one(`select public.fulfil_order($1::uuid, 'accept') r`, [Q3.order_id])).r.status === 'confirmed');
 await q(`update settings set value = 'true' where key = 'auto_accept_orders'`);
 
 const Q4 = await placeCod('upi');
 ok("online order waits for payment before confirming", (await one(`select status, payment_status from orders where id = $1`, [Q4.order_id])).status === 'placed');
-await as(STORE_OWNER);
-ok("store cannot accept an unpaid online order", /PAYMENT_PENDING/.test(await err(`select public.store_update_order($1::uuid, 'accept')`, [Q4.order_id]) ?? ""));
+await as(ADMIN);
+ok("an unpaid online order cannot be accepted", /PAYMENT_PENDING/.test(await err(`select public.fulfil_order($1::uuid, 'accept')`, [Q4.order_id]) ?? ""));
 await db.query(`select set_config('request.jwt.claim.role', 'authenticated', false)`);
 ok("customer cannot fake the payment confirmation", /FORBIDDEN/.test((await as(CUST), await err(`select public.confirm_online_payment($1::uuid, 'o', 'p', 's')`, [Q4.order_id])) ?? ""));
 await db.query(`select set_config('request.jwt.claim.role', '', false)`);
 await as(ADMIN); await q(`select public.confirm_online_payment($1::uuid, 'order_test', 'pay_test', 'sig_test')`, [Q4.order_id]);
-ok("captured payment confirms the order automatically", (await one(`select status, payment_status from orders where id = $1`, [Q4.order_id])).status === 'store_confirmed');
+ok("captured payment confirms the order automatically", (await one(`select status, payment_status from orders where id = $1`, [Q4.order_id])).status === 'confirmed');
 
 // Clean slate: earlier sections leave orders mid-delivery. One rider online, everyone else offline, nobody busy.
 await q(`update delivery_assignments set status = 'cancelled' where status in ('offered','accepted','picked_up')`);
@@ -346,9 +343,9 @@ const X = await one(`select id, user_id from delivery_partners where status = 'a
 await q(`update delivery_partners set is_online = false`);
 await as(X.user_id); await q(`select public.rider_set_online(true, 26.6491, 74.0341)`);
 const Q5 = await placeCod();
-await as(STORE_OWNER);
-const packed = (await one(`select public.store_update_order($1::uuid, 'ready') r`, [Q5.order_id])).r;
-ok("store taps Packed → rider requested", packed.status === 'ready_for_pickup' && Boolean(packed.assignment_id), JSON.stringify(packed));
+await as(ADMIN);
+const packed = (await one(`select public.fulfil_order($1::uuid, 'ready') r`, [Q5.order_id])).r;
+ok("admin taps Packed → rider requested", packed.status === 'ready_for_pickup' && Boolean(packed.assignment_id), JSON.stringify(packed));
 await q(`update delivery_assignments set expires_at = now() - interval '1 second' where id = $1`, [packed.assignment_id]); // the offer times out unanswered
 await as(X.user_id);
 const list = (await one(`select public.rider_assignments(array['offered']) r`)).r;
@@ -367,8 +364,8 @@ ok("order stays packed, waiting for a rider (not delivered, not cancelled)", (aw
 // No rider online when packed → offered as soon as one comes online.
 await as(X.user_id); await q(`select public.rider_set_online(false)`);
 const Q6 = await placeCod();
-await as(STORE_OWNER);
-ok("packed with no rider online → waits (no fake assignment)", (await one(`select public.store_update_order($1::uuid, 'ready') r`, [Q6.order_id])).r.assignment_id === null);
+await as(ADMIN);
+ok("packed with no rider online → waits (no fake assignment)", (await one(`select public.fulfil_order($1::uuid, 'ready') r`, [Q6.order_id])).r.assignment_id === null);
 await as(X.user_id); await q(`select public.rider_set_online(true, 26.6491, 74.0341)`);
 const a6 = await one(`select id from delivery_assignments where order_id = $1 and status = 'offered' and rider_id = $2`, [Q6.order_id, X.id]);
 ok("rider going online receives the waiting order", Boolean(a6));
@@ -386,6 +383,28 @@ const again6 = (await one(`select public.verify_delivery_otp($1::uuid, $2, true)
 ok("retrying completion is a no-op", again6.already === true);
 ok("rider earning credited exactly once", (await one(`select count(*)::int n from rider_earnings where assignment_id = $1`, [a6.id])).n === 1);
 ok("tracking shows delivered with no OTP exposed", await (async () => { await as(CUST); const t = (await one(`select public.order_tracking($1::uuid) r`, [Q6.order_id])).r; return t.order.status === 'delivered' && t.delivery_otp === null; })());
+
+console.log("Single operator (0030): no store concept remains");
+const leftovers = await one(`select (select count(*)::int from information_schema.tables where table_schema = 'public' and table_name ilike '%store%') t,
+  (select count(*)::int from information_schema.columns where table_schema = 'public' and column_name ilike '%store%') c,
+  (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and (p.prosrc ilike '%store%' or p.proname ilike '%store%')) f,
+  (select count(*)::int from pg_policies where schemaname = 'public' and (qual ilike '%store%' or with_check ilike '%store%')) p,
+  (select string_agg(enumlabel, ',' order by enumsortorder) from pg_enum e join pg_type t on t.oid = e.enumtypid where t.typname = 'user_role') roles,
+  (select string_agg(enumlabel, ',' order by enumsortorder) from pg_enum e join pg_type t on t.oid = e.enumtypid where t.typname = 'review_target') targets`);
+ok("no store tables, columns, functions or policies", leftovers.t === 0 && leftovers.c === 0 && leftovers.f === 0 && leftovers.p === 0, JSON.stringify(leftovers));
+ok("roles are customer / rider / admin / super_admin", leftovers.roles === 'customer,rider,admin,super_admin', leftovers.roles);
+ok("reviews rate products and deliveries only", leftovers.targets === 'product,delivery', leftovers.targets);
+const slug = (await one(`select slug from v_product_cards where inventory_id is not null limit 1`)).slug;
+ok("product detail carries exactly one listing", (await anonQ(`select public.product_detail($1) r`, [slug])).offers.length === 1);
+ok("typeahead has no store section", !('stores' in (await anonQ(`select public.search_suggest('amul') r`))));
+await as(CUST);
+const tr6 = (await one(`select public.order_tracking($1::uuid) r`, [Q6.order_id])).r;
+ok("tracking exposes the pickup point, not a store", tr6.pickup?.name === 'Merta Deal' && !('store' in tr6) && tr6.viewer === 'customer', JSON.stringify(tr6.pickup));
+await as(X.user_id);
+const ra6 = (await one(`select public.rider_assignments(array['delivered']) r`)).r.find((a) => a.id === a6.id);
+ok("rider requests carry the pickup point", ra6 && ra6.pickup.lat != null && ra6.pickup.name === 'Merta Deal' && !('store' in ra6), JSON.stringify(ra6?.pickup));
+ok("stock movements are admin-only", (await rls(ADMIN, `select id from inventory_movements limit 1`)).length === 1 && (await rls(cust2, `select id from inventory_movements limit 1`)).length === 0);
+ok("admin dashboard has a to-pack count", typeof (await (async () => { await as(ADMIN); return (await one(`select public.admin_dashboard_stats() r`)).r; })()).to_pack === 'number');
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -17,8 +17,6 @@ const MAX_CREDIT = 100000; // mirrors creditWalletAction's validation
 function roleConsequence(from: Role, to: Role) {
   const parts: string[] = [];
   if (to === "rider") parts.push("A pending delivery partner record is created; approve it under Riders before they can deliver.");
-  if (to === "store_owner") parts.push("They get the store portal. A store still has to be registered and approved before it can sell.");
-  if (to === "store_staff") parts.push("They only get store access once a store owner adds them as staff.");
   if (ADMIN_ROLES.includes(to)) parts.push(to === "super_admin" ? "They get full admin access, including granting admin roles." : "They get full access to this admin panel.");
   if (ADMIN_ROLES.includes(from) && !ADMIN_ROLES.includes(to)) parts.push("They lose admin access immediately.");
   if (to === "customer") parts.push("They keep their orders, wallet and addresses as a customer.");

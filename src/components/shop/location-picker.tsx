@@ -32,7 +32,7 @@ export function LocationPicker({ addresses = [], className, light, variant = "in
   const sp = useSearchParams();
   const [open, setOpen] = React.useState(() => sp.get("pick") === "1");
   const [pincode, setPincode] = React.useState("");
-  const [busy, setBusy] = React.useState<"gps" | "pin" | null>(null);
+  const [busy, setBusy] = React.useState<"gps" | "pin" | "address" | null>(null);
   const [result, setResult] = React.useState<Serviceability | null>(null);
   const hydrated = useHydrated();
 
@@ -126,10 +126,19 @@ export function LocationPicker({ addresses = [], className, light, variant = "in
   const etaLabel = eta ? `${eta.min}–${eta.max} min` : null;
 
   const pickAddress = async (a: Address) => {
-    const s = await check(a.lat && a.lng ? { lat: String(a.lat), lng: String(a.lng), pincode: a.pincode } : { pincode: a.pincode });
-    setResult(s);
-    setLocation({ label: `${a.label ?? a.type[0].toUpperCase() + a.type.slice(1)} · ${a.area}`, area: a.area, pincode: a.pincode, lat: a.lat, lng: a.lng, serviceable: s.serviceable, zoneName: s.zone_name, etaMin: s.eta_min_minutes, etaMax: s.eta_max_minutes, addressId: a.id });
-    if (s.serviceable) setOpen(false);
+    if (busy) return;
+    setBusy("address");
+    try {
+      const s = await check(a.lat && a.lng ? { lat: String(a.lat), lng: String(a.lng), pincode: a.pincode } : { pincode: a.pincode });
+      setResult(s);
+      setLocation({ label: `${a.label ?? a.type[0].toUpperCase() + a.type.slice(1)} · ${a.area}`, area: a.area, pincode: a.pincode, lat: a.lat, lng: a.lng, serviceable: s.serviceable, zoneName: s.zone_name, etaMin: s.eta_min_minutes, etaMax: s.eta_max_minutes, addressId: a.id });
+      if (s.serviceable) setOpen(false);
+    } catch {
+      // Offline or the API is unreachable: say so instead of silently doing nothing.
+      setResult({ serviceable: false, message: "Couldn't check this address. Check your connection and try again." });
+    } finally {
+      setBusy(null);
+    }
   };
 
   return (
@@ -160,28 +169,30 @@ export function LocationPicker({ addresses = [], className, light, variant = "in
         <div className="-mx-5 -mb-5 bg-surface px-5 pb-5 pt-2">
           <form onSubmit={(e) => { e.preventDefault(); checkPin(); }} className="flex gap-2">
             <Input value={pincode} onChange={(e) => setPincode(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" placeholder="Search by pincode (e.g. 341510)" aria-label="Pincode" leftIcon={<Search className="h-4 w-4" />} className="h-12 bg-card" wrapperClassName="flex-1" />
-            <Button type="submit" variant="primary" className="h-12 rounded-xl" loading={busy === "pin"}>Check</Button>
+            <Button type="submit" variant="primary" className="h-12 rounded-xl" loading={busy === "pin"} disabled={busy !== null}>Check</Button>
           </form>
 
           <div className="mt-4 divide-y divide-line rounded-2xl border border-line bg-card">
             <div className="flex items-center gap-4 p-4">
               <LocateFixed className="h-7 w-7 shrink-0 text-brand-700" strokeWidth={1.5} />
-              <div className="min-w-0 flex-1"><p className="text-base font-bold text-brand-700">Use My Current Location</p><p className="text-sm text-ink-3">Enable your current location for better services</p></div>
-              <Button variant="outline" size="sm" className="rounded-lg border-brand-600 text-brand-700" loading={busy === "gps"} onClick={locateMe}>Enable</Button>
+              <div className="min-w-0 flex-1"><p className="text-base font-bold text-brand-700">Use My Current Location</p><p id="loc-gps-hint" className="text-sm text-ink-3">Enable your current location for better services</p></div>
+              <Button variant="outline" size="md" className="rounded-lg border-brand-600 px-4 text-brand-700" loading={busy === "gps"} disabled={busy !== null} onClick={locateMe} aria-describedby="loc-gps-hint">Enable</Button>
             </div>
-            <Link href={signedIn ? "/account/addresses?new=1" : `/login?next=${encodeURIComponent("/account/addresses?new=1")}`} onClick={() => setOpen(false)} className="flex items-center gap-4 p-4 hover:bg-surface">
-              <Plus className="h-7 w-7 shrink-0 text-brand-700" strokeWidth={1.5} />
+            <Link href={signedIn ? "/account/addresses?new=1" : `/login?next=${encodeURIComponent("/account/addresses?new=1")}`} onClick={() => setOpen(false)} className="flex items-center gap-4 p-4 hover:bg-surface focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-brand-600">
+              <Plus className="h-7 w-7 shrink-0 text-brand-700" strokeWidth={1.5} aria-hidden />
               <span className="flex-1 text-base font-bold text-brand-700">Add New Address</span>
-              <ChevronRight className="h-5 w-5 text-ink-3" />
+              <ChevronRight className="h-5 w-5 text-ink-3" aria-hidden />
             </Link>
           </div>
 
-          {result ? (
-            <div className={cn("mt-4 flex items-start gap-2 rounded-xl px-3 py-2.5 text-sm", result.serviceable ? "bg-success-50 text-brand-800" : "bg-danger-50 text-[#8a1f18]")}>
-              {result.serviceable ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> : <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />}
-              <span>{result.serviceable ? `Great news! We deliver to ${result.area} in ${result.eta_min_minutes}-${result.eta_max_minutes} minutes.` : result.message}</span>
-            </div>
-          ) : null}
+          <div role="status" aria-live="polite">
+            {result ? (
+              <div className={cn("mt-4 flex items-start gap-2 rounded-xl px-3 py-2.5 text-sm", result.serviceable ? "bg-success-50 text-brand-800" : "bg-danger-50 text-[#8a1f18]")}>
+                {result.serviceable ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden /> : <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />}
+                <span>{result.serviceable ? `Great news! We deliver to ${result.area} in ${result.eta_min_minutes}-${result.eta_max_minutes} minutes.` : result.message}</span>
+              </div>
+            ) : null}
+          </div>
 
           {addresses.length ? (
             <div className="mt-5">
@@ -189,8 +200,8 @@ export function LocationPicker({ addresses = [], className, light, variant = "in
               <ul className="mt-3 divide-y divide-dashed divide-line-2 rounded-2xl border border-line bg-card">
                 {addresses.map((a) => (
                   <li key={a.id}>
-                    <button type="button" onClick={() => pickAddress(a)} className="flex w-full items-start gap-4 px-4 py-4 text-left hover:bg-surface">
-                      <span className="mt-0.5 shrink-0 text-ink-2">{a.type === "home" ? <Home className="h-6 w-6" strokeWidth={1.5} /> : a.type === "work" ? <Briefcase className="h-6 w-6" strokeWidth={1.5} /> : <MapIcon className="h-6 w-6" strokeWidth={1.5} />}</span>
+                    <button type="button" onClick={() => pickAddress(a)} disabled={busy !== null} className="flex w-full items-start gap-4 px-4 py-4 text-left hover:bg-surface focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-brand-600 disabled:opacity-60">
+                      <span className="mt-0.5 shrink-0 text-ink-2" aria-hidden="true">{a.type === "home" ? <Home className="h-6 w-6" strokeWidth={1.5} /> : a.type === "work" ? <Briefcase className="h-6 w-6" strokeWidth={1.5} /> : <MapIcon className="h-6 w-6" strokeWidth={1.5} />}</span>
                       <span className="min-w-0"><span className="block text-base font-bold text-ink">{a.label ?? a.type[0].toUpperCase() + a.type.slice(1)}</span><span className="line-clamp-2 text-sm text-ink-2">{[a.house, a.street, a.area, a.landmark, `${a.city} – ${a.pincode}`].filter(Boolean).join(", ")}</span></span>
                     </button>
                   </li>

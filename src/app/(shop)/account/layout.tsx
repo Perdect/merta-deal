@@ -13,7 +13,6 @@ export default async function AccountLayout({ children }: { children: React.Reac
   const profile = await getMyProfile();
   if (!profile) redirect("/login?next=/account");
   const workspace: WorkspaceLink[] = [];
-  if (profile.role === "store_owner" || profile.role === "store_staff") workspace.push({ href: "/store", label: "Store dashboard", icon: "store" });
   if (profile.role === "rider") workspace.push({ href: "/rider", label: "Rider app", icon: "bike" });
   if (profile.role === "admin" || profile.role === "super_admin") workspace.push({ href: "/admin", label: "Admin console", icon: "layout" });
   return (

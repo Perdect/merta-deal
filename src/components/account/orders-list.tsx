@@ -14,9 +14,9 @@ const TABS = [{ v: "all", l: "All" }, { v: "active", l: "Active" }, { v: "past",
 export function OrdersList({ orders, tab, base = "/account/orders" }: { orders: OrderListItem[]; tab: string; base?: string }) {
   return (
     <div className="space-y-3">
-      <div className="flex w-fit gap-1 rounded-full bg-surface-2 p-1">
-        {TABS.map((t) => <Link key={t.v} href={`${base}?tab=${t.v}`} className={cn("tap rounded-full px-4 py-1.5 text-sm font-semibold", tab === t.v ? "bg-card text-ink shadow-card" : "text-ink-3")}>{t.l}</Link>)}
-      </div>
+      <nav aria-label="Order filter" className="flex w-fit gap-1 rounded-full bg-surface-2 p-1">
+        {TABS.map((t) => <Link key={t.v} href={`${base}?tab=${t.v}`} aria-current={tab === t.v ? "page" : undefined} className={cn("tap inline-flex min-h-9 items-center rounded-full px-4 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600", tab === t.v ? "bg-card text-ink shadow-card" : "text-ink-3")}>{t.l}</Link>)}
+      </nav>
       {orders.length === 0 ? (
         <EmptyState icon={<Package className="h-7 w-7" />} title={tab === "active" ? "No active orders" : "No orders yet"} description="Your orders and live tracking will show up here." action={<Button href="/categories">Start shopping</Button>} />
       ) : (
@@ -27,10 +27,10 @@ export function OrdersList({ orders, tab, base = "/account/orders" }: { orders: 
             const done = o.status === "delivered" || o.status === "completed";
             return (
               <li key={o.id} className="overflow-hidden rounded-2xl border border-line bg-card shadow-card">
-                <Link href={`/orders/${o.id}`} className="block p-4 md:p-5">
+                <Link href={`/orders/${o.id}`} aria-label={`Order ${o.order_number}, ${meta.label.toLowerCase()}, ${formatINR(o.total)}`} className="block p-4 md:p-5 focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-brand-600">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="flex items-center gap-1.5 font-display text-base font-bold text-ink">Order {meta.label.toLowerCase()} <Icon className={cn("h-4 w-4", meta.tone === "success" ? "text-success" : meta.tone === "danger" ? "text-danger" : "text-info")} /></p>
+                      <p className="flex items-center gap-1.5 font-display text-base font-bold text-ink">Order {meta.label.toLowerCase()} <Icon className={cn("h-4 w-4", meta.tone === "success" ? "text-success" : meta.tone === "danger" ? "text-danger" : "text-info")} aria-hidden /></p>
                       <p className="mt-0.5 text-sm text-ink-3">Placed at {formatDateTime(o.created_at)}</p>
                     </div>
                     <p className="inline-flex shrink-0 items-center gap-0.5 font-display text-base font-bold text-ink">{formatINR(o.total)} <ChevronRight className="h-4 w-4 text-ink-3" /></p>
@@ -42,7 +42,7 @@ export function OrdersList({ orders, tab, base = "/account/orders" }: { orders: 
                   <p className="mt-2 text-xs text-ink-3">{o.item_count} item{o.item_count === 1 ? "" : "s"} · {o.order_number}</p>
                 </Link>
                 <div className={cn("grid border-t border-line", done ? "grid-cols-2 divide-x divide-line" : "grid-cols-1")}>
-                  {done ? <Link href={`/orders/${o.id}#review`} className="py-3 text-center text-sm font-bold text-ink hover:bg-surface">Rate order</Link> : null}
+                  {done ? <Link href={`/orders/${o.id}#review`} className="flex min-h-12 items-center justify-center py-3 text-center text-sm font-bold text-ink hover:bg-surface focus-visible:-outline-offset-2 focus-visible:outline-2 focus-visible:outline-brand-600">Rate order</Link> : null}
                   <ReorderButton orderId={o.id} label="Order Again" variant="ghost" className="h-auto w-full rounded-none py-3 text-sm font-bold text-brand-700 hover:bg-surface" />
                 </div>
               </li>

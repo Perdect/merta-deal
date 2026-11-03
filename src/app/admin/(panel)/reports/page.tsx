@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BadgePercent, Bike, Clock, IndianRupee, Package, Receipt, ShoppingBag, Store as StoreIcon, Ticket, Truck, UserPlus, Wallet, XCircle } from "lucide-react";
+import { Bike, Clock, FolderTree, IndianRupee, Package, Receipt, ShoppingBag, Ticket, Truck, UserPlus, Wallet, XCircle } from "lucide-react";
 import { getReport, spGet, type SP, type AdminReport } from "@/lib/data/admin";
 import { pctChange } from "@/lib/data/admin-dashboard";
 import { AdminPageHeader, Panel, MetricCard, DataTable, CellStack, EmptyBlock, ErrorBlock, TrendChart, BreakdownBar, paymentMethodLabel, rupees, rupeesRounded } from "@/components/admin/kit";
@@ -44,7 +44,7 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
 
   return (
     <>
-      <AdminPageHeader title="Reports" description="Orders, money and partner performance for any date range. Export to CSV for accounting."
+      <AdminPageHeader title="Reports" description="Orders, money and rider performance for any date range. Export to CSV for accounting."
         actions={<ReportExportButton report={report} start={start} end={end} />} />
       <ReportRangeControls start={start} end={end} today={today} />
 
@@ -70,13 +70,12 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
               <MetricCard label="Cancellation rate" period={period} value={cancelRate == null ? "—" : `${cancelRate}%`} icon={XCircle} hint={`${formatNumber(r.cancelled)} cancelled or rejected`} tone={cancelRate ? "attention" : "default"} change={cancelChange ? { ...cancelChange, label: `cancelled orders ${vs}` } : null} />
             </section>
 
-            <h2 className="mb-2 mt-5 text-[13px] font-semibold text-ink-2">Platform money <span className="font-normal text-ink-4">· delivered orders</span></h2>
-            <section aria-label="Platform money" className="grid grid-cols-2 gap-3 xl:grid-cols-3 2xl:grid-cols-6">
-              <MetricCard label="Net platform revenue" period={period} value={rupeesRounded(r.net_revenue)} icon={Wallet} hint="Commission + fees − rider pay" change={change(Number(r.net_revenue), prev ? Number(prev.net_revenue) : undefined)} />
-              <MetricCard label="Commission" period={period} value={rupeesRounded(r.commission)} icon={BadgePercent} change={change(Number(r.commission), prev ? Number(prev.commission) : undefined)} />
+            <h2 className="mb-2 mt-5 text-[13px] font-semibold text-ink-2">Money <span className="font-normal text-ink-4">· delivered orders</span></h2>
+            <section aria-label="Money" className="grid grid-cols-2 gap-3 xl:grid-cols-3 2xl:grid-cols-6">
+              <MetricCard label="Net revenue" period={period} value={rupeesRounded(r.net_revenue)} icon={Wallet} hint="Order totals − rider pay" change={change(Number(r.net_revenue), prev ? Number(prev.net_revenue) : undefined)} />
+              <MetricCard label="Item sales" period={period} value={rupeesRounded(r.item_sales)} icon={IndianRupee} hint="After coupon discounts" change={change(Number(r.item_sales), prev ? Number(prev.item_sales) : undefined)} />
               <MetricCard label="Delivery fees" period={period} value={rupeesRounded(r.delivery_fees)} icon={Truck} hint={`Rider pay ${rupeesRounded(r.rider_earnings)}`} />
               <MetricCard label="Platform fees" period={period} value={rupeesRounded(r.platform_fees)} icon={Receipt} hint={`GST on fees ${rupees(r.taxes)}`} />
-              <MetricCard label="Store payouts due" period={period} value={rupeesRounded(r.store_payouts)} icon={StoreIcon} hint="Earned by stores" />
               <MetricCard label="Coupon discounts" period={period} value={rupeesRounded(r.coupon_discounts)} icon={Ticket} hint="Excludes cancelled orders" />
             </section>
 
@@ -106,15 +105,13 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
                     { key: "rev", header: "Revenue", align: "right", render: (p) => <span className="font-semibold tabular">{rupeesRounded(p.revenue)}</span> },
                   ]} />
               </Panel>
-              <Panel title="Top stores" description={`${period} · by sales`} flush>
-                <DataTable caption="Top stores" className={tableCls} maxHeight={null} rows={r.top_stores} rowKey={(s) => s.store_id}
-                  empty={<EmptyBlock icon={StoreIcon} title="No store orders in this range" />}
+              <Panel title="Top categories" description={`${period} · by sales`} flush>
+                <DataTable caption="Top categories" className={tableCls} maxHeight={null} rows={r.top_categories} rowKey={(c) => c.category_id}
+                  empty={<EmptyBlock icon={FolderTree} title="No sales in this range" />}
                   columns={[
-                    { key: "name", header: "Store", render: (s) => <CellStack primary={s.name} href={`/admin/stores/${s.store_id}`} /> },
-                    { key: "orders", header: "Orders", align: "right", render: (s) => <span className="tabular text-ink-2">{formatNumber(s.orders)}</span> },
-                    { key: "gmv", header: "Sales", align: "right", render: (s) => <span className="font-semibold tabular">{rupeesRounded(s.gmv)}</span> },
-                    { key: "comm", header: "Commission", align: "right", hideBelow: "md", render: (s) => <span className="tabular text-ink-3">{rupeesRounded(s.commission)}</span> },
-                    { key: "cancel", header: "Cancelled", align: "right", hideBelow: "lg", render: (s) => <span className="tabular text-ink-3">{formatNumber(s.cancelled)}</span> },
+                    { key: "name", header: "Category", render: (c) => <CellStack primary={c.name} href={`/admin/products?category=${c.category_id}`} /> },
+                    { key: "qty", header: "Sold", align: "right", render: (c) => <span className="tabular text-ink-2">{formatNumber(c.quantity)}</span> },
+                    { key: "rev", header: "Sales", align: "right", render: (c) => <span className="font-semibold tabular">{rupeesRounded(c.revenue)}</span> },
                   ]} />
               </Panel>
             </div>
@@ -131,7 +128,7 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
                   { key: "earn", header: "Earnings", align: "right", render: (x) => <span className="font-semibold tabular">{rupeesRounded(x.earnings)}</span> },
                 ]} />
             </Panel>
-            <p className="mt-4 text-xs text-ink-4">Figures come straight from orders and deliveries; nothing is estimated. <Link href="/admin/payouts" className="font-medium text-brand-700 hover:underline">Payouts</Link> settle store earnings.</p>
+            <p className="mt-4 text-xs text-ink-4">Figures come straight from orders and deliveries; nothing is estimated. <Link href="/admin/payouts/riders" className="font-medium text-brand-700 hover:underline">Rider payouts</Link> settle what riders are owed.</p>
           </>
         );
       })()}
