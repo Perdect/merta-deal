@@ -21,7 +21,7 @@ import { LoginArt } from "./login-art";
  * guest never loses their place. When a guest session exists its id is sent along so the server
  * can carry the guest cart over to the account (merge_guest_cart).
  */
-export function LoginModal({ open, onClose, eta, guest, onGuestContinue }: { open: boolean; onClose: () => void; eta: string; guest?: boolean; onGuestContinue?: () => void }) {
+export function LoginModal({ open, onClose, eta, guest, onGuestContinue, title = "Login to start ordering" }: { open: boolean; onClose: () => void; eta: string; guest?: boolean; onGuestContinue?: () => void; /** Heading, e.g. "Login to place your order" from the cart. */ title?: string }) {
   const pathname = usePathname();
   const hydrated = useHydrated();
   const [state, formAction, pending] = React.useActionState<AuthResult | null, FormData>(signInAction, null);
@@ -29,9 +29,10 @@ export function LoginModal({ open, onClose, eta, guest, onGuestContinue }: { ope
   const [step, setStep] = React.useState<"mobile" | "pin">("mobile");
   const [guestId, setGuestId] = React.useState("");
 
+  // The guest session's id goes along with the sign-in so the server can hand its cart and addresses to the account.
   React.useEffect(() => {
-    if (!open || !guest) return;
-    createClient().auth.getUser().then(({ data }) => setGuestId(data.user?.id ?? "")).catch(() => {});
+    if (!open) return;
+    createClient().auth.getUser().then(({ data }) => setGuestId(data.user?.is_anonymous ? data.user.id : "")).catch(() => {});
   }, [open, guest]);
   // Scroll lock (iOS-safe), Escape, focus trap, focus return and Back-closes-it — shared with Modal.
   const dialogRef = useDialog(open, onClose);
@@ -55,7 +56,7 @@ export function LoginModal({ open, onClose, eta, guest, onGuestContinue }: { ope
         <div className="relative px-5 pb-[calc(1.5rem+var(--safe-bottom))] pt-5 sm:px-8 sm:py-8">
           <div className="flex justify-center"><LogoMark size={52} /></div>
           <p className="mt-3 text-center text-xs font-bold uppercase tracking-wide text-brand-700 sm:mt-4">Customer login</p>
-          <h2 id="login-modal-title" className="mt-1 text-center font-display text-xl font-bold leading-tight text-ink sm:text-2xl">Login to start ordering</h2>
+          <h2 id="login-modal-title" className="mt-1 text-center font-display text-xl font-bold leading-tight text-ink sm:text-2xl">{title}</h2>
 
           <form action={formAction} className="mt-6 space-y-4">
             <input type="hidden" name="next" value={pathname} />

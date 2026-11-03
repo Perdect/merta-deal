@@ -14,9 +14,10 @@ const CartDrawer = dynamic(() => import("./cart-drawer").then((m) => m.CartDrawe
  */
 export function CartDrawerLazy(props: Props) {
   const drawer = useCartStore((s) => s.drawer);
+  const sheet = useCartStore((s) => s.sheet);
   const hasItems = useCartStore((s) => Boolean(s.summary?.items.length));
   const [wanted, setWanted] = React.useState(false);
-  if ((drawer || hasItems) && !wanted) setWanted(true);
+  if ((drawer || sheet || hasItems) && !wanted) setWanted(true);
   React.useEffect(() => {
     const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number; cancelIdleCallback?: (id: number) => void };
     const id = w.requestIdleCallback ? w.requestIdleCallback(() => { void import("./cart-drawer"); }, { timeout: 4000 }) : window.setTimeout(() => { void import("./cart-drawer"); }, 2500);

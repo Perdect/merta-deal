@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/states";
 import { toast } from "@/components/ui/toast";
 import { safeNext } from "@/lib/safe-next";
+import { createClient } from "@/lib/supabase/client";
 
 /** Sign in with mobile number + 6-digit PIN. OTP login appears only when the project has an SMS provider. */
 export function LoginForm({ next, phoneEnabled, guestEnabled, confirmed }: { next?: string; phoneEnabled: boolean; guestEnabled: boolean; confirmed?: boolean }) {
@@ -20,6 +21,9 @@ export function LoginForm({ next, phoneEnabled, guestEnabled, confirmed }: { nex
   const [otpMode, setOtpMode] = React.useState(false);
   const [otp, setOtp] = React.useState(""); const [otpSent, setOtpSent] = React.useState(false); const [busy, setBusy] = React.useState(false);
   const [guestBusy, setGuestBusy] = React.useState(false);
+  // A guest (anonymous session) signing in keeps their cart and addresses: the id lets the server merge them.
+  const [guestId, setGuestId] = React.useState("");
+  React.useEffect(() => { createClient().auth.getUser().then(({ data }) => setGuestId(data.user?.is_anonymous ? data.user.id : "")).catch(() => {}); }, []);
 
   const sendOtp = async () => { setBusy(true); const r = await sendPhoneOtpAction(mobile); setBusy(false); if (r.ok) { setOtpSent(true); toast.success("OTP sent to +91 " + mobile); } else toast.error(r.error); };
   const verify = async () => { setBusy(true); const r = await verifyPhoneOtpAction(mobile, otp); setBusy(false); if (r.ok) router.replace(safeNext(next, r.redirectTo ?? "/")); else toast.error(r.error); };
@@ -43,6 +47,7 @@ export function LoginForm({ next, phoneEnabled, guestEnabled, confirmed }: { nex
       ) : (
         <form action={formAction} className="mt-5 space-y-4">
           <input type="hidden" name="next" value={next ?? ""} />
+          <input type="hidden" name="guestUserId" value={guestId} />
           <Input name="mobile" type="tel" inputMode="numeric" label="Mobile number" autoComplete="tel-national" required maxLength={10} value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))} leftIcon={<span className="text-sm font-semibold text-ink-3">+91</span>} className="pl-12" error={fieldErr("mobile")} placeholder="10-digit mobile number" />
           <Input name="password" type={showPw ? "text" : "password"} label="6-digit PIN" inputMode="numeric" maxLength={6} pattern="[0-9]{6}" placeholder="6 digits" autoComplete="current-password" required onInput={(e) => { const t = e.currentTarget; t.value = t.value.replace(/\D/g, "").slice(0, 6); }} leftIcon={<Lock className="h-4 w-4" />} error={fieldErr("password")}
             rightSlot={<button type="button" onClick={() => setShowPw((v) => !v)} aria-label={showPw ? "Hide PIN" : "Show PIN"} className="flex h-8 w-8 items-center justify-center rounded-full text-ink-3 hover:bg-surface-2">{showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>} />

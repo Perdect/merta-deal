@@ -12,11 +12,15 @@ type CartState = {
   pending: Record<string, number>; // inventory_id -> optimistic qty
   /** Slide-in cart panel: closed, the cart itself, or the payment step. */
   drawer: null | "cart" | "pay";
+  /** Sheets that can open over any page (the cart panel owns them): pick/add an address, or sign in. */
+  sheet: null | "address" | "login";
   /** Explanation shown at the top of the cart until dismissed (e.g. what a reorder changed). */
   notice: { title: string; lines: string[] } | null;
   setNotice: (n: { title: string; lines: string[] } | null) => void;
   openDrawer: (step?: "cart" | "pay") => void;
   closeDrawer: () => void;
+  openSheet: (sheet: "address" | "login") => void;
+  closeSheet: () => void;
   setSummary: (s: CartSummary | null) => void;
   setLoading: (v: boolean) => void;
   setPending: (inventoryId: string, qty: number | null) => void;
@@ -29,10 +33,13 @@ export const useCartStore = create<CartState>((set, get) => ({
   loading: false,
   pending: {},
   drawer: null,
+  sheet: null,
   notice: null,
   setNotice: (notice) => set({ notice }),
   openDrawer: (step = "cart") => set({ drawer: step }),
   closeDrawer: () => set({ drawer: null }),
+  openSheet: (sheet) => set({ sheet }),
+  closeSheet: () => set({ sheet: null }),
   setSummary: (summary) => set({ summary }),
   setLoading: (loading) => set({ loading }),
   setPending: (inventoryId, qty) => set((s) => {

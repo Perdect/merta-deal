@@ -2,15 +2,21 @@
 import * as React from "react";
 import { LocateFixed, Home, Briefcase, MapPin } from "lucide-react";
 import { saveAddressAction, type AddressInput } from "@/lib/actions/checkout";
-import type { Address } from "@/types/app";
+import type { Address, Serviceability } from "@/types/app";
 import { Button } from "@/components/ui/button";
 import { Input, Checkbox } from "@/components/ui/input";
+import { Alert } from "@/components/ui/states";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { site } from "@/config/site";
 
 const TYPES = [{ v: "home", label: "Home", icon: Home }, { v: "work", label: "Work", icon: Briefcase }, { v: "other", label: "Other", icon: MapPin }] as const;
 
+/**
+ * Address details: house / flat, street or area, optional landmark, receiver and phone, Home / Work /
+ * Other. Before saving, the address is checked against the delivery zones (by pin, else by pincode)
+ * so an address we cannot deliver to is never saved as the delivery address.
+ */
 export function AddressForm({ initial, onSaved, onCancel, defaultName, defaultPhone }: { initial?: Partial<Address>; onSaved: (a: Address) => void; onCancel?: () => void; defaultName?: string | null; defaultPhone?: string | null }) {
   const [form, setForm] = React.useState<AddressInput>({
     id: initial?.id, type: initial?.type ?? "home", label: initial?.label ?? "", full_name: initial?.full_name ?? defaultName ?? "", phone: initial?.phone ?? defaultPhone ?? "",
@@ -18,9 +24,12 @@ export function AddressForm({ initial, onSaved, onCancel, defaultName, defaultPh
     lat: initial?.lat ?? null, lng: initial?.lng ?? null, is_default: initial?.is_default ?? false,
   });
   const [errors, setErrors] = React.useState<Record<string, string>>({});
+  const [areaError, setAreaError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [locating, setLocating] = React.useState(false);
   const set = (k: keyof AddressInput, v: unknown) => setForm((f) => ({ ...f, [k]: v }));
+  // A "Guest" placeholder name is not a receiver's name.
+  const nameValue = form.full_name === "Guest" ? "" : form.full_name;
 
   const locate = () => {
     if (!navigator.geolocation) { toast.error("Location is not supported on this device"); return; }
@@ -36,9 +45,15 @@ export function AddressForm({ initial, onSaved, onCancel, defaultName, defaultPh
       } catch { toast.info("Location pinned", "Please type your house and area details."); }
       setLocating(false);
     }, (err) => {
-      toast.error(err.code === err.PERMISSION_DENIED ? "Location permission is blocked. Allow it in your browser settings." : "Could not get your location. Type the address instead.");
+      toast.error(err.code === err.PERMISSION_DENIED ? "Location permission is blocked. You can still type the address below." : "Could not get your location. Type the address instead.");
       setLocating(false);
     }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 });
+  };
+
+  /** Delivery-area check (the same zone lookup the cart and place_order use). Null = could not check. */
+  const checkArea = async (): Promise<Serviceability | null> => {
+    const q = new URLSearchParams(form.lat != null && form.lng != null ? { lat: String(form.lat), lng: String(form.lng), pincode: String(form.pincode) } : { pincode: String(form.pincode) });
+    try { return (await (await fetch(`/api/location/serviceability?${q}`)).json()) as Serviceability; } catch { return null; }
   };
 
   // Typed values stay in `form` whatever the outcome: a failed save only adds field errors. `busy`
@@ -47,9 +62,15 @@ export function AddressForm({ initial, onSaved, onCancel, defaultName, defaultPh
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (busy) return;
-    setBusy(true); setErrors({});
+    setBusy(true); setErrors({}); setAreaError(null);
     try {
-      const r = await saveAddressAction(form);
+      if (!/^[1-9][0-9]{5}$/.test(String(form.pincode))) { setErrors({ pincode: "Enter a valid 6-digit pincode" }); return; }
+      const area = await checkArea();
+      if (area && !area.serviceable) {
+        setAreaError(area.message ?? `Sorry, ${site.name} doesn't deliver to this address yet.`);
+        return;
+      }
+      const r = await saveAddressAction({ ...form, full_name: nameValue });
       if (!r.ok) { setErrors(r.fieldErrors ?? {}); toast.error(r.error); return; }
       toast.success("Address saved"); onSaved(r.data);
     } catch {
@@ -61,22 +82,24 @@ export function AddressForm({ initial, onSaved, onCancel, defaultName, defaultPh
 
   return (
     <form onSubmit={submit} className="space-y-4">
-      <div className="grid grid-cols-3 gap-2" role="group" aria-label="Address type">
+      <div className="grid grid-cols-3 gap-2" role="group" aria-label="Save address as">
         {TYPES.map(({ v, label, icon: Icon }) => (
           <button key={v} type="button" aria-pressed={form.type === v} onClick={() => set("type", v)} className={cn("flex h-11 items-center justify-center gap-2 rounded-sm border text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600", form.type === v ? "border-brand-600 bg-brand-50 text-brand-700" : "border-line-2 bg-card text-ink-2")}><Icon className="h-4 w-4" aria-hidden />{label}</button>
         ))}
       </div>
       <Button type="button" variant="secondary" fullWidth loading={locating} onClick={locate}><LocateFixed className="h-4 w-4" /> {form.lat ? "Location pinned · Update GPS" : "Use current location (GPS)"}</Button>
-      {/* Only what a rider needs: house, area, receiver and phone; city and pincode come prefilled. Street/landmark already saved on an address are kept. */}
       <div className="grid gap-3 sm:grid-cols-2">
         <Input label="House / Flat / Shop no." required value={form.house} onChange={(e) => set("house", e.target.value)} error={errors.house} placeholder="e.g. 12, First floor" autoComplete="address-line1" />
         <Input label="Area / Colony" required value={form.area} onChange={(e) => set("area", e.target.value)} error={errors.area} placeholder="e.g. Sadar Bazaar" autoComplete="address-level3" />
-        <Input label="Receiver's name" required value={form.full_name} onChange={(e) => set("full_name", e.target.value)} error={errors.full_name} autoComplete="name" />
-        <Input label="Mobile number" required inputMode="numeric" value={form.phone} onChange={(e) => set("phone", e.target.value.replace(/\D/g, "").slice(0, 10))} error={errors.phone} autoComplete="tel-national" placeholder="10-digit number" />
+        <Input label="Street / Road (optional)" value={form.street ?? ""} onChange={(e) => set("street", e.target.value)} error={errors.street} placeholder="e.g. Station Road" autoComplete="address-line2" />
+        <Input label="Landmark (optional)" value={form.landmark ?? ""} onChange={(e) => set("landmark", e.target.value)} error={errors.landmark} placeholder="e.g. opposite SBI bank" hint="Helps the rider find you faster." />
+        <Input label="Receiver's name" required value={nameValue} onChange={(e) => set("full_name", e.target.value)} error={errors.full_name} autoComplete="name" />
+        <Input label="Mobile number" required inputMode="numeric" value={form.phone} onChange={(e) => set("phone", e.target.value.replace(/\D/g, "").slice(0, 10))} error={errors.phone} autoComplete="tel-national" placeholder="10-digit number" hint="The rider calls this number." />
         <Input label="City" required value={form.city} onChange={(e) => set("city", e.target.value)} error={errors.city} autoComplete="address-level2" />
         <Input label="Pincode" required inputMode="numeric" value={form.pincode} onChange={(e) => set("pincode", e.target.value.replace(/\D/g, "").slice(0, 6))} error={errors.pincode} autoComplete="postal-code" />
         {form.type === "other" ? <Input label="Label" value={form.label ?? ""} onChange={(e) => set("label", e.target.value)} placeholder="e.g. Mom's house" /> : null}
       </div>
+      {areaError ? <div role="alert"><Alert tone="danger" title="Outside our delivery area">{areaError} We deliver in {site.city} (pincodes {site.servicePincodes.join(", ")}).</Alert></div> : null}
       <Checkbox label="Make this my default address" checked={Boolean(form.is_default)} onChange={(e) => set("is_default", e.target.checked)} />
       <div className="flex gap-2">
         {onCancel ? <Button type="button" variant="outline" onClick={onCancel} disabled={busy} className="flex-1">Cancel</Button> : null}

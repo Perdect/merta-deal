@@ -5,21 +5,22 @@ import Script from "next/script";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, X, Clock, TicketPercent, ReceiptText, Check, Plus, Home, Briefcase, MapPin, Zap, CalendarClock, Smartphone, CreditCard, Landmark, Wallet, Banknote, ShoppingBag, BadgePercent, Truck } from "lucide-react";
-import type { Address, CartLine, DeliveryType, PaymentMethod, ProductCard as ProductCardType } from "@/types/app";
-import { acknowledgeCartPricesAction, applyCouponAction, getCartSummary, removeCouponAction } from "@/lib/actions/cart";
+import type { Address, CartLine, PaymentMethod, ProductCard as ProductCardType } from "@/types/app";
+import { applyCouponAction, getCartSummary, removeCouponAction } from "@/lib/actions/cart";
 import { packLimit, setLineQuantity } from "@/lib/cart-sync";
 import { placeOrderAction } from "@/lib/actions/checkout";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useCartStore } from "@/stores/cart-store";
+import { useCheckoutStore } from "@/stores/checkout-store";
 import { useLocationStore } from "@/stores/location-store";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
-import { Modal } from "@/components/ui/overlay";
 import { Alert } from "@/components/ui/states";
 import { QuantityStepper } from "@/components/ui/misc";
 import { toast } from "@/components/ui/toast";
-import { AddressWizard } from "./address-wizard";
+import { AddressSheet, addressLine, addressTitle } from "./address-sheet";
+import { DeliveryAddressRow, useCheckoutGate } from "./checkout-gate";
 import { ProductImage } from "./product-image";
 import { ProductCard } from "./product-card";
 import { LoginModal } from "@/components/auth/login-modal";
@@ -62,32 +63,39 @@ function PayRow({ id, current, onPick, icon, title, sub, disabled }: { id: Payme
 
 /**
  * The cart as a slide-in panel over whatever page the customer is on, with the payment step as a
- * second screen inside the same panel. All totals come from cart_summary; placing the order goes
- * through place_order — this component only arranges them.
+ * second screen inside the same panel. The order of steps is shop → address → sign in → pay (see
+ * useCheckoutGate): guests fill the cart and pick an address first and are only asked to sign in at
+ * "Proceed to Pay". All totals come from cart_summary for the chosen address; placing the order goes
+ * through place_order — this component only arranges them. The address and sign-in sheets live here
+ * too and open from any page (cart store `sheet`), the panel itself need not be open.
  */
-export function CartDrawer({ signedIn, isGuest, addresses: initialAddresses, walletBalance, razorpayEnabled, codEnabled, slots, coupons, user, eta }: Props) {
+export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, walletBalance, razorpayEnabled, codEnabled, slots, coupons, user, eta }: Props) {
   const router = useRouter();
   const hydrated = useHydrated();
   const step = useCartStore((s) => s.drawer);
   const openDrawer = useCartStore((s) => s.openDrawer);
   const closeDrawer = useCartStore((s) => s.closeDrawer);
+  const sheet = useCartStore((s) => s.sheet);
+  const openSheet = useCartStore((s) => s.openSheet);
+  const closeSheet = useCartStore((s) => s.closeSheet);
   const leavingForOrder = useBackToClose(Boolean(step), closeDrawer);
   const summary = useCartStore((s) => s.summary);
   const setSummary = useCartStore((s) => s.setSummary);
   const location = useLocationStore((s) => s.location);
 
-  // Addresses come from the server (and change when one is saved in the account area); ones added
-  // from this panel are merged in until the layout re-renders with them. The chosen address falls
-  // back to the default / first one, so a stale selection can never point at a deleted row.
-  const [added, setAdded] = React.useState<Address[]>([]);
-  const addresses = React.useMemo(() => [...added.filter((a) => !initialAddresses.some((x) => x.id === a.id)), ...initialAddresses], [added, initialAddresses]);
-  const [chosenId, setChosenId] = React.useState<string | null>(null);
-  const addressId = chosenId && addresses.some((a) => a.id === chosenId) ? chosenId : (addresses.find((a) => a.is_default)?.id ?? addresses[0]?.id ?? null);
-  const setAddressId = setChosenId;
-  const [deliveryType, setDeliveryType] = React.useState<DeliveryType>("standard");
+  const setAddressId = useCheckoutStore((s) => s.setAddressId);
+  const addAddress = useCheckoutStore((s) => s.addAddress);
+  const deliveryType = useCheckoutStore((s) => s.deliveryType);
+  const setDeliveryType = useCheckoutStore((s) => s.setDeliveryType);
+  const instructions = useCheckoutStore((s) => s.instructions);
+  const setInstructions = useCheckoutStore((s) => s.setInstructions);
+  const resume = useCheckoutStore((s) => s.resume);
+  const setResume = useCheckoutStore((s) => s.setResume);
+  const gate = useCheckoutGate({ summary, addresses: serverAddresses, signedIn, isGuest });
+  const { addresses, addressId, selectedAddress } = gate;
+
   const [slot, setSlot] = React.useState(slots[0] ?? "");
   const [payment, setPayment] = React.useState<PaymentMethod>(codEnabled ? "cod" : razorpayEnabled ? "upi" : "wallet");
-  const [instructions, setInstructions] = React.useState("");
   const pending = useCartStore((st) => st.pending);
   const notice = useCartStore((st) => st.notice);
   const setNotice = useCartStore((st) => st.setNotice);
@@ -95,8 +103,6 @@ export function CartDrawer({ signedIn, isGuest, addresses: initialAddresses, wal
   const [code, setCode] = React.useState("");
   const [couponBusy, setCouponBusy] = React.useState(false);
   const [placing, setPlacing] = React.useState(false);
-  const [addOpen, setAddOpen] = React.useState(false);
-  const [loginOpen, setLoginOpen] = React.useState(false);
   const [suggestions, setSuggestions] = React.useState<ProductCardType[]>([]);
 
   const s = summary;
@@ -104,6 +110,9 @@ export function CartDrawer({ signedIn, isGuest, addresses: initialAddresses, wal
   if (deliveryType === "express" && s && !s.zone?.express_supported) setDeliveryType("standard");
   const items = s?.items ?? [];
   const open = Boolean(step);
+  const account = signedIn && !isGuest;
+  // The payment step needs an account: a guest who lands here (e.g. Back after signing out) goes to the cart.
+  React.useEffect(() => { if (step === "pay" && !account) openDrawer("cart"); }, [step, account, openDrawer]);
   React.useEffect(() => {
     if (!open) return;
     document.body.style.overflow = "hidden";
@@ -112,10 +121,17 @@ export function CartDrawer({ signedIn, isGuest, addresses: initialAddresses, wal
     return () => { document.body.style.overflow = ""; window.removeEventListener("keydown", onKey); };
   }, [open, closeDrawer]);
 
-  // Fresh totals whenever the panel opens or the delivery choice changes (fees depend on address + type).
+  // A guest sent to sign in from "Proceed to Pay" comes back signed in: continue to the payment step
+  // with the cart and address they had (merge_guest_cart moved both to the account).
+  React.useEffect(() => {
+    if (resume === "pay" && account && hydrated) { setResume(null); closeSheet(); openDrawer("pay"); }
+  }, [resume, account, hydrated, setResume, closeSheet, openDrawer]);
+
+  // Fresh totals whenever the panel opens, the address changes or the delivery option changes: the
+  // delivery fee, ETA and serviceability all depend on the address, on the cart step too.
   React.useEffect(() => {
     if (!open || !signedIn) return;
-    getCartSummary(step === "pay" ? addressId : null, step === "pay" ? deliveryType : "standard").then((s) => { if (s) setSummary(s); });
+    getCartSummary(addressId, deliveryType).then((s) => { if (s) setSummary(s); });
   }, [open, step, addressId, deliveryType, signedIn, setSummary]);
 
   // "You might also like": popular in-stock items, loaded once per drawer session.
@@ -127,7 +143,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: initialAddresses, wal
     fetch(`/api/search?sort=popular&inStock=1`).then((r) => r.json()).then((d: { items?: ProductCardType[] }) => setSuggestions(d.items ?? [])).catch(() => {});
   }, [step, hasItems]);
 
-  const refresh = async () => setSummary(await getCartSummary(step === "pay" ? addressId : null, step === "pay" ? deliveryType : "standard"));
+  const refresh = async () => setSummary(await getCartSummary(addressId, deliveryType));
   // Quantity changes go through the shared queue (optimistic, merged taps, server-checked limits).
   const onQty = (line: CartLine, qty: number) => {
     const lim = packLimit(line.max_order_qty, line.stock_qty);
@@ -141,14 +157,12 @@ export function CartDrawer({ signedIn, isGuest, addresses: initialAddresses, wal
   const deliveryWaived = Number(s?.delivery_fee_waived ?? 0);
   const savings = s ? s.item_savings + s.coupon_discount + deliveryWaived : 0;
   const etaLabel = s?.eta_max_minutes ? `${s.eta_min_minutes}–${s.eta_max_minutes}` : hydrated && location?.etaMax ? `${location.etaMin}–${location.etaMax}` : `${eta.min}–${eta.max}`;
-  const selectedAddress = addresses.find((a) => a.id === addressId) ?? null;
-  const headerLine = selectedAddress ? `${selectedAddress.label ?? selectedAddress.type[0].toUpperCase() + selectedAddress.type.slice(1)} · ${selectedAddress.house}, ${selectedAddress.area}` : hydrated && location ? location.label : `Delivering across ${site.city}`;
+  const headerLine = selectedAddress ? `${addressTitle(selectedAddress)} · ${addressLine(selectedAddress)}` : hydrated && location ? location.label : `Delivering across ${site.city}`;
   const walletOk = walletBalance >= (s?.total ?? 0);
 
-  const cartBlocker = !s ? null : !s.meets_min_order ? `Minimum order is ${formatINR(s.min_order_amount)}. Add ${formatINR(s.min_order_amount - s.subtotal)} more to continue.` : s.issues.length ? "Some items are no longer available in the quantity you chose. Update the quantities to continue." : null;
   const payBlocker = !s ? null : !addressId ? "Select or add a delivery address to continue."
     : !s.serviceable ? (s.service_message ?? "We don't deliver to this address yet.")
-    : cartBlocker ? cartBlocker
+    : gate.cartBlocker ? gate.cartBlocker
     : deliveryType === "scheduled" && !slot ? "Pick a delivery slot to continue."
     : payment === "wallet" && !walletOk ? "Your wallet balance doesn't cover this order. Choose another payment method."
     : ONLINE.includes(payment) && !razorpayEnabled ? "Online payment isn't available yet. Choose Cash on Delivery."
@@ -160,6 +174,8 @@ export function CartDrawer({ signedIn, isGuest, addresses: initialAddresses, wal
     return { scheduledStart: mk(a), scheduledEnd: mk(b) };
   };
 
+  // One order per tap: `placingRef` blocks re-entry while the request is in flight (the button also
+  // shows a spinner); place_order itself is transactional, so a retry after a failure is safe.
   const place = async () => {
     if (!addressId || !s || placingRef.current) return;
     placingRef.current = true; setPlacing(true);
@@ -172,7 +188,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: initialAddresses, wal
       placingRef.current = false; setPlacing(false); return;
     }
     const order = res.data;
-    const done = (q: string) => { leavingForOrder(); closeDrawer(); setSummary(null); router.replace(`/orders/${order.order_id}?${q}`); };
+    const done = (q: string) => { leavingForOrder(); closeDrawer(); setSummary(null); setInstructions(""); router.replace(`/orders/${order.order_id}?${q}`); };
     if (!order.payment_required) { done("placed=1"); return; }
     try {
       const r = await fetch("/api/payments/razorpay/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId: order.order_id }) });
@@ -192,7 +208,17 @@ export function CartDrawer({ signedIn, isGuest, addresses: initialAddresses, wal
     setPlacing(false);
   };
 
-  if (!open || !hydrated) return null;
+  if (!hydrated) return null;
+
+  const sheets = (
+    <>
+      <AddressSheet open={sheet === "address"} onClose={closeSheet} addresses={addresses} selectedId={addressId} defaultName={user.name} defaultPhone={user.phone}
+        onPick={(a, isNew) => { if (isNew) { addAddress(a); router.refresh(); } setAddressId(a.id); closeSheet(); }} />
+      <LoginModal open={sheet === "login" && !account} onClose={() => { closeSheet(); setResume(null); }} eta={`${eta.min}–${eta.max} minutes`} guest={isGuest} title={resume === "pay" ? "Login to place your order" : undefined} />
+    </>
+  );
+
+  if (!open) return createPortal(sheets, document.body);
 
   return createPortal(
     <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={step === "pay" ? "Payment options" : "Cart"}>
@@ -203,8 +229,14 @@ export function CartDrawer({ signedIn, isGuest, addresses: initialAddresses, wal
         <div className="flex items-center gap-3 border-b border-line bg-card px-3 py-3" style={{ paddingTop: "calc(var(--safe-top) + 12px)" }}>
           <button type="button" onClick={step === "pay" ? () => openDrawer("cart") : closeDrawer} aria-label={step === "pay" ? "Back to cart" : "Close cart"} className="tap flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line bg-card text-ink hover:bg-surface-2"><ChevronLeft className="h-5 w-5" /></button>
           <div className="min-w-0 flex-1">
-            <p className="font-display text-lg font-bold leading-tight text-ink">{step === "pay" ? "Payment Options" : "Cart"}</p>
-            <p className="truncate text-xs text-ink-3">{headerLine}</p>
+            {step === "cart" && selectedAddress && !empty ? (
+              <DeliveryAddressRow address={selectedAddress} unserved={gate.unserved} serviceMessage={gate.serviceMessage} onChange={() => openSheet("address")} compact />
+            ) : (
+              <>
+                <p className="font-display text-lg font-bold leading-tight text-ink">{step === "pay" ? "Payment Options" : "Cart"}</p>
+                <p className="truncate text-xs text-ink-3">{headerLine}</p>
+              </>
+            )}
           </div>
           <button type="button" onClick={closeDrawer} aria-label="Close" className="hidden h-10 w-10 items-center justify-center rounded-full text-ink-3 hover:bg-surface-2 sm:flex"><X className="h-5 w-5" /></button>
         </div>
@@ -230,6 +262,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: initialAddresses, wal
                   <button type="button" onClick={() => setNotice(null)} aria-label="Dismiss" className="tap absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full text-[#1e3a8a] hover:bg-info/10"><X className="h-4 w-4" /></button>
                 </div>
               ) : null}
+              {gate.unserved ? <Alert tone="danger">{gate.serviceMessage ?? "We don't deliver to this address yet."} <button type="button" onClick={() => openSheet("address")} className="font-bold underline underline-offset-2">Change address</button></Alert> : null}
               <Card className="p-4">
                 <h3 className="font-display text-base font-bold text-ink">Coupons & offers</h3>
                 {s.coupon?.valid && s.coupon_discount > 0 ? (
@@ -258,7 +291,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: initialAddresses, wal
               <Card>
                 <div className="flex items-center gap-3 border-b border-line px-4 py-3.5">
                   <span className="flex h-11 w-11 items-center justify-center rounded-md border border-line bg-card text-ink"><Clock className="h-5 w-5" /></span>
-                  <div className="min-w-0 flex-1"><p className="font-display text-base font-bold text-ink">Delivering in {etaLabel} mins</p><p className="text-xs text-ink-3">{s.item_count} item{s.item_count === 1 ? "" : "s"}</p></div>
+                  <div className="min-w-0 flex-1"><p className="font-display text-base font-bold text-ink">Delivering in {etaLabel} mins</p><p className="text-xs text-ink-3">{s.item_count} item{s.item_count === 1 ? "" : "s"}{selectedAddress ? ` · to ${addressTitle(selectedAddress)}` : ""}</p></div>
                 </div>
                 <ul className="divide-y divide-line px-4">
                   {items.map((line) => {
@@ -296,7 +329,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: initialAddresses, wal
                 </div>
                 <div className="px-4 py-1">
                   <Row label="Item Total" value={formatINR(s.subtotal)} strike={s.mrp_total > s.subtotal ? s.mrp_total : undefined} />
-                  <Row label="Delivery Fee" value={s.delivery_fee === 0 ? <span className="font-bold text-success">FREE</span> : formatINR(s.delivery_fee)} strike={s.delivery_fee === 0 && deliveryWaived > 0 ? deliveryWaived : undefined} sub={s.free_delivery_threshold > 0 && s.free_delivery_gap > 0 ? `Free above ${formatINR(s.free_delivery_threshold)} (Unlock by adding ${formatINR(s.free_delivery_gap)} more)` : undefined} />
+                  <Row label="Delivery Fee" value={s.delivery_fee === 0 ? <span className="font-bold text-success">FREE</span> : formatINR(s.delivery_fee)} strike={s.delivery_fee === 0 && deliveryWaived > 0 ? deliveryWaived : undefined} sub={s.free_delivery_threshold > 0 && s.free_delivery_gap > 0 ? `Free above ${formatINR(s.free_delivery_threshold)} (Unlock by adding ${formatINR(s.free_delivery_gap)} more)` : !selectedAddress ? "Confirmed for your address" : undefined} />
                   {s.express_fee > 0 ? <Row label="Express delivery" value={formatINR(s.express_fee)} /> : null}
                   {s.coupon_discount > 0 ? <Row label={`Coupon (${s.coupon?.code})`} value={<span className="text-success">− {formatINR(s.coupon_discount)}</span>} /> : null}
                   {s.platform_fee > 0 ? <Row label="Platform fee" value={formatINR(s.platform_fee)} /> : null}
@@ -344,12 +377,12 @@ export function CartDrawer({ signedIn, isGuest, addresses: initialAddresses, wal
                     <li key={a.id}>
                       <button type="button" onClick={() => setAddressId(a.id)} className={cn("flex w-full items-start gap-3 rounded-xl border p-3 text-left", on ? "border-brand-600 bg-brand-50" : "border-line bg-card")}>
                         <span className={cn("mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md", on ? "bg-brand-600 text-white" : "bg-surface-2 text-ink-3")}><Icon className="h-4 w-4" /></span>
-                        <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-ink">{a.label ?? a.type[0].toUpperCase() + a.type.slice(1)} · {a.full_name}</span><span className="block text-xs text-ink-2">{[a.house, a.street, a.area, a.landmark, `${a.city} – ${a.pincode}`].filter(Boolean).join(", ")}</span></span>
+                        <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-ink">{addressTitle(a)} · {a.full_name}</span><span className="block text-xs text-ink-2">{addressLine(a)}</span></span>
                         <Radio on={on} />
                       </button>
                     </li>); })}
                 </ul>
-                <Button variant="outline" size="sm" className="mt-3 rounded-lg" onClick={() => setAddOpen(true)}><Plus className="h-4 w-4" /> Add new address</Button>
+                <Button variant="outline" size="sm" className="mt-3 rounded-lg" onClick={() => openSheet("address")}><Plus className="h-4 w-4" /> Add new address</Button>
                 {addressId && !s.serviceable ? <Alert tone="danger" className="mt-3">{s.service_message ?? "Sorry, Merta Deal is not available in your area yet."}</Alert> : null}
               </Card>
 
@@ -391,19 +424,10 @@ export function CartDrawer({ signedIn, isGuest, addresses: initialAddresses, wal
           <div className="border-t border-line bg-card px-3 pt-3" style={{ paddingBottom: "calc(var(--safe-bottom) + 12px)" }}>
             {step === "cart" ? (
               <>
-                {cartBlocker ? <Alert tone="warning" className="mb-2">{cartBlocker}</Alert> : null}
-                {isGuest || !signedIn ? (
-                  <Button size="lg" fullWidth className="h-13 rounded-xl text-base" onClick={() => setLoginOpen(true)}>Login to Proceed</Button>
-                ) : (
-                  <>
-                    {!cartBlocker && items.some((l) => l.price_changed) ? <Alert tone="info" className="mb-2">Some prices changed since you added these items. The bill above uses today&rsquo;s prices.</Alert> : null}
-                    {addresses.length === 0 ? (
-                      <Button size="lg" fullWidth className="h-13 rounded-xl text-base" disabled={Boolean(cartBlocker)} onClick={() => setAddOpen(true)}>Add Address to proceed</Button>
-                    ) : (
-                      <Button size="lg" fullWidth className="h-13 rounded-xl text-base" disabled={Boolean(cartBlocker) || Object.keys(pending).length > 0} onClick={async () => { if (items.some((l) => l.price_changed)) await acknowledgeCartPricesAction(); openDrawer("pay"); }}>Click to Pay {formatINR(s.total, { precise: true })}</Button>
-                    )}
-                  </>
-                )}
+                {gate.cartBlocker && selectedAddress ? <Alert tone="warning" className="mb-2">{gate.cartBlocker}</Alert> : null}
+                {!gate.cartBlocker && selectedAddress && !gate.unserved && items.some((l) => l.price_changed) ? <Alert tone="info" className="mb-2">Some prices changed since you added these items. The bill above uses today&rsquo;s prices.</Alert> : null}
+                <Button size="lg" fullWidth className="h-13 rounded-xl text-base" disabled={gate.ctaDisabled} onClick={() => void gate.proceed()}>{gate.ctaLabel}</Button>
+                {gate.needsLogin && selectedAddress && !gate.unserved ? <p className="mt-2 text-center text-[11px] text-ink-3">You&rsquo;ll sign in with your mobile number before paying. Your cart and address are kept.</p> : null}
               </>
             ) : (
               <>
@@ -415,11 +439,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: initialAddresses, wal
           </div>
         ) : null}
       </aside>
-
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Location information" size="screen">
-        <AddressWizard defaultName={user.name} defaultPhone={user.phone} onCancel={() => setAddOpen(false)} onSaved={(a) => { setAdded((cur) => [a, ...cur.filter((x) => x.id !== a.id)]); setAddressId(a.id); setAddOpen(false); if (step === "cart") openDrawer("pay"); }} />
-      </Modal>
-      <LoginModal open={loginOpen && (isGuest || !signedIn)} onClose={() => setLoginOpen(false)} eta={`${eta.min}–${eta.max} minutes`} guest={isGuest} onGuestContinue={isGuest ? () => { setLoginOpen(false); openDrawer("pay"); } : undefined} />
+      {sheets}
     </div>,
     document.body,
   );

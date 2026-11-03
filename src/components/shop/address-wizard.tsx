@@ -7,16 +7,19 @@ import { MapPicker, type PickedLocation } from "./map-picker";
 
 /**
  * New address in two steps: drop the pin on the map, then add house / area / receiver details.
- * The pin's coordinates (and the looked-up area and pincode) prefill the form.
+ * The pin's coordinates (and the looked-up area and pincode) prefill the form. "Enter address
+ * manually" skips the map (no location permission, no GPS fix): the form then checks the pincode
+ * against the delivery zones before saving.
  */
 export function AddressWizard({ onSaved, onCancel, defaultName, defaultPhone }: { onSaved: (a: Address) => void; onCancel?: () => void; defaultName?: string | null; defaultPhone?: string | null }) {
   const [picked, setPicked] = React.useState<PickedLocation | null>(null);
-  if (!picked) return <MapPicker onConfirm={setPicked} />;
+  const [manual, setManual] = React.useState(false);
+  if (!picked && !manual) return <MapPicker onConfirm={setPicked} onManual={() => setManual(true)} />;
   return (
     <div className="max-sm:px-4 max-sm:py-4">
-      <button type="button" onClick={() => setPicked(null)} className="tap mb-2 inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"><ChevronLeft className="h-4 w-4" aria-hidden /> Change location on map</button>
+      <button type="button" onClick={() => { setPicked(null); setManual(false); }} className="tap mb-2 inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"><ChevronLeft className="h-4 w-4" aria-hidden /> {picked ? "Change location on map" : "Pick the location on the map instead"}</button>
       <AddressForm
-        initial={{ lat: picked.lat, lng: picked.lng, area: picked.area ?? "", pincode: picked.pincode ?? undefined, street: picked.street ?? "" }}
+        initial={picked ? { lat: picked.lat, lng: picked.lng, area: picked.area ?? "", pincode: picked.pincode ?? undefined, street: picked.street ?? "" } : undefined}
         defaultName={defaultName} defaultPhone={defaultPhone} onSaved={onSaved} onCancel={onCancel} />
     </div>
   );

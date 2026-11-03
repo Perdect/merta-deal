@@ -19,6 +19,7 @@ import { formatINR } from "@/lib/utils";
  */
 export function ProductBuyBar({ product, signedIn }: { product: ProductDetail; signedIn: boolean }) {
   const router = useRouter();
+  const openSheet = useCartStore((s) => s.openSheet);
   const offer = React.useMemo(() => resolveOffer(product), [product]);
   const qty = useCartStore((s) => (offer ? s.qtyFor(offer.inventory_id) : 0));
   const subtotal = useCartStore((s) => s.summary?.subtotal ?? 0);
@@ -34,7 +35,7 @@ export function ProductBuyBar({ product, signedIn }: { product: ProductDetail; s
     setBusy(true);
     if (!signedIn) {
       const g = await ensureGuestSessionAction();
-      if (!g.ok) { setBusy(false); router.push(`/login?next=${encodeURIComponent(`/p/${product.slug}`)}`); return; }
+      if (!g.ok) { setBusy(false); toast.info("Sign in to add items", g.error); openSheet("login"); return; }
       if (g.created) router.refresh();
     }
     await setLineQuantity(offer.inventory_id, Math.min(qty + 1, Math.max(limit.max, 1)));

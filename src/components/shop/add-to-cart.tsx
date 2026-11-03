@@ -20,6 +20,7 @@ type Props = { inventoryId: string | null; maxQty?: number | null; stockQty?: nu
 /** `className` styles the ADD button; `stepperClassName` styles the quantity control that replaces it. */
 export function AddToCart({ inventoryId, maxQty, stockQty, size = "md", className, stepperClassName, label = "ADD", signedIn = true, fullWidth }: Props) {
   const router = useRouter();
+  const openSheet = useCartStore((s) => s.openSheet);
   const qty = useCartStore((s) => (inventoryId ? s.qtyFor(inventoryId) : 0));
   const syncing = useCartStore((s) => (inventoryId ? inventoryId in s.pending : false));
   const [starting, setStarting] = React.useState(false);
@@ -32,7 +33,8 @@ export function AddToCart({ inventoryId, maxQty, stockQty, size = "md", classNam
       setStarting(true);
       const g = await ensureGuestSessionAction();
       setStarting(false);
-      if (!g.ok) { router.push(`/login?next=${encodeURIComponent(window.location.pathname)}`); return; }
+      // Guest sessions are the norm (Supabase anonymous sign-in); only when that is switched off is a sign-in asked for here.
+      if (!g.ok) { toast.info("Sign in to add items", g.error); openSheet("login"); return; }
       if (g.created) router.refresh();
     }
     const first = qty === 0 && next > 0;

@@ -38,7 +38,7 @@ const SOURCE_LABEL = { place: "Merta landmark", area: "Delivery area", google: "
  * and Confirm & Continue. Searching opens a full-screen "Your Location" results list.
  * Map data © OpenStreetMap contributors.
  */
-export function MapPicker({ initial, onConfirm, confirmLabel = "Confirm & Continue", requireServiceable = true }: { initial?: LatLng | null; onConfirm: (p: PickedLocation) => void; confirmLabel?: string; /** Block confirming outside delivery zones (customers); admins pinning landmarks pass false. */ requireServiceable?: boolean }) {
+export function MapPicker({ initial, onConfirm, confirmLabel = "Confirm & Continue", requireServiceable = true, onManual }: { initial?: LatLng | null; onConfirm: (p: PickedLocation) => void; confirmLabel?: string; /** Block confirming outside delivery zones (customers); admins pinning landmarks pass false. */ requireServiceable?: boolean; /** Offered when location is denied or the map fails: type the address without a pin. */ onManual?: () => void }) {
   const boxRef = React.useRef<HTMLDivElement>(null);
   const mapRef = React.useRef<LMap | null>(null);
   const searchRef = React.useRef<HTMLInputElement>(null);
@@ -105,7 +105,7 @@ export function MapPicker({ initial, onConfirm, confirmLabel = "Confirm & Contin
       mapRef.current?.setView([pos.coords.latitude, pos.coords.longitude], 18);
       setChosen(true); setLocating(false);
     }, (err) => {
-      toast.error(err.code === err.PERMISSION_DENIED ? "Location permission is blocked. Allow it in your browser settings, or search instead." : "Could not get your location. Search or move the map instead.");
+      toast.error(err.code === err.PERMISSION_DENIED ? "Location permission is blocked. Allow it in your browser settings, search, or enter the address manually." : "Could not get your location. Search, move the map, or enter the address manually.");
       setLocating(false);
     }, { enableHighAccuracy: true, timeout: 12000 });
   };
@@ -223,6 +223,7 @@ export function MapPicker({ initial, onConfirm, confirmLabel = "Confirm & Contin
             </button>
           ) : null}
           <div className="rounded-2xl bg-card p-4 shadow-float">
+            {onManual ? <button type="button" onClick={onManual} className="tap mb-2 flex min-h-9 w-full items-center justify-center text-sm font-semibold text-brand-700 underline-offset-2 hover:underline">Can&rsquo;t find it? Enter address manually</button> : null}
             {chosen || failed ? (
               <>
                 <p className="font-display text-lg font-bold leading-tight text-ink">{looking && !place ? "Finding address…" : title}</p>

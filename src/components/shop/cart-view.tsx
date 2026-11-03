@@ -1,26 +1,41 @@
 "use client";
 import * as React from "react";
 import { ShoppingBag, TicketPercent, X } from "lucide-react";
-import type { CartSummary } from "@/types/app";
+import type { Address, CartSummary } from "@/types/app";
 import { applyCouponAction, getCartSummary, removeCouponAction } from "@/lib/actions/cart";
 import { setLineQuantity } from "@/lib/cart-sync";
 import { useCartStore } from "@/stores/cart-store";
+import { useCheckoutStore } from "@/stores/checkout-store";
 import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { EmptyState } from "@/components/ui/states";
+import { Alert, EmptyState } from "@/components/ui/states";
 import { CartItem } from "./cart-item";
 import { PriceBreakdown, FreeDeliveryBar } from "./price-breakdown";
+import { DeliveryAddressRow, useCheckoutGate } from "./checkout-gate";
 import { formatINR } from "@/lib/utils";
 
-export function CartView({ initial, coupons }: { initial: CartSummary | null; coupons: { code: string; title: string; min_order_amount: number }[] }) {
+/**
+ * The full /cart page (deep links, desktop). Same steps as the cart panel: address first, sign in only
+ * at "Proceed to Pay", then the payment step opens in the panel. Totals are for the chosen address.
+ */
+export function CartView({ initial, coupons, addresses, signedIn, isGuest }: { initial: CartSummary | null; coupons: { code: string; title: string; min_order_amount: number }[]; addresses: Address[]; signedIn: boolean; isGuest: boolean }) {
   const summary = useCartStore((s) => s.summary) ?? initial;
   const setSummary = useCartStore((s) => s.setSummary);
+  const openSheet = useCartStore((s) => s.openSheet);
+  const deliveryType = useCheckoutStore((s) => s.deliveryType);
+  const gate = useCheckoutGate({ summary, addresses, signedIn, isGuest });
+  const { addressId, selectedAddress } = gate;
   const [code, setCode] = React.useState("");
   const [couponBusy, setCouponBusy] = React.useState(false);
   React.useEffect(() => { setSummary(initial); }, [initial, setSummary]);
+  // Delivery fee and ETA follow the chosen address.
+  React.useEffect(() => {
+    if (!signedIn) return;
+    getCartSummary(addressId, deliveryType).then((s) => { if (s) setSummary(s); });
+  }, [addressId, deliveryType, signedIn, setSummary]);
 
-  const refresh = async () => setSummary(await getCartSummary());
+  const refresh = async () => setSummary(await getCartSummary(addressId, deliveryType));
   const onQty = (inventoryId: string, qty: number) => { void setLineQuantity(inventoryId, qty); };
   const apply = async (c = code) => {
     if (!c.trim()) return;
@@ -38,6 +53,12 @@ export function CartView({ initial, coupons }: { initial: CartSummary | null; co
   return (
     <div className="grid grid-cols-1 gap-5 px-4 sm:px-0 lg:grid-cols-[minmax(0,1fr)_360px]">
       <div className="min-w-0 space-y-4">
+        {selectedAddress ? (
+          <div className="rounded-lg border border-line bg-card px-4 py-3">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-ink-3">Delivering to</p>
+            <DeliveryAddressRow address={selectedAddress} unserved={gate.unserved} serviceMessage={gate.serviceMessage} onChange={() => openSheet("address")} />
+          </div>
+        ) : null}
         <FreeDeliveryBar s={summary} />
         <ul className="divide-y divide-line rounded-lg border border-line bg-card px-4">
           {summary.items.map((line) => <CartItem key={line.id} line={line} onQty={onQty} issue={summary.issues.find((i) => i.inventory_id === line.inventory_id)} />)}
@@ -66,14 +87,13 @@ export function CartView({ initial, coupons }: { initial: CartSummary | null; co
         <div className="rounded-lg border border-line bg-card p-4">
           <h2 className="mb-3 text-base font-bold text-ink">Bill details</h2>
           <PriceBreakdown s={summary} />
-          {!summary.meets_min_order ? <p className="mt-3 rounded-md bg-warning-50 px-3 py-2 text-xs font-medium text-[#6b4d00]">Minimum order is {formatINR(summary.min_order_amount)}. Add {formatINR(summary.min_order_amount - summary.subtotal)} more to checkout.</p> : null}
-          {summary.issues.length ? <p className="mt-3 rounded-md bg-danger-50 px-3 py-2 text-xs font-medium text-[#8a1f18]">Some items exceed available stock. Please adjust quantities.</p> : null}
+          {gate.cartBlocker && selectedAddress ? <Alert tone="warning" className="mt-3">{gate.cartBlocker}</Alert> : null}
         </div>
         <div className="grid grid-cols-2 gap-2">
           <Button variant="outline" size="lg" href="/categories">Continue shopping</Button>
-          <Button size="lg" href="/checkout" disabled={!summary.meets_min_order || summary.issues.length > 0}>Checkout</Button>
+          <Button size="lg" disabled={gate.ctaDisabled} onClick={() => void gate.proceed()}>{gate.ctaLabel}</Button>
         </div>
-        <p className="text-center text-[11px] text-ink-3">Delivery fee and ETA are confirmed at checkout based on your address.</p>
+        <p className="text-center text-[11px] text-ink-3">{selectedAddress ? gate.needsLogin ? "You'll sign in with your mobile number before paying. Your cart and address are kept." : "Delivery fee and ETA above are for the selected address." : "Add a delivery address to see the delivery fee and ETA."}</p>
       </aside>
     </div>
   );

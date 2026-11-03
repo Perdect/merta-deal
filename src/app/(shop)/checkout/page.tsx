@@ -15,6 +15,7 @@ export default async function CheckoutPage() {
   const user = await getSessionUser();
   if (!user) redirect("/login?next=/checkout");
   const [summary, addresses, profile, settings] = await Promise.all([getCartSummary(), getMyAddresses(), getMyProfile(), getPublicSettings()]);
+  if (profile?.is_guest) redirect("/login?next=/checkout");
   if (!summary || summary.empty) redirect("/cart");
   const slots = Array.isArray(settings.scheduled_slots) ? (settings.scheduled_slots as string[]) : [];
   return (
