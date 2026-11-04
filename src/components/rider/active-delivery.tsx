@@ -3,6 +3,7 @@ import * as React from "react";
 import { Check, Phone, Navigation, Store as StoreIcon, Home, Package, ShieldCheck, Banknote, ChevronLeft, MessageSquareText, ChevronRight } from "lucide-react";
 import type { RiderAssignment } from "@/types/app";
 import { pickupAction, verifyOtpAction, reportFailedDeliveryAction, type OtpResult, type FailedDeliveryReason } from "@/lib/actions/rider";
+import { PickupScan } from "./pickup-scan";
 import { BottomSheet } from "@/components/ui/overlay";
 import { Textarea } from "@/components/ui/input";
 import { LiveMap } from "@/components/shop/live-map";
@@ -215,6 +216,7 @@ function Pickup({ a, onBack, onChanged }: { a: RiderAssignment; onBack: () => vo
         {cod ? <>Cash on delivery: collect <strong>{formatINR(a.cod_amount)}</strong> from the customer at handover.</> : <>Prepaid order — nothing to collect from the customer.</>}
       </Alert>
       {error ? <Alert tone="danger" className="mt-3">{error}</Alert> : null}
+      <PickupScan a={a} onChanged={onChanged} />
       <div className="mt-3 flex gap-2">
         <Button variant="outline" size="lg" onClick={onBack} aria-label="Back to directions"><ChevronLeft className="h-5 w-5" /></Button>
         <Button size="lg" className="flex-1" loading={busy} onClick={confirm}><Check className="h-5 w-5" /> Picked up all items</Button>

@@ -1,7 +1,7 @@
 import {
   Wallet,
   LayoutDashboard, BarChart3, ShoppingBag, MapPinned, Bike, Package, Camera, FolderTree, Tags,
-  TicketPercent, Megaphone, Bell, CreditCard, LifeBuoy, Star, Users, Settings, ScrollText, type LucideIcon,
+  TicketPercent, Megaphone, Bell, CreditCard, LifeBuoy, Star, Users, Settings, ScrollText, ScanLine, type LucideIcon,
 } from "lucide-react";
 
 export type AdminNavItem = { href: string; label: string; icon: LucideIcon };
@@ -15,6 +15,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   ] },
   { label: "Operations", items: [
     { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
+    { href: "/admin/scan", label: "Scan", icon: ScanLine },
     { href: "/admin/delivery", label: "Delivery zones", icon: MapPinned },
     { href: "/admin/riders", label: "Riders", icon: Bike },
   ] },

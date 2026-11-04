@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ExternalLink, History, PackagePlus } from "lucide-react";
-import { getAllCategories, getAllBrands } from "@/lib/data/admin";
+import { ExternalLink, History, PackagePlus, ScanLine } from "lucide-react";
+import { getAllCategories, getAllBrands, adminRpc } from "@/lib/data/admin";
+import { env } from "@/lib/env";
+import { ProductIdentity } from "@/components/admin/scan/product-identity";
+import type { ScanProduct } from "@/lib/scan/types";
 import { getCatalogueProduct } from "@/lib/data/admin-catalogue";
 import { ProductForm } from "@/components/admin/product-form";
 import { ProductFlags } from "@/components/admin/product-flags";
@@ -18,7 +21,7 @@ const REASON_LABEL: Record<string, string> = { order: "Order", cancel_restock: "
 export default async function AdminProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
-  const [{ data: detail, error }, categories, brands] = await Promise.all([getCatalogueProduct(id), getAllCategories(), getAllBrands()]);
+  const [{ data: detail, error }, categories, brands, scan] = await Promise.all([getCatalogueProduct(id), getAllCategories(), getAllBrands(), adminRpc<ScanProduct>("scan_product", { p_product_id: id })]);
   if (error) {
     return (
       <>
@@ -61,6 +64,12 @@ export default async function AdminProductPage({ params }: { params: Promise<{ i
           <EmptyBlock icon={PackagePlus} title="Not on sale yet" description="Customers can't buy this product until it has a selling price and stock." action={<OfferQuickEdit variant="button" product={qe} offer={null} showFlags={false} />} />
         )}
       </Panel>
+
+      {scan.data ? (
+        <Panel className="mb-6" title={<span className="inline-flex items-center gap-1.5"><ScanLine className="h-4 w-4 text-ink-3" aria-hidden />Label and scanning</span>} description="The QR and SKU printed on this size's label, the packet's own barcode, and how its stock is counted.">
+          <ProductIdentity product={scan.data} siteUrl={env.siteUrl} />
+        </Panel>
+      ) : null}
 
       {movements.length ? (
         <Panel className="mb-6" flush title={<span className="inline-flex items-center gap-1.5"><History className="h-4 w-4 text-ink-3" aria-hidden />Recent stock changes</span>} description="Latest 12 movements, from inventory history">

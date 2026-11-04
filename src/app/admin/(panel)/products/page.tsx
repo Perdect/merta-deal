@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Box, Camera, Plus, SearchX } from "lucide-react";
+import { Box, Camera, Plus, Printer, SearchX } from "lucide-react";
 import { getAllCategories, getAllBrands, spGet, spPage, type SP } from "@/lib/data/admin";
 import { listCatalogueProducts, countProductTabs, withSubcategories, PRODUCT_TABS, PRODUCT_SORTS, type ProductFilters } from "@/lib/data/admin-catalogue";
 import { AdminPageHeader, DataTable, CellStack, RowLink, EmptyBlock, ErrorBlock, ListToolbar, StatusTabs, ListPagination, rupees } from "@/components/admin/kit";
@@ -31,6 +31,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
       <AdminPageHeader title="Products"
         description="The catalogue: names, packs, photos and flags, with each product's selling price and stock."
         actions={<>
+          <a href={`/admin/print/labels${category ? `?category=${encodeURIComponent(categories.find((c) => c.id === category)?.slug ?? "")}` : ""}`} target="_blank" rel="noopener" className={btn.outline}><Printer className="h-4 w-4" aria-hidden />Print labels</a>
           <Link href="/admin/products/images" className={btn.outline}><Camera className="h-4 w-4" aria-hidden />Photo studio</Link>
           <Link href="/admin/products/new" className={btn.primary}><Plus className="h-4 w-4" aria-hidden />New product</Link>
         </>} />

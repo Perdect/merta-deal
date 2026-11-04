@@ -20,6 +20,7 @@ Hyperlocal kirana marketplace for Merta City, Rajasthan. Brand: **Merta Deal** (
 - `src/components/shop/*` — customer components (`ProductCard`, `ProductImage`, `AddToCart`, `OrderTimeline`, `OrderStatusBadge`, `LiveMap`, …).
 - `src/hooks/*` — `useDebouncedValue`, `useOrderRealtime`, `useNotifications`.
 - Order status metadata: `src/lib/order-status.ts`. Hinglish parser: `src/lib/order-parser.ts`.
+- Scanning (0034): `src/lib/scan/*` (types, camera hook, offline queue, formatting), `src/lib/actions/scan.ts`, `src/components/admin/scan/*` (Scan section, panels, print bar), `/admin/scan`, `/admin/print/{labels,slip}`, `/q/<code>`. Loose produce shares one gram balance (`stock_pools`); packing never touches stock; a scan never sets Delivered. Harness: `node scripts/test-scan.mjs "$PWD"`.
 - Storage buckets: `product-images`, `store-photos`, `avatars`, `banners` (public), `store-documents` (private). Paths must start with `<storeId>/` or `<userId>/` for RLS.
 
 ## Style

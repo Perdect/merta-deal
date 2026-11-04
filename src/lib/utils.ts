@@ -99,6 +99,10 @@ export function friendlyError(err: unknown): string {
   if (avail) return onlyAvailableMessage(Number(avail[1]));
   const due = raw.match(/^AMOUNT_ABOVE_DUE:\s*([\d.]+)/);
   if (due) return `That's more than the rider holds — at most ₹${Number(due[1]).toFixed(2)} is due.`;
+  const notPackable = raw.match(/^NOT_PACKABLE:\s*(\w+)/);
+  if (notPackable) return notPackable[1] === "confirmed" ? "Tap Start packing first." : `This order is ${notPackable[1].replace(/_/g, " ")}, so it can't be packed.`;
+  if (raw.startsWith("UNIT_NOT_ALLOWED:")) return raw.slice("UNIT_NOT_ALLOWED:".length).trim();
+  if (raw.startsWith("BARCODE_IN_USE:")) return `That barcode is already on ${raw.slice("BARCODE_IN_USE:".length).trim()}.`;
   if (/^INVALID_STATE/.test(raw)) return "This delivery has already moved on (refresh to see its current state).";
   if (raw.startsWith("ITEMS_UNAVAILABLE")) return "Some items in your cart changed (stock or per-order limit). Review your cart and try again.";
   if (/inventory_stock_qty_check|violates check constraint "inventory_stock/i.test(raw)) return "Some items just sold out. Review your cart and try again.";
@@ -126,6 +130,22 @@ export function friendlyError(err: unknown): string {
     PRICE_ABOVE_MRP: "Selling price cannot be higher than MRP.",
     NEGATIVE_STOCK: "Stock cannot go below zero.",
     ORDER_NOT_DELIVERED: "You can review an order after it is delivered.",
+    INSUFFICIENT_STOCK: "Some items just sold out. Review your cart and try again.",
+    CONFIRMATION_REQUIRED: "Confirm before saving this change.",
+    QUANTITY_REQUIRED: "Enter a quantity above zero.",
+    QUANTITY_OUT_OF_RANGE: "That quantity is too large. Check the unit and try again.",
+    WHOLE_GRAMS_REQUIRED: "Enter a whole number of grams.",
+    WHOLE_PACKS_REQUIRED: "Enter a whole number of packs.",
+    DIRECTION_REQUIRED: "Choose add or remove.",
+    NOT_LISTED: "This product is not listed for sale yet, so it has no stock record. Add it to the store first.",
+    NOT_SOLD_BY_WEIGHT: "Only products sold in g or kg can share stock by weight.",
+    INVALID_BARCODE: "A barcode is 8 to 14 digits.",
+    NOT_ASSIGNED: "This order is not assigned to you.",
+    ORDER_NOT_FOUND: "Order not found.",
+    ORDER_NOT_PACKED: "This order has not been packed yet.",
+    NO_RIDER_ACCEPTED: "No delivery partner has accepted this order yet.",
+    ALREADY_ASSIGNED: "A delivery partner is already on this order.",
+    PACK_INCOMPLETE: "Scanning shows items still missing. Finish packing in the Scan section.",
   };
   for (const [code, msg] of Object.entries(map)) {
     if (raw.startsWith(code)) return msg;

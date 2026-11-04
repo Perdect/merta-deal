@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Bike } from "lucide-react";
-import { getOrderAdmin, getOrderAssignments, getLiveRiders } from "@/lib/data/admin";
+import { getOrderAdmin, getOrderAssignments, getLiveRiders, adminRpc } from "@/lib/data/admin";
+import { PackingPanel } from "@/components/admin/scan/packing-panel";
+import type { ScanOrder } from "@/lib/scan/types";
 import { serverEnv } from "@/lib/env";
 import { OrderAdminActions } from "@/components/admin/order-actions";
 import { OrderFacts, type AddressSnapshot } from "@/components/admin/order-summary";
@@ -15,7 +17,7 @@ export const metadata: Metadata = { title: "Order" };
 export default async function AdminOrderPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
-  const [t, assignments, riders] = await Promise.all([getOrderAdmin(id), getOrderAssignments(id), getLiveRiders()]);
+  const [t, assignments, riders, scan] = await Promise.all([getOrderAdmin(id), getOrderAssignments(id), getLiveRiders(), adminRpc<ScanOrder>("scan_order_detail", { p_order_id: id })]);
   if (!t) notFound();
   const o = t.order;
   const addr = o.address_snapshot as unknown as AddressSnapshot;
@@ -29,6 +31,7 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0 space-y-4">
           <Panel><OrderFacts t={t} /></Panel>
+          {scan.data ? <PackingPanel order={scan.data} /> : null}
 
           {(live || o.status === "ready_for_pickup") ? (
             <Panel title="Live location" description={live ? "Rider GPS, pickup point and customer" : "Pickup point and customer; rider appears once assigned"} flush>
