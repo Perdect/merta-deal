@@ -86,7 +86,8 @@
 
   @keyframes slide-up { from { opacity: 0; transform: translateY(16px) } to { opacity: 1; transform: translateY(0) } }
   /* Search hint: hold each word ~2.2s, slide up 0.3s; the 4th row repeats the 1st for a seamless loop. */
-  @keyframes search-hint { 0%, 29% { transform: translateY(0) } 33%, 62% { transform: translateY(-25%) } 66%, 95% { transform: translateY(-50%) } 99%, 100% { transform: translateY(-75%) } }
+  /* Five rows (four words + the first again): each step is one fifth, and the loop ends on the duplicate so it restarts seamlessly. */
+  @keyframes search-hint { 0%, 22% { transform: translateY(0) } 25%, 47% { transform: translateY(-20%) } 50%, 72% { transform: translateY(-40%) } 75%, 97% { transform: translateY(-60%) } 100% { transform: translateY(-80%) } }
   /* Toasts */
   @keyframes toast-in { from { opacity: 0; transform: translateY(-10px) scale(0.97) } to { opacity: 1; transform: translateY(0) scale(1) } }
   @keyframes toast-out { to { opacity: 0; transform: translateY(-6px) scale(0.97) } }
