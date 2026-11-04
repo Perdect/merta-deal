@@ -222,7 +222,6 @@ begin
   execute $q$create policy "admin manage product images" on storage.objects for all to authenticated using (bucket_id = 'product-images' and public.is_admin()) with check (bucket_id = 'product-images' and public.is_admin())$q$;
 end $$;
 
-delete from public.settings where key in ('commission_default_percent', 'store_accept_window_minutes', 'require_product_approval');
 
 -- ---------------------------------------------------------------------------
 -- 5. Product view: one listing per product
@@ -254,6 +253,9 @@ create or replace function public.current_user_role()
 returns public.user_role language sql stable security definer set search_path = public as $$
   select role from public.profiles where id = auth.uid();
 $$;
+
+-- Settings rows are audited (trigger calls current_user_role), so this runs once the function exists again.
+delete from public.settings where key in ('commission_default_percent', 'store_accept_window_minutes', 'require_product_approval');
 
 create or replace function public.admin_set_user_role(p_user_id uuid, p_role public.user_role)
 returns void language plpgsql security definer set search_path = public as $$
