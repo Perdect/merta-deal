@@ -208,8 +208,8 @@ alter table public.reviews add constraint reviews_target_check check (
 do $$
 begin
   if not exists (select 1 from information_schema.schemata where schema_name = 'storage') then return; end if;
-  delete from storage.objects where bucket_id in ('store-photos','store-documents');
-  delete from storage.buckets where id in ('store-photos','store-documents');
+  -- Supabase blocks direct deletes on storage tables; the (empty) store buckets are removed through the
+  -- Storage API / dashboard instead. Only the policies change here.
   execute 'drop policy if exists "store members upload product images" on storage.objects';
   execute 'drop policy if exists "store members manage product images" on storage.objects';
   execute 'drop policy if exists "store members delete product images" on storage.objects';
