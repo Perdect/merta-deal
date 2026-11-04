@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronRight, Star, Mail, Phone } from "lucide-react";
 import { getSessionUser } from "@/lib/supabase/server";
-import { getProductDetail, getWishlistIds, getPublicSettings } from "@/lib/data/catalog";
+import { getProductDetail, getPublicSettings } from "@/lib/data/catalog";
 import { paymentPhrase } from "@/lib/seo-copy";
 import { ProductHero, ShareButton } from "@/components/shop/product-hero";
 import { AppBar } from "@/components/shop/app-bar";
@@ -12,7 +12,6 @@ import { ProductBuyBar } from "@/components/shop/product-buy-bar";
 import { PackChips } from "@/components/shop/pack-chips";
 import { DetailSection, type DetailRow } from "@/components/shop/product-details";
 import { ProductRail } from "@/components/shop/product-card";
-import { WishlistButton } from "@/components/shop/wishlist-button";
 import { VegMark } from "@/components/ui/badge";
 import { StarRating } from "@/components/ui/misc";
 import { SectionHeader } from "@/components/ui/card";
@@ -51,7 +50,7 @@ function Card({ title, children, className }: { title?: string; children: React.
 
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
-  const [user, product, wished, settings] = await Promise.all([getSessionUser(), getProductDetail(slug), getWishlistIds(), getPublicSettings()]);
+  const [user, product, settings] = await Promise.all([getSessionUser(), getProductDetail(slug), getPublicSettings()]);
   if (!product) notFound();
   // "More from <brand>" comes with the product (same round trip), filtered live by the database.
   const moreFromBrand = product.more_from_brand ?? [];
@@ -120,9 +119,7 @@ export default async function ProductPage({ params }: Props) {
 
       <div className="md:grid md:grid-cols-[1.05fr_1fr] md:items-start md:gap-8">
         <div>
-          <ProductHero images={images} name={product.name} brand={product.brand_name} packSize={product.pack_label} price={price} mrp={mrp} backHref={`/c/${product.category_slug}`}>
-            {user ? <WishlistButton productId={product.id} initial={wished.has(product.id) || product.in_wishlist} size={20} className="h-10 w-10 shadow-card" /> : null}
-          </ProductHero>
+          <ProductHero images={images} name={product.name} brand={product.brand_name} packSize={product.pack_label} price={price} mrp={mrp} backHref={`/c/${product.category_slug}`} />
           {/* Floats above the dock on mobile; a wide button under the gallery on desktop. */}
           <div className="md:mt-4"><ProductBuyBar product={product} signedIn={Boolean(user)} /></div>
         </div>
@@ -184,9 +181,9 @@ export default async function ProductPage({ params }: Props) {
         </div>
       </div>
 
-      {moreFromBrand.length ? <section className="mt-8"><SectionHeader title={`More from ${product.brand_name}`} href={brandHref ?? undefined} /><ProductRail products={moreFromBrand} signedIn={Boolean(user)} wished={wished} /></section> : null}
-      {product.frequently_bought.length ? <section className="mt-8"><SectionHeader title="Frequently bought together" /><ProductRail products={product.frequently_bought} signedIn={Boolean(user)} wished={wished} /></section> : null}
-      {product.related.length ? <section className="mt-8"><SectionHeader title="Similar products" href={`/c/${product.category_slug}`} /><ProductRail products={product.related} signedIn={Boolean(user)} wished={wished} /></section> : null}
+      {moreFromBrand.length ? <section className="mt-8"><SectionHeader title={`More from ${product.brand_name}`} href={brandHref ?? undefined} /><ProductRail products={moreFromBrand} signedIn={Boolean(user)} /></section> : null}
+      {product.frequently_bought.length ? <section className="mt-8"><SectionHeader title="Frequently bought together" /><ProductRail products={product.frequently_bought} signedIn={Boolean(user)} /></section> : null}
+      {product.related.length ? <section className="mt-8"><SectionHeader title="Similar products" href={`/c/${product.category_slug}`} /><ProductRail products={product.related} signedIn={Boolean(user)} /></section> : null}
     </div>
   );
 }

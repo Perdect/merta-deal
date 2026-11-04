@@ -46,7 +46,7 @@ function usableSnapshot(key: string, result: SearchResult) {
  * `scope` holds the params that define this page's result set but are not in the query string (e.g. the
  * category of /c/grocery). They are always sent with "Load more", so page 2 comes from the same set.
  */
-export function ProductListing({ result, filters, signedIn, wished, loadMoreHref, scope, hideCategoryChips, emptyTitle = "No products found", emptyHint }: { result: SearchResult; filters: ListingFilters; signedIn: boolean; wished: Set<string>; loadMoreHref?: string; scope?: Record<string, string>; hideCategoryChips?: boolean; emptyTitle?: string; emptyHint?: string }) {
+export function ProductListing({ result, filters, signedIn, loadMoreHref, scope, hideCategoryChips, emptyTitle = "No products found", emptyHint }: { result: SearchResult; filters: ListingFilters; signedIn: boolean; loadMoreHref?: string; scope?: Record<string, string>; hideCategoryChips?: boolean; emptyTitle?: string; emptyHint?: string }) {
   const router = useRouter(); const pathname = usePathname(); const sp = useSearchParams();
   const key = `${pathname}?${sp.toString()}#${JSON.stringify(scope ?? {})}`;
   const [filterOpen, setFilterOpen] = React.useState(false);
@@ -167,7 +167,7 @@ export function ProductListing({ result, filters, signedIn, wished, loadMoreHref
             <EmptyState title={emptyTitle} description={emptyHint ?? "Try removing a filter, or search with a different word — Hindi words like aata, chini and lal mirch work too."} action={activeCount ? <Button variant="outline" onClick={() => startTransition(() => router.replace(pathname))}>Clear filters</Button> : null} />
           ) : (
             <>
-              <ProductGrid products={items} signedIn={signedIn} wished={wished} className={cn(pending && "opacity-60")} />
+              <ProductGrid products={items} signedIn={signedIn} className={cn(pending && "opacity-60")} />
               {hasMore ? <div ref={sentinel} className="mt-6 flex flex-col items-center gap-2">{moreError ? <p role="alert" className="text-sm text-danger">Couldn&apos;t load more products. Check your connection and try again.</p> : null}
                 {/* A real link to the next page (crawlers and no-JS get ?page=N), appended in place for shoppers. */}
                 <Button variant="outline" href={nextPageHref} loading={loadingMore} onClick={(e) => { e.preventDefault(); void loadMore(); }}>{moreError ? "Try again" : "Load more"}</Button></div> : null}

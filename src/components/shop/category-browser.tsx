@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
  */
 const RETURN_KEY = "categories-return";
 
-export function CategoryBrowser({ tabs, initial, products, signedIn, wished }: { tabs: CategoryTab[]; initial: string; products: Record<string, { items: ProductCardType[]; total: number }>; signedIn: boolean; wished: string[] }) {
+export function CategoryBrowser({ tabs, initial, products, signedIn }: { tabs: CategoryTab[]; initial: string; products: Record<string, { items: ProductCardType[]; total: number }>; signedIn: boolean }) {
   const valid = (slug: string | null | undefined) => (slug && tabs.some((t) => t.slug === slug) ? slug : null);
   // Back/forward restores this page from the router cache with its first render's props; the address
   // (kept current with replaceState) is the source of truth for which tab was open.
@@ -40,7 +40,6 @@ export function CategoryBrowser({ tabs, initial, products, signedIn, wished }: {
     if (!(e.target as Element).closest("a[href]")) return;
     try { sessionStorage.setItem(RETURN_KEY, JSON.stringify({ url: window.location.pathname + window.location.search, y: window.scrollY, at: Date.now() })); } catch { /* ignore */ }
   };
-  const wishedSet = React.useMemo(() => new Set(wished), [wished]);
   const refs = React.useRef<Record<string, HTMLButtonElement | null>>({});
   const select = (slug: string, focus = false) => {
     setActive(slug);
@@ -96,7 +95,7 @@ export function CategoryBrowser({ tabs, initial, products, signedIn, wished }: {
               </ul>
             ) : listed && listed.items.length ? (
               <>
-                <ProductGrid products={listed.items} signedIn={signedIn} wished={wishedSet} priorityCount={t.slug === active ? 4 : 0} />
+                <ProductGrid products={listed.items} signedIn={signedIn} priorityCount={t.slug === active ? 4 : 0} />
                 {listed.total > listed.items.length ? (
                   <Link href={`/c/${t.slug}`} className="mt-4 flex min-h-11 items-center justify-center gap-1 rounded-xl border border-line bg-card text-sm font-semibold text-brand-800 focus-visible:outline-2 focus-visible:outline-brand-600">See all {listed.total} {t.name.toLowerCase()} <ChevronRight className="h-4 w-4" aria-hidden /></Link>
                 ) : null}

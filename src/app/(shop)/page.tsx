@@ -1,9 +1,10 @@
 import { getSessionUser } from "@/lib/supabase/server";
-import { getWishlistIds, getPublicSettings } from "@/lib/data/catalog";
+import { getPublicSettings } from "@/lib/data/catalog";
 import { getHomeData, DEFAULT_ESSENTIALS } from "@/lib/data/home";
+import { getCategoryTabs } from "@/lib/data/catalog";
 import { EmptyState } from "@/components/ui/states";
 import { Button } from "@/components/ui/button";
-import { CategoryTiles, ProductSection, ServiceStrip } from "@/components/home/home-sections";
+import { CategoryGrid, ProductSection, ServiceStrip } from "@/components/home/home-sections";
 import { OfferCarousel } from "@/components/home/offer-strip";
 import { OffersSheet } from "@/components/home/offers-sheet";
 import { LocalIntro } from "@/components/home/local-intro";
@@ -66,24 +67,25 @@ export default async function HomePage() {
   const settings = await getPublicSettings();
   const essentials = Array.isArray(settings.home_essentials) ? (settings.home_essentials as string[]) : DEFAULT_ESSENTIALS;
   const welcomeCode = typeof settings.welcome_coupon_code === "string" && settings.welcome_coupon_code ? settings.welcome_coupon_code : "WELCOME50";
-  const [user, wished, home] = await Promise.all([getSessionUser(), getWishlistIds(), getHomeData(essentials, welcomeCode)]);
+  const [user, home, tabs] = await Promise.all([getSessionUser(), getHomeData(essentials, welcomeCode), getCategoryTabs().catch(() => [])]);
   const num = (k: string, d: number) => { const v = Number(settings[k]); return Number.isFinite(v) && v > 0 ? v : d; };
-  const etaLabel = `${num("delivery_eta_min_minutes", 20)}–${num("delivery_eta_max_minutes", 25)} min`;
+  // Headline promise: the quick-commerce single figure (the settings minimum); the window stays in the order promise.
+  const etaLabel = `${num("delivery_eta_min_minutes", 20)} min`;
   const signedIn = Boolean(user);
 
   return (
-    <div className="space-y-5 pt-3 sm:space-y-7 sm:pt-4">
+    <div className="space-y-4 pt-2.5 sm:space-y-7 sm:pt-4">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }} />
-      {/* The page's one H1 is visible and says what the service is; the shopping sections follow. */}
+      {/* The page's one H1 is visible and says what the service is (one compact line on phones); the shopping sections follow. */}
       <header className="px-4 sm:px-0">
-        <h1 className="font-display text-xl font-bold leading-tight text-ink sm:text-2xl">{homeH1}</h1>
-        <p className="mt-1 text-sm text-ink-2">Grocery, fruits, vegetables and daily essentials delivered to your home in {site.city}, Rajasthan — usually in {etaLabel}.</p>
+        <h1 className="font-display text-[17px] font-bold leading-tight text-ink sm:text-2xl">{homeH1}</h1>
+        <p className="mt-0.5 line-clamp-1 text-[13px] text-ink-2 sm:line-clamp-none sm:text-sm">Grocery, fruits, vegetables and daily essentials delivered to your home in {site.city}, Rajasthan — usually in {etaLabel}.</p>
       </header>
       {home.offers.length ? <OfferCarousel offers={home.offers} /> : null}
       <OffersSheet offers={home.offers} />
-      {home.categories.length ? <CategoryTiles categories={home.categories} /> : null}
+      <CategoryGrid tabs={tabs} fallback={home.categories} />
       {home.sections.length ? (
-        home.sections.map((s, i) => <ProductSection key={s.key} section={s} signedIn={signedIn} wished={wished} first={i === 0} />)
+        home.sections.map((s, i) => <ProductSection key={s.key} section={s} signedIn={signedIn} first={i === 0} />)
       ) : (
         <EmptyState title="Stocking up" description="Products will appear here as soon as they are in stock." action={<Button href="/categories" variant="outline">Browse categories</Button>} compact />
       )}

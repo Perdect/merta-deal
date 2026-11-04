@@ -2,12 +2,53 @@ import Link from "next/link";
 import Image from "next/image";
 import { ChevronRight } from "lucide-react";
 import type { HomeCategory, HomeSection } from "@/lib/data/home";
+import type { CategoryTab, CategoryTile } from "@/lib/data/catalog";
 import { ProductGrid } from "@/components/shop/product-card";
+import { ProductImage } from "@/components/shop/product-image";
 import { cn } from "@/lib/utils";
 
 const TILE_BG: Record<string, string> = { grocery: "bg-[#FFF4E2]", fruits: "bg-[#FDEFF0]", vegetables: "bg-[#EAF6EC]" };
+const GRID_MAX = 12;
 
-/** Small image-led category tiles: one compact row on mobile, grouped (not stretched) on desktop. */
+/**
+ * Compact four-column category grid (quick-commerce style): the fresh categories first, then the
+ * grocery staples as their own tiles, each with a product photo and a short label. Only categories
+ * with something to buy appear; the "All grocery" tile closes the grid.
+ */
+export function CategoryGrid({ tabs, fallback }: { tabs: CategoryTab[]; fallback: HomeCategory[] }) {
+  const tiles: (CategoryTile & { bg?: string })[] = [];
+  const fresh = tabs.filter((t) => t.slug === "fruits" || t.slug === "vegetables");
+  for (const t of fresh) tiles.push({ key: t.slug, label: t.name, href: `/c/${t.slug}`, image: t.image, count: t.count, bg: TILE_BG[t.slug] });
+  for (const t of tabs) {
+    if (fresh.includes(t)) continue;
+    if (t.tiles.length) { for (const tile of t.tiles) tiles.push({ ...tile, bg: TILE_BG[t.slug] }); tiles.push({ key: `all-${t.slug}`, label: `All ${t.name.toLowerCase()}`, href: `/c/${t.slug}`, image: t.image, count: t.count, bg: TILE_BG[t.slug] }); }
+    else tiles.push({ key: t.slug, label: t.name, href: `/c/${t.slug}`, image: t.image, count: t.count, bg: TILE_BG[t.slug] });
+  }
+  const shown = tiles.slice(0, GRID_MAX);
+  if (!shown.length) return fallback.length ? <CategoryTiles categories={fallback} /> : null;
+  return (
+    <section aria-labelledby="cats-title" className="px-4 sm:px-0">
+      <div className="mb-2 flex items-baseline justify-between">
+        <h2 id="cats-title" className="font-display text-[15px] font-bold text-ink sm:text-lg">Shop by category</h2>
+        <Link href="/categories" className="tap inline-flex items-center gap-0.5 text-sm font-semibold text-brand-700 hover:underline focus-visible:outline-2 focus-visible:outline-brand-600">See all<ChevronRight className="h-4 w-4" aria-hidden /></Link>
+      </div>
+      <ul className="grid grid-cols-4 gap-x-2 gap-y-3 sm:grid-cols-6 sm:gap-3 lg:grid-cols-8">
+        {shown.map((t) => (
+          <li key={t.key} className="min-w-0">
+            <Link href={t.href} className="group block rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600" aria-label={`${t.label}, ${t.count} product${t.count === 1 ? "" : "s"}`}>
+              <span aria-hidden className={cn("block aspect-square overflow-hidden rounded-xl p-1.5 transition-transform duration-200 group-hover:-translate-y-0.5 group-active:scale-[0.97] motion-reduce:transform-none", t.bg ?? "bg-surface-2")}>
+                <ProductImage image={t.image} productName={t.label} className="h-full w-full" rounded="rounded-lg" sizes="(max-width: 640px) 22vw, 120px" />
+              </span>
+              <span className="mt-1 line-clamp-2 block text-center text-[11.5px] font-semibold leading-[1.2] text-ink sm:text-xs">{t.label}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** Image-led top-level tiles: used only when the category data for the grid is unavailable. */
 export function CategoryTiles({ categories }: { categories: HomeCategory[] }) {
   return (
     <section aria-labelledby="cats-title" className="px-4 sm:px-0">
@@ -37,7 +78,7 @@ export function CategoryTiles({ categories }: { categories: HomeCategory[] }) {
 }
 
 /** One titled product section; "See all" only where there is a category listing behind it. */
-export function ProductSection({ section, signedIn, wished, first }: { section: HomeSection; signedIn: boolean; wished: Set<string>; first?: boolean }) {
+export function ProductSection({ section, signedIn, first }: { section: HomeSection; signedIn: boolean; first?: boolean }) {
   return (
     <section id={section.key} aria-labelledby={`${section.key}-title`} className="scroll-mt-32">
       <div className="mb-2.5 flex items-end justify-between px-4 sm:px-0">
@@ -48,7 +89,7 @@ export function ProductSection({ section, signedIn, wished, first }: { section: 
           </Link>
         ) : null}
       </div>
-      <ProductGrid products={section.products} signedIn={signedIn} wished={wished} priorityCount={first ? 2 : 0} className="px-4 sm:px-0" />
+      <ProductGrid products={section.products} signedIn={signedIn} priorityCount={first ? 2 : 0} className="px-4 sm:px-0" />
     </section>
   );
 }

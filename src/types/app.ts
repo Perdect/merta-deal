@@ -60,7 +60,7 @@ export type ProductDetail = ProductCard & {
   tags: string[]; created_at: string;
   description: string | null; ingredients: string | null; nutrition: Record<string, number | string> | null; manufacturer: string | null; country_of_origin: string | null;
   shelf_life: string | null; seller_name: string | null; seller_address: string | null; seller_license: string | null;
-  offers: ProductOffer[]; related: ProductCard[]; frequently_bought: ProductCard[]; more_from_brand: ProductCard[]; reviews: ProductReview[]; in_wishlist: boolean;
+  offers: ProductOffer[]; related: ProductCard[]; frequently_bought: ProductCard[]; more_from_brand: ProductCard[]; reviews: ProductReview[];
 };
 
 export type CartLine = { id: string; inventory_id: string; product_id: string; name: string; slug: string; image_url: string | null; pack_label: string | null; brand_name: string | null; quantity: number; unit_price: number; unit_mrp: number; line_total: number; stock_qty: number; max_order_qty: number; available: boolean;

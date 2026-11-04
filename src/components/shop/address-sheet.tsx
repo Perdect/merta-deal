@@ -5,11 +5,10 @@ import type { Address } from "@/types/app";
 import { BottomSheet, Modal } from "@/components/ui/overlay";
 import { AddressWizard } from "./address-wizard";
 import { cn } from "@/lib/utils";
+import { addressLine, addressTitle } from "@/stores/location-store";
+export { addressLine, addressTitle };
 
 const TYPE_ICON = { home: Home, work: Briefcase, other: MapPin } as const;
-
-export function addressTitle(a: Address) { return a.label || a.type[0].toUpperCase() + a.type.slice(1); }
-export function addressLine(a: Address) { return [a.house, a.street, a.area, a.landmark ? `near ${a.landmark}` : null, `${a.city} – ${a.pincode}`].filter(Boolean).join(", "); }
 
 /**
  * "Select delivery location": the saved addresses as a bottom sheet, with "Add new address" opening

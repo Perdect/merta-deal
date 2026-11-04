@@ -12,7 +12,7 @@ import { placeOrderAction } from "@/lib/actions/checkout";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useCartStore } from "@/stores/cart-store";
 import { useCheckoutStore } from "@/stores/checkout-store";
-import { useLocationStore } from "@/stores/location-store";
+import { useLocationStore, adoptAddress } from "@/stores/location-store";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
@@ -25,6 +25,7 @@ import { ProductImage } from "./product-image";
 import { ProductCard } from "./product-card";
 import { LoginModal } from "@/components/auth/login-modal";
 import { cn, formatINR } from "@/lib/utils";
+import { etaText } from "@/lib/eta";
 import { site } from "@/config/site";
 
 declare global { interface Window { Razorpay?: new (opts: Record<string, unknown>) => { open: () => void; on: (e: string, cb: (r: unknown) => void) => void } } }
@@ -156,7 +157,9 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
   const empty = !s || s.empty || !items.length;
   const deliveryWaived = Number(s?.delivery_fee_waived ?? 0);
   const savings = s ? s.item_savings + s.coupon_discount + deliveryWaived : 0;
-  const etaLabel = s?.eta_max_minutes ? `${s.eta_min_minutes}–${s.eta_max_minutes}` : hydrated && location?.etaMax ? `${location.etaMin}–${location.etaMax}` : `${eta.min}–${eta.max}`;
+  // A delivery time is only promised for a served address (cart_summary) or a served picked location.
+  const etaLabel = selectedAddress && s?.serviceable ? etaText(s.eta_min_minutes, s.eta_max_minutes) : !selectedAddress && hydrated && location?.serviceable ? etaText(location.etaMin, location.etaMax) : null;
+  void eta;
   const headerLine = selectedAddress ? `${addressTitle(selectedAddress)} · ${addressLine(selectedAddress)}` : hydrated && location ? location.label : `Delivering across ${site.city}`;
   const walletOk = walletBalance >= (s?.total ?? 0);
 
@@ -213,7 +216,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
   const sheets = (
     <>
       <AddressSheet open={sheet === "address"} onClose={closeSheet} addresses={addresses} selectedId={addressId} defaultName={user.name} defaultPhone={user.phone}
-        onPick={(a, isNew) => { if (isNew) { addAddress(a); router.refresh(); } setAddressId(a.id); closeSheet(); }} />
+        onPick={(a, isNew) => { if (isNew) { addAddress(a); router.refresh(); } setAddressId(a.id); void adoptAddress(a); closeSheet(); }} />
       <LoginModal open={sheet === "login" && !account} onClose={() => { closeSheet(); setResume(null); }} eta={`${eta.min}–${eta.max} minutes`} guest={isGuest} title={resume === "pay" ? "Login to place your order" : undefined} />
     </>
   );
@@ -291,7 +294,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
               <Card>
                 <div className="flex items-center gap-3 border-b border-line px-4 py-3.5">
                   <span className="flex h-11 w-11 items-center justify-center rounded-md border border-line bg-card text-ink"><Clock className="h-5 w-5" /></span>
-                  <div className="min-w-0 flex-1"><p className="font-display text-base font-bold text-ink">Delivering in {etaLabel} mins</p><p className="text-xs text-ink-3">{s.item_count} item{s.item_count === 1 ? "" : "s"}{selectedAddress ? ` · to ${addressTitle(selectedAddress)}` : ""}</p></div>
+                  <div className="min-w-0 flex-1"><p className="font-display text-base font-bold text-ink">{etaLabel ? `Delivering in ${etaLabel}` : selectedAddress ? "Delivery time unavailable here" : "Add an address to see delivery time"}</p><p className="text-xs text-ink-3">{s.item_count} item{s.item_count === 1 ? "" : "s"}{selectedAddress ? ` · to ${addressTitle(selectedAddress)}` : ""}</p></div>
                 </div>
                 <ul className="divide-y divide-line px-4">
                   {items.map((line) => {
@@ -392,7 +395,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
                   // Express is offered only where the zone supports it (admins switch it per zone); otherwise it is not shown at all.
                   const opts = ([
                     { id: "express" as const, icon: <Zap className="h-4 w-4 text-saffron-600" aria-hidden />, t: "Express", sub: `+${formatINR(s.express_fee || 20)}`, show: Boolean(s.zone?.express_supported) },
-                    { id: "standard" as const, icon: <Clock className="h-4 w-4 text-brand-600" aria-hidden />, t: "Standard", sub: `${s.eta_min_minutes}–${s.eta_max_minutes} min`, show: true },
+                    { id: "standard" as const, icon: <Clock className="h-4 w-4 text-brand-600" aria-hidden />, t: "Standard", sub: etaText(s.eta_min_minutes, s.eta_max_minutes, "min") ?? "Standard", show: true },
                     { id: "scheduled" as const, icon: <CalendarClock className="h-4 w-4 text-info" aria-hidden />, t: "Scheduled", sub: "Pick a slot", show: slots.length > 0 },
                   ]).filter((o) => o.show);
                   return (

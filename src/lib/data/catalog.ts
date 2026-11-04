@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { createClient, getAuthUser } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import type { Category, HomeFeed, ProductCard, ProductDetail, SearchResult } from "@/types/app";
 
 export const getHomeFeed = cache(async (lat?: number | null, lng?: number | null): Promise<HomeFeed | null> => {
@@ -64,13 +64,6 @@ export const getPublicSettings = cache(async (): Promise<Record<string, unknown>
   const supabase = await createClient();
   const { data } = await supabase.rpc("public_settings");
   return (data as Record<string, unknown>) ?? {};
-});
-
-export const getWishlistIds = cache(async (): Promise<Set<string>> => {
-  const [supabase, user] = await Promise.all([createClient(), getAuthUser()]);
-  if (!user) return new Set();
-  const { data } = await supabase.from("wishlists").select("product_id").eq("user_id", user.id);
-  return new Set((data ?? []).map((w) => w.product_id));
 });
 
 export async function getProductsByIds(ids: string[]): Promise<ProductCard[]> {

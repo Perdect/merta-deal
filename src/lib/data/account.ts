@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { createClient, getAuthUser } from "@/lib/supabase/server";
-import type { Address, Coupon, Notification, ProductCard, Profile } from "@/types/app";
+import type { Address, Coupon, Notification, Profile } from "@/types/app";
 
 export const getMyProfile = cache(async (): Promise<Profile | null> => {
   const [supabase, user] = await Promise.all([createClient(), getAuthUser()]);
@@ -14,17 +14,6 @@ export const getMyAddresses = cache(async (): Promise<Address[]> => {
   if (!user) return [];
   const { data } = await supabase.from("addresses").select("*").eq("user_id", user.id).order("is_default", { ascending: false }).order("created_at");
   return (data ?? []) as Address[];
-});
-
-export const getMyWishlist = cache(async (): Promise<ProductCard[]> => {
-  const [supabase, user] = await Promise.all([createClient(), getAuthUser()]);
-  if (!user) return [];
-  const { data: ids } = await supabase.from("wishlists").select("product_id").eq("user_id", user.id).order("created_at", { ascending: false });
-  const pids = (ids ?? []).map((w) => w.product_id);
-  if (!pids.length) return [];
-  const { data } = await supabase.from("v_product_cards").select("*").in("id", pids);
-  const map = new Map((data ?? []).map((p) => [p.id, p]));
-  return pids.map((id) => map.get(id)).filter(Boolean) as ProductCard[];
 });
 
 export const getMyNotifications = cache(async (limit = 50): Promise<{ items: Notification[]; unread: number }> => {

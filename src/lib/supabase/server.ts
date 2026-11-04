@@ -28,7 +28,7 @@ export const createClient = cache(async () => {
 
 /**
  * The signed-in auth user, fetched once per request. `auth.getUser()` is a network call to Supabase
- * Auth; without this cache a page that needs the user in several places (layout, wishlist, cart,
+ * Auth; without this cache a page that needs the user in several places (layout, cart,
  * addresses…) paid for it several times over.
  */
 export const getAuthUser = cache(async () => {

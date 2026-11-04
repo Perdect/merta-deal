@@ -98,7 +98,7 @@ export function PreferencesForm({ profile }: { profile: Profile }) {
         {!canSave ? <Alert tone="warning" className="mb-3">Add your name and mobile number on <Link href="/account" className="font-semibold underline">your profile</Link> to save preferences.</Alert> : null}
         <ul className="divide-y divide-line">
           <li className="flex items-center justify-between gap-3 py-3"><div><p className="text-sm font-semibold text-ink">Order updates</p><p className="text-xs text-ink-3">Confirmation, rider assigned, out for delivery</p></div><Switch checked={prefs.notify_order_updates} onChange={(v) => set("notify_order_updates", v)} /></li>
-          <li className="flex items-center justify-between gap-3 py-3"><div><p className="text-sm font-semibold text-ink">Offers &amp; deals</p><p className="text-xs text-ink-3">Coupons, festival sales, price drops on wishlisted items</p></div><Switch checked={prefs.notify_offers} onChange={(v) => set("notify_offers", v)} /></li>
+          <li className="flex items-center justify-between gap-3 py-3"><div><p className="text-sm font-semibold text-ink">Offers &amp; deals</p><p className="text-xs text-ink-3">Coupons, festival sales, price drops</p></div><Switch checked={prefs.notify_offers} onChange={(v) => set("notify_offers", v)} /></li>
           <li className="flex items-center justify-between gap-3 py-3"><div><p className="text-sm font-semibold text-ink">WhatsApp updates</p><p className="text-xs text-ink-3">Order status on WhatsApp ({profile.phone ? `+91 ${profile.phone}` : "add a mobile number first"})</p></div><Switch checked={prefs.whatsapp_opt_in} onChange={(v) => set("whatsapp_opt_in", v)} disabled={!profile.phone} /></li>
         </ul>
       </SettingsCard>

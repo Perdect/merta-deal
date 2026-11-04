@@ -2,7 +2,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { type LucideIcon, ShoppingBag, MessageCircleQuestion, MapPin, UserRound, Heart, Ticket, Star, Bell, Settings, Wallet, ChevronRight, Store, Bike, LayoutDashboard } from "lucide-react";
+import { type LucideIcon, ShoppingBag, MessageCircleQuestion, MapPin, UserRound, Ticket, Star, Bell, Settings, Wallet, ChevronRight, Store, Bike, LayoutDashboard } from "lucide-react";
 import { signOutAction } from "@/lib/actions/auth";
 import { Avatar, Logo } from "@/components/ui/misc";
 import { cn, formatINR } from "@/lib/utils";
@@ -14,7 +14,6 @@ const NAV = [
   { href: "/account/profile", label: "Profile", icon: UserRound },
 ];
 const MORE = [
-  { href: "/account/wishlist", label: "Wishlist", icon: Heart },
   { href: "/account/coupons", label: "Coupons & offers", icon: Ticket },
   { href: "/account/rewards", label: "Rewards", icon: Star },
   { href: "/account/notifications", label: "Notifications", icon: Bell },

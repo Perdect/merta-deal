@@ -74,16 +74,16 @@ function OfferCard({ offer }: { offer: WelcomeOffer }) {
   };
 
   return (
-    <div className="flex h-full items-center gap-3 rounded-xl border border-dashed border-saffron-400 bg-saffron-50 px-3 py-2.5">
-      <Tag key={wiggle} aria-hidden className={cn("h-5 w-5 shrink-0 text-saffron-700", wiggle > 0 && "motion-safe:animate-tag")} strokeWidth={2} />
+    <div className="flex h-full items-center gap-2.5 rounded-xl border border-dashed border-saffron-400 bg-saffron-50 px-3 py-2">
+      <Tag key={wiggle} aria-hidden className={cn("h-4.5 w-4.5 shrink-0 text-saffron-700", wiggle > 0 && "motion-safe:animate-tag")} strokeWidth={2} />
       <div className="min-w-0 flex-1 leading-snug">
-        <p className="line-clamp-2 text-[13px] font-bold leading-tight text-ink sm:text-sm">{offer.title}</p>
-        <p className="mt-0.5 text-[11.5px] text-ink-2 sm:text-xs">
+        <p className="line-clamp-1 text-[13px] font-bold leading-tight text-ink sm:text-sm">{offer.title}</p>
+        <p className="mt-0.5 truncate text-[11px] text-ink-2 sm:text-xs">
           Code <b className="tracking-wide text-ink">{offer.code}</b>{offer.minOrder ? <> · above {formatINR(offer.minOrder)}</> : null}
-          {offer.expiresAt ? <span className="text-ink-3"> · till {formatDate(offer.expiresAt, { day: "numeric", month: "short" })}</span> : null}
+          {offer.expiresAt ? <span className="text-ink-3"> · till {formatDate(offer.expiresAt, new Date(offer.expiresAt).getFullYear() === new Date().getFullYear() ? { day: "numeric", month: "short" } : { day: "numeric", month: "short", year: "numeric" })}</span> : null}
         </p>
       </div>
-      <button type="button" onClick={use} disabled={busy} className="inline-flex h-11 shrink-0 items-center gap-1 rounded-full bg-white px-3.5 text-xs font-bold text-saffron-800 ring-1 ring-saffron-300 transition-transform duration-150 hover:bg-saffron-100 active:scale-95 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-saffron-600">
+      <button type="button" onClick={use} disabled={busy} className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full bg-white px-3 text-[11px] font-bold text-saffron-800 ring-1 ring-saffron-300 transition-transform duration-150 hover:bg-saffron-100 active:scale-95 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-saffron-600">
         {done ? <><Check className="h-3.5 w-3.5" aria-hidden /> Applied</> : busy ? "Applying…" : count ? "Apply" : "Use code"}
       </button>
     </div>

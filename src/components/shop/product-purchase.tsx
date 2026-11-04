@@ -7,16 +7,19 @@ import { useHydrated } from "@/hooks/use-hydrated";
 import { resolveOffer } from "./product-offer";
 import { formatINR, cn } from "@/lib/utils";
 import { site } from "@/config/site";
+import { etaText } from "@/lib/eta";
 
+/** The zone ETA for the chosen location, or null until a served location is picked (never a default). */
 function useEta() {
   const hydrated = useHydrated();
   const location = useLocationStore((s) => s.location);
-  return hydrated && location?.etaMax ? `${location.etaMin}–${location.etaMax} minutes` : site.deliveryWindow;
+  return hydrated && location?.serviceable ? etaText(location.etaMin, location.etaMax, "minutes") : null;
 }
 
-/** "⚡ Get in 20–25 minutes": the zone ETA once a location resolves, else the city-wide setting. */
+/** "⚡ Get in 20–25 minutes" once a served location is set; otherwise a prompt to pick one. */
 export function EtaBadge({ className }: { className?: string }) {
   const eta = useEta();
+  if (!eta) return <span className={cn("inline-flex items-center gap-1 rounded-md bg-surface-2 px-2.5 py-1 text-sm text-ink-2", className)}><Zap className="h-4 w-4 text-ink-4" /> Select your location to see delivery time</span>;
   return <span className={cn("inline-flex items-center gap-1 rounded-md bg-fresh-50 px-2.5 py-1 text-sm text-brand-800", className)}><Zap className="h-4 w-4 fill-fresh text-fresh" /> Get in <b>{eta}</b></span>;
 }
 
@@ -56,7 +59,7 @@ export function ProductPurchase({ product, children }: { product: ProductDetail;
       <div className="border-t border-line" />
       <div className="grid grid-cols-2 gap-3 sm:max-w-sm">
         <Tile icon={RotateCcw} label="Damaged item?" sub="Replace or refund within 24 hrs" />
-        <Tile icon={Truck} label="Fast Delivery" sub={`${eta} across ${site.city}`} />
+        <Tile icon={Truck} label="Fast Delivery" sub={eta ? `${eta} to your location` : `Usually ${site.deliveryWindow} across ${site.city}`} />
       </div>
     </div>
   );

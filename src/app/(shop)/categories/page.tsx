@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getCategoryTabs, getWishlistIds, searchProducts } from "@/lib/data/catalog";
+import { getCategoryTabs, searchProducts } from "@/lib/data/catalog";
 import { getSessionUser } from "@/lib/supabase/server";
 import { ShopPageHeader } from "@/components/shop/shop-page-header";
 import { SearchLink } from "@/components/shop/search-link";
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 /** Compact quick-commerce style category screen: tabs → sub-category tiles, or products for leaf categories. */
 export default async function CategoriesPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
-  const [{ tab }, tabs, user, wished] = await Promise.all([searchParams, getCategoryTabs(), getSessionUser(), getWishlistIds()]);
+  const [{ tab }, tabs, user] = await Promise.all([searchParams, getCategoryTabs(), getSessionUser()]);
   // Categories without sub-categories show their products right on this screen.
   const leaf = tabs.filter((t) => t.tiles.length === 0);
   const lists = await Promise.all(leaf.map((t) => searchProducts({ category: t.slug, sort: "popular", pageSize: 12 })));
@@ -18,7 +18,7 @@ export default async function CategoriesPage({ searchParams }: { searchParams: P
   return (
     <div className="bg-card px-4 pb-6 pt-1 sm:rounded-2xl sm:px-5 lg:mt-4 lg:border lg:border-line lg:py-5">
       <ShopPageHeader title="Categories" barTitle="Categories" cart barClassName="-mt-1" actions={<SearchLink />} className="px-0 lg:pb-3" />
-      <CategoryBrowser tabs={tabs} initial={tab ?? tabs[0]?.slug ?? ""} products={products} signedIn={Boolean(user)} wished={[...wished]} />
+      <CategoryBrowser tabs={tabs} initial={tab ?? tabs[0]?.slug ?? ""} products={products} signedIn={Boolean(user)} />
     </div>
   );
 }

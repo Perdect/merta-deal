@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { env } from "@/lib/env";
 import { friendlyError } from "@/lib/utils";
 import type { ActionResult } from "./cart";
 import type { Address, DeliveryType, PaymentMethod } from "@/types/app";
@@ -33,8 +34,14 @@ export async function saveAddressAction(input: AddressInput): Promise<ActionResu
     return { ok: false, error: "Please fix the highlighted fields", fieldErrors };
   }
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Please sign in" };
+  let { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    // First thing a new visitor does may be picking an address: start the guest session here, as ADD does.
+    if (!env.anonymousAuthEnabled) return { ok: false, error: "Please sign in to save an address" };
+    const { data: anon, error: anonErr } = await supabase.auth.signInAnonymously({ options: { data: { full_name: "Guest", role: "customer" } } });
+    if (anonErr || !anon.user) return { ok: false, error: anonErr ? friendlyError(anonErr) : "Please sign in to save an address" };
+    user = anon.user;
+  }
   const { data: zone } = await supabase.rpc("find_zone", { p_pincode: parsed.data.pincode, p_lat: parsed.data.lat ?? undefined, p_lng: parsed.data.lng ?? undefined });
   const zoneRow = zone as unknown as { id: string | null } | null;
   const { id, ...rest } = parsed.data;

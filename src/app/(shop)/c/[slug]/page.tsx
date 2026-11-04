@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSessionUser } from "@/lib/supabase/server";
-import { getBrands, getCategoryBySlug, getPublicSettings, getWishlistIds, searchProducts } from "@/lib/data/catalog";
+import { getBrands, getCategoryBySlug, getPublicSettings, searchProducts } from "@/lib/data/catalog";
 import { paymentPhrase } from "@/lib/seo-copy";
 import { parseListingParams } from "@/lib/listing-params";
 import { ProductListing } from "@/components/shop/product-listing";
@@ -48,7 +48,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const barTitle = pickedNames.length ? pickedNames.join(" & ") : category.name;
   const scopeCategory = picked.length ? picked.join(",") : slug;
   const listingParams = parseListingParams(sp, { category: scopeCategory });
-  const [user, result, brands, wished] = await Promise.all([getSessionUser(), searchProducts(listingParams), getBrands(), getWishlistIds()]);
+  const [user, result, brands] = await Promise.all([getSessionUser(), searchProducts(listingParams), getBrands()]);
   const seo = CATEGORY_SEO[slug];
   const crumbs = [{ name: "Home", url: `${site.url}/` }, ...(parent ? [{ name: parent.name, url: `${site.url}/c/${parent.slug}` }] : []), { name: category.name, url: `${site.url}/c/${slug}` }];
   const jsonLd = {
@@ -75,7 +75,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           {children.map((c) => <Link key={c.id} href={`/c/${c.slug}`} className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-line-2 bg-card px-3.5 text-sm font-medium text-ink-2 hover:border-brand-500 hover:text-brand-700">{c.name}</Link>)}
         </div>
       ) : null}
-      <ProductListing result={result} filters={{ brands, categories: children.map((c) => ({ name: c.name, slug: c.slug })) }} signedIn={Boolean(user)} wished={wished} scope={{ category: scopeCategory }} hideCategoryChips
+      <ProductListing result={result} filters={{ brands, categories: children.map((c) => ({ name: c.name, slug: c.slug })) }} signedIn={Boolean(user)} scope={{ category: scopeCategory }} hideCategoryChips
         emptyTitle={`No ${barTitle.toLowerCase()} products right now`} emptyHint="Check back soon, or remove a filter if you added one." />
     </div>
   );

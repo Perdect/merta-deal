@@ -46,7 +46,7 @@ export function ProductHero({ images, name, brand, packSize, children }: {
   images: string[]; name: string; brand?: string | null; packSize?: string | null; price: number; mrp: number;
   /** Where "back" goes when the page was opened directly (no history). */
   backHref: string;
-  /** Overlay slot (wishlist button). */
+  /** Overlay slot (top-right of the gallery). */
   children?: React.ReactNode;
 }) {
   const scroller = React.useRef<HTMLDivElement>(null);

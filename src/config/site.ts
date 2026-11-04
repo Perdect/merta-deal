@@ -1,6 +1,6 @@
 /** Brand + navigation configuration. Business rules (fees, thresholds) live in the `settings` table, not here. */
 /** Marketing copy only — the live promise is `settings.delivery_eta_*` and each delivery zone. Keep in step with them. */
-const DELIVERY_WINDOW = "20–25 minutes";
+const DELIVERY_WINDOW = "20 minutes";
 export const site = {
   name: "Merta Deal",
   /** Brand as written in the logo, titles and structured data (alternate: "Merta Deal"). */
@@ -9,7 +9,7 @@ export const site = {
   description:
     `Order groceries, fresh fruits and vegetables from Merta Deal in Merta City, Rajasthan. Fast local delivery in ${DELIVERY_WINDOW}.`,
   deliveryWindow: DELIVERY_WINDOW,
-  deliveryWindowShort: "20–25 min",
+  deliveryWindowShort: "20 min",
   city: "Merta City",
   state: "Rajasthan",
   defaultPincode: "341510",

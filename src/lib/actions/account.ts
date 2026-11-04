@@ -22,14 +22,6 @@ export async function updateProfileAction(input: { full_name: string; phone: str
   return { ok: true, data: undefined };
 }
 
-export async function toggleWishlistAction(productId: string): Promise<ActionResult<{ wished: boolean }>> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("toggle_wishlist", { p_product_id: productId });
-  if (error) return { ok: false, error: friendlyError(error) };
-  revalidatePath("/account/wishlist");
-  return { ok: true, data: { wished: Boolean(data) } };
-}
-
 export async function markNotificationsReadAction(ids?: string[]): Promise<ActionResult<number>> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("mark_notifications_read", { p_ids: ids });
