@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { listCatalogueProducts } from "@/lib/data/admin-catalogue";
 import { friendlyError } from "@/lib/utils";
 import type { ActionResult } from "./cart";
 import type { ScanOrder, ScanProduct, ScanResolved, StockHistoryRow, StockInput, StockResult, PackResult } from "@/lib/scan/types";
@@ -65,6 +66,16 @@ export async function stockHistoryAction(productId: string): Promise<ActionResul
 export async function setStockModeAction(productId: string, mode: "loose" | "pack"): Promise<ActionResult<ScanProduct>> {
   if (!uuid.safeParse(productId).success) return { ok: false, error: "Invalid id" };
   return rpc<ScanProduct>("admin_set_stock_mode", { p_product_id: productId, p_mode: mode === "loose" ? "loose" : "pack", p_confirmed: true });
+}
+
+export type ProductPick = { id: string; name: string; pack_label: string | null; brand: string | null; image_url: string | null; listed: boolean };
+/** Catalogue search for "which product is this packet?" (admin only: the listing itself is admin-gated by RLS). */
+export async function searchProductsAction(q: string): Promise<ActionResult<ProductPick[]>> {
+  const term = q.trim().slice(0, 80);
+  if (term.length < 2) return { ok: true, data: [] };
+  const r = await listCatalogueProducts({ q: term, page: 1 });
+  if (r.error) return { ok: false, error: r.error };
+  return { ok: true, data: r.items.slice(0, 12).map((p) => ({ id: p.id, name: p.name, pack_label: p.pack_label, brand: p.brand?.name ?? null, image_url: p.image_url, listed: Boolean(p.offer) })) };
 }
 
 export async function setBarcodeAction(productId: string, barcode: string): Promise<ActionResult<ScanProduct>> {

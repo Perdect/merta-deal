@@ -13,6 +13,7 @@ import { Scanner, ScanBanner } from "./scanner";
 import { ProductPanel, type StockOutcome } from "./product-panel";
 import { OrderPanel, type LastScan } from "./order-panel";
 import { PendingBanner, isNetworkFailure, newKey } from "./shared";
+import { LinkBarcode } from "./link-barcode";
 
 type View = { kind: "idle" } | { kind: "loading"; code: string } | { kind: "product"; product: ScanProduct } | { kind: "order"; order: ScanOrder } | { kind: "unknown"; code: string } | { kind: "error"; code: string; message: string };
 
@@ -170,10 +171,13 @@ export function ScanSection({ userId, siteUrl, initialCode, initialOrderId, init
           </div>
         ) : null}
         {view.kind === "unknown" ? (
-          <Alert tone="warning" title="Unknown code">
-            <span className="font-mono text-xs">{view.code}</span> is not a Merta Deal product label, order label, or a barcode saved on a product. To use a packet&rsquo;s own barcode, open that product and add the barcode.
-            <div className="mt-2"><Button size="sm" variant="outline" onClick={reset}>Try again</Button></div>
-          </Alert>
+          <>
+            <Alert tone="warning" title={/^\d{8,14}$/.test(view.code) ? "Packet barcode not linked yet" : "Unknown code"}>
+              <span className="font-mono text-xs">{view.code}</span>{/^\d{8,14}$/.test(view.code) ? " looks like a packet barcode that is not saved on any product yet. Link it once below and it will scan from then on." : " is not a Merta Deal product label, order label, or a barcode saved on a product."}
+              <div className="mt-2"><Button size="sm" variant="outline" onClick={reset}>Scan again</Button></div>
+            </Alert>
+            {/^\d{8,14}$/.test(view.code) ? <LinkBarcode code={view.code} onLinked={showProduct} /> : null}
+          </>
         ) : null}
         {view.kind === "error" ? (
           <Alert tone="danger" title="Couldn't look that up">{view.message}<div className="mt-2"><Button size="sm" variant="outline" onClick={() => void lookup(view.code)}>Retry</Button> <Button size="sm" variant="ghost" onClick={reset}>Cancel</Button></div></Alert>

@@ -11,6 +11,7 @@ import { btn } from "@/components/admin/catalogue/bits";
 import { WEIGHT_UNIT_OPTIONS } from "@/components/admin/constants";
 import { deleteProductAction, type ProductInput } from "@/lib/actions/admin";
 import { saveCatalogueProductAction, type SellerInput } from "@/lib/actions/admin-catalogue";
+import { setBarcodeAction } from "@/lib/actions/scan";
 import type { Product } from "@/types/app";
 import { slugify } from "@/lib/utils";
 
@@ -66,7 +67,7 @@ function parseNutrition(text: string): { ok: true; value: Record<string, string 
  * validation and audit) plus the seller-of-record / shelf-life columns.
  * The selling price and stock are NOT edited here; they live on the product's listing (see the product page).
  */
-export function ProductForm({ product, categories, brands }: { product: Product | null; categories: Opt[]; brands: Opt[] }) {
+export function ProductForm({ product, categories, brands, barcode }: { product: Product | null; categories: Opt[]; brands: Opt[]; /** Scanned packet barcode to attach once the product exists (from Scan › unknown code). */ barcode?: string }) {
   const router = useRouter();
   const [state, setState] = React.useState<Snapshot>(() => initial(product));
   const [base, setBase] = React.useState<Snapshot>(() => initial(product));
@@ -126,7 +127,14 @@ export function ProductForm({ product, categories, brands }: { product: Product 
     setBusy(null);
     if (!r.ok) { toast.error(product ? "Couldn't save the product" : "Couldn't create the product", r.error); return; }
     setBase(state); setShowErrors(false);
-    if (!product) { toast.success("Product created", "Next: set its selling price and stock."); router.push(`/admin/products/${r.data.id}`); }
+    if (!product) {
+      if (barcode) {
+        const bc = await setBarcodeAction(r.data.id, barcode);
+        if (!bc.ok) toast.error(`Product created, but the barcode was not attached: ${bc.error}`);
+      }
+      toast.success("Product created", barcode ? "Barcode attached. Next: set its selling price and stock." : "Next: set its selling price and stock.");
+      router.push(`/admin/products/${r.data.id}`);
+    }
     else { toast.success("Product saved"); router.refresh(); }
   };
 
