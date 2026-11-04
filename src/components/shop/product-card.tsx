@@ -6,6 +6,7 @@ import { VegMark } from "@/components/ui/badge";
 import { ProductImage } from "./product-image";
 import { AddToCart } from "./add-to-cart";
 import { PackOptionsButton } from "./variant-sheet";
+import { EtaPill } from "./eta-pill";
 import { WishlistButton } from "./wishlist-button";
 
 /**
@@ -33,6 +34,7 @@ export function ProductCard({ product, signedIn, wished, className, priority }: 
       </div>
 
       <div className="flex flex-1 flex-col px-0.5 pt-2">
+        <EtaPill className="mb-1.5 self-start" />
         <Link href={href} className="tap line-clamp-2 min-h-[2.5em] text-[13px] font-semibold leading-[1.25] text-ink hover:text-brand-800">{product.name}</Link>
         <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-ink-3">
           <VegMark veg={product.is_veg} className="h-3 w-3" />
