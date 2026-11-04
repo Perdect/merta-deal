@@ -177,7 +177,7 @@ export const getBrandProductCounts = cache(async (): Promise<Record<string, numb
  * Orders
  * ---------------------------------------------------------------------------------------------- */
 
-export type OrderListRow = Pick<Tables<"orders">, "id" | "order_number" | "short_code" | "status" | "payment_method" | "payment_status" | "total" | "item_count" | "delivery_type" | "created_at" | "promised_at" | "delivered_at" | "address_snapshot"> & { customer: { full_name: string | null; phone: string | null } | null };
+export type OrderListRow = Pick<Tables<"orders">, "id" | "order_number" | "short_code" | "status" | "payment_method" | "payment_status" | "total" | "item_count" | "delivery_type" | "created_at" | "promised_at" | "delivered_at" | "address_snapshot" | "exception" | "accepted_at"> & { customer: { full_name: string | null; phone: string | null } | null };
 
 export type OrderFilters = { q?: string; status?: string; payment?: string; method?: string; from?: string; to?: string; late?: string; delivery?: string };
 
@@ -193,9 +193,11 @@ export const ORDER_STATUS_GROUPS: Record<string, Enums<"order_status">[]> = {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function applyOrderFilters<Q extends { in: any; eq: any; gte: any; lt: any; or: any }>(query: Q, opts: OrderFilters, withStatus = true): Q {
+function applyOrderFilters<Q extends { in: any; eq: any; gte: any; lt: any; or: any; is: any; not: any }>(query: Q, opts: OrderFilters, withStatus = true): Q {
   let q = query;
-  if (withStatus && opts.status) q = ORDER_STATUS_GROUPS[opts.status] ? q.in("status", ORDER_STATUS_GROUPS[opts.status]) : q.eq("status", opts.status as Enums<"order_status">);
+  if (withStatus && opts.status === "unaccepted") q = q.in("status", ORDER_STATUS_GROUPS.packing).is("accepted_at", null);
+  else if (withStatus && opts.status === "exceptions") q = q.in("status", ORDER_STATUS_GROUPS.active).not("exception", "is", null);
+  else if (withStatus && opts.status) q = ORDER_STATUS_GROUPS[opts.status] ? q.in("status", ORDER_STATUS_GROUPS[opts.status]) : q.eq("status", opts.status as Enums<"order_status">);
   if (opts.late === "1") q = q.in("status", ORDER_STATUS_GROUPS.active).lt("promised_at", new Date().toISOString());
   if (opts.payment) q = q.eq("payment_status", opts.payment as Enums<"payment_status">);
   if (opts.method) q = q.eq("payment_method", opts.method as Enums<"payment_method">);
@@ -209,7 +211,7 @@ function applyOrderFilters<Q extends { in: any; eq: any; gte: any; lt: any; or: 
 export const listOrders = cache(async (opts: OrderFilters & { page?: number }): Promise<Paged<OrderListRow>> => {
   const supabase = await createClient();
   const page = opts.page ?? 1;
-  const base = supabase.from("orders").select("id, order_number, short_code, status, payment_method, payment_status, total, item_count, delivery_type, created_at, promised_at, delivered_at, address_snapshot, customer:profiles!orders_user_id_fkey(full_name, phone)", { count: "exact" }).order("created_at", { ascending: false }).range(...pageRange(page));
+  const base = supabase.from("orders").select("id, order_number, short_code, status, payment_method, payment_status, total, item_count, delivery_type, created_at, promised_at, delivered_at, address_snapshot, exception, accepted_at, customer:profiles!orders_user_id_fkey(full_name, phone)", { count: "exact" }).order("created_at", { ascending: false }).range(...pageRange(page));
   const { data, count, error } = await applyOrderFilters(base, opts);
   if (error) console.error("listOrders", error.message);
   return { items: (data ?? []) as unknown as OrderListRow[], total: count ?? 0, page, pageSize: PAGE_SIZE };

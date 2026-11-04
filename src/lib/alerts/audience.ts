@@ -4,8 +4,8 @@
  */
 export type Audience = "customer" | "admin" | "rider";
 
-const ADMIN = new Set(["new_order", "payment_update", "rider_assigned", "order_delivered", "order_cancelled", "low_stock", "dispatch_no_rider", "order_unattended", "rider_registered", "store_registered"]);
-const RIDER = new Set(["delivery_offer", "cash_received", "rider_payout", "rider_status"]);
+const ADMIN = new Set(["new_order", "payment_update", "rider_assigned", "order_delivered", "order_cancelled", "low_stock", "dispatch_no_rider", "order_unattended", "rider_registered", "store_registered", "rider_arrived", "exception_resolved", "exception_expired", "refund_due"]);
+const RIDER = new Set(["delivery_offer", "delivery_cancelled", "cash_received", "rider_payout", "rider_status"]);
 
 export function audienceOf(type: string, context: Audience = "customer"): Audience {
   if (ADMIN.has(type)) return "admin";
@@ -18,4 +18,4 @@ export function audienceOf(type: string, context: Audience = "customer"): Audien
 export const AUDIENCE_LABEL: Record<Audience, string> = { customer: "Customer", admin: "Admin", rider: "Rider" };
 
 /** Types that ring: the dashboard and the rider app treat these as alerts, not news. */
-export const ALERT_TYPES = new Set(["new_order", "delivery_offer", "order_unattended", "dispatch_no_rider"]);
+export const ALERT_TYPES = new Set(["new_order", "delivery_offer", "order_unattended", "dispatch_no_rider", "order_exception", "delivery_cancelled"]);

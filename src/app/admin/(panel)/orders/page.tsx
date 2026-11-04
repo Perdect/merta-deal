@@ -12,13 +12,15 @@ export const metadata: Metadata = { title: "Orders" };
 
 const TABS = [
   { value: "", label: "All" },
-  { value: "active", label: "Active" },
-  { value: "packing", label: "To pack" },
-  { value: "ready", label: "Packed" },
+  { value: "unaccepted", label: "New" },
+  { value: "packing", label: "Picking" },
+  { value: "ready", label: "Packed · awaiting rider" },
   { value: "on_the_way", label: "On the way" },
   { value: "done", label: "Delivered" },
+  { value: "exceptions", label: "Exceptions" },
   { value: "cancelled_all", label: "Cancelled" },
 ];
+const EXCEPTION_LABEL: Record<string, string> = { no_rider: "No rider in range", unattended: "Nobody accepted", delivery_failed: "Delivery failed", item_exception: "Item unavailable · customer deciding" };
 const TERMINAL = ["delivered", "completed", "cancelled", "rejected"];
 
 export default async function AdminOrdersPage({ searchParams }: { searchParams: Promise<SP> }) {
@@ -56,7 +58,7 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
           ? <EmptyBlock icon={SearchX} title="No orders match" description="Try another tab, clear a filter chip, or search by a different order number or phone." />
           : <EmptyBlock icon={ShoppingBag} title="No orders yet" description="Orders appear here the moment a customer checks out." />}
         columns={[
-          { key: "order", header: "Order", render: (o) => <CellStack primary={o.order_number} secondary={o.short_code ? `Code ${o.short_code}` : undefined} href={viewHref(o.id)} scroll={false} /> },
+          { key: "order", header: "Order", render: (o) => <CellStack primary={<>{o.order_number}{o.exception ? <span className="ml-1.5 rounded-full bg-danger-50 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-danger">{EXCEPTION_LABEL[o.exception] ?? o.exception}</span> : !o.accepted_at && !TERMINAL.includes(o.status) && !["ready_for_pickup", "rider_assigned", "out_for_delivery"].includes(o.status) ? <span className="ml-1.5 rounded-full bg-brand-50 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-brand-700">New</span> : null}</>} secondary={o.short_code ? `Code ${o.short_code}` : undefined} href={viewHref(o.id)} scroll={false} /> },
           { key: "customer", header: "Customer", hideBelow: "md", render: (o) => { const a = o.address_snapshot as { full_name?: string; phone?: string } | null; return <CellStack primary={a?.full_name ?? o.customer?.full_name ?? "—"} secondary={a?.phone ?? o.customer?.phone ?? undefined} />; } },
           { key: "status", header: "Order status", render: (o) => { const eta = minutesUntil(o.promised_at); const late = eta != null && eta < 0 && !TERMINAL.includes(o.status); return <span className="flex flex-col items-start gap-1"><OrderStatusPill status={o.status} />{late ? <StatusPill tone="red">{Math.abs(eta!)} min late</StatusPill> : null}</span>; } },
           { key: "method", header: "Method", hideBelow: "lg", render: (o) => <span className="text-ink-2">{paymentMethodLabel(o.payment_method)}</span> },

@@ -103,6 +103,10 @@ export function friendlyError(err: unknown): string {
   if (notPackable) return notPackable[1] === "confirmed" ? "Tap Start packing first." : `This order is ${notPackable[1].replace(/_/g, " ")}, so it can't be packed.`;
   if (raw.startsWith("UNIT_NOT_ALLOWED:")) return raw.slice("UNIT_NOT_ALLOWED:".length).trim();
   if (raw.startsWith("BARCODE_IN_USE:")) return `That barcode is already on ${raw.slice("BARCODE_IN_USE:".length).trim()}.`;
+  for (const code of ["CAPACITY_FULL", "HANDOVER_SCAN_REQUIRED", "EXCEPTION_PENDING", "INVALID_QUANTITY"]) if (raw.startsWith(`${code}:`)) return raw.slice(code.length + 1).trim();
+  if (/^ORDER_CLOSED/.test(raw)) return "This order is already closed.";
+  if (/^ORDER_NOT_READY/.test(raw)) return "This order is not packed yet.";
+  if (/^CANNOT_CANCEL/.test(raw)) return raw.includes("contact support") ? "This order is already being packed. Please contact support." : "This order can no longer be cancelled.";
   if (/^INVALID_STATE/.test(raw)) return "This delivery has already moved on (refresh to see its current state).";
   if (raw.startsWith("ITEMS_UNAVAILABLE")) return "Some items in your cart changed (stock or per-order limit). Review your cart and try again.";
   if (/inventory_stock_qty_check|violates check constraint "inventory_stock/i.test(raw)) return "Some items just sold out. Review your cart and try again.";

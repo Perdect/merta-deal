@@ -1,5 +1,5 @@
 /* Merta Deal service worker: offline shell for navigations, cache-first static assets, web push. */
-const VERSION = "md-v7";
+const VERSION = "md-v8";
 const STATIC_CACHE = `${VERSION}-static`;
 const OFFLINE_URL = "/offline.html";
 
@@ -51,7 +51,7 @@ self.addEventListener("fetch", (event) => {
    longer; one notification per order so retries replace rather than pile up. Bodies never carry a
    customer's name, phone or address. A closed browser or a locked phone shows them only as long as the
    platform delivers push at all: there is no continuous ringing without a native app. */
-const ALERT_TYPES = ["new_order", "delivery_offer", "order_unattended", "dispatch_no_rider"];
+const ALERT_TYPES = ["new_order", "delivery_offer", "order_unattended", "dispatch_no_rider", "order_exception", "delivery_cancelled"];
 self.addEventListener("push", (event) => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch { data = { title: "Merta Deal", body: event.data ? event.data.text() : "" }; }

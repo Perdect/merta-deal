@@ -100,6 +100,7 @@ const productSchema = z.object({
   category_id: uuid,
   description: optionalText, ingredients: optionalText, manufacturer: optionalText,
   country_of_origin: z.string().trim().max(80).optional().nullable().transform((v) => v || "India"),
+  bin_location: z.string().trim().max(40).optional().nullable().transform((v) => v || null),
   weight_value: z.coerce.number().positive("Weight must be positive"),
   weight_unit: z.enum(["g", "kg", "ml", "l", "pcs", "pack"]),
   pack_label: optionalText,

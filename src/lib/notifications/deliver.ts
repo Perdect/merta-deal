@@ -8,10 +8,10 @@ export type DeliverSummary = { ok: boolean; reason?: string; detail?: string; pr
 export function pushUrlFor(type: string, data: Record<string, unknown>): string {
   if (typeof data.url === "string") return data.url;
   const orderId = typeof data.order_id === "string" ? data.order_id : null;
-  if (["new_order", "order_unattended", "dispatch_no_rider", "rider_assigned", "payment_update", "order_delivered", "order_cancelled"].includes(type)) return orderId ? `/admin/orders/${orderId}` : "/admin/notifications";
+  if (["new_order", "order_unattended", "dispatch_no_rider", "rider_assigned", "payment_update", "order_delivered", "order_cancelled", "rider_arrived", "exception_resolved", "exception_expired", "refund_due", "delivery_failed"].includes(type)) return orderId ? `/admin/orders/${orderId}` : "/admin/notifications";
   if (type === "low_stock") return "/admin/products?stock=low_stock";
   if (type === "rider_registered") return "/admin/riders";
-  if (["delivery_offer", "cash_received"].includes(type)) return "/rider";
+  if (["delivery_offer", "delivery_cancelled", "cash_received"].includes(type)) return "/rider";
   return orderId ? `/orders/${orderId}` : "/account/notifications";
 }
 

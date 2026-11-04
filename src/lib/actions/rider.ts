@@ -95,6 +95,14 @@ export async function respondAssignmentAction(assignmentId: string, accept: bool
   return { ok: true, data: { status: res.status ?? (accept ? "accepted" : "rejected"), reassigned_to: res.reassigned_to ?? null } };
 }
 
+/** Records "I've reached the pickup point / the customer" on the assignment (idempotent; admins are told once for the store). */
+export async function riderArrivedAction(assignmentId: string, where: "pickup" | "customer"): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("rider_mark_arrived", { p_assignment_id: assignmentId, p_where: where });
+  if (error) return { ok: false, error: friendlyError(error) };
+  return { ok: true, data: undefined };
+}
+
 export async function pickupAction(assignmentId: string): Promise<ActionResult> {
   const supabase = await createClient();
   const { error } = await supabase.rpc("rider_pickup", { p_assignment_id: assignmentId });

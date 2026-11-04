@@ -2,7 +2,7 @@
 import * as React from "react";
 import { Check, Phone, Navigation, Store as StoreIcon, Home, Package, ShieldCheck, Banknote, ChevronLeft, MessageSquareText, ChevronRight } from "lucide-react";
 import type { RiderAssignment } from "@/types/app";
-import { pickupAction, verifyOtpAction, reportFailedDeliveryAction, type OtpResult, type FailedDeliveryReason } from "@/lib/actions/rider";
+import { pickupAction, verifyOtpAction, reportFailedDeliveryAction, riderArrivedAction, type OtpResult, type FailedDeliveryReason } from "@/lib/actions/rider";
 import { PickupScan } from "./pickup-scan";
 import { BottomSheet } from "@/components/ui/overlay";
 import { Textarea } from "@/components/ui/input";
@@ -73,9 +73,9 @@ export function ActiveDelivery({ assignment: a, onChanged, onCompleted }: { assi
       </header>
       <Stepper current={currentIdx} />
       <div className="px-4 pb-4">
-        {sub === "to_store" ? <GoToStore a={a} onNext={() => go("pickup")} /> : null}
+        {sub === "to_store" ? <GoToStore a={a} onNext={() => { go("pickup"); void riderArrivedAction(a.id, "pickup"); }} /> : null}
         {sub === "pickup" ? <Pickup a={a} onBack={() => go("to_store")} onChanged={onChanged} /> : null}
-        {sub === "to_customer" ? <GoToCustomer a={a} onNext={() => go("deliver")} /> : null}
+        {sub === "to_customer" ? <GoToCustomer a={a} onNext={() => { go("deliver"); void riderArrivedAction(a.id, "customer"); }} /> : null}
         {sub === "deliver" ? <Deliver a={a} verifying={verifying} setVerifying={setVerifying} onBack={() => go("to_customer")} onCompleted={onCompleted} /> : null}
         {!verifying ? <CantDeliver a={a} onReported={onChanged} /> : null}
       </div>

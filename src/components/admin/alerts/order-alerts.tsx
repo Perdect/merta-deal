@@ -100,7 +100,7 @@ export function OrderAlerts({ userId, push }: { userId: string; push: PushConfig
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` }, (payload) => {
         const n = payload.new as Notification;
         if (n.type === "new_order") { bump(); pushNow(); return; }
-        if (n.type === "dispatch_no_rider" || n.type === "order_unattended") {
+        if (["dispatch_no_rider", "order_unattended", "rider_arrived", "exception_expired", "exception_resolved", "refund_due", "delivery_failed", "order_cancelled"].includes(n.type)) {
           ping();
           const orderId = (n.data as { order_id?: string } | null)?.order_id;
           toast.custom({ title: n.title, description: n.body, tone: "warning", action: orderId ? { label: "Open", onClick: () => router.push(`/admin/orders/${orderId}`) } : undefined });

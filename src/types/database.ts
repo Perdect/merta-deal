@@ -688,7 +688,13 @@ export type Database = {
           earning: number
           expires_at: string
           failed_at: string | null
+          arrived_customer_at: string | null
+          arrived_pickup_at: string | null
           failure_reason: string | null
+          handed_over_at: string | null
+          handed_over_by: string | null
+          handed_over_by_name: string | null
+          handover_method: string | null
           id: string
           note: string | null
           offered_at: string
@@ -711,7 +717,13 @@ export type Database = {
           earning?: number
           expires_at?: string
           failed_at?: string | null
+          arrived_customer_at?: string | null
+          arrived_pickup_at?: string | null
           failure_reason?: string | null
+          handed_over_at?: string | null
+          handed_over_by?: string | null
+          handed_over_by_name?: string | null
+          handover_method?: string | null
           id?: string
           note?: string | null
           offered_at?: string
@@ -734,7 +746,13 @@ export type Database = {
           earning?: number
           expires_at?: string
           failed_at?: string | null
+          arrived_customer_at?: string | null
+          arrived_pickup_at?: string | null
           failure_reason?: string | null
+          handed_over_at?: string | null
+          handed_over_by?: string | null
+          handed_over_by_name?: string | null
+          handover_method?: string | null
           id?: string
           note?: string | null
           offered_at?: string
@@ -1207,6 +1225,72 @@ export type Database = {
           },
         ]
       }
+      order_exceptions: {
+        Row: {
+          available_qty: number
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          expires_at: string
+          id: string
+          kind: string
+          note: string | null
+          order_id: string
+          order_item_id: string
+          refund_amount: number
+          requested_qty: number
+          resolved_at: string | null
+          status: string
+        }
+        Insert: {
+          available_qty: number
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          expires_at: string
+          id?: string
+          kind: string
+          note?: string | null
+          order_id: string
+          order_item_id: string
+          refund_amount?: number
+          requested_qty: number
+          resolved_at?: string | null
+          status?: string
+        }
+        Update: {
+          available_qty?: number
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          expires_at?: string
+          id?: string
+          kind?: string
+          note?: string | null
+          order_id?: string
+          order_item_id?: string
+          refund_amount?: number
+          requested_qty?: number
+          resolved_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_exceptions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_exceptions_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           brand_name: string | null
@@ -1475,6 +1559,8 @@ export type Database = {
           accepted_at: string | null
           accepted_by: string | null
           accepted_by_name: string | null
+          exception: string | null
+          exception_at: string | null
           packed_by_name: string | null
           payment_method: Database["public"]["Enums"]["payment_method"]
           payment_status: Database["public"]["Enums"]["payment_status"]
@@ -1524,6 +1610,8 @@ export type Database = {
           accepted_at?: string | null
           accepted_by?: string | null
           accepted_by_name?: string | null
+          exception?: string | null
+          exception_at?: string | null
           packed_by_name?: string | null
           payment_method: Database["public"]["Enums"]["payment_method"]
           payment_status?: Database["public"]["Enums"]["payment_status"]
@@ -1573,6 +1661,8 @@ export type Database = {
           accepted_at?: string | null
           accepted_by?: string | null
           accepted_by_name?: string | null
+          exception?: string | null
+          exception_at?: string | null
           packed_by_name?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"]
           payment_status?: Database["public"]["Enums"]["payment_status"]
@@ -1726,6 +1816,7 @@ export type Database = {
       products: {
         Row: {
           barcode: string | null
+          bin_location: string | null
           brand_id: string | null
           category_id: string
           country_of_origin: string | null
@@ -1763,6 +1854,7 @@ export type Database = {
         }
         Insert: {
           barcode?: string | null
+          bin_location?: string | null
           brand_id?: string | null
           category_id: string
           country_of_origin?: string | null
@@ -1800,6 +1892,7 @@ export type Database = {
         }
         Update: {
           barcode?: string | null
+          bin_location?: string | null
           brand_id?: string | null
           category_id?: string
           country_of_origin?: string | null
@@ -2765,7 +2858,9 @@ export type Database = {
       }
       _scan_find_product: { Args: { p_code: string }; Returns: string }
       _scan_normalize: { Args: { p_code: string }; Returns: string }
+      _apply_item_exception: { Args: { p_exception_id: string }; Returns: number }
       _scan_product: { Args: { p_product_id: string }; Returns: Json }
+      _set_exception: { Args: { p_kind: string; p_order_id: string }; Returns: undefined }
       _set_order_status: {
         Args: {
           p_note?: string
@@ -2798,6 +2893,8 @@ export type Database = {
         Returns: string
       }
       admin_order_alerts: { Args: never; Returns: Json }
+      admin_raise_item_exception: { Args: { p_available_qty: number; p_note?: string; p_order_item_id: string }; Returns: Json }
+      admin_resolve_exception: { Args: { p_action: string; p_exception_id: string }; Returns: Json }
       admin_audit: {
         Args: {
           p_action: string
@@ -2939,9 +3036,11 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      customer_resolve_exception: { Args: { p_approve: boolean; p_exception_id: string }; Returns: Json }
       dispatch_pending: { Args: never; Returns: number }
       escalate_unattended_orders: { Args: never; Returns: number }
       expand_search_query: { Args: { p_query: string }; Returns: string }
+      expire_item_exceptions: { Args: never; Returns: number }
       expire_unpaid_orders: { Args: { p_minutes?: number }; Returns: number }
       find_zone: {
         Args: { p_lat?: number; p_lng?: number; p_pincode?: string }
@@ -3002,6 +3101,7 @@ export type Database = {
       is_super_admin: { Args: never; Returns: boolean }
       mark_notifications_read: { Args: { p_ids?: string[] }; Returns: number }
       mark_order_completed: { Args: { p_order_id: string }; Returns: Json }
+      order_capacity: { Args: never; Returns: Json }
       mark_payment_failed: {
         Args: { p_order_id: string; p_reason: string }
         Returns: undefined
@@ -3092,6 +3192,7 @@ export type Database = {
       reorder: { Args: { p_order_id: string }; Returns: Json }
       rider_assignments: { Args: { p_status?: string[] }; Returns: Json }
       rider_dashboard_stats: { Args: never; Returns: Json }
+      rider_mark_arrived: { Args: { p_assignment_id: string; p_where: string }; Returns: Json }
       rider_pickup: { Args: { p_assignment_id: string }; Returns: Json }
       rider_report_failed_delivery: {
         Args: { p_assignment_id: string; p_note?: string; p_reason: string }

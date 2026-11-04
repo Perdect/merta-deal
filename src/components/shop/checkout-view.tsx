@@ -18,10 +18,10 @@ import { cn, formatINR } from "@/lib/utils";
 
 declare global { interface Window { Razorpay?: new (opts: Record<string, unknown>) => { open: () => void; on: (e: string, cb: (r: unknown) => void) => void } } }
 
-type Props = { initial: CartSummary; addresses: Address[]; walletBalance: number; razorpayEnabled: boolean; codEnabled: boolean; slots: string[]; user: { name: string | null; phone: string | null } };
+type Props = { initial: CartSummary; addresses: Address[]; walletBalance: number; razorpayEnabled: boolean; codEnabled: boolean; slots: string[]; user: { name: string | null; phone: string | null }; /** false while the shop is at its active-order limit */ accepting?: boolean };
 const TYPE_ICON = { home: Home, work: Briefcase, other: MapPin };
 
-export function CheckoutView({ initial, addresses: initialAddresses, walletBalance, razorpayEnabled, codEnabled, slots, user }: Props) {
+export function CheckoutView({ initial, addresses: initialAddresses, walletBalance, razorpayEnabled, codEnabled, slots, user, accepting = true }: Props) {
   const router = useRouter();
   const [addresses, setAddresses] = React.useState(initialAddresses);
   const [addressId, setAddressId] = React.useState<string | null>(initialAddresses.find((a) => a.is_default)?.id ?? initialAddresses[0]?.id ?? null);
@@ -45,7 +45,8 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
   // The first reason the order cannot be placed, in the order a customer can fix it. Shown next
   // to the button so a greyed-out "Place order" is never a mystery. The rules themselves come from
   // cart_summary (zone min order, serviceability), not from here.
-  const blocker = !addressId ? "Select or add a delivery address to continue."
+  const blocker = !accepting ? "We're handling as many orders as we can right now. Please try again in a few minutes."
+    : !addressId ? "Select or add a delivery address to continue."
     : !summary.serviceable ? (summary.service_message ?? "We don't deliver to this address yet.")
     : !summary.meets_min_order ? `Minimum order is ${formatINR(summary.min_order_amount)} for your area. Add ${formatINR(summary.min_order_amount - summary.subtotal)} more to place this order.`
     : summary.issues.length ? "Some items are no longer available in the quantity you chose. Update your cart to continue."

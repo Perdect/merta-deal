@@ -10,7 +10,7 @@ export type ScanProduct = {
   variants: ScanVariant[];
 };
 
-export type PackLine = { id: string; product_id: string | null; name: string; brand_name: string | null; pack_label: string | null; image_url: string | null; quantity: number; packed_qty: number; sku: string | null; unit_price: number };
+export type PackLine = { id: string; product_id: string | null; name: string; brand_name: string | null; pack_label: string | null; image_url: string | null; quantity: number; packed_qty: number; sku: string | null; unit_price: number; bin_location?: string | null; exception?: { id: string; status: string; available_qty: number; kind: string } | null };
 export type PackFlag = { result: PackResult; message: string; at: string; by: string | null };
 export type PackResult = "ok" | "wrong_product" | "wrong_weight" | "extra" | "unknown" | "undo" | "packed";
 

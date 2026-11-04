@@ -13,6 +13,7 @@ import { AdminPageHeader, Panel, EmptyBlock, StatusText } from "@/components/adm
 import { formatINR, formatDateTime, formatTime } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { AcceptControl } from "@/components/admin/alerts/accept-control";
+import { ItemExceptions } from "@/components/admin/alerts/item-exceptions";
 
 export const metadata: Metadata = { title: "Order" };
 
@@ -36,6 +37,7 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
         <div className="min-w-0 space-y-4">
           <Panel><OrderFacts t={t} /></Panel>
           {scan.data ? <PackingPanel order={scan.data} /> : null}
+          {scan.data ? <ItemExceptions orderId={o.id} status={o.status} lines={scan.data.lines} /> : null}
 
           {(live || o.status === "ready_for_pickup") ? (
             <Panel title="Live location" description={live ? "Rider GPS, pickup point and customer" : "Pickup point and customer; rider appears once assigned"} flush>
