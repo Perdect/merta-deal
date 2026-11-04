@@ -35,6 +35,27 @@ export type Database = {
         }
         Relationships: []
       }
+      _backup_0034: {
+        Row: {
+          data: Json | null
+          name: string | null
+          rows: number | null
+          taken_at: string | null
+        }
+        Insert: {
+          data?: Json | null
+          name?: string | null
+          rows?: number | null
+          taken_at?: string | null
+        }
+        Update: {
+          data?: Json | null
+          name?: string | null
+          rows?: number | null
+          taken_at?: string | null
+        }
+        Relationships: []
+      }
       addresses: {
         Row: {
           area: string
@@ -463,6 +484,68 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      cod_collections: {
+        Row: {
+          amount: number
+          assignment_id: string | null
+          collected_by: string | null
+          confirmed_via: string
+          created_at: string
+          id: string
+          order_id: string
+          rider_id: string | null
+        }
+        Insert: {
+          amount: number
+          assignment_id?: string | null
+          collected_by?: string | null
+          confirmed_via: string
+          created_at?: string
+          id?: string
+          order_id: string
+          rider_id?: string | null
+        }
+        Update: {
+          amount?: number
+          assignment_id?: string | null
+          collected_by?: string | null
+          confirmed_via?: string
+          created_at?: string
+          id?: string
+          order_id?: string
+          rider_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cod_collections_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cod_collections_collected_by_fkey"
+            columns: ["collected_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cod_collections_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cod_collections_rider_id_fkey"
+            columns: ["rider_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_partners"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       coupon_usage: {
         Row: {
@@ -944,33 +1027,57 @@ export type Database = {
       inventory_movements: {
         Row: {
           actor_id: string | null
+          actor_name: string | null
+          balance_after: number | null
+          balance_unit: string | null
           created_at: string
           delta: number
+          delta_grams: number | null
           id: string
           inventory_id: string
           note: string | null
+          quantity_entered: number | null
           reason: string
           reference_id: string | null
+          request_key: string | null
+          stock_pool_id: string | null
+          unit_entered: string | null
         }
         Insert: {
           actor_id?: string | null
+          actor_name?: string | null
+          balance_after?: number | null
+          balance_unit?: string | null
           created_at?: string
           delta: number
+          delta_grams?: number | null
           id?: string
           inventory_id: string
           note?: string | null
+          quantity_entered?: number | null
           reason: string
           reference_id?: string | null
+          request_key?: string | null
+          stock_pool_id?: string | null
+          unit_entered?: string | null
         }
         Update: {
           actor_id?: string | null
+          actor_name?: string | null
+          balance_after?: number | null
+          balance_unit?: string | null
           created_at?: string
           delta?: number
+          delta_grams?: number | null
           id?: string
           inventory_id?: string
           note?: string | null
+          quantity_entered?: number | null
           reason?: string
           reference_id?: string | null
+          request_key?: string | null
+          stock_pool_id?: string | null
+          unit_entered?: string | null
         }
         Relationships: [
           {
@@ -993,6 +1100,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_product_cards"
             referencedColumns: ["inventory_id"]
+          },
+          {
+            foreignKeyName: "inventory_movements_stock_pool_id_fkey"
+            columns: ["stock_pool_id"]
+            isOneToOne: false
+            referencedRelation: "stock_pools"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1103,6 +1217,7 @@ export type Database = {
           line_total: number
           order_id: string
           pack_label: string | null
+          packed_qty: number
           product_id: string
           product_name: string
           quantity: number
@@ -1118,6 +1233,7 @@ export type Database = {
           line_total: number
           order_id: string
           pack_label?: string | null
+          packed_qty?: number
           product_id: string
           product_name: string
           quantity: number
@@ -1133,6 +1249,7 @@ export type Database = {
           line_total?: number
           order_id?: string
           pack_label?: string | null
+          packed_qty?: number
           product_id?: string
           product_name?: string
           quantity?: number
@@ -1170,6 +1287,84 @@ export type Database = {
           },
           {
             foreignKeyName: "order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_pack_events: {
+        Row: {
+          actor_id: string | null
+          actor_name: string | null
+          code: string | null
+          created_at: string
+          id: string
+          message: string
+          order_id: string
+          order_item_id: string | null
+          product_id: string | null
+          request_key: string
+          result: string
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_name?: string | null
+          code?: string | null
+          created_at?: string
+          id?: string
+          message: string
+          order_id: string
+          order_item_id?: string | null
+          product_id?: string | null
+          request_key: string
+          result: string
+        }
+        Update: {
+          actor_id?: string | null
+          actor_name?: string | null
+          code?: string | null
+          created_at?: string
+          id?: string
+          message?: string
+          order_id?: string
+          order_item_id?: string | null
+          product_id?: string | null
+          request_key?: string
+          result?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_pack_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_pack_events_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_pack_events_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_pack_events_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_pack_events_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "v_product_cards"
@@ -1275,6 +1470,9 @@ export type Database = {
           item_count: number
           item_discount: number
           order_number: string
+          packed_at: string | null
+          packed_by: string | null
+          packed_by_name: string | null
           payment_method: Database["public"]["Enums"]["payment_method"]
           payment_status: Database["public"]["Enums"]["payment_status"]
           picked_up_at: string | null
@@ -1283,6 +1481,7 @@ export type Database = {
           ready_at: string | null
           reject_reason: string | null
           rider_earning: number
+          scan_code: string
           scheduled_slot_end: string | null
           scheduled_slot_start: string | null
           short_code: string | null
@@ -1317,6 +1516,9 @@ export type Database = {
           item_count?: number
           item_discount?: number
           order_number: string
+          packed_at?: string | null
+          packed_by?: string | null
+          packed_by_name?: string | null
           payment_method: Database["public"]["Enums"]["payment_method"]
           payment_status?: Database["public"]["Enums"]["payment_status"]
           picked_up_at?: string | null
@@ -1325,6 +1527,7 @@ export type Database = {
           ready_at?: string | null
           reject_reason?: string | null
           rider_earning?: number
+          scan_code?: string
           scheduled_slot_end?: string | null
           scheduled_slot_start?: string | null
           short_code?: string | null
@@ -1359,6 +1562,9 @@ export type Database = {
           item_count?: number
           item_discount?: number
           order_number?: string
+          packed_at?: string | null
+          packed_by?: string | null
+          packed_by_name?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"]
           payment_status?: Database["public"]["Enums"]["payment_status"]
           picked_up_at?: string | null
@@ -1367,6 +1573,7 @@ export type Database = {
           ready_at?: string | null
           reject_reason?: string | null
           rider_earning?: number
+          scan_code?: string
           scheduled_slot_end?: string | null
           scheduled_slot_start?: string | null
           short_code?: string | null
@@ -1391,6 +1598,13 @@ export type Database = {
             columns: ["coupon_id"]
             isOneToOne: false
             referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_packed_by_fkey"
+            columns: ["packed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -1502,6 +1716,7 @@ export type Database = {
       }
       products: {
         Row: {
+          barcode: string | null
           brand_id: string | null
           category_id: string
           country_of_origin: string | null
@@ -1522,12 +1737,15 @@ export type Database = {
           popularity_score: number
           rating_avg: number
           rating_count: number
+          scan_code: string
           search_vector: unknown
           seller_address: string | null
           seller_license: string | null
           seller_name: string | null
           shelf_life: string | null
+          sku: string
           slug: string
+          stock_pool_id: string | null
           synonyms: string[]
           tags: string[]
           updated_at: string
@@ -1535,6 +1753,7 @@ export type Database = {
           weight_value: number
         }
         Insert: {
+          barcode?: string | null
           brand_id?: string | null
           category_id: string
           country_of_origin?: string | null
@@ -1555,12 +1774,15 @@ export type Database = {
           popularity_score?: number
           rating_avg?: number
           rating_count?: number
+          scan_code: string
           search_vector?: unknown
           seller_address?: string | null
           seller_license?: string | null
           seller_name?: string | null
           shelf_life?: string | null
+          sku: string
           slug: string
+          stock_pool_id?: string | null
           synonyms?: string[]
           tags?: string[]
           updated_at?: string
@@ -1568,6 +1790,7 @@ export type Database = {
           weight_value: number
         }
         Update: {
+          barcode?: string | null
           brand_id?: string | null
           category_id?: string
           country_of_origin?: string | null
@@ -1588,12 +1811,15 @@ export type Database = {
           popularity_score?: number
           rating_avg?: number
           rating_count?: number
+          scan_code?: string
           search_vector?: unknown
           seller_address?: string | null
           seller_license?: string | null
           seller_name?: string | null
           shelf_life?: string | null
+          sku?: string
           slug?: string
+          stock_pool_id?: string | null
           synonyms?: string[]
           tags?: string[]
           updated_at?: string
@@ -1613,6 +1839,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_stock_pool_id_fkey"
+            columns: ["stock_pool_id"]
+            isOneToOne: false
+            referencedRelation: "stock_pools"
             referencedColumns: ["id"]
           },
         ]
@@ -2157,6 +2390,30 @@ export type Database = {
           },
         ]
       }
+      stock_pools: {
+        Row: {
+          balance_g: number
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          balance_g?: number
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          balance_g?: number
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       support_messages: {
         Row: {
           created_at: string
@@ -2473,7 +2730,9 @@ export type Database = {
       }
     }
     Functions: {
+      _actor_name: { Args: never; Returns: string }
       _auto_confirm_order: { Args: { p_order_id: string }; Returns: boolean }
+      _cart_short_pools: { Args: { p_cart_id: string }; Returns: string[] }
       _complete_delivery: {
         Args: { p_assignment_id: string; p_via: string }
         Returns: number
@@ -2482,7 +2741,22 @@ export type Database = {
         Args: { p_order_id: string }
         Returns: undefined
       }
+      _pack_lines: { Args: { p_order_id: string }; Returns: Json }
+      _pool_sync: {
+        Args: { p_except?: string; p_pool: string }
+        Returns: undefined
+      }
       _rider_cash: { Args: { p_rider_id: string }; Returns: Json }
+      _scan_dispatch: {
+        Args: {
+          p_assignment: Database["public"]["Tables"]["delivery_assignments"]["Row"]
+          p_order: Database["public"]["Tables"]["orders"]["Row"]
+        }
+        Returns: undefined
+      }
+      _scan_find_product: { Args: { p_code: string }; Returns: string }
+      _scan_normalize: { Args: { p_code: string }; Returns: string }
+      _scan_product: { Args: { p_product_id: string }; Returns: Json }
       _set_order_status: {
         Args: {
           p_note?: string
@@ -2550,6 +2824,10 @@ export type Database = {
         Returns: Json
       }
       admin_dashboard_stats: { Args: never; Returns: Json }
+      admin_label_products: {
+        Args: { p_category?: string; p_ids?: string[]; p_listed_only?: boolean }
+        Returns: Json
+      }
       admin_live_riders: { Args: never; Returns: Json }
       admin_notify_user: {
         Args: {
@@ -2572,6 +2850,14 @@ export type Database = {
       }
       admin_report: { Args: { p_end: string; p_start: string }; Returns: Json }
       admin_rider_balances: { Args: never; Returns: Json }
+      admin_set_product_barcode: {
+        Args: { p_barcode: string; p_product_id: string }
+        Returns: Json
+      }
+      admin_set_stock_mode: {
+        Args: { p_confirmed?: boolean; p_mode: string; p_product_id: string }
+        Returns: Json
+      }
       admin_set_user_role: {
         Args: {
           p_role: Database["public"]["Enums"]["user_role"]
@@ -2727,6 +3013,7 @@ export type Database = {
         Returns: undefined
       }
       my_rider_id: { Args: never; Returns: string }
+      new_scan_code: { Args: { p_prefix: string }; Returns: string }
       notify_admins: {
         Args: { p_body: string; p_data?: Json; p_title: string; p_type: string }
         Returns: undefined
@@ -2742,7 +3029,28 @@ export type Database = {
         Returns: undefined
       }
       order_tracking: { Args: { p_order_id: string }; Returns: Json }
+      pack_complete: {
+        Args: {
+          p_confirmed?: boolean
+          p_order_id: string
+          p_request_key: string
+        }
+        Returns: Json
+      }
       pack_grams: { Args: { p_unit: string; p_value: number }; Returns: number }
+      pack_scan: {
+        Args: { p_code: string; p_order_id: string; p_request_key: string }
+        Returns: Json
+      }
+      pack_start: { Args: { p_order_id: string }; Returns: Json }
+      pack_undo: {
+        Args: {
+          p_order_id: string
+          p_order_item_id: string
+          p_request_key: string
+        }
+        Returns: Json
+      }
       pickup_point: { Args: never; Returns: Json }
       place_order: {
         Args: {
@@ -2781,8 +3089,35 @@ export type Database = {
         Args: { p_accept: boolean; p_assignment_id: string }
         Returns: Json
       }
+      rider_scan_pickup: { Args: { p_order_id: string }; Returns: Json }
       rider_set_online: {
         Args: { p_lat?: number; p_lng?: number; p_online: boolean }
+        Returns: Json
+      }
+      scan_assign_rider: {
+        Args: { p_order_id: string; p_rider_id: string }
+        Returns: Json
+      }
+      scan_confirm_dispatch: { Args: { p_order_id: string }; Returns: Json }
+      scan_order_detail: { Args: { p_order_id: string }; Returns: Json }
+      scan_product: { Args: { p_product_id: string }; Returns: Json }
+      scan_resolve: { Args: { p_code: string }; Returns: Json }
+      scan_stock_action: {
+        Args: {
+          p_action: string
+          p_confirmed?: boolean
+          p_direction?: string
+          p_note?: string
+          p_product_id: string
+          p_quantity: number
+          p_reason?: string
+          p_request_key: string
+          p_unit: string
+        }
+        Returns: Json
+      }
+      scan_stock_history: {
+        Args: { p_limit?: number; p_product_id: string }
         Returns: Json
       }
       search_local_places: {
