@@ -1,4 +1,6 @@
-import type { Enums, Tables, Views } from "./database";
+import type { Enums, Tables, Database } from "./database";
+/** Row type of a view (the generated file only exports table helpers). */
+export type Views<T extends keyof Database["public"]["Views"]> = Database["public"]["Views"][T]["Row"];
 
 /** Row of v_product_cards with real nullability (information_schema reports every view column as nullable). */
 export type ProductCard = {
