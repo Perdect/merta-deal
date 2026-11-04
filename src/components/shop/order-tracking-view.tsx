@@ -22,6 +22,7 @@ import { formatINR, formatDateTime, formatTime, cn } from "@/lib/utils";
 import type { OrderStatus } from "@/lib/order-status";
 import { DeliveryOtpStrip } from "./delivery-otp-strip";
 import { PushOptInCard } from "@/components/pwa/push-opt-in-card";
+import { OrderPlacedSplash } from "./order-placed-splash";
 
 const TERMINAL: OrderStatus[] = ["delivered", "completed", "cancelled", "rejected"];
 
@@ -65,7 +66,7 @@ export function OrderTrackingView({ initial, placed, paymentState, push }: { ini
   const active = !TERMINAL.includes(o.status);
   const eta = o.promised_at ? Math.round((new Date(o.promised_at).getTime() - now) / 60000) : null;
   const late = active && paid && eta != null && eta < 0;
-  const addr = o.address_snapshot as unknown as { full_name: string; phone: string; house: string; street: string; area: string; landmark?: string; city: string; pincode: string; lat?: number; lng?: number };
+  const addr = o.address_snapshot as unknown as { full_name: string; phone: string; house: string; street: string; area: string; landmark?: string; city: string; pincode: string; lat?: number; lng?: number; label?: string | null };
 
   // Server actions reject outright when the device is offline; the catch keeps the buttons usable
   // and tells the customer what happened instead of leaving a spinner.
@@ -91,6 +92,7 @@ export function OrderTrackingView({ initial, placed, paymentState, push }: { ini
 
   return (
     <div className="grid grid-cols-1 gap-5 px-4 sm:px-0 lg:grid-cols-[minmax(0,1fr)_380px]">
+      {placed && active ? <OrderPlacedSplash orderId={o.id} confirmed={paid && o.status !== "placed"} label={addr.label ?? null} addressLine={[addr.house, addr.street, addr.area, addr.city].filter(Boolean).join(", ")} codNote={o.payment_method === "cod" ? `Keep ${formatINR(o.total, { precise: true })} cash ready for the rider` : null} /> : null}
       <div className="space-y-4">
         {placed && o.status !== "placed" && active ? <Alert tone="success" icon={<CheckCircle2 className="h-4 w-4" />} title={`Order ${o.order_number} confirmed`}>{t.pickup.name} is packing it now{o.promised_at ? `, arriving by ${formatTime(o.promised_at)}` : ""}.{o.payment_method === "cod" ? ` Keep ${formatINR(o.total, { precise: true })} cash ready for the rider.` : ""}</Alert> : null}
         {placed && o.status === "placed" && paid ? <Alert tone="success" icon={<CheckCircle2 className="h-4 w-4" />} title={`Order ${o.order_number} placed`}>We&apos;ve got it and will confirm it as soon as your payment is received.</Alert> : null}

@@ -81,6 +81,10 @@
   --animate-rise: rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   --animate-bump: bump 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   --animate-tag: tag 0.22s ease-out both;
+  /* Order-placed splash: the circle pops in, a soft ring spreads, then the tick draws itself. */
+  --animate-tick-pop: tick-pop 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-tick-ring: tick-ring 0.9s ease-out 0.2s both;
+  --animate-tick-draw: tick-draw 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s both;
 
   @keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
 
@@ -107,6 +111,9 @@
   @keyframes float { 0%, 100% { transform: translateY(0) rotate(var(--tilt, 0deg)) } 50% { transform: translateY(-10px) rotate(var(--tilt, 0deg)) } }
   @keyframes rise { from { opacity: 0; transform: translateY(12px) } to { opacity: 1; transform: translateY(0) } }
   @keyframes bump { 0% { transform: scale(1) } 45% { transform: scale(1.35) } 100% { transform: scale(1) } }
+  @keyframes tick-pop { 0% { opacity: 0; transform: scale(0.4) } 70% { opacity: 1; transform: scale(1.08) } 100% { transform: scale(1) } }
+  @keyframes tick-ring { 0% { opacity: 0.35; transform: scale(1) } 100% { opacity: 0; transform: scale(1.7) } }
+  @keyframes tick-draw { to { stroke-dashoffset: 0 } }
   @keyframes tag { 0%, 100% { transform: rotate(0) } 35% { transform: rotate(-14deg) } 70% { transform: rotate(8deg) } }
 }
 
