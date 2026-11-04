@@ -5,7 +5,6 @@ import { getCategoryTabs } from "@/lib/data/catalog";
 import { EmptyState } from "@/components/ui/states";
 import { Button } from "@/components/ui/button";
 import { CategoryGrid, ProductSection, ServiceStrip } from "@/components/home/home-sections";
-import { OfferCarousel } from "@/components/home/offer-strip";
 import { OffersSheet } from "@/components/home/offers-sheet";
 import { LocalIntro } from "@/components/home/local-intro";
 import { site } from "@/config/site";
@@ -81,7 +80,6 @@ export default async function HomePage() {
         <h1 className="font-display text-[17px] font-bold leading-tight text-ink sm:text-2xl">{homeH1}</h1>
         <p className="mt-0.5 line-clamp-1 text-[13px] text-ink-2 sm:line-clamp-none sm:text-sm">Grocery, fruits, vegetables and daily essentials delivered to your home in {site.city}, Rajasthan — usually in {etaLabel}.</p>
       </header>
-      {home.offers.length ? <OfferCarousel offers={home.offers} /> : null}
       <OffersSheet offers={home.offers} />
       <CategoryGrid tabs={tabs} fallback={home.categories} />
       {home.sections.length ? (
