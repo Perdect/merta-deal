@@ -178,7 +178,7 @@ function GoToStore({ a, onNext }: { a: RiderAssignment; onNext: () => void }) {
         <div className="min-w-0">
           <p className="text-base font-bold text-ink">{a.pickup.name}</p>
           <p className="text-sm text-ink-2">{[a.pickup.address_line1, a.pickup.area].filter(Boolean).join(", ")}</p>
-          <p className="mt-0.5 text-xs text-ink-3">{a.order.item_count} items · {formatKm(a.distance_km)} total trip{a.order.promised_at ? ` · promised by ${formatTime(a.order.promised_at)}` : ""}</p>
+          <p className="mt-0.5 text-xs text-ink-3">{a.order.item_count} items{a.distance_km != null && Number(a.distance_km) > 0 ? ` · ${formatKm(a.distance_km)} total trip` : " · no map pin, call the customer for directions"}{a.order.promised_at ? ` · promised by ${formatTime(a.order.promised_at)}` : ""}</p>
         </div>
       </div>
       <ActionRow phone={a.pickup.phone} dest={{ lat: a.pickup_lat ?? a.pickup.lat, lng: a.pickup_lng ?? a.pickup.lng }} phoneLabel="Call Merta Deal" />

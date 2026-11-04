@@ -88,8 +88,10 @@ export async function respondAssignmentAction(assignmentId: string, accept: bool
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("rider_respond_assignment", { p_assignment_id: assignmentId, p_accept: accept });
   if (error) return { ok: false, error: friendlyError(error) };
-  const res = data as { status?: string; reassigned_to?: string | null };
+  const res = data as { ok?: boolean; status?: string; error?: string; reassigned_to?: string | null };
   revalidatePath("/rider");
+  // An expired offer is recorded as such (and re-offered) rather than raised, so the expiry is never rolled back.
+  if (res.ok === false) return { ok: false, error: friendlyError({ message: res.error ?? "OFFER_EXPIRED" }) };
   return { ok: true, data: { status: res.status ?? (accept ? "accepted" : "rejected"), reassigned_to: res.reassigned_to ?? null } };
 }
 

@@ -11,13 +11,16 @@ import { OrderFacts, type AddressSnapshot } from "@/components/admin/order-summa
 import { LiveMap } from "@/components/shop/live-map";
 import { AdminPageHeader, Panel, EmptyBlock, StatusText } from "@/components/admin/kit";
 import { formatINR, formatDateTime, formatTime } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/server";
+import { AcceptControl } from "@/components/admin/alerts/accept-control";
 
 export const metadata: Metadata = { title: "Order" };
 
 export default async function AdminOrderPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
-  const [t, assignments, riders, scan] = await Promise.all([getOrderAdmin(id), getOrderAssignments(id), getLiveRiders(), adminRpc<ScanOrder>("scan_order_detail", { p_order_id: id })]);
+  const [t, assignments, riders, scan, accepted] = await Promise.all([getOrderAdmin(id), getOrderAssignments(id), getLiveRiders(), adminRpc<ScanOrder>("scan_order_detail", { p_order_id: id }),
+    (await createClient()).from("orders").select("accepted_at, accepted_by_name").eq("id", id).maybeSingle()]);
   if (!t) notFound();
   const o = t.order;
   const addr = o.address_snapshot as unknown as AddressSnapshot;
@@ -26,7 +29,8 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
 
   return (
     <>
-      <AdminPageHeader back="/admin/orders" title={`Order ${o.order_number}`} description={`Placed ${formatDateTime(o.created_at)}${o.short_code ? ` · pickup code ${o.short_code}` : ""}`} />
+      <AdminPageHeader back="/admin/orders" title={`Order ${o.order_number}`} description={`Placed ${formatDateTime(o.created_at)}${o.short_code ? ` · pickup code ${o.short_code}` : ""}`}
+        actions={<AcceptControl orderId={o.id} status={o.status} acceptedAt={accepted.data?.accepted_at ?? null} acceptedByName={accepted.data?.accepted_by_name ?? null} />} />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0 space-y-4">

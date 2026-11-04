@@ -53,7 +53,7 @@ export function OfferCard({ offer, onChanged }: { offer: RiderAssignment; onChan
 
       <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
         <div className="rounded-md bg-brand-50 px-2 py-2.5"><dt className="text-[10px] font-semibold uppercase tracking-wide text-brand-700">You earn</dt><dd className="text-xl font-extrabold tabular text-brand-800">{formatINR(offer.earning)}</dd></div>
-        <div className="rounded-md bg-surface-2 px-2 py-2.5"><dt className="text-[10px] font-semibold uppercase tracking-wide text-ink-3"><Route className="mr-0.5 inline h-3 w-3" />Distance</dt><dd className="text-xl font-extrabold tabular text-ink">{formatKm(offer.distance_km)}</dd></div>
+        <div className="rounded-md bg-surface-2 px-2 py-2.5"><dt className="text-[10px] font-semibold uppercase tracking-wide text-ink-3"><Route className="mr-0.5 inline h-3 w-3" />Distance</dt><dd className={cn("font-extrabold tabular text-ink", offer.distance_km != null && Number(offer.distance_km) > 0 ? "text-xl" : "text-xs leading-7")}>{offer.distance_km != null && Number(offer.distance_km) > 0 ? formatKm(offer.distance_km) : "No map pin"}</dd></div>
         <div className="rounded-md bg-surface-2 px-2 py-2.5"><dt className="text-[10px] font-semibold uppercase tracking-wide text-ink-3"><Package className="mr-0.5 inline h-3 w-3" />Items</dt><dd className="text-xl font-extrabold tabular text-ink">{offer.order.item_count}</dd></div>
       </dl>
 

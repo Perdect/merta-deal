@@ -12,6 +12,7 @@ import { useNotifications, notificationHref } from "@/hooks/use-notifications";
 import { broadcastAction, markAdminNotificationsReadAction } from "@/lib/actions/admin";
 import type { Notification } from "@/types/app";
 import { cn, formatDateTime, timeAgo } from "@/lib/utils";
+import { audienceOf, AUDIENCE_LABEL } from "@/lib/alerts/audience";
 
 /* ------------------------------------------------------------------------------------------------
  * Inbox: live (Supabase Realtime) list of this admin's notifications, with mark-read.
@@ -20,9 +21,11 @@ import { cn, formatDateTime, timeAgo } from "@/lib/utils";
 export function AdminNotificationList({ userId, initial, limit }: { userId: string; initial: Notification[]; limit: number }) {
   const router = useRouter();
   const { items, unread, setItems } = useNotifications(userId, initial, { toastNew: true });
-  const [filter, setFilter] = React.useState<"all" | "unread">("all");
+  const [filter, setFilter] = React.useState<"all" | "unread" | "admin">("admin");
   const [busy, setBusy] = React.useState<string | null>(null);
-  const shown = filter === "unread" ? items.filter((n) => !n.is_read) : items;
+  const adminOnly = items.filter((n) => audienceOf(n.type, "admin") === "admin");
+  const shown = filter === "unread" ? items.filter((n) => !n.is_read) : filter === "admin" ? adminOnly : items;
+  const mixed = adminOnly.length !== items.length;
 
   const markRead = async (ids?: string[]) => {
     setBusy(ids ? ids[0] : "all");
@@ -35,10 +38,10 @@ export function AdminNotificationList({ userId, initial, limit }: { userId: stri
   };
 
   return (
-    <Panel title="Inbox" description={`Your latest ${limit} notifications · new ones arrive live`} flush
+    <Panel title="Inbox" description={mixed ? `Your latest ${limit} notifications · this account also receives customer or rider messages; they are labelled` : `Your latest ${limit} notifications · new ones arrive live`} flush
       actions={<button type="button" className={cn(btn.secondary, btn.small)} disabled={!unread || busy === "all"} onClick={() => markRead()}><CheckCheck className="h-3.5 w-3.5" aria-hidden />{busy === "all" ? "Marking…" : "Mark all read"}</button>}>
       <div role="tablist" aria-label="Show" className="flex gap-1 border-y border-line px-4 sm:px-5">
-        {([["all", "All", items.length], ["unread", "Unread", unread]] as const).map(([v, label, n]) => (
+        {([["admin", "Admin", adminOnly.length], ["unread", "Unread", unread], ["all", "All", items.length]] as const).map(([v, label, n]) => (
           <button key={v} type="button" role="tab" aria-selected={filter === v} onClick={() => setFilter(v)}
             className={cn("-mb-px inline-flex items-center gap-1.5 border-b-2 px-2 py-2 text-sm font-medium transition-colors duration-150", filter === v ? "border-brand-600 text-brand-800" : "border-transparent text-ink-3 hover:text-ink")}>
             {label}<span className={cn("rounded-full px-1.5 text-[11px] font-semibold leading-[18px] tabular", filter === v ? "bg-brand-100 text-brand-800" : "bg-surface-2 text-ink-3")}>{n}</span>
@@ -48,6 +51,7 @@ export function AdminNotificationList({ userId, initial, limit }: { userId: stri
       {shown.length === 0 ? (
         filter === "unread"
           ? <EmptyBlock icon={BellOff} title="No unread notifications" description="You're up to date. Switch to All to see earlier ones." />
+          : filter === "admin" ? <EmptyBlock icon={Bell} title="No admin notifications yet" description="New orders, unattended-order reminders and dispatch problems show up here as they happen." />
           : <EmptyBlock icon={Bell} title="Nothing here yet" description="New orders, dispatch failures and support pings show up here as they happen." />
       ) : (
         <ul className="divide-y divide-line">
@@ -55,7 +59,8 @@ export function AdminNotificationList({ userId, initial, limit }: { userId: stri
             <li key={n.id} className={cn("flex items-start gap-3 px-4 py-3 sm:px-5", !n.is_read && "bg-brand-50/40")}>
               <span className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", n.is_read ? "bg-line-2" : "bg-brand-600")} aria-hidden />
               <div className="min-w-0 flex-1">
-                <Link href={notificationHref(n, "admin")} onClick={() => { if (!n.is_read) void markRead([n.id]); }} className="text-sm font-semibold text-ink hover:text-brand-700 hover:underline">{n.title}</Link>
+                <Link href={notificationHref(n, audienceOf(n.type, "admin"))} onClick={() => { if (!n.is_read) void markRead([n.id]); }} className="text-sm font-semibold text-ink hover:text-brand-700 hover:underline">{n.title}</Link>
+                {audienceOf(n.type, "admin") !== "admin" ? <span className="ml-1.5 rounded-full bg-surface-2 px-1.5 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-ink-3" title="Sent to this account in its other role">{AUDIENCE_LABEL[audienceOf(n.type, "admin")]}</span> : null}
                 <p className="text-sm text-ink-2">{n.body}</p>
                 <p className="mt-0.5 text-[11px] text-ink-4"><span className="sr-only">{n.is_read ? "Read" : "Unread"} · </span>{n.type.replace(/_/g, " ")} · <span title={formatDateTime(n.created_at)}>{timeAgo(n.created_at)}</span></p>
               </div>

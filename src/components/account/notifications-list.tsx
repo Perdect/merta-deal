@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/states";
 import { toast } from "@/components/ui/toast";
 import { cn, timeAgo } from "@/lib/utils";
+import { audienceOf, AUDIENCE_LABEL } from "@/lib/alerts/audience";
 
 function iconFor(type: string) {
   if (type.includes("cancel") || type.includes("reject")) return <XCircle className="h-4.5 w-4.5 text-danger" />;
@@ -42,7 +43,8 @@ export function NotificationsList({ userId, initial }: { userId: string; initial
 
   const open = (n: Notification) => {
     if (!n.is_read) { setItems((cur) => cur.map((x) => (x.id === n.id ? { ...x, is_read: true } : x))); void markNotificationsReadAction([n.id]); }
-    router.push(notificationHref(n));
+    const aud = audienceOf(n.type, "customer");
+    router.push(notificationHref(n, aud));
   };
 
   return (
@@ -61,7 +63,7 @@ export function NotificationsList({ userId, initial }: { userId: string; initial
                 <span className={cn("mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full", n.is_read ? "bg-surface-2" : "bg-card shadow-card")} aria-hidden="true">{iconFor(n.type)}</span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-start justify-between gap-2">
-                    <span className={cn("text-sm text-ink", n.is_read ? "font-medium" : "font-bold")}>{!n.is_read ? <span className="sr-only">Unread: </span> : null}{n.title}</span>
+                    <span className={cn("text-sm text-ink", n.is_read ? "font-medium" : "font-bold")}>{!n.is_read ? <span className="sr-only">Unread: </span> : null}{n.title}{audienceOf(n.type, "customer") !== "customer" ? <span className="ml-1.5 rounded-full bg-surface-2 px-1.5 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-ink-3">{AUDIENCE_LABEL[audienceOf(n.type, "customer")]}</span> : null}</span>
                     <span className="shrink-0 text-[11px] text-ink-3">{timeAgo(n.created_at)}</span>
                   </span>
                   <span className={cn("mt-0.5 block text-sm", n.is_read ? "text-ink-3" : "text-ink-2")}>{n.body}</span>

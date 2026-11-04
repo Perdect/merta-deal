@@ -5,6 +5,7 @@ import { getAdminNotifications } from "@/lib/data/admin";
 import { AdminShell } from "@/components/admin/kit/shell";
 import { PortalTheme } from "@/components/shared/portal-theme";
 import { createClient } from "@/lib/supabase/server";
+import { env, isPushConfigured } from "@/lib/env";
 
 export const metadata: Metadata = { title: { default: "Admin", template: "%s · Admin | Merta Deal" }, robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="theme-admin contents">
       <PortalTheme portal="admin" />
-      <AdminShell user={{ name: user.fullName, email: user.email, role: user.role, avatarUrl: user.avatarUrl }} unread={unread}>
+      <AdminShell user={{ name: user.fullName, email: user.email, role: user.role, avatarUrl: user.avatarUrl }} userId={user.id} unread={unread} push={{ configured: isPushConfigured(), vapidPublicKey: env.vapidPublicKey }}>
         {children}
       </AdminShell>
     </div>

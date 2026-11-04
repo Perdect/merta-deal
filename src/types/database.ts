@@ -1472,6 +1472,9 @@ export type Database = {
           order_number: string
           packed_at: string | null
           packed_by: string | null
+          accepted_at: string | null
+          accepted_by: string | null
+          accepted_by_name: string | null
           packed_by_name: string | null
           payment_method: Database["public"]["Enums"]["payment_method"]
           payment_status: Database["public"]["Enums"]["payment_status"]
@@ -1518,6 +1521,9 @@ export type Database = {
           order_number: string
           packed_at?: string | null
           packed_by?: string | null
+          accepted_at?: string | null
+          accepted_by?: string | null
+          accepted_by_name?: string | null
           packed_by_name?: string | null
           payment_method: Database["public"]["Enums"]["payment_method"]
           payment_status?: Database["public"]["Enums"]["payment_status"]
@@ -1564,6 +1570,9 @@ export type Database = {
           order_number?: string
           packed_at?: string | null
           packed_by?: string | null
+          accepted_at?: string | null
+          accepted_by?: string | null
+          accepted_by_name?: string | null
           packed_by_name?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"]
           payment_status?: Database["public"]["Enums"]["payment_status"]
@@ -2783,10 +2792,12 @@ export type Database = {
         }
         Returns: number
       }
+      admin_accept_order: { Args: { p_order_id: string }; Returns: Json }
       admin_assign_rider: {
         Args: { p_order_id: string; p_rider_id: string }
         Returns: string
       }
+      admin_order_alerts: { Args: never; Returns: Json }
       admin_audit: {
         Args: {
           p_action: string
@@ -2929,6 +2940,7 @@ export type Database = {
         Returns: Database["public"]["Enums"]["user_role"]
       }
       dispatch_pending: { Args: never; Returns: number }
+      escalate_unattended_orders: { Args: never; Returns: number }
       expand_search_query: { Args: { p_query: string }; Returns: string }
       expire_unpaid_orders: { Args: { p_minutes?: number }; Returns: number }
       find_zone: {

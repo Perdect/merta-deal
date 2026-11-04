@@ -14,7 +14,8 @@ const GROUP_META: Record<string, { title: string; description: string; order: nu
   payments: { title: "Payments", description: "Turn cash on delivery and online payments on or off (online also needs Razorpay keys).", order: 4 },
   delivery: { title: "Delivery", description: "Fallback fees, ETAs, scheduled slots, dispatch and rider pay. Zones can override these per area.", order: 5 },
   orders: { title: "Orders", description: "Automatic confirmation, per-product limits and delivery OTP attempts.", order: 6 },
-  rewards: { title: "Rewards", description: "Loyalty points.", order: 7 },
+  alerts: { title: "Order alerts", description: "How long a new order rings, reminder and escalation times for unaccepted orders, and the no-rider alert. Sound and push are enabled per device under Notifications.", order: 7 },
+  rewards: { title: "Rewards", description: "Loyalty points.", order: 8 },
   marketing: { title: "Marketing and QR links", description: "Editable short links behind printed QR codes.", order: 9 },
 };
 const titleCase = (g: string) => g.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());

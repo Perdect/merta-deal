@@ -21,6 +21,7 @@ Hyperlocal kirana marketplace for Merta City, Rajasthan. Brand: **Merta Deal** (
 - `src/hooks/*` — `useDebouncedValue`, `useOrderRealtime`, `useNotifications`.
 - Order status metadata: `src/lib/order-status.ts`. Hinglish parser: `src/lib/order-parser.ts`.
 - Scanning (0034): `src/lib/scan/*` (types, camera hook, offline queue, formatting), `src/lib/actions/scan.ts`, `src/components/admin/scan/*` (Scan section, panels, print bar), `/admin/scan`, `/admin/print/{labels,slip}`, `/q/<code>`. Loose produce shares one gram balance (`stock_pools`); packing never touches stock; a scan never sets Delivered. Harness: `node scripts/test-scan.mjs "$PWD"`.
+- Order alerts (0035): `src/lib/alerts/*` (synthesised ringtones, device prefs, ring policy), `src/lib/actions/alerts.ts`, `src/components/alerts/alert-setup.tsx` (Enable / test / mute, honest sound+push status), `src/components/admin/alerts/*` (incoming-order popup, accept control), `src/components/rider/offer-alert.tsx`. Feed = `admin_order_alerts()`; accept = `admin_accept_order()` (idempotent, records who); escalation = `escalate_unattended_orders()` (cron). Only one tab per browser rings (Web Lock). Harness: `node scripts/test-alerts.mjs "$PWD"`.
 - Storage buckets: `product-images`, `store-photos`, `avatars`, `banners` (public), `store-documents` (private). Paths must start with `<storeId>/` or `<userId>/` for RLS.
 
 ## Style

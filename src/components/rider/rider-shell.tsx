@@ -19,6 +19,8 @@ import { useRiderStore } from "./rider-store";
 import { useRiderGps, useWakeLock } from "./use-rider-gps";
 import { useNow } from "./use-now";
 import { realtimeTopic } from "@/lib/realtime-topic";
+import { OfferAlert } from "./offer-alert";
+import { AlertBanner, type PushConfig } from "@/components/alerts/alert-setup";
 
 const EMPTY_NOTIFICATIONS: Notification[] = [];
 
@@ -29,7 +31,7 @@ type ShellUser = { id: string; name: string | null };
  * floating dock. Also owns the cross-page plumbing — realtime subscriptions on the rider's
  * assignments/row, GPS streaming while online or on a delivery, and notification toasts.
  */
-export function RiderShell({ user, rider, initialActive, children }: { user: ShellUser; rider: DeliveryPartner; initialActive: boolean; children: React.ReactNode }) {
+export function RiderShell({ user, rider, initialActive, push, children }: { user: ShellUser; rider: DeliveryPartner; initialActive: boolean; push: PushConfig; children: React.ReactNode }) {
   const hydrate = useRiderStore((s) => s.hydrate);
   const setRider = useRiderStore((s) => s.setRider);
   const setStats = useRiderStore((s) => s.setStats);
@@ -80,9 +82,11 @@ export function RiderShell({ user, rider, initialActive, children }: { user: She
       <RiderTopBar name={user.name} rider={current} isOnline={isOnline} gpsOn={gpsOn} />
       <main className="mx-auto w-full max-w-lg flex-1 px-4 pb-nav pt-3">
         <RiderStatusBanner status={current.status} />
+        {current.status === "active" ? <AlertBanner portal="rider" push={push} href="/rider/profile#alerts" /> : null}
         {children}
       </main>
       <RiderBottomNav />
+      {current.status === "active" ? <OfferAlert push={push} /> : null}
       <PwaClient />
     </div>
   );

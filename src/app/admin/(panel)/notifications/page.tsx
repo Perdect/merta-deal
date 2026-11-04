@@ -6,6 +6,8 @@ import { toBroadcastLog } from "@/lib/data/admin-care";
 import { AdminNotificationList, BroadcastForm } from "@/components/admin/notifications-admin";
 import { AdminPageHeader, Panel, EmptyBlock, ErrorBlock } from "@/components/admin/kit";
 import { formatDateTime, formatNumber, timeAgo } from "@/lib/utils";
+import { AlertSetup } from "@/components/alerts/alert-setup";
+import { env, isPushConfigured } from "@/lib/env";
 
 export const metadata: Metadata = { title: "Notifications" };
 
@@ -21,6 +23,9 @@ export default async function AdminNotificationsPage() {
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_400px]">
         {user ? <AdminNotificationList userId={user.id} initial={items} limit={LIMIT} /> : <ErrorBlock title="Couldn't load your inbox" description="Your session could not be read. Sign in again if this keeps happening." retryHref="/admin/notifications" />}
         <div className="space-y-4">
+          <Panel id="alerts" title="Order alerts on this device" description="New orders ring here while the dashboard is open. Enable sound and push once per device.">
+            <AlertSetup portal="admin" push={{ configured: isPushConfigured(), vapidPublicKey: env.vapidPublicKey }} />
+          </Panel>
           <BroadcastForm />
           <Panel title="Recent broadcasts" description="Last 10, from the audit log" flush>
             {broadcasts.length === 0 ? <EmptyBlock icon={Megaphone} title="No broadcasts sent yet" description="Broadcasts you send appear here with their reach." /> : (

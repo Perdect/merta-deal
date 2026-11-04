@@ -24,6 +24,9 @@ const nextConfig: NextConfig = {
       { source: "/grocery-delivery-merta", destination: "/delivery-area", permanent: true },
       { source: "/stores", destination: "/categories", permanent: true },
       { source: "/s/:slug", destination: "/categories", permanent: true },
+      // The store portal merged into the admin panel (0030): /store/orders -> /admin/orders, etc.
+      { source: "/store", destination: "/admin", permanent: true },
+      { source: "/store/:path*", destination: "/admin/:path*", permanent: true },
     ];
   },
   async headers() {

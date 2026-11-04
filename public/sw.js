@@ -1,5 +1,5 @@
 /* Merta Deal service worker: offline shell for navigations, cache-first static assets, web push. */
-const VERSION = "md-v6";
+const VERSION = "md-v7";
 const STATIC_CACHE = `${VERSION}-static`;
 const OFFLINE_URL = "/offline.html";
 
@@ -47,19 +47,35 @@ self.addEventListener("fetch", (event) => {
   }
 });
 
+/* Alerts (a new order for staff, a delivery request for a rider) stay on screen until dismissed and buzz
+   longer; one notification per order so retries replace rather than pile up. Bodies never carry a
+   customer's name, phone or address. A closed browser or a locked phone shows them only as long as the
+   platform delivers push at all: there is no continuous ringing without a native app. */
+const ALERT_TYPES = ["new_order", "delivery_offer", "order_unattended", "dispatch_no_rider"];
 self.addEventListener("push", (event) => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch { data = { title: "Merta Deal", body: event.data ? event.data.text() : "" }; }
   const title = data.title || "Merta Deal";
-  const options = { body: data.body || "", icon: "/icons/icon-192.png", badge: "/icons/icon-192.png", data: { url: data.url || "/" }, tag: data.tag, renotify: Boolean(data.tag), vibrate: [80, 40, 80] };
+  const inner = data.data || {};
+  const alert = ALERT_TYPES.includes(data.type);
+  const tag = data.tag || (inner.order_id ? `${data.type || "n"}-${inner.order_id}` : undefined);
+  const options = {
+    body: data.body || "", icon: "/icons/icon-192.png", badge: "/icons/icon-192.png",
+    data: { url: data.url || "/", type: data.type || "" }, tag, renotify: Boolean(tag),
+    requireInteraction: alert, vibrate: alert ? [300, 120, 300, 120, 300] : [80, 40, 80],
+    actions: alert ? [{ action: "open", title: data.type === "delivery_offer" ? "Open request" : "View order" }] : [],
+  };
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = (event.notification.data && event.notification.data.url) || "/";
+  // Prefer a window already in the same app (admin / rider / shop) so an open dashboard is reused.
+  const area = url.startsWith("/admin") ? "/admin" : url.startsWith("/rider") ? "/rider" : "";
   event.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
-    for (const c of list) { if ("focus" in c) { c.navigate(url); return c.focus(); } }
+    const same = list.find((c) => area && new URL(c.url).pathname.startsWith(area)) || list[0];
+    if (same && "focus" in same) { same.navigate(url); return same.focus(); }
     return self.clients.openWindow(url);
   }));
 });

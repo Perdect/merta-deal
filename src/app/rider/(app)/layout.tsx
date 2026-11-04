@@ -6,6 +6,7 @@ import { RiderShell } from "@/components/rider/rider-shell";
 import { RiderRegistration } from "@/components/rider/rider-registration";
 import { PortalTheme } from "@/components/shared/portal-theme";
 import { createClient } from "@/lib/supabase/server";
+import { env, isPushConfigured } from "@/lib/env";
 
 export const metadata: Metadata = {
   title: { default: "Delivery partner", template: "%s · Delivery partner | Merta Deal" },
@@ -29,7 +30,7 @@ export default async function RiderLayout({ children }: { children: React.ReactN
   return (
     <div className="theme-rider contents">
       <PortalTheme portal="rider" />
-      <RiderShell user={{ id: user.id, name: user.fullName }} rider={rider} initialActive={active}>
+      <RiderShell user={{ id: user.id, name: user.fullName }} rider={rider} initialActive={active} push={{ configured: isPushConfigured(), vapidPublicKey: env.vapidPublicKey }}>
         {children}
       </RiderShell>
     </div>

@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { ADMIN_NAV, ADMIN_NAV_FOOTER, activeNavHref, breadcrumbs, type AdminNavItem } from "./nav";
 import { AdminTrail } from "./client";
+import { OrderAlerts } from "@/components/admin/alerts/order-alerts";
+import { AlertBanner, type PushConfig } from "@/components/alerts/alert-setup";
 
 /* Collapsed state lives in localStorage (a per-admin convenience). useSyncExternalStore keeps the
    server render (expanded) and the client in agreement without a hydration mismatch. */
@@ -26,7 +28,7 @@ type ShellUser = { name: string | null; email: string | null; role: string; avat
  * compact top bar with breadcrumbs, notifications, the customer site and the account menu.
  * Page headings live in each page (AdminPageHeader), never here, so there is exactly one h1.
  */
-export function AdminShell({ user, unread, children }: { user: ShellUser; unread: number; children: React.ReactNode }) {
+export function AdminShell({ user, userId, unread, push, children }: { user: ShellUser; userId: string; unread: number; push: PushConfig; children: React.ReactNode }) {
   const pathname = usePathname();
   const collapsed = React.useSyncExternalStore(subscribe, readCollapsed, () => false);
   const [drawer, setDrawer] = React.useState(false);
@@ -108,9 +110,10 @@ export function AdminShell({ user, unread, children }: { user: ShellUser; unread
           </div>
         </header>
         <main id="admin-main" className="min-w-0 flex-1 px-3 py-4 pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] sm:px-5 sm:py-5 lg:px-7 lg:py-6">
-          <div className="mx-auto w-full max-w-[1400px]">{children}</div>
+          <div className="mx-auto w-full max-w-[1400px]"><AlertBanner portal="admin" push={push} href="/admin/notifications#alerts" />{children}</div>
         </main>
       </div>
+      <OrderAlerts userId={userId} push={push} />
     </div>
   );
 }
