@@ -9,7 +9,7 @@ import { cn, formatINR } from "@/lib/utils";
 import { ProductImage } from "./product-image";
 
 /** Zepto-style rotating hint: Search "Groceries" → "Fruits" → "Vegetables" (CSS only, no timers). */
-const HINTS = ["Groceries", "Fruits", "Vegetables"];
+const HINTS = ["milk", "atta", "chips", "dal"];
 
 /** `scope` keeps typeahead and results inside one category (search opened from a category page). */
 export function SearchBar({ className, autoFocus, initial = "", compact, scope }: { className?: string; autoFocus?: boolean; initial?: string; compact?: boolean; scope?: { slug: string; name: string } }) {
@@ -73,7 +73,7 @@ export function SearchBar({ className, autoFocus, initial = "", compact, scope }
         <Search className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-3" />
         <input ref={inputRef} value={q} onChange={(e) => { setQ(e.target.value); setOpen(true); }} onFocus={() => setOpen(true)} autoFocus={autoFocus} type="search" enterKeyHint="search" autoComplete="off"
           placeholder="" aria-label={scope ? `Search in ${scope.name}` : "Search groceries, fruits and vegetables"}
-          className={cn("w-full rounded-md border border-line-2 bg-card pl-11 pr-20 text-[15px] text-ink shadow-card placeholder:text-ink-3 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 [&::-webkit-search-cancel-button]:hidden", compact ? "h-11" : "h-12")} />
+          className={cn("w-full pl-11 pr-20 text-[15px] text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-brand-100 [&::-webkit-search-cancel-button]:hidden", compact ? "h-12 rounded-2xl border border-transparent bg-surface-2 focus:border-brand-300 focus:bg-card" : "h-12 rounded-md border border-line-2 bg-card shadow-card focus:border-brand-500")} />
         {!q ? (
           <span aria-hidden className={cn("pointer-events-none absolute left-11 right-20 top-1/2 flex -translate-y-1/2 items-center overflow-hidden whitespace-nowrap text-[15px] leading-6 text-ink-3", compact ? "h-6" : "h-6")}>
             {scope ? <span className="truncate">Search in {scope.name}</span> : <>Search&nbsp;

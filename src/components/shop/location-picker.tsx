@@ -146,7 +146,7 @@ export function LocationPicker({ addresses = [], className, light, variant = "in
 
   // Delivery time only once the location is a real, served one; never a default.
   const verified = hydrated && location?.serviceable && location.etaMax;
-  const etaLabel = verified ? etaText(location.etaMin, location.etaMax, "min") : null;
+  const etaLabel = verified ? etaText(location.etaMin, location.etaMax, variant === "banner" ? "minutes" : "min") : null;
   const title = !hydrated || !location ? "Select delivery location" : location.serviceable ? (etaLabel ? `Delivery in ${etaLabel}` : `Delivering to ${location.label}`) : "Not delivering here yet";
   const line = hydrated && location ? location.label : "See delivery time & availability";
 
@@ -179,11 +179,11 @@ export function LocationPicker({ addresses = [], className, light, variant = "in
         </button>
       ) : (
       <button type="button" onClick={() => setOpen(true)} aria-label={`Delivery location: ${line}. Change`} className={cn("block min-w-0 max-w-full text-left", className)}>
-        <span className={cn("block truncate font-display font-bold leading-tight", variant === "banner" ? "text-[15px]" : "text-[15px]", light ? "text-white" : "text-ink")}>{title}</span>
-        <span className={cn("mt-0.5 flex items-center gap-1 font-medium", variant === "banner" ? "text-xs" : "text-xs", light ? "text-white/85" : "text-ink-3")}>
-          <MapPin className="h-3.5 w-3.5 shrink-0" />
-          <span className="truncate">{line}</span>
-          <ChevronDown className="h-4 w-4 shrink-0" />
+        <span className={cn("block truncate font-display leading-tight", variant === "banner" ? "text-[22px] font-extrabold tracking-[-0.01em]" : "text-[15px] font-bold", light ? "text-white" : "text-ink")}>{title}</span>
+        <span className={cn("flex items-center gap-1.5 font-medium", variant === "banner" ? "mt-0.5 text-[14px] text-ink-2" : "mt-0.5 text-xs text-ink-3", light && "text-white/85")}>
+          {variant === "banner" ? null : <MapPin className="h-3.5 w-3.5 shrink-0" />}
+          <span className="truncate">{variant === "banner" ? (hydrated && location ? (location.detail ?? location.label) : line) : line}</span>
+          {variant === "banner" ? <span aria-hidden className="shrink-0 text-[11px] leading-none text-ink">▼</span> : <ChevronDown className="h-4 w-4 shrink-0" />}
         </span>
       </button>
       )}

@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { User } from "lucide-react";
+import { User, CircleUserRound } from "lucide-react";
 import type { SessionUser } from "@/lib/supabase/server";
 import type { Address } from "@/types/app";
-import { Logo, LogoMark } from "@/components/ui/misc";
+import { Logo } from "@/components/ui/misc";
 import { SearchBar } from "./search-bar";
 import { LocationPicker } from "./location-picker";
 import { CartButton } from "./cart-button";
@@ -20,17 +20,15 @@ export function Header({ user, addresses, unread = 0, defaultEta }: { user: Sess
       <HeaderHeight />
       {/* Mobile — the product page brings its own floating controls instead. */}
       <HideOnRoutes prefixes={["/p/"]} fallback={<div className="px-4 py-2 md:hidden"><LocationPicker addresses={addresses} variant="strip" fallbackEta={defaultEta} signedIn={Boolean(user)} /></div>}>
-        <div className="px-4 pb-2 pt-1.5 md:hidden">
-          <div className="flex items-center gap-2">
-            <Link href="/" aria-label="Merta Deal home" className="tap shrink-0"><LogoMark size={28} /></Link>
+        <div className="px-4 pb-2.5 pt-2 md:hidden">
+          <div className="flex items-start gap-3">
             <div className="min-w-0 flex-1"><LocationPicker addresses={addresses} variant="banner" fallbackEta={defaultEta} signedIn={Boolean(user)} /></div>
-            <Link href={user ? "/account" : "/login"} aria-label={accountLabel} className="tap relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-brand-600">
-              <User className="h-5 w-5" strokeWidth={1.9} aria-hidden />
-              {unread > 0 ? <span aria-hidden className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-saffron-500 ring-2 ring-card" /> : null}
+            <Link href={user ? "/account" : "/login"} aria-label={accountLabel} className="tap relative -mr-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-brand-600">
+              <CircleUserRound className="h-7 w-7" strokeWidth={1.8} aria-hidden />
+              {unread > 0 ? <span aria-hidden className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-full bg-saffron-500 ring-2 ring-card" /> : null}
             </Link>
-            <CartButton className="tap -ml-1 text-ink hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-brand-600" />
           </div>
-          <div className="mt-1.5"><SearchBar compact /></div>
+          <div className="mt-2.5"><SearchBar compact /></div>
         </div>
       </HideOnRoutes>
       {/* Desktop */}
