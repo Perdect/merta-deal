@@ -6,6 +6,8 @@ import { listRidersOps, countRidersByStatus, listHref, type RiderFilters } from 
 import { AdminPageHeader, Panel, DataTable, CellStack, RowLink, EmptyBlock, ErrorBlock, ListToolbar, StatusTabs, ListPagination, QuickView, DetailList, StatusText, rupees, rupeesRounded } from "@/components/admin/kit";
 import { RidersLiveBoard } from "@/components/admin/riders-map";
 import { RiderStatusActions } from "@/components/admin/rider-actions";
+import { AddRiderButton, RiderRowActions } from "@/components/admin/rider-manage";
+import { getSessionUser } from "@/lib/supabase/server";
 import { RiderStatusPill, OnlinePill, ActivePill, VEHICLE_LABEL } from "@/components/admin/ops/pills";
 import { VEHICLE_OPTIONS } from "@/components/admin/constants";
 import { Avatar, StarRating } from "@/components/ui/misc";
@@ -25,13 +27,15 @@ export default async function AdminRidersPage({ searchParams }: { searchParams: 
   const filters: RiderFilters = { q: spGet(sp, "q"), status: spGet(sp, "status"), online: spGet(sp, "online"), vehicle: spGet(sp, "vehicle") };
   const viewId = spGet(sp, "view");
   const validView = /^[0-9a-f-]{36}$/.test(viewId);
-  const [list, counts, live, view, cities] = await Promise.all([
+  const [list, counts, live, view, cities, me] = await Promise.all([
     listRidersOps({ ...filters, page: spPage(sp) }),
     countRidersByStatus(filters),
     getLiveRiders(),
     validView ? getRiderDetail(viewId) : Promise.resolve(null),
-    validView ? getCities() : Promise.resolve([]),
+    getCities(),
+    getSessionUser(),
   ]);
+  const selfId = me?.id ?? "";
   const { items, total, page, pageSize, error } = list;
   const here = listHref("/admin/riders", sp);
   const viewHref = (id: string) => listHref("/admin/riders", sp, { view: id });
@@ -40,7 +44,7 @@ export default async function AdminRidersPage({ searchParams }: { searchParams: 
 
   return (
     <>
-      <AdminPageHeader title="Riders" description="Approve and manage delivery partners, and see who is online right now." />
+      <AdminPageHeader title="Riders" description="Approve and manage delivery partners, and see who is online right now. Add a rider you already know, edit details in place, or open one to approve or suspend." actions={<AddRiderButton cities={cities} />} />
 
       <Panel title="Live now" description="Approved riders who are online, with their last GPS fix" className="mb-5">
         <RidersLiveBoard initial={live} />
@@ -79,7 +83,7 @@ export default async function AdminRidersPage({ searchParams }: { searchParams: 
             { key: "earned", header: "Earned", align: "right", hideBelow: "lg", render: (r) => <span className="tabular">{rupeesRounded(r.total_earnings)}</span> },
             { key: "gps", header: "Last GPS", hideBelow: "xl", render: (r) => <span className="whitespace-nowrap text-xs text-ink-3" title={r.last_location_at ? formatDateTime(r.last_location_at) : undefined}>{r.last_location_at ? timeAgo(r.last_location_at) : "Never"}</span> },
             { key: "joined", header: "Joined", hideBelow: "xl", render: (r) => <span className="whitespace-nowrap text-xs text-ink-3">{formatDate(r.created_at)}</span> },
-            { key: "act", header: <span className="sr-only">Actions</span>, align: "right", render: (r) => <RowLink href={viewHref(r.id)} label={`Quick view of ${r.user?.full_name ?? "rider"}`} scroll={false} /> },
+            { key: "act", header: <span className="sr-only">Actions</span>, align: "right", render: (r) => <span className="inline-flex items-center gap-1"><RiderRowActions rider={r} cities={cities} selfId={selfId} /><RowLink href={viewHref(r.id)} label={`Quick view of ${r.user?.full_name ?? "rider"}`} scroll={false} /></span> },
           ]} />
       )}
       {!error ? <ListPagination page={page} pageSize={pageSize} total={total} /> : null}
