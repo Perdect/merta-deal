@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, Search, PackageCheck, Banknote, Lock } from "lucide-react";
+import { Plus, Trash2, Search, PackageCheck, Banknote, Lock, Scale } from "lucide-react";
 import { Panel } from "@/components/admin/kit";
 import { btn } from "@/components/admin/care/shared";
 import { Input, Select, Textarea } from "@/components/ui/input";
@@ -16,11 +16,12 @@ import { cn, formatINR, formatDateTime } from "@/lib/utils";
 export type DocKind = "po" | "grn";
 export type SupplierOption = { id: string; name: string };
 export type DocLine = DocLineInput & { key: string; name: string; pack_label: string | null; loose: boolean; stock_pool_id?: string | null };
-export type DocHead = { id: string | null; number?: string; status: string; supplier_id: string; discount: number; freight: number; other_costs: number; notes: string; expected_at: string; invoice_no: string; received_at: string; po_id: string | null; paid_amount?: number; total?: number; payment_status?: string; posted_at?: string | null; received_by_name?: string | null };
+export type DocHead = { id: string | null; number?: string; status: string; supplier_id: string; discount: number; freight: number; other_costs: number; notes: string; expected_at: string; invoice_no: string; received_at: string; po_id: string | null; weighbridge_slip_no: string; vehicle_no: string; gross_weight_kg: string; tare_weight_kg: string; paid_amount?: number; total?: number; payment_status?: string; posted_at?: string | null; received_by_name?: string | null };
 type PaymentRow = { id: string; amount: number; reference: string | null; paid_by_name: string | null; paid_at: string };
 
 const UNIT_LABEL: Record<DocLine["unit"], string> = { pack: "packs", carton: "cartons", kg: "kg", g: "g" };
 const n2 = (v: number) => Math.round(v * 100) / 100;
+const n3 = (v: number) => Math.round(v * 1000) / 1000;
 
 /**
  * One editor for purchase orders and goods receipts: supplier and document costs on top, lines with the
@@ -44,6 +45,12 @@ export function DocEditor({ kind, initial, lines: initialLines, suppliers, payme
   const baseQty = (l: DocLine) => (l.unit === "carton" ? l.qty * (l.units_per_carton ?? 0) : l.unit === "kg" ? l.qty * 1000 : l.qty);
   const landed = (l: DocLine) => { const base = baseQty(l); if (!base) return null; const share = subtotal > 0 ? (head.freight + head.other_costs - head.discount) * lineTotal(l) / subtotal : 0; return l.loose ? (lineTotal(l) + share) / (base / 1000) : (lineTotal(l) + share) / base; };
 
+  const looseKg = n3(lines.filter((l) => l.loose).reduce((a, l) => a + baseQty(l), 0) / 1000);
+  const gross = head.gross_weight_kg === "" ? null : Number(head.gross_weight_kg);
+  const tare = head.tare_weight_kg === "" ? null : Number(head.tare_weight_kg);
+  const netKg = gross != null && tare != null && Number.isFinite(gross) && Number.isFinite(tare) ? n3(gross - tare) : null;
+  const hasSlip = Boolean(head.weighbridge_slip_no || head.vehicle_no || head.gross_weight_kg !== "" || head.tare_weight_kg !== "");
+
   const setLine = (key: string, patch: Partial<DocLine>) => setLines((ls) => ls.map((l) => (l.key === key ? { ...l, ...patch } : l)));
   const addProduct = (p: PurchasablePick) => {
     if (lines.some((l) => l.product_id === p.id)) { toast.info("Already on this document"); return; }
@@ -57,7 +64,8 @@ export function DocEditor({ kind, initial, lines: initialLines, suppliers, payme
     setBusy("save");
     try {
       const payload = lines.map((l) => ({ product_id: l.product_id, qty: Number(l.qty), unit: l.unit, units_per_carton: l.unit === "carton" ? Number(l.units_per_carton) || null : null, unit_price: Number(l.unit_price), discount: Number(l.discount ?? 0), batch_no: l.batch_no || undefined, expiry_date: l.expiry_date || undefined, po_line_id: l.po_line_id ?? null }));
-      const headInput = { supplier_id: head.supplier_id, discount: head.discount, freight: head.freight, other_costs: head.other_costs, notes: head.notes, expected_at: head.expected_at || null, invoice_no: head.invoice_no || null, po_id: head.po_id, received_at: head.received_at || null };
+      const headInput = { supplier_id: head.supplier_id, discount: head.discount, freight: head.freight, other_costs: head.other_costs, notes: head.notes, expected_at: head.expected_at || null, invoice_no: head.invoice_no || null, po_id: head.po_id, received_at: head.received_at || null,
+        weighbridge_slip_no: head.weighbridge_slip_no || null, vehicle_no: head.vehicle_no || null, gross_weight_kg: head.gross_weight_kg === "" ? null : Number(head.gross_weight_kg), tare_weight_kg: head.tare_weight_kg === "" ? null : Number(head.tare_weight_kg) };
       const r = kind === "po" ? await savePurchaseOrderAction(head.id, headInput, payload, status ?? (head.status === "ordered" ? "ordered" : "draft")) : await saveGoodsReceiptAction(head.id, headInput, payload);
       if (!r.ok) { toast.error("Not saved", r.error); return null; }
       toast.success(kind === "po" ? (status === "ordered" ? "Purchase order sent" : "Purchase order saved") : "Receipt saved as draft");
@@ -108,6 +116,25 @@ export function DocEditor({ kind, initial, lines: initialLines, suppliers, payme
           </div>
           <Textarea label="Notes" className="mt-3" value={head.notes} disabled={locked} onChange={(e) => setHead({ ...head, notes: e.target.value })} />
         </Panel>
+
+        {kind === "grn" && (!locked || hasSlip) ? (
+          <Panel title="Weighbridge slip" description={locked ? "As recorded when the goods were received." : "For loads bought by weight (dharam kanta). Optional: the slip's serial number, the vehicle, and the two weighings. The net weight is worked out and compared with the loose-produce kg on the lines."}>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <Input label="Slip serial no." value={head.weighbridge_slip_no} disabled={locked} onChange={(e) => setHead({ ...head, weighbridge_slip_no: e.target.value })} placeholder="e.g. 4521" maxLength={40} />
+              <Input label="Vehicle no." value={head.vehicle_no} disabled={locked} onChange={(e) => setHead({ ...head, vehicle_no: e.target.value.toUpperCase() })} placeholder="RJ 21 GA 1234" maxLength={20} className="uppercase" />
+              <Input label="Gross weight (kg)" type="number" inputMode="decimal" min={0} step="0.001" value={head.gross_weight_kg} disabled={locked} onChange={(e) => setHead({ ...head, gross_weight_kg: e.target.value })} hint="Loaded vehicle" />
+              <Input label="Tare weight (kg)" type="number" inputMode="decimal" min={0} step="0.001" value={head.tare_weight_kg} disabled={locked} onChange={(e) => setHead({ ...head, tare_weight_kg: e.target.value })} hint="Empty vehicle" />
+            </div>
+            {netKg != null ? (
+              <p className={cn("mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md px-3 py-2 text-sm", netKg < 0 ? "bg-danger-50 text-danger" : "bg-surface text-ink-2")}>
+                <span><Scale className="mr-1 inline h-4 w-4" aria-hidden />Net weight <strong className="tabular text-ink">{netKg.toFixed(3)} kg</strong></span>
+                {netKg < 0 ? <span>Tare is more than gross; check the two weights.</span> : looseKg > 0 ? (
+                  <span>Lines (loose produce) <strong className="tabular text-ink">{looseKg.toFixed(3)} kg</strong> · difference <strong className={cn("tabular", Math.abs(netKg - looseKg) > Math.max(0.5, looseKg * 0.01) ? "text-warning" : "text-success")}>{(looseKg - netKg) >= 0 ? "+" : "−"}{Math.abs(looseKg - netKg).toFixed(3)} kg</strong>{Math.abs(netKg - looseKg) > Math.max(0.5, looseKg * 0.01) ? " — lines and slip disagree by more than 1%; the lines are what goes into stock." : ""}</span>
+                ) : <span>No loose-produce lines to compare yet.</span>}
+              </p>
+            ) : null}
+          </Panel>
+        ) : null}
 
         <Panel title="Lines" description="Enter quantities in the unit you bought: packs, cartons (with packs per carton), or kg / g for loose produce." flush
           actions={!locked ? <ProductSearch onPick={addProduct} /> : null}>

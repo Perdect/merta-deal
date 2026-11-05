@@ -146,6 +146,13 @@ create table if not exists public.goods_receipts (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+-- Weighbridge (dharam kanta) slip for loads bought by weight: slip serial number, vehicle, gross and tare
+-- weights in kg; the net weight is derived and shown against the loose-produce kg on the lines.
+alter table public.goods_receipts add column if not exists weighbridge_slip_no text;
+alter table public.goods_receipts add column if not exists vehicle_no text;
+alter table public.goods_receipts add column if not exists gross_weight_kg numeric(10,3) check (gross_weight_kg is null or gross_weight_kg >= 0);
+alter table public.goods_receipts add column if not exists tare_weight_kg numeric(10,3) check (tare_weight_kg is null or tare_weight_kg >= 0);
+alter table public.goods_receipts add column if not exists net_weight_kg numeric(10,3) generated always as (case when gross_weight_kg is not null and tare_weight_kg is not null then gross_weight_kg - tare_weight_kg end) stored;
 create table if not exists public.goods_receipt_lines (
   id uuid primary key default gen_random_uuid(),
   grn_id uuid not null references public.goods_receipts(id) on delete cascade,

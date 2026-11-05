@@ -66,12 +66,14 @@ const lineSchema = z.object({
   units_per_carton: z.coerce.number().int().positive().max(10000).nullable().optional(), unit_price: money, discount: money.default(0),
   batch_no: z.string().trim().max(40).optional().transform((v) => v || null), expiry_date: z.string().trim().optional().transform((v) => v || null), po_line_id: z.string().uuid().nullable().optional(),
 }).refine((l) => l.unit !== "carton" || Boolean(l.units_per_carton), { message: "Enter packs per carton", path: ["units_per_carton"] });
-export type DocHeadInput = { supplier_id: string; discount?: number; freight?: number; other_costs?: number; notes?: string; expected_at?: string | null; invoice_no?: string | null; po_id?: string | null; received_at?: string | null };
+export type DocHeadInput = { supplier_id: string; discount?: number; freight?: number; other_costs?: number; notes?: string; expected_at?: string | null; invoice_no?: string | null; po_id?: string | null; received_at?: string | null; weighbridge_slip_no?: string | null; vehicle_no?: string | null; gross_weight_kg?: number | null; tare_weight_kg?: number | null };
 const headSchema = z.object({
   supplier_id: uuid, discount: money.default(0), freight: money.default(0), other_costs: money.default(0),
   notes: z.string().trim().max(500).optional().transform((v) => v || null), expected_at: z.string().trim().optional().nullable().transform((v) => v || null),
   invoice_no: z.string().trim().max(60).optional().nullable().transform((v) => v || null), po_id: z.string().uuid().nullable().optional(), received_at: z.string().trim().optional().nullable().transform((v) => v || null),
-});
+  weighbridge_slip_no: z.string().trim().max(40).optional().nullable().transform((v) => v || null), vehicle_no: z.string().trim().max(20).optional().nullable().transform((v) => v?.toUpperCase() || null),
+  gross_weight_kg: z.coerce.number().min(0).max(100000).optional().nullable().transform((v) => (v ? v : null)), tare_weight_kg: z.coerce.number().min(0).max(100000).optional().nullable().transform((v) => (v ? v : null)),
+}).refine((h) => h.gross_weight_kg == null || h.tare_weight_kg == null || h.tare_weight_kg <= h.gross_weight_kg, { message: "Tare (empty vehicle) weight cannot be more than the gross weight", path: ["tare_weight_kg"] });
 
 /** Create or update a purchase order with its lines (lines are replaced). Draft and ordered POs only. */
 export async function savePurchaseOrderAction(id: string | null, head: DocHeadInput, lines: DocLineInput[], status: "draft" | "ordered"): Promise<ActionResult<{ id: string }>> {
@@ -120,7 +122,8 @@ export async function saveGoodsReceiptAction(id: string | null, head: DocHeadInp
   try {
     const { from, rpc, userId } = await db();
     let grnId = id;
-    const headRow = { supplier_id: h.data.supplier_id, po_id: h.data.po_id ?? null, discount: h.data.discount, freight: h.data.freight, other_costs: h.data.other_costs, notes: h.data.notes, invoice_no: h.data.invoice_no, received_at: h.data.received_at ?? new Date().toISOString() };
+    const headRow = { supplier_id: h.data.supplier_id, po_id: h.data.po_id ?? null, discount: h.data.discount, freight: h.data.freight, other_costs: h.data.other_costs, notes: h.data.notes, invoice_no: h.data.invoice_no, received_at: h.data.received_at ?? new Date().toISOString(),
+      weighbridge_slip_no: h.data.weighbridge_slip_no, vehicle_no: h.data.vehicle_no, gross_weight_kg: h.data.gross_weight_kg, tare_weight_kg: h.data.tare_weight_kg };
     if (grnId) {
       const { data: cur } = await from("goods_receipts").select("status").eq("id", grnId).maybeSingle();
       if (!cur) return { ok: false, error: "Receipt not found." };

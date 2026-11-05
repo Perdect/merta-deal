@@ -15,7 +15,7 @@ export default async function PurchaseOrderPage({ params }: { params: Promise<{ 
   const { data: sups } = await any.from("suppliers").select("id, name").eq("is_active", true).order("name");
   const suppliers = (sups ?? []) as SupplierOption[];
   if (id === "new") {
-    const head: DocHead = { id: null, status: "draft", supplier_id: suppliers[0]?.id ?? "", discount: 0, freight: 0, other_costs: 0, notes: "", expected_at: "", invoice_no: "", received_at: "", po_id: null };
+    const head: DocHead = { id: null, status: "draft", supplier_id: suppliers[0]?.id ?? "", discount: 0, freight: 0, other_costs: 0, notes: "", expected_at: "", invoice_no: "", received_at: "", po_id: null, weighbridge_slip_no: "", vehicle_no: "", gross_weight_kg: "", tare_weight_kg: "" };
     return <><AdminPageHeader back="/admin/purchasing?tab=po" title="New purchase order" description="What you are asking a supplier for. Receive the goods later against this order." /><DocEditor kind="po" initial={head} lines={[]} suppliers={suppliers} /></>;
   }
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
@@ -25,7 +25,7 @@ export default async function PurchaseOrderPage({ params }: { params: Promise<{ 
   ]);
   if (!po) notFound();
   type L = { id: string; product_id: string; qty: number; unit: DocLine["unit"]; units_per_carton: number | null; unit_price: number; discount: number; product: { name: string; pack_label: string | null; stock_pool_id: string | null } | null };
-  const head: DocHead = { id: po.id, number: po.po_number, status: po.status, supplier_id: po.supplier_id, discount: Number(po.discount), freight: Number(po.freight), other_costs: Number(po.other_costs), notes: po.notes ?? "", expected_at: po.expected_at ?? "", invoice_no: "", received_at: "", po_id: null, total: Number(po.total) };
+  const head: DocHead = { id: po.id, number: po.po_number, status: po.status, supplier_id: po.supplier_id, discount: Number(po.discount), freight: Number(po.freight), other_costs: Number(po.other_costs), notes: po.notes ?? "", expected_at: po.expected_at ?? "", invoice_no: "", received_at: "", po_id: null, weighbridge_slip_no: "", vehicle_no: "", gross_weight_kg: "", tare_weight_kg: "", total: Number(po.total) };
   const docLines: DocLine[] = ((lines ?? []) as L[]).map((l) => ({ key: l.id, po_line_id: l.id, product_id: l.product_id, name: l.product?.name ?? "Product", pack_label: l.product?.pack_label ?? null, loose: Boolean(l.product?.stock_pool_id), qty: Number(l.qty), unit: l.unit, units_per_carton: l.units_per_carton, unit_price: Number(l.unit_price), discount: Number(l.discount) }));
   return <><AdminPageHeader back="/admin/purchasing?tab=po" title={po.po_number} description={`Purchase order · ${String(po.status).replace("_", " ")}${po.created_by_name ? ` · by ${po.created_by_name}` : ""}`} /><DocEditor kind="po" initial={head} lines={docLines} suppliers={suppliers} /></>;
 }

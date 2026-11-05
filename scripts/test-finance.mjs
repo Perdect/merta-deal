@@ -72,6 +72,9 @@ await q(`insert into goods_receipt_lines (grn_id, po_line_id, product_id, qty, u
 await q(`insert into goods_receipt_lines (grn_id, product_id, qty, unit, unit_cost, batch_no) values ($1, $2, 50, 'kg', 24, 'B2')`, [grn.id, pot1.id]);
 const g0 = await one(`select subtotal, total from goods_receipts where id = $1`, [grn.id]);
 ok("GRN totals include freight", near(g0.subtotal, 3360 + 1200) && near(g0.total, 4560 + 240));
+ok("a GRN without a slip has no net weight", (await one(`select net_weight_kg from goods_receipts where id = $1`, [grn.id])).net_weight_kg == null);
+await q(`update goods_receipts set weighbridge_slip_no = '4521', vehicle_no = 'RJ21GA1234', gross_weight_kg = 1250.500, tare_weight_kg = 1200.700 where id = $1`, [grn.id]);
+ok("weighbridge net weight is derived from gross and tare", near((await one(`select net_weight_kg from goods_receipts where id = $1`, [grn.id])).net_weight_kg, 49.8, 0.001));
 ok("nobody but cost-authorised admins can post", /FORBIDDEN/.test((await (async () => { await as(CUST); const e = await err(`select public.post_goods_receipt($1::uuid)`, [grn.id]); await as(ADMIN); return e; })()) ?? ""));
 const posted = await fnv(`public.post_goods_receipt($1::uuid)`, [grn.id]);
 ok("posting adds stock: 2 cartons of 12 = 24 packs", posted.lines === 2 && (await one(`select stock_qty from inventory where id = $1`, [oil.inv])).stock_qty === 24);
