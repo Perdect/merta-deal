@@ -6,6 +6,8 @@ import { AdminPageHeader, DataTable, CellStack, RowLink, EmptyBlock, ErrorBlock,
 import { RolePill, ActivePill, ROLE_LABEL } from "@/components/admin/ops/pills";
 import { Avatar } from "@/components/ui/misc";
 import { formatDate, formatNumber } from "@/lib/utils";
+import { getSessionUser, createClient } from "@/lib/supabase/server";
+import { AddUserButton, UserRowActions } from "@/components/admin/ops/user-manage";
 
 export const metadata: Metadata = { title: "Users" };
 
@@ -19,7 +21,8 @@ const TABS = [
 export default async function AdminUsersPage({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
   const filters: UserFilters = { q: spGet(sp, "q"), role: spGet(sp, "role"), active: spGet(sp, "active"), guest: spGet(sp, "guest") };
-  const [list, counts] = await Promise.all([listUsersOps({ ...filters, page: spPage(sp) }), countUsersByRole(filters)]);
+  const [list, counts, me, superRes] = await Promise.all([listUsersOps({ ...filters, page: spPage(sp) }), countUsersByRole(filters), getSessionUser(), (await createClient()).rpc("is_super_admin")]);
+  const isSuper = Boolean(superRes.data); const selfId = me?.id ?? "";
   const { items, total, page, pageSize, error } = list;
   const here = listHref("/admin/users", sp);
   const filtered = Boolean(filters.q || filters.active || filters.guest);
@@ -27,7 +30,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
 
   return (
     <>
-      <AdminPageHeader title="Users" description="Every account on Merta Deal: customers, riders and admins. Open a user to change their role, credit their wallet or deactivate them." />
+      <AdminPageHeader title="Users" description="Every account on Merta Deal: customers, riders and admins. Add staff here, edit a role or phone in place, or open a user for wallet and order history." actions={<AddUserButton isSuper={isSuper} />} />
 
       <StatusTabs param="role" items={TABS.map((t) => ({ ...t, count: counts[t.value] ?? null }))} />
       {rawRole ? <p className="-mt-1 mb-3 text-xs text-ink-3">Showing role: <span className="font-medium text-ink">{ROLE_LABEL[rawRole as keyof typeof ROLE_LABEL] ?? rawRole}</span></p> : null}
@@ -57,7 +60,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
             { key: "points", header: "Points", align: "right", hideBelow: "xl", render: (u) => <span className="tabular text-ink-3">{formatNumber(u.reward_points)}</span> },
             { key: "status", header: "Status", render: (u) => <ActivePill active={u.is_active} /> },
             { key: "joined", header: "Joined", hideBelow: "lg", render: (u) => <span className="whitespace-nowrap text-xs text-ink-3">{formatDate(u.created_at)}</span> },
-            { key: "act", header: <span className="sr-only">Actions</span>, align: "right", render: (u) => <RowLink href={`/admin/users/${u.id}`} label={`Open ${u.full_name ?? "user"}`}>Open</RowLink> },
+            { key: "act", header: <span className="sr-only">Actions</span>, align: "right", render: (u) => <span className="inline-flex items-center gap-1"><UserRowActions user={{ id: u.id, full_name: u.full_name, phone: u.phone, email: u.email, role: u.role, is_active: u.is_active, is_guest: u.is_guest }} isSuper={isSuper} selfId={selfId} /><RowLink href={`/admin/users/${u.id}`} label={`Open ${u.full_name ?? "user"}`}>Open</RowLink></span> },
           ]} />
       )}
       {!error ? <ListPagination page={page} pageSize={pageSize} total={total} /> : null}
