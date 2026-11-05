@@ -8,7 +8,7 @@ import { AdminPageHeader, Panel, ErrorBlock, StatusPill } from "@/components/adm
 export const metadata: Metadata = { title: "Settings" };
 
 const GROUP_META: Record<string, { title: string; description: string; order: number }> = {
-  general: { title: "Brand and support", description: "Name, tagline and how customers reach you.", order: 1 },
+  general: { title: "Brand and support", description: "Name, tagline, how customers reach you, and your Facebook, Instagram and LinkedIn pages (shown in the footer once filled in).", order: 1 },
   business: { title: "Business", description: "Opening hours, the pickup point riders collect from, and membership.", order: 2 },
   fees: { title: "Fees and taxes", description: "Platform fee and GST on fees.", order: 3 },
   payments: { title: "Payments", description: "Turn cash on delivery and online payments on or off (online also needs Razorpay keys).", order: 4 },

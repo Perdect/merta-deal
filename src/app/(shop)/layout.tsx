@@ -10,6 +10,7 @@ import { CartProvider } from "@/components/shop/cart-provider";
 import { StickyCartBar } from "@/components/shop/sticky-cart-bar";
 import { CartDrawerLazy } from "@/components/shop/cart-drawer-lazy";
 import { Footer } from "@/components/shop/footer";
+import { socialLinks } from "@/lib/social";
 import { PwaClient } from "@/components/pwa/pwa-client";
 import { ConnectionIndicator } from "@/components/pwa/connection-indicator";
 import { UpdatePrompt } from "@/components/pwa/update-prompt";
@@ -32,7 +33,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
       <NavHistory />
       <ChromePart part="header"><Header user={user} addresses={addresses} unread={notifications.unread} defaultEta={defaultEta} /></ChromePart>
       <main className="mx-auto w-full max-w-6xl flex-1 pb-2 sm:px-6 md:pb-10">{children}</main>
-      <ChromePart part="footer"><Footer /></ChromePart>
+      <ChromePart part="footer"><Footer social={socialLinks(settings)} /></ChromePart>
       <ChromePart part="cartBar"><StickyCartBar /></ChromePart>
       <NavSpacer />
       <CartDrawerLazy signedIn={Boolean(user)} isGuest={Boolean(profile?.is_guest)} addresses={addresses} walletBalance={Number(profile?.wallet_balance ?? 0)}

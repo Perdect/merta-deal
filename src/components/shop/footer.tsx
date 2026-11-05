@@ -3,12 +3,14 @@ import { Mail, Phone, Truck, MapPin, Bike, Megaphone } from "lucide-react";
 import { site } from "@/config/site";
 import { Logo } from "@/components/ui/misc";
 import { InstallButtons } from "@/components/pwa/install-buttons";
+import { SocialLinks } from "@/components/shop/social-links";
+import type { SocialLink } from "@/lib/social";
 
 /**
- * Footer: brand + app badges, Shop, Help, For Partners (rider sign-up live; ads coming soon), and a bottom bar with the
- * legal links. Phones: brand on top, link columns two-up; desktop: four columns.
+ * Footer: brand + app badges + social profiles (from settings, only when set), Shop, Help, For Partners (rider sign-up
+ * live; ads coming soon), and a bottom bar with the legal links. Phones: brand on top, link columns two-up; desktop: four columns.
  */
-export function Footer() {
+export function Footer({ social = [] }: { social?: SocialLink[] }) {
   const tel = `tel:+${site.supportPhone.replace(/\D/g, "")}`;
   const link = "inline-flex items-center gap-2 text-ink-2 transition-colors hover:text-brand-700 focus-visible:outline-2 focus-visible:outline-brand-600 pointer-coarse:min-h-11";
   const list = "mt-4 space-y-2.5 text-sm pointer-coarse:space-y-0";
@@ -27,6 +29,7 @@ export function Footer() {
             </ul>
             <h2 className={`${heading} mt-7`}>Download the app</h2>
             <InstallButtons className="mt-3 flex flex-wrap gap-2 space-y-0 [&>p]:basis-full [&>p]:text-xs" />
+            {social.length ? <><h2 className={`${heading} mt-7`}>Follow us</h2><SocialLinks links={social} className="mt-3" /></> : null}
           </div>
 
           <nav aria-labelledby="footer-shop">

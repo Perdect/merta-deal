@@ -1,5 +1,6 @@
 import { getSessionUser } from "@/lib/supabase/server";
 import { getPublicSettings } from "@/lib/data/catalog";
+import { socialLinks } from "@/lib/social";
 import { getHomeData, DEFAULT_ESSENTIALS } from "@/lib/data/home";
 import { getCategoryTabs } from "@/lib/data/catalog";
 import { EmptyState } from "@/components/ui/states";
@@ -32,9 +33,10 @@ export async function generateMetadata(): Promise<Metadata> {
 /**
  * Business identity for search engines (Organization → OnlineStore, as Google recommends for shops).
  * Only verified details: locality-level address (no street until confirmed), the support line, the
- * pincodes we deliver to, and public profiles only once `site.socialProfiles` lists them.
+ * pincodes we deliver to, and public profiles only once they are set (Admin → Settings → Brand and support, or
+ * `site.socialProfiles`).
  */
-export const orgJsonLd = {
+export const orgJsonLd = (sameAs: string[] = []) => ({
   "@context": "https://schema.org",
   "@graph": [
     {
@@ -51,11 +53,11 @@ export const orgJsonLd = {
       ],
       contactPoint: { "@type": "ContactPoint", contactType: "customer service", telephone: "+91-88750-20202", email: site.supportEmail, areaServed: "IN", availableLanguage: ["en", "hi"] },
       knowsLanguage: ["en", "hi"],
-      ...(site.socialProfiles.length ? { sameAs: [...site.socialProfiles] } : {}),
+      ...([...site.socialProfiles, ...sameAs].length ? { sameAs: [...new Set([...site.socialProfiles, ...sameAs])] } : {}),
     },
     { "@type": "WebSite", "@id": `${site.url}/#website`, url: `${site.url}/`, name: site.seoName, alternateName: site.name, inLanguage: "en-IN", publisher: { "@id": `${site.url}/#organization` } },
   ],
-};
+});
 
 /**
  * Launch homepage, shopping first: offer strip → category tiles → everyday essentials → fresh
@@ -74,7 +76,7 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-4 pt-2.5 sm:space-y-7 sm:pt-4">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd(socialLinks(settings).map((l) => l.url))) }} />
       {/* The page's one H1 is visible and says what the service is (one compact line on phones); the shopping sections follow. */}
       <header className="px-4 sm:px-0">
         <h1 className="font-display text-[17px] font-bold leading-tight text-ink sm:text-2xl">{homeH1}</h1>

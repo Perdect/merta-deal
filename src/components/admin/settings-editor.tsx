@@ -10,6 +10,7 @@ import { updateSettingsBulkAction } from "@/lib/actions/admin";
 import type { Setting } from "@/types/app";
 import type { Json } from "@/types/database";
 import { cn, formatDateTime } from "@/lib/utils";
+import { socialNetworkForKey, validSocialUrl } from "@/lib/social";
 
 /* ================================================================================================
  * Typed editor for `settings` rows. Numbers, switches and text get their own inputs, JSON lists and
@@ -52,6 +53,8 @@ function evaluate(s: Setting, d: Draft): { value?: Json; error?: string } {
       const t = String(d);
       if (s.key === "brand_name" && !t.trim()) return { error: "The brand name can't be empty." };
       if (s.key.includes("email") && t.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t.trim())) return { error: "Enter a valid email address." };
+      const net = socialNetworkForKey(s.key);
+      if (net) { if (!t.trim()) return { value: "" }; const u = validSocialUrl(t, net.hosts); return u ? { value: u } : { error: `Enter the full ${net.label} link (it must be on ${net.hosts[0]}).` }; }
       return { value: t };
     }
     case "qr": {
@@ -147,7 +150,7 @@ function SettingRow({ s, api }: { s: Setting; api: DraftApi }) {
           </button>
         ) : null}
         {kind === "number" ? <input id={id} type="number" step="any" min={0} max={isPercent(s) ? 100 : undefined} inputMode="decimal" value={String(d)} onChange={(e) => api.set(s.key, e.target.value)} className={cn(fieldCls, "sm:max-w-[200px]")} {...aria} /> : null}
-        {kind === "string" ? <input id={id} type={s.key.includes("email") ? "email" : "text"} value={String(d)} onChange={(e) => api.set(s.key, e.target.value)} className={fieldCls} {...aria} /> : null}
+        {kind === "string" ? <input id={id} type={s.key.includes("email") ? "email" : socialNetworkForKey(s.key) ? "url" : "text"} inputMode={socialNetworkForKey(s.key) ? "url" : undefined} placeholder={socialNetworkForKey(s.key) ? `https://www.${socialNetworkForKey(s.key)!.hosts[0]}/…` : undefined} value={String(d)} onChange={(e) => api.set(s.key, e.target.value)} className={fieldCls} {...aria} /> : null}
         {kind === "json" ? <textarea id={id} value={String(d)} onChange={(e) => api.set(s.key, e.target.value)} spellCheck={false} className={cn(fieldCls, "h-auto min-h-28 py-2 font-mono text-xs")} {...aria} /> : null}
         {kind === "qr" ? <QrLinksEditor id={id} rows={d as QrRow[]} onChange={(rows) => api.set(s.key, rows)} /> : null}
         {ev.error && changed ? <p id={errId} role="alert" className="mt-1.5 text-xs font-medium text-danger">{ev.error}</p> : null}
