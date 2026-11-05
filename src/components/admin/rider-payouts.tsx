@@ -1,32 +1,84 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { createRiderPayoutAction, settleRiderPayoutAction, adminConfirmDeliveryAction, recordCashRemittanceAction } from "@/lib/actions/admin-delivery";
+import { settleRiderPayoutAction, adminConfirmDeliveryAction, recordCashRemittanceAction } from "@/lib/actions/admin-delivery";
+import { createRiderPayoutWithOffsetAction, riderAdjustmentAction } from "@/lib/actions/finance";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
-import { Modal, ConfirmDialog } from "@/components/ui/overlay";
+import { Modal } from "@/components/ui/overlay";
 import { toast } from "@/components/ui/toast";
 import { formatINR } from "@/lib/utils";
 
-/** "Create payout": everything payable for this rider becomes one payout in Processing. */
-export function CreateRiderPayout({ riderId, name, payable }: { riderId: string; name: string; payable: number }) {
+/**
+ * "Create payout": everything payable for this rider becomes one payout in Processing. Cash the rider
+ * still holds can be set off, but only explicitly: both amounts are shown and recorded, and the cash
+ * side gets its own hand-over entry. Earnings and COD cash are never mixed silently.
+ */
+export function CreateRiderPayout({ riderId, name, payable, cashDue = 0 }: { riderId: string; name: string; payable: number; cashDue?: number }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
-  const go = async () => {
+  const [offset, setOffset] = React.useState("0");
+  const [note, setNote] = React.useState("");
+  const off = Math.max(0, Number(offset) || 0);
+  const maxOffset = Math.min(cashDue, payable);
+  const go = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (busy) return;
+    if (off > maxOffset) { toast.error(`At most ${formatINR(maxOffset)} can be set off`); return; }
     setBusy(true);
-    const r = await createRiderPayoutAction(riderId);
-    setBusy(false); setOpen(false);
+    const r = await createRiderPayoutWithOffsetAction(riderId, off, note);
+    setBusy(false);
     if (!r.ok) { toast.error(r.error); return; }
-    toast.success(`Payout of ${formatINR(r.data.amount)} created`, `${r.data.earnings} deliveries · send the money, then mark it paid.`);
+    setOpen(false); setOffset("0"); setNote("");
+    toast.success(`Payout of ${formatINR(r.data.amount)} created`, `${r.data.earnings} entries${r.data.cod_offset ? ` · ${formatINR(r.data.cod_offset)} cash set off` : ""} · send the money, then mark it paid.`);
     router.refresh();
   };
   return (
     <>
       <Button size="sm" variant="outline" disabled={payable <= 0} onClick={() => setOpen(true)}>Create payout</Button>
-      <ConfirmDialog open={open} onClose={() => setOpen(false)} onConfirm={go} loading={busy} title={`Pay ${name} ${formatINR(payable)}?`} confirmLabel="Create payout"
-        description="All payable earnings move to Processing. Transfer the money to the rider, then mark the payout Paid with the UPI/bank reference — or Failed to make them payable again." />
+      <Modal open={open} onClose={() => (busy ? undefined : setOpen(false))} title={`Pay ${name}`} size="sm" description="All payable earnings move to Processing. Transfer the money, then mark the payout Paid with the reference, or Failed to make them payable again.">
+        <form onSubmit={go} className="space-y-3">
+          <dl className="grid grid-cols-2 gap-2 text-center text-sm">
+            <div className="rounded-md bg-surface p-2"><dt className="text-[11px] text-ink-3">Earnings payable</dt><dd className="font-bold tabular">{formatINR(payable)}</dd></div>
+            <div className="rounded-md bg-surface p-2"><dt className="text-[11px] text-ink-3">COD cash held</dt><dd className="font-bold tabular">{formatINR(cashDue)}</dd></div>
+          </dl>
+          {cashDue > 0 ? <Input label="Set off cash held against earnings (₹)" type="number" inputMode="decimal" min={0} max={maxOffset} step="0.01" value={offset} onChange={(e) => setOffset(e.target.value)} hint={`Up to ${formatINR(maxOffset)}. The rider then hands over ${formatINR(Math.max(0, cashDue - off))} in cash and receives ${formatINR(Math.max(0, payable - off))}.`} /> : null}
+          <Input label="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Week 45" />
+          <p className="rounded-md bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-800">Pay out {formatINR(Math.max(0, payable - off))}{off ? ` (${formatINR(payable)} earnings − ${formatINR(off)} cash set off)` : ""}</p>
+          <div className="flex gap-2"><Button type="button" variant="outline" className="flex-1" disabled={busy} onClick={() => setOpen(false)}>Cancel</Button><Button type="submit" className="flex-1" loading={busy}>Create payout</Button></div>
+        </form>
+      </Modal>
+    </>
+  );
+}
+
+/** A manual plus or minus with a reason: its own earnings row, never a change to a delivery's pay. */
+export function RiderAdjustment({ riderId, name }: { riderId: string; name: string }) {
+  const router = useRouter();
+  const [open, setOpen] = React.useState(false);
+  const [busy, setBusy] = React.useState(false);
+  const [amount, setAmount] = React.useState("");
+  const [reason, setReason] = React.useState("");
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    const r = await riderAdjustmentAction(riderId, Number(amount), reason);
+    setBusy(false);
+    if (!r.ok) { toast.error(r.error); return; }
+    toast.success("Adjustment recorded", `${formatINR(Number(amount))} for ${name}`); setOpen(false); setAmount(""); setReason(""); router.refresh();
+  };
+  return (
+    <>
+      <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>Adjust</Button>
+      <Modal open={open} onClose={() => (busy ? undefined : setOpen(false))} title={`Adjust ${name}'s earnings`} size="sm" description="Use a negative amount for a deduction. The reason is shown to the rider and kept in the audit log.">
+        <form onSubmit={submit} className="space-y-3">
+          <Input label="Amount (₹, negative to deduct)" type="number" inputMode="decimal" step="0.01" required value={amount} onChange={(e) => setAmount(e.target.value)} />
+          <Textarea label="Reason" required value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Festival bonus · Late by 40 min" />
+          <div className="flex gap-2"><Button type="button" variant="outline" className="flex-1" disabled={busy} onClick={() => setOpen(false)}>Cancel</Button><Button type="submit" className="flex-1" loading={busy} disabled={!amount || reason.trim().length < 3}>Record</Button></div>
+        </form>
+      </Modal>
     </>
   );
 }

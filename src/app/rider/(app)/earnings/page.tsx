@@ -12,8 +12,8 @@ export default async function RiderEarningsPage() {
   const supabase = await createClient();
   const [rider, delivered, earn, pay] = await Promise.all([
     getMyRiderProfile(), getRiderAssignments(["delivered"]),
-    supabase.from("rider_earnings" as never).select("amount, status, created_at, confirmed_via, order:orders(order_number)").order("created_at", { ascending: false }).limit(50),
-    supabase.from("rider_payouts" as never).select("amount, status, reference_no, failure_reason, created_at, settled_at").order("created_at", { ascending: false }).limit(10),
+    supabase.from("rider_earnings" as never).select("amount, status, created_at, confirmed_via, kind, note, breakdown, order:orders(order_number)").order("created_at", { ascending: false }).limit(50),
+    supabase.from("rider_payouts" as never).select("amount, gross_amount, cod_offset, status, reference_no, failure_reason, created_at, settled_at").order("created_at", { ascending: false }).limit(10),
   ]);
   if (!rider) return <ErrorState title="Rider profile not found" retryHref="/rider" />;
   return (

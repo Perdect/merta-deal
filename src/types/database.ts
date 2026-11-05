@@ -2859,6 +2859,8 @@ export type Database = {
       _scan_find_product: { Args: { p_code: string }; Returns: string }
       _scan_normalize: { Args: { p_code: string }; Returns: string }
       _apply_item_exception: { Args: { p_exception_id: string }; Returns: number }
+      _price_rule: { Args: { p_cost: number; p_mode: string; p_mrp: number; p_price: number; p_value: number }; Returns: number }
+      _rider_compensation: { Args: { p_assignment_id: string; p_kind: string }; Returns: number }
       _scan_product: { Args: { p_product_id: string }; Returns: Json }
       _set_exception: { Args: { p_kind: string; p_order_id: string }; Returns: undefined }
       _set_order_status: {
@@ -2892,7 +2894,14 @@ export type Database = {
         Args: { p_order_id: string; p_rider_id: string }
         Returns: string
       }
+      admin_price_apply: { Args: { p_confirm_below_cost?: boolean; p_effective_at?: string; p_filter: Json; p_mode: string; p_reason?: string; p_value: number }; Returns: Json }
+      admin_price_preview: { Args: { p_filter: Json; p_mode: string; p_value: number }; Returns: Json }
+      admin_product_costs: { Args: { p_ids: string[] }; Returns: Json }
+      admin_profit_report: { Args: { p_end: string; p_start: string }; Returns: Json }
       admin_order_alerts: { Args: never; Returns: Json }
+      admin_rider_adjustment: { Args: { p_amount: number; p_assignment_id?: string; p_reason: string; p_rider_id: string }; Returns: Json }
+      admin_save_rate_card: { Args: { p_activate?: boolean; p_name: string; p_note?: string; p_rules: Json }; Returns: Json }
+      admin_set_price: { Args: { p_confirm_below_cost?: boolean; p_mrp?: number; p_price: number; p_product_id: string; p_reason?: string }; Returns: Json }
       admin_raise_item_exception: { Args: { p_available_qty: number; p_note?: string; p_order_item_id: string }; Returns: Json }
       admin_resolve_exception: { Args: { p_action: string; p_exception_id: string }; Returns: Json }
       admin_audit: {
@@ -2923,10 +2932,7 @@ export type Database = {
         Returns: Json
       }
       admin_coupon_stats: { Args: never; Returns: Json }
-      admin_create_rider_payout: {
-        Args: { p_note?: string; p_rider_id: string }
-        Returns: Json
-      }
+      admin_create_rider_payout: { Args: { p_cod_offset?: number; p_note?: string; p_rider_id: string }; Returns: Json }
       admin_credit_wallet: {
         Args: { p_amount: number; p_description: string; p_user_id: string }
         Returns: Json
@@ -3036,6 +3042,8 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      apply_due_price_changes: { Args: never; Returns: number }
+      can_see_costs: { Args: never; Returns: boolean }
       customer_resolve_exception: { Args: { p_approve: boolean; p_exception_id: string }; Returns: Json }
       dispatch_pending: { Args: never; Returns: number }
       escalate_unattended_orders: { Args: never; Returns: number }
@@ -3192,7 +3200,13 @@ export type Database = {
       reorder: { Args: { p_order_id: string }; Returns: Json }
       rider_assignments: { Args: { p_status?: string[] }; Returns: Json }
       rider_dashboard_stats: { Args: never; Returns: Json }
+      post_goods_receipt: { Args: { p_grn_id: string }; Returns: Json }
+      product_cost: { Args: { p_product_id: string }; Returns: number }
+      record_supplier_payment: { Args: { p_amount: number; p_grn_id: string; p_note?: string; p_reference?: string }; Returns: Json }
+      rider_earnings_history: { Args: { p_limit?: number }; Returns: Json }
       rider_mark_arrived: { Args: { p_assignment_id: string; p_where: string }; Returns: Json }
+      rider_pay_calc: { Args: { p_at?: string; p_distance_km: number; p_rules: Json; p_weight_kg?: number; p_zone_id?: string }; Returns: Json }
+      rider_pay_quote: { Args: { p_order_id: string; p_rules?: Json }; Returns: Json }
       rider_pickup: { Args: { p_assignment_id: string }; Returns: Json }
       rider_report_failed_delivery: {
         Args: { p_assignment_id: string; p_note?: string; p_reason: string }

@@ -6,6 +6,7 @@ import { PackagePlus, SlidersHorizontal, Tag } from "lucide-react";
 import { SidePanel, IconAction, EmptyBlock, StatusPill, rupees, useUnsavedChanges } from "@/components/admin/kit";
 import { Switch } from "@/components/ui/input";
 import { toast } from "@/components/ui/toast";
+import { ConfirmDialog } from "@/components/ui/overlay";
 import { updateListingAction, createListingAction, setProductVisibilityAction } from "@/lib/actions/admin-catalogue";
 import type { Listing } from "@/lib/data/admin-catalogue";
 import { cn } from "@/lib/utils";
@@ -92,8 +93,9 @@ function QuickEditPanel({ product, offer, showFlags, onClose }: { product: Quick
   const err = (k: string) => (showErrors ? errors[k] ?? null : null);
   const discount = sp > 0 && mrp > 0 && sp < mrp ? Math.round((1 - sp / mrp) * 100) : 0;
 
-  const save = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const [belowCost, setBelowCost] = React.useState<string | null>(null);
+  const save = async (e: React.FormEvent | null, confirmBelowCost = false) => {
+    e?.preventDefault();
     if (!dirty) { onClose(); return; }
     if (hasErrors) { setShowErrors(true); return; }
     setSaving(true);
@@ -101,9 +103,9 @@ function QuickEditPanel({ product, offer, showFlags, onClose }: { product: Quick
     if (offerDirty && offer) {
       const r = await updateListingAction(offer.id, {
         selling_price: sp, mrp, is_active: f.offer_active, stock_delta: delta, stock_reason: f.mode === "set" ? "manual_adjust" : f.reason, stock_note: f.note,
-        low_stock_threshold: Number(f.low), max_order_qty: Number(f.max),
+        low_stock_threshold: Number(f.low), max_order_qty: Number(f.max), confirm_below_cost: confirmBelowCost,
       });
-      if (!r.ok) { setSaving(false); toast.error("Couldn't save the listing", r.error); return; }
+      if (!r.ok) { setSaving(false); if (/below cost/i.test(r.error)) { setBelowCost(r.error); return; } toast.error("Couldn't save the listing", r.error); return; }
       done.push(delta ? `stock now ${r.data.stock_qty}` : "price saved");
     } else if (offerDirty && !offer) {
       const r = await createListingAction(product.id, { selling_price: sp, mrp, stock_qty: f.opening.trim() ? Number(f.opening) : 0, is_active: f.offer_active });
@@ -224,6 +226,7 @@ function QuickEditPanel({ product, offer, showFlags, onClose }: { product: Quick
 
         {showErrors && hasErrors ? <p className="text-sm font-medium text-danger" role="alert">Fix the highlighted fields to save.</p> : null}
       </form>
+      <ConfirmDialog open={belowCost !== null} onClose={() => setBelowCost(null)} onConfirm={() => { setBelowCost(null); void save(null, true); }} tone="danger" title="Sell below cost?" description={`${belowCost ?? ""} This is recorded against your name in the price history.`} confirmLabel="Yes, set this price" loading={saving} />
     </SidePanel>
   );
 }

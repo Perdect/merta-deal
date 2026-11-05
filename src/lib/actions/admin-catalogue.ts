@@ -60,6 +60,7 @@ const offerSchema = z.object({
   stock_note: z.string().trim().max(200).optional().transform((v) => v || undefined),
   low_stock_threshold: z.coerce.number().int("Use a whole number").min(0).max(1000).optional(),
   max_order_qty: z.coerce.number().int("Use a whole number").min(1, "Allow at least 1 per order").max(100).optional(),
+  confirm_below_cost: z.boolean().optional(),
 }).refine((d) => d.selling_price <= d.mrp, { message: "Selling price cannot be higher than MRP", path: ["selling_price"] });
 export type OfferInput = z.input<typeof offerSchema>;
 
@@ -84,7 +85,13 @@ export async function updateListingAction(inventoryId: string, input: OfferInput
     }
 
     const patch: { selling_price?: number; mrp?: number; is_active?: boolean; low_stock_threshold?: number; max_order_qty?: number } = {};
-    if (Number(before.selling_price) !== d.selling_price) patch.selling_price = d.selling_price;
+    if (Number(before.selling_price) !== d.selling_price) {
+      // A price under the recorded cost needs an explicit confirmation (recorded in the price history and audit).
+      const { data: cost } = await supabase.rpc("product_cost" as never, { p_product_id: before.product_id } as never);
+      if (cost != null && d.selling_price < Number(cost) && !d.confirm_below_cost) return { ok: false, error: `BELOW_COST: ${Number(cost).toFixed(2)}` };
+      if (cost != null && d.selling_price < Number(cost)) await audit(supabase, "price.below_cost_confirmed", "inventory", inventoryId, { price: before.selling_price }, { price: d.selling_price, cost });
+      patch.selling_price = d.selling_price;
+    }
     if (Number(before.mrp) !== d.mrp) patch.mrp = d.mrp;
     if (before.is_active !== d.is_active) patch.is_active = d.is_active;
     if (d.low_stock_threshold != null && before.low_stock_threshold !== d.low_stock_threshold) patch.low_stock_threshold = d.low_stock_threshold;

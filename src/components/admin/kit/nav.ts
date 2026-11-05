@@ -1,7 +1,7 @@
 import {
   Wallet,
   LayoutDashboard, BarChart3, ShoppingBag, MapPinned, Bike, Package, Camera, FolderTree, Tags,
-  TicketPercent, Megaphone, Bell, CreditCard, LifeBuoy, Star, Users, Settings, ScrollText, ScanLine, type LucideIcon,
+  TicketPercent, Megaphone, Bell, CreditCard, LifeBuoy, Star, Users, Settings, ScrollText, ScanLine, Truck, Tag, IndianRupee, type LucideIcon,
 } from "lucide-react";
 
 export type AdminNavItem = { href: string; label: string; icon: LucideIcon };
@@ -31,8 +31,11 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     { href: "/admin/notifications", label: "Notifications", icon: Bell },
   ] },
   { label: "Finance", items: [
+    { href: "/admin/purchasing", label: "Purchasing", icon: Truck },
+    { href: "/admin/pricing", label: "Selling prices", icon: Tag },
     { href: "/admin/payments", label: "Payments", icon: CreditCard },
     { href: "/admin/payouts/riders", label: "Rider payouts", icon: Wallet },
+    { href: "/admin/riders/rates", label: "Rider rates", icon: IndianRupee },
   ] },
   { label: "Customer Care", items: [
     { href: "/admin/support", label: "Support", icon: LifeBuoy },

@@ -9,6 +9,8 @@ import { rangeLabel } from "@/components/admin/care/shared";
 import { dayLabel } from "@/components/admin/bar-chart";
 import type { Enums } from "@/types/database";
 import { formatNumber } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/server";
+import { ProfitPanel, type ProfitReport } from "@/components/admin/finance/profit-panel";
 
 export const metadata: Metadata = { title: "Reports" };
 
@@ -32,7 +34,8 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
   const prevEnd = iso(new Date(asDate(start).getTime() - DAY));
   const prevStart = iso(new Date(asDate(prevEnd).getTime() - (length - 1) * DAY));
 
-  const [report, prevRaw] = await Promise.all([getReport(start, end), getReport(prevStart, prevEnd)]);
+  const [report, prevRaw, profitRes] = await Promise.all([getReport(start, end), getReport(prevStart, prevEnd), (await createClient()).rpc("admin_profit_report", { p_start: start, p_end: end })]);
+  const profit = (profitRes.error ? null : profitRes.data) as ProfitReport | null;
   const prev: AdminReport | null = prevRaw && prevRaw.orders > 0 ? prevRaw : null;
   const year = Number(today.slice(0, 4));
   const period = rangeLabel(start, end, year);
@@ -47,6 +50,7 @@ export default async function AdminReportsPage({ searchParams }: { searchParams:
       <AdminPageHeader title="Reports" description="Orders, money and rider performance for any date range. Export to CSV for accounting."
         actions={<ReportExportButton report={report} start={start} end={end} />} />
       <ReportRangeControls start={start} end={end} today={today} />
+      {profit ? <div className="mb-4"><ProfitPanel r={profit} /></div> : null}
 
       {!report ? (
         <ErrorBlock title="Couldn't build the report" description={`The report for ${period} didn't load. Check the dates and try again.`} retryHref={`/admin/reports?start=${start}&end=${end}`} />

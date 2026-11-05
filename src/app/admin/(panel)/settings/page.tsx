@@ -16,6 +16,7 @@ const GROUP_META: Record<string, { title: string; description: string; order: nu
   orders: { title: "Orders", description: "Automatic confirmation, the active-order capacity limit, scan-only handover, the customer approval window for unavailable items, per-product limits and OTP attempts.", order: 6 },
   alerts: { title: "Order alerts", description: "How long a new order rings, reminder and escalation times for unaccepted orders, and the no-rider alert. Sound and push are enabled per device under Notifications.", order: 7 },
   rewards: { title: "Rewards", description: "Loyalty points.", order: 8 },
+  finance: { title: "Finance", description: "Packaging and gateway fee estimates for the profit report, and who may see purchase costs.", order: 8.5 },
   marketing: { title: "Marketing and QR links", description: "Editable short links behind printed QR codes.", order: 9 },
 };
 const titleCase = (g: string) => g.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());

@@ -103,7 +103,14 @@ export function friendlyError(err: unknown): string {
   if (notPackable) return notPackable[1] === "confirmed" ? "Tap Start packing first." : `This order is ${notPackable[1].replace(/_/g, " ")}, so it can't be packed.`;
   if (raw.startsWith("UNIT_NOT_ALLOWED:")) return raw.slice("UNIT_NOT_ALLOWED:".length).trim();
   if (raw.startsWith("BARCODE_IN_USE:")) return `That barcode is already on ${raw.slice("BARCODE_IN_USE:".length).trim()}.`;
-  for (const code of ["CAPACITY_FULL", "HANDOVER_SCAN_REQUIRED", "EXCEPTION_PENDING", "INVALID_QUANTITY"]) if (raw.startsWith(`${code}:`)) return raw.slice(code.length + 1).trim();
+  for (const code of ["CAPACITY_FULL", "HANDOVER_SCAN_REQUIRED", "EXCEPTION_PENDING", "INVALID_QUANTITY", "GRN_POSTED", "NO_LINES", "CARTON_SIZE_REQUIRED", "NOT_LISTED", "INVALID_PRICE", "NOTHING_TO_PAY", "REFERENCE_REQUIRED", "INVALID_RULES"]) if (raw.startsWith(`${code}:`)) return raw.slice(code.length + 1).trim();
+  const below = raw.match(/^BELOW_COST:\s*([\d.]+)/);
+  if (below) return `This price is below cost (₹${Number(below[1]).toFixed(2)}).`;
+  if (/^BELOW_COST/.test(raw)) return raw.replace(/^BELOW_COST:?\s*/, "Below cost: ");
+  if (/^OFFSET_ABOVE_EARNINGS/.test(raw)) return raw.replace(/^OFFSET_ABOVE_EARNINGS:\s*/, "Cash set-off too large: ");
+  if (/^GRN_CANCELLED/.test(raw)) return "This receipt was cancelled.";
+  if (/^SUPER_ADMIN_REQUIRED/.test(raw)) return "Only a super admin can do that.";
+  if (/^INVALID_MODE/.test(raw)) return "Choose how the price should change.";
   if (/^ORDER_CLOSED/.test(raw)) return "This order is already closed.";
   if (/^ORDER_NOT_READY/.test(raw)) return "This order is not packed yet.";
   if (/^CANNOT_CANCEL/.test(raw)) return raw.includes("contact support") ? "This order is already being packed. Please contact support." : "This order can no longer be cancelled.";

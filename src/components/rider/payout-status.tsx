@@ -2,8 +2,9 @@ import { Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatINR, formatDateTime } from "@/lib/utils";
 
-export type EarningRow = { amount: number; status: "pending" | "processing" | "paid" | "failed"; created_at: string; confirmed_via: string; order: { order_number: string } | null };
-export type RiderPayoutRow = { amount: number; status: "pending" | "processing" | "paid" | "failed"; reference_no: string | null; failure_reason: string | null; created_at: string; settled_at: string | null };
+export type EarningRow = { amount: number; status: "pending" | "processing" | "paid" | "failed"; created_at: string; confirmed_via: string; kind?: string | null; note?: string | null; breakdown?: { lines?: { label: string; amount: number }[] } | null; order: { order_number: string } | null };
+export type RiderPayoutRow = { amount: number; gross_amount?: number | null; cod_offset?: number | null; status: "pending" | "processing" | "paid" | "failed"; reference_no: string | null; failure_reason: string | null; created_at: string; settled_at: string | null };
+const KIND_LABEL: Record<string, string> = { delivery: "Delivery", failed_attempt: "Failed attempt", cancelled_after_pickup: "Cancelled after pickup", return_trip: "Return trip", incentive: "Incentive", adjustment: "Adjustment" };
 
 const META = {
   pending: { label: "Pending", tone: "warning", hint: "Credited — waiting for the next payout" },
@@ -31,7 +32,7 @@ export function PayoutStatus({ earnings, payouts }: { earnings: EarningRow[]; pa
         <ul className="mt-3 divide-y divide-line text-sm">
           {earnings.slice(0, 20).map((e, i) => (
             <li key={i} className="flex items-center justify-between gap-3 py-2">
-              <span className="min-w-0"><span className="block truncate font-medium text-ink">{e.order?.order_number ?? "Delivery"}{e.confirmed_via === "support" ? <span className="text-xs font-normal text-ink-3"> · confirmed by support</span> : null}</span><span className="block text-xs text-ink-3">{formatDateTime(e.created_at)} · {META[e.status].hint}</span></span>
+              <span className="min-w-0"><span className="block truncate font-medium text-ink">{e.order?.order_number ?? (e.kind ? KIND_LABEL[e.kind] ?? e.kind : "Delivery")}{e.kind && e.kind !== "delivery" ? <span className="text-xs font-normal text-ink-3"> · {KIND_LABEL[e.kind] ?? e.kind}</span> : null}{e.confirmed_via === "support" ? <span className="text-xs font-normal text-ink-3"> · confirmed by support</span> : null}</span><span className="block text-xs text-ink-3">{formatDateTime(e.created_at)} · {META[e.status].hint}</span>{e.breakdown?.lines?.length ? <span className="mt-0.5 block text-[11px] text-ink-3">{e.breakdown.lines.map((l) => `${l.label} ${formatINR(l.amount)}`).join(" · ")}</span> : e.note ? <span className="mt-0.5 block text-[11px] text-ink-3">{e.note}</span> : null}</span>
               <span className="flex shrink-0 flex-col items-end gap-1"><span className="tabular font-semibold">{formatINR(e.amount)}</span><Badge tone={META[e.status].tone} size="xs">{META[e.status].label}</Badge></span>
             </li>
           ))}
@@ -43,7 +44,7 @@ export function PayoutStatus({ earnings, payouts }: { earnings: EarningRow[]; pa
           <ul className="mt-1 divide-y divide-line text-sm">
             {payouts.slice(0, 10).map((p, i) => (
               <li key={i} className="flex items-center justify-between gap-3 py-2">
-                <span className="min-w-0 text-xs text-ink-3">{formatDateTime(p.settled_at ?? p.created_at)}{p.reference_no ? ` · Ref ${p.reference_no}` : p.failure_reason ? ` · ${p.failure_reason}` : ""}</span>
+                <span className="min-w-0 text-xs text-ink-3">{formatDateTime(p.settled_at ?? p.created_at)}{p.reference_no ? ` · Ref ${p.reference_no}` : p.failure_reason ? ` · ${p.failure_reason}` : ""}{Number(p.cod_offset) > 0 ? ` · ${formatINR(p.gross_amount ?? 0)} earned, ${formatINR(p.cod_offset ?? 0)} cash set off` : ""}</span>
                 <span className="flex shrink-0 items-center gap-2"><span className="tabular font-semibold">{formatINR(p.amount)}</span><Badge tone={META[p.status].tone} size="xs">{META[p.status].label}</Badge></span>
               </li>
             ))}
