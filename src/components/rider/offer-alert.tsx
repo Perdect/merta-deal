@@ -30,7 +30,7 @@ function writeSnoozed(s: Set<string>) { try { sessionStorage.setItem(SNOOZE_KEY,
 export function OfferAlert({ push }: { push: PushConfig }) {
   const router = useRouter();
   const ringer = useRinger();
-  const { setRinging, leader } = ringer;
+  const { setRinging, courier } = ringer;
   const now = useNow();
   const version = useRiderStore((s) => s.assignmentsVersion);
   const bump = useRiderStore((s) => s.bumpAssignments);
@@ -49,9 +49,9 @@ export function OfferAlert({ push }: { push: PushConfig }) {
       setOffers(r.data);
       const fresh = r.data.filter((o) => !seenRef.current.has(o.id));
       fresh.forEach((o) => seenRef.current.add(o.id));
-      if (fresh.length) { setCollapsed(false); if (push.configured && leader) void deliverPendingPushAction(); }
+      if (fresh.length) { setCollapsed(false); if (push.configured && courier) void deliverPendingPushAction(); }
     } catch { /* offline: the next bump or poll retries */ }
-  }, [push.configured, leader]);
+  }, [push.configured, courier]);
 
   React.useEffect(() => { const t = setTimeout(() => setSnoozed(readSnoozed()), 0); return () => clearTimeout(t); }, []);
   React.useEffect(() => {
@@ -109,7 +109,7 @@ export function OfferAlert({ push }: { push: PushConfig }) {
 export type OfferAlertViewProps = {
   collapsed: boolean; setCollapsed: (v: boolean) => void; live: RiderAssignment[]; o: RiderAssignment; now: number; msLeft: number; urgent: boolean; customerArea: string;
   cod: boolean; earns: boolean; km: boolean; muted: boolean; ringing: boolean;
-  ringer: { sound: ReturnType<typeof useRinger>["sound"]; leader: boolean; muted: boolean; unlock: () => Promise<boolean> };
+  ringer: { sound: ReturnType<typeof useRinger>["sound"]; leader: boolean; muted: boolean; unlock: () => Promise<boolean>; claim: () => void };
   busy: "accept" | "reject" | null; respond: (o: RiderAssignment, accept: boolean) => void | Promise<void>; confirmReject: boolean; setConfirmReject: (v: boolean) => void; snooze: (id: string) => void;
 };
 
@@ -158,7 +158,7 @@ export function OfferAlertView(p: OfferAlertViewProps) {
             {cod ? <span className="text-ink-2">Collect <Badge tone="saffron" size="sm">{formatINR(o.cod_amount)} cash</Badge></span> : <span className="text-ink-2">Prepaid <Badge tone="success" size="sm">nothing to collect</Badge></span>}
           </p>
           <div className="flex items-center justify-between gap-2">
-            <SoundChip sound={ringer.sound} leader={ringer.leader} muted={ringer.muted || muted} />
+            <SoundChip sound={ringer.sound} leader={ringer.leader} muted={ringer.muted || muted} onClaim={ringer.claim} />
             {ringer.sound === "locked" ? <button type="button" onClick={() => void ringer.unlock()} className="text-xs font-semibold text-[#8a6300] underline">Turn sound on</button> : null}
           </div>
         </div>

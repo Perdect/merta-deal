@@ -134,10 +134,12 @@ export function AlertBanner({ portal, push, href }: { portal: Portal; push: Push
 }
 
 /** Small inline chip used inside alert popups. */
-export function SoundChip({ sound, leader, muted }: { sound: ReturnType<typeof useRinger>["sound"]; leader: boolean; muted: boolean }) {
+export function SoundChip({ sound, leader, muted, onClaim }: { sound: ReturnType<typeof useRinger>["sound"]; leader: boolean; muted: boolean; onClaim?: () => void }) {
   if (sound === "ready" && leader && !muted) return <Badge tone="success" size="sm"><Volume2 className="mr-1 h-3 w-3" aria-hidden />Ringing</Badge>;
   if (sound === "ready" && muted) return <Badge tone="warning" size="sm"><VolumeX className="mr-1 h-3 w-3" aria-hidden />Muted</Badge>;
-  if (sound === "ready" && !leader) return <Badge tone="neutral" size="sm">Ringing in another tab</Badge>;
+  if (sound === "ready" && !leader) return onClaim
+    ? <button type="button" onClick={onClaim} className="tap inline-flex items-center gap-1 rounded-full bg-surface-2 px-2.5 py-1 text-xs font-semibold text-ink-2 hover:bg-brand-50 hover:text-brand-700" title="Another tab of this browser is ringing. Tap to ring here instead."><Volume2 className="h-3 w-3" aria-hidden />Ring here</button>
+    : <Badge tone="neutral" size="sm">Ringing in another tab</Badge>;
   if (sound === "unsupported") return <Badge tone="neutral" size="sm">No sound support</Badge>;
   return <Badge tone="warning" size="sm"><VolumeX className="mr-1 h-3 w-3" aria-hidden />Sound off</Badge>;
 }

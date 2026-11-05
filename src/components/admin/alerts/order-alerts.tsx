@@ -33,7 +33,7 @@ function writeSnoozed(s: Set<string>) { try { sessionStorage.setItem(SNOOZE_KEY,
 export function OrderAlerts({ userId, push }: { userId: string; push: PushConfig }) {
   const router = useRouter();
   const ringer = useRinger();
-  const { setRinging, ping, leader } = ringer;
+  const { setRinging, ping, courier } = ringer;
   const now = useNow();
   const [feed, setFeed] = React.useState<AlertFeed | null>(null);
   const [offset, setOffset] = React.useState(0);
@@ -84,7 +84,7 @@ export function OrderAlerts({ userId, push }: { userId: string; push: PushConfig
     let t: ReturnType<typeof setTimeout> | null = null; let flush: ReturnType<typeof setTimeout> | null = null;
     const bump = () => { if (t) clearTimeout(t); t = setTimeout(() => { void load(); }, 400); };
     const pushNow = () => {
-      if (!push.configured || !leader) return;
+      if (!push.configured || !courier) return;
       if (flush) clearTimeout(flush);
       flush = setTimeout(() => { void deliverPendingPushAction(); }, 1500);
     };
@@ -109,7 +109,7 @@ export function OrderAlerts({ userId, push }: { userId: string; push: PushConfig
       })
       .subscribe();
     return () => { supabase.removeChannel(ch); if (t) clearTimeout(t); if (flush) clearTimeout(flush); };
-  }, [load, userId, push.configured, leader, ping, router]);
+  }, [load, userId, push.configured, courier, ping, router]);
 
   // Ring while any unaccepted, unsnoozed order is inside its ring or reminder window.
   // `now` is 0 until the shared clock's first tick (and on the server): nothing rings until then.
@@ -161,7 +161,7 @@ export function OrderAlerts({ userId, push }: { userId: string; push: PushConfig
 
 export type OrderAlertViewProps = {
   collapsed: boolean; setCollapsed: (v: boolean) => void; count: number; live: boolean; o: AlertOrder; i: number; ageSec: number; ringingThis: boolean;
-  ringer: { sound: ReturnType<typeof useRinger>["sound"]; leader: boolean; muted: boolean; unlock: () => Promise<boolean> };
+  ringer: { sound: ReturnType<typeof useRinger>["sound"]; leader: boolean; muted: boolean; unlock: () => Promise<boolean>; claim: () => void };
   snoozed: Set<string>; loadError: string | null; busy: string | null; accept: (o: AlertOrder) => void | Promise<void>; snooze: (id: string) => void; setIndex: React.Dispatch<React.SetStateAction<number>>;
 };
 
@@ -190,7 +190,7 @@ export function OrderAlertView(p: OrderAlertViewProps) {
             <p id="order-alert-title" className="text-sm font-bold text-ink">{o.status === "placed" ? "New order · needs acceptance" : "New order"}</p>
             <p className="text-[11px] text-ink-3">{count > 1 ? `${i + 1} of ${count} waiting` : "1 waiting"} · {ageSec < 60 ? `${ageSec}s ago` : `${Math.floor(ageSec / 60)} min ago`}</p>
           </div>
-          <SoundChip sound={ringer.sound} leader={ringer.leader} muted={ringer.muted || snoozed.has(o.id)} />
+          <SoundChip sound={ringer.sound} leader={ringer.leader} muted={ringer.muted || snoozed.has(o.id)} onClaim={ringer.claim} />
           <button type="button" onClick={() => setCollapsed(true)} aria-label="Minimise" className="tap flex h-8 w-8 items-center justify-center rounded-md text-ink-3 hover:bg-surface-2"><ChevronDown className="h-4 w-4" /></button>
         </div>
         <div id="order-alert-body" className="px-4 py-3">
