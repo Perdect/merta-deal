@@ -20,6 +20,7 @@ export default function PrivacyPage() {
           <li><b>Guest browsing:</b> if you shop without signing in, we create an anonymous guest session so your cart works.</li>
           <li><b>Addresses and location:</b> the delivery addresses you save, including a map pin. We read your device&rsquo;s location only when you tap &ldquo;use my location&rdquo; and allow it.</li>
           <li><b>Orders:</b> items, cart, coupons used, order history, delivery OTPs, ratings and reviews, and support conversations.</li>
+          <li><b>Service requests:</b> if you send a gift, sweets, bulk or pickup and drop request, we keep your name, mobile number, the locations and the details you enter, so we can reply and arrange it. The same applies to details you send through the List Your Business form.</li>
           <li><b>Payments:</b> for online payments, card/UPI/bank details are entered on Razorpay&rsquo;s secure checkout and are not stored by us. We keep the payment status, amount and reference IDs. We also keep your Merta Wallet transactions.</li>
           <li><b>Notifications:</b> if you allow notifications, a device token so we can send order updates.</li>
           <li><b>Technical:</b> sign-in cookies that keep you logged in, and small settings stored on your device (such as your selected location). We do not use advertising cookies.</li>

@@ -67,7 +67,7 @@ export default async function AboutPage() {
       <p lang="hi" className="mt-2 max-w-3xl text-sm leading-relaxed text-ink-3">{site.cityHindi} ({site.cityHindiAlt}) में ऑनलाइन किराना, फल और सब्ज़ी की होम डिलीवरी — ऑर्डर वेबसाइट या ऐप से करें, डिलीवरी हमारे अपने डिलीवरी पार्टनर करते हैं।</p>
 
       <ul className="mt-5 grid gap-3 sm:grid-cols-2">
-        <Fact icon={Truck} title="How delivery works" text={`Orders are packed by ${site.seoName} and delivered usually within ${eta} of ordering. The exact charge and time for your address are shown before you confirm.`} />
+        <Fact icon={Truck} title="How delivery works" text={`Orders are packed by ${site.seoName}, and our delivery target is ${eta} from ordering. It depends on stock, preparation, distance and rider availability. The charge and estimate for your address are shown before you confirm.`} />
         {opens && closes ? <Fact icon={Clock} title="Hours" text={`${opens} – ${closes}, every day`} /> : null}
         <Fact icon={MapPin} title="Where we deliver" text={zones.length ? `${zones.map((z) => z.name).join(", ")} (pincode${pincodes.length > 1 ? "s" : ""} ${pincodes.join(", ")}).` : `${site.city}, Rajasthan.`} />
         {pay ? <Fact icon={Wallet} title="Payment" text={pay} /> : null}

@@ -1,7 +1,7 @@
 import {
   Wallet,
   LayoutDashboard, BarChart3, ShoppingBag, MapPinned, Bike, Package, Camera, FolderTree, Tags,
-  TicketPercent, Megaphone, Bell, CreditCard, LifeBuoy, Star, Users, Settings, ScrollText, ScanLine, Truck, Tag, IndianRupee, type LucideIcon,
+  TicketPercent, Megaphone, Bell, CreditCard, LifeBuoy, Star, Users, Settings, ScrollText, ScanLine, Truck, Tag, IndianRupee, Inbox, Building2, type LucideIcon,
 } from "lucide-react";
 
 export type AdminNavItem = { href: string; label: string; icon: LucideIcon };
@@ -15,6 +15,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
   ] },
   { label: "Operations", items: [
     { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
+    { href: "/admin/requests", label: "Service requests", icon: Inbox },
     { href: "/admin/scan", label: "Scan", icon: ScanLine },
     { href: "/admin/delivery", label: "Delivery zones", icon: MapPinned },
     { href: "/admin/riders", label: "Riders", icon: Bike },
@@ -24,6 +25,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     { href: "/admin/products/images", label: "Photo studio", icon: Camera },
     { href: "/admin/categories", label: "Categories", icon: FolderTree },
     { href: "/admin/brands", label: "Brands", icon: Tags },
+    { href: "/admin/businesses", label: "Local businesses", icon: Building2 },
   ] },
   { label: "Marketing", items: [
     { href: "/admin/coupons", label: "Coupons", icon: TicketPercent },

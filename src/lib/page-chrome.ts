@@ -1,3 +1,5 @@
+import { SERVICE_SLUGS } from "@/lib/service-pages";
+
 /**
  * Which shared chrome each page type shows on phones and tablets (below the `lg` breakpoint).
  * Desktop always keeps the shopping header. Pages without the header render their own compact
@@ -21,6 +23,6 @@ export function chromeFor(pathname: string): Chrome {
   // Browsing: compact bar (Back, title or search, Cart).
   if (under(pathname, ["/c", "/search"])) return { header: false, bottomNav: true, footer: true, cartBar: true };
   // Information pages.
-  if (under(pathname, ["/terms", "/privacy", "/about", "/delivery-area", "/attributions", "/assistant", "/start", "/deliver"])) return { header: false, bottomNav: true, footer: true, cartBar: false };
+  if (under(pathname, ["/terms", "/privacy", "/about", "/delivery-area", "/attributions", "/assistant", "/start", "/deliver", "/list-your-business", "/hotels-merta-city", "/restaurants-merta-city", "/bakeries-merta-city", ...SERVICE_SLUGS.map((s) => `/${s}`)])) return { header: false, bottomNav: true, footer: true, cartBar: false };
   return { header: true, bottomNav: true, footer: true, cartBar: true };
 }

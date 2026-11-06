@@ -7,8 +7,9 @@ import { Home, Briefcase, MapPin, Plus, Zap, Clock, CalendarClock, Banknote, Wal
 import type { Address, CartSummary, DeliveryType, PaymentMethod } from "@/types/app";
 import { getCartSummary } from "@/lib/actions/cart";
 import { placeOrderAction } from "@/lib/actions/checkout";
+import { orderNote } from "@/lib/destinations";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/input";
+import { Input, Textarea } from "@/components/ui/input";
 import { Modal } from "@/components/ui/overlay";
 import { Alert } from "@/components/ui/states";
 import { toast } from "@/components/ui/toast";
@@ -29,6 +30,7 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
   const [slot, setSlot] = React.useState<string>(slots[0] ?? "");
   const [payment, setPayment] = React.useState<PaymentMethod>(codEnabled ? "cod" : razorpayEnabled ? "upi" : "wallet");
   const [instructions, setInstructions] = React.useState("");
+  const [gift, setGift] = React.useState("");
   const [summary, setSummary] = React.useState<CartSummary>(initial);
   // Express can only stay selected while the delivery zone offers it.
   if (deliveryType === "express" && summary && !summary.zone?.express_supported) setDeliveryType("standard");
@@ -64,7 +66,7 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
 
   const place = async () => {
     if (!addressId) return; setPlacing(true);
-    const res = await placeOrderAction({ addressId, paymentMethod: payment, deliveryType, instructions, ...scheduledRange() });
+    const res = await placeOrderAction({ addressId, paymentMethod: payment, deliveryType, instructions: orderNote(instructions, gift), ...scheduledRange() });
     if (!res.ok) { toast.error(res.error); setPlacing(false); return; }
     const order = res.data;
     if (!order.payment_required) { router.replace(`/orders/${order.order_id}?placed=1`); return; }
@@ -108,7 +110,7 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
         <Section step={2} title="Delivery option">
           <div className={cn("grid gap-2", summary.zone?.express_supported ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
             {summary.zone?.express_supported ? <Option active={deliveryType === "express"} disabled={!summary.zone?.express_supported} onClick={() => setDeliveryType("express")} icon={<Zap className="h-5 w-5 text-saffron-600" />} title="Express" subtitle={summary.zone?.express_supported ? `20–35 min · +${formatINR(summary.express_fee || 20)}` : "Not in your zone yet"} /> : null}
-            <Option active={deliveryType === "standard"} onClick={() => setDeliveryType("standard")} icon={<Clock className="h-5 w-5 text-brand-600" />} title="Standard" subtitle={`${summary.eta_min_minutes}–${summary.eta_max_minutes} min`} />
+            <Option active={deliveryType === "standard"} onClick={() => setDeliveryType("standard")} icon={<Clock className="h-5 w-5 text-brand-600" />} title="As soon as possible" subtitle={`${summary.eta_min_minutes}–${summary.eta_max_minutes} min`} />
             <Option active={deliveryType === "scheduled"} onClick={() => setDeliveryType("scheduled")} icon={<CalendarClock className="h-5 w-5 text-info" />} title="Scheduled" subtitle="Pick a slot" />
           </div>
           {deliveryType === "scheduled" ? <div className="scroll-x mt-3">{slots.map((s) => <button key={s} type="button" onClick={() => setSlot(s)} className={cn("rounded-full border px-3.5 py-2 text-sm font-medium", slot === s ? "border-brand-600 bg-brand-50 text-brand-700" : "border-line-2 bg-card text-ink-2")}>{s.replace("-", " – ")}</button>)}</div> : null}
@@ -127,7 +129,8 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
         </Section>
 
         <Section step={4} title="Delivery instructions (optional)">
-          <Textarea value={instructions} onChange={(e) => setInstructions(e.target.value.slice(0, 200))} placeholder="e.g. Ring the bell twice, leave with the watchman" />
+          <Textarea value={instructions} onChange={(e) => setInstructions(e.target.value.slice(0, 200))} placeholder="e.g. Ring the bell twice, leave at hotel reception" />
+          <Input label="Gift message (optional)" wrapperClassName="mt-2" value={gift} onChange={(e) => setGift(e.target.value.slice(0, 150))} placeholder="e.g. Happy birthday, Asha!" hint="Ordering for someone else? Put their name and number on the address." />
         </Section>
       </div>
 

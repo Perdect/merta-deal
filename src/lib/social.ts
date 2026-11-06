@@ -1,3 +1,5 @@
+import { site } from "@/config/site";
+
 /**
  * Social profiles of the business, read from the public `settings` rows `social_facebook`,
  * `social_instagram`, `social_linkedin`. Only a well-formed https link on the matching domain counts;
@@ -29,7 +31,10 @@ export function validSocialUrl(raw: unknown, hosts: string[]): string | null {
 /** Which network a settings key belongs to, or undefined for other keys. */
 export const socialNetworkForKey = (key: string) => SOCIAL_NETWORKS.find((n) => n.key === key);
 
-/** The links that are actually set, in display order. */
+/** The links that are actually set, in display order. A setting wins; `site.socialProfiles` fills the gaps. */
 export function socialLinks(settings: Record<string, unknown>): SocialLink[] {
-  return SOCIAL_NETWORKS.flatMap((n) => { const url = validSocialUrl(settings[n.key], n.hosts); return url ? [{ network: n.network, label: n.label, url }] : []; });
+  return SOCIAL_NETWORKS.flatMap((n) => {
+    const url = validSocialUrl(settings[n.key], n.hosts) ?? site.socialProfiles.map((p) => validSocialUrl(p, n.hosts)).find(Boolean);
+    return url ? [{ network: n.network, label: n.label, url }] : [];
+  });
 }

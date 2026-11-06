@@ -12,7 +12,7 @@ const FLOATERS = [
   { Icon: ShoppingBasket, cls: "right-40 top-7 hidden h-7 w-7 text-white/20 sm:block", delay: "2s", tilt: "6deg" },
 ];
 const PERKS = [
-  { Icon: Zap, t: site.deliveryWindowShort, s: "delivery" },
+  { Icon: Zap, t: site.deliveryWindowShort, s: "delivery target" },
   { Icon: Banknote, t: "Pay on", s: "delivery" },
   { Icon: ShieldCheck, t: "OTP", s: "safe handover" },
 ];
@@ -35,7 +35,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="relative mx-auto max-w-md motion-safe:animate-rise">
           <Logo light size="lg" />
           <p className="mt-3 font-display text-2xl font-extrabold leading-tight">{site.tagline}</p>
-          <p className="mt-1 max-w-[18rem] text-sm text-white/80">Groceries, fruits and vegetables from Merta Deal, delivered in {site.deliveryWindow}.</p>
+          <p className="mt-1 max-w-[18rem] text-sm text-white/80">Groceries, fruits and vegetables from Merta Deal, with a {site.deliveryWindow} delivery target.</p>
           <ul className="mt-5 flex gap-2">
             {PERKS.map(({ Icon, t, s }, i) => (
               <li key={t} className="flex items-center gap-2 rounded-full bg-white/12 px-3 py-1.5 text-xs backdrop-blur motion-safe:animate-rise" style={{ animationDelay: `${150 + i * 90}ms` }}>

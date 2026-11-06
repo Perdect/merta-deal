@@ -14,6 +14,7 @@ type CheckoutState = {
   addressId: string | null;
   deliveryType: DeliveryType;
   instructions: string;
+  giftMessage: string;
   /** Set when a guest is sent to sign in from "Proceed to Pay": the payment step reopens once signed in. */
   resume: "pay" | null;
   /** Addresses saved in this session before the server re-rendered the layout with them (not persisted). */
@@ -21,6 +22,7 @@ type CheckoutState = {
   setAddressId: (id: string | null) => void;
   setDeliveryType: (t: DeliveryType) => void;
   setInstructions: (s: string) => void;
+  setGiftMessage: (v: string) => void;
   setResume: (r: "pay" | null) => void;
   addAddress: (a: Address) => void;
 };
@@ -29,11 +31,13 @@ export const useCheckoutStore = create<CheckoutState>()(persist((set) => ({
   addressId: null,
   deliveryType: "standard",
   instructions: "",
+  giftMessage: "",
   resume: null,
   added: [],
   setAddressId: (addressId) => set({ addressId }),
   setDeliveryType: (deliveryType) => set({ deliveryType }),
   setInstructions: (instructions) => set({ instructions }),
+  setGiftMessage: (giftMessage) => set({ giftMessage }),
   setResume: (resume) => set({ resume }),
   addAddress: (a) => set((s) => ({ added: [a, ...s.added.filter((x) => x.id !== a.id)] })),
-}), { name: "md-checkout", partialize: (s) => ({ addressId: s.addressId, deliveryType: s.deliveryType, instructions: s.instructions, resume: s.resume }) }));
+}), { name: "md-checkout", partialize: (s) => ({ addressId: s.addressId, deliveryType: s.deliveryType, instructions: s.instructions, giftMessage: s.giftMessage, resume: s.resume }) }));

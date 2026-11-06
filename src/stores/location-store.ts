@@ -37,7 +37,7 @@ export const useLocationStore = create<LocationState>()(persist((set) => ({
   }),
 }), { name: "md-location" }));
 
-export const addressTitle = (a: Address) => a.label || a.type[0].toUpperCase() + a.type.slice(1);
+export const addressTitle = (a: Address) => a.label || (a.type === "work" ? "Office" : a.type[0].toUpperCase() + a.type.slice(1));
 export const addressLine = (a: Address) => [a.house, a.street, a.area, a.landmark ? `near ${a.landmark}` : null, `${a.city} – ${a.pincode}`].filter(Boolean).join(", ");
 
 /** Zone check for an address: by its pin when it has one (the pincode breaks ties), else by pincode. */

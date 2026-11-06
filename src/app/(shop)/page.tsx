@@ -1,12 +1,12 @@
 import { getSessionUser } from "@/lib/supabase/server";
 import { getPublicSettings } from "@/lib/data/catalog";
-import { socialLinks } from "@/lib/social";
+import { businessNode, jsonLdHtml } from "@/lib/seo-schema";
 import { getHomeData, DEFAULT_ESSENTIALS } from "@/lib/data/home";
 import { getCategoryTabs } from "@/lib/data/catalog";
 import { EmptyState } from "@/components/ui/states";
 import { Button } from "@/components/ui/button";
 import { CategoryGrid, ProductSection, ServiceStrip } from "@/components/home/home-sections";
-import { LocalIntro } from "@/components/home/local-intro";
+import { LocalIntro, UrgentHighlight } from "@/components/home/local-intro";
 import { site } from "@/config/site";
 import { paymentPhrase } from "@/lib/seo-copy";
 import type { Metadata } from "next";
@@ -29,31 +29,11 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-/**
- * Business identity for search engines (Organization → OnlineStore, as Google recommends for shops).
- * Only verified details: locality-level address (no street until confirmed), the support line, the
- * pincodes we deliver to, and public profiles only once they are set (Admin → Settings → Brand and support, or
- * `site.socialProfiles`).
- */
-export const orgJsonLd = (sameAs: string[] = []) => ({
+/** Business identity (shared with the service pages) and the site itself, for search engines. */
+const homeJsonLd = (settings: Record<string, unknown>) => ({
   "@context": "https://schema.org",
   "@graph": [
-    {
-      "@type": "OnlineStore", "@id": `${site.url}/#organization`, name: site.seoName, alternateName: [site.name, "MertaDeal.com"], url: `${site.url}/`,
-      description: `Online grocery delivery service in ${site.city}, Rajasthan: grocery and kirana staples, fresh vegetables, fruits and daily essentials delivered to homes by ${site.seoName}'s own delivery partners.`,
-      logo: { "@type": "ImageObject", url: `${site.url}/icons/icon-512.png`, width: 512, height: 512 },
-      image: `${site.url}/opengraph-image`,
-      email: site.supportEmail, telephone: "+91-88750-20202", slogan: site.tagline,
-      address: { "@type": "PostalAddress", addressLocality: site.city, addressRegion: site.state, postalCode: site.defaultPincode, addressCountry: "IN" },
-      areaServed: [
-        { "@type": "City", name: site.city, containedInPlace: { "@type": "State", name: site.state } },
-        // Pincodes as plain text: areaServed accepts Text, and no schema.org Place type models a pincode.
-        ...site.servicePincodes.map((code) => `${code}, ${site.city}, ${site.state}, India`),
-      ],
-      contactPoint: { "@type": "ContactPoint", contactType: "customer service", telephone: "+91-88750-20202", email: site.supportEmail, areaServed: "IN", availableLanguage: ["en", "hi"] },
-      knowsLanguage: ["en", "hi"],
-      ...([...site.socialProfiles, ...sameAs].length ? { sameAs: [...new Set([...site.socialProfiles, ...sameAs])] } : {}),
-    },
+    businessNode(settings),
     { "@type": "WebSite", "@id": `${site.url}/#website`, url: `${site.url}/`, name: site.seoName, alternateName: site.name, inLanguage: "en-IN", publisher: { "@id": `${site.url}/#organization` } },
   ],
 });
@@ -75,13 +55,14 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-4 pt-2.5 sm:space-y-7 sm:pt-4">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd(socialLinks(settings).map((l) => l.url))) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdHtml(homeJsonLd(settings)) }} />
       {/* The page's one H1 is visible and says what the service is (one compact line on phones); the shopping sections follow. */}
       <header className="px-4 sm:px-0">
         <h1 className="font-display text-[17px] font-bold leading-tight text-ink sm:text-2xl">{homeH1}</h1>
-        <p className="mt-0.5 line-clamp-1 text-[13px] text-ink-2 sm:line-clamp-none sm:text-sm">Grocery, fruits, vegetables and daily essentials delivered to your home in {site.city}, Rajasthan — usually in {etaLabel}.</p>
+        <p className="mt-0.5 line-clamp-1 text-[13px] text-ink-2 sm:line-clamp-none sm:text-sm">Grocery, fruits, vegetables and daily essentials delivered to your home in {site.city}, Rajasthan, with a {etaLabel} delivery target.</p>
       </header>
       <CategoryGrid tabs={tabs} fallback={home.categories} />
+      <UrgentHighlight etaLabel={etaLabel} />
       {home.sections.length ? (
         home.sections.map((s, i) => <ProductSection key={s.key} section={s} signedIn={signedIn} first={i === 0} />)
       ) : (

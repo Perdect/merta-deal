@@ -3,6 +3,9 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import { env, isSupabaseConfigured } from "@/lib/env";
 import { site } from "@/config/site";
+import { SERVICE_LINKS } from "@/lib/service-pages";
+import { publishedForSitemap } from "@/lib/data/directory";
+import { DIRECTORY, profilePath } from "@/lib/directory";
 
 export const dynamic = "force-dynamic";
 
@@ -30,9 +33,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/about` },
     { url: `${base}/delivery-area` },
     { url: `${base}/deliver` },
+    ...SERVICE_LINKS.map((l) => ({ url: `${base}${l.href}` })),
+    { url: `${base}/list-your-business` },
     { url: `${base}/terms` },
     { url: `${base}/privacy` },
   ];
+
+  // Directories join the sitemap with their first published profile; an empty one is noindex.
+  const profiles = await publishedForSitemap().catch(() => []);
+  for (const category of new Set(profiles.map((b) => b.category))) entries.push({ url: `${base}${DIRECTORY[category].path}` });
+  for (const b of profiles) entries.push({ url: `${base}${profilePath(b)}`, lastModified: new Date(b.updated_at) });
 
   const supabase = catalogueClient();
   if (!supabase) return entries;

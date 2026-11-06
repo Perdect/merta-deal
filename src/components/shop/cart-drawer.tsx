@@ -9,6 +9,7 @@ import type { Address, CartLine, PaymentMethod, ProductCard as ProductCardType }
 import { applyCouponAction, getCartSummary, removeCouponAction } from "@/lib/actions/cart";
 import { packLimit, setLineQuantity } from "@/lib/cart-sync";
 import { placeOrderAction } from "@/lib/actions/checkout";
+import { orderNote } from "@/lib/destinations";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useCartStore } from "@/stores/cart-store";
 import { useCheckoutStore } from "@/stores/checkout-store";
@@ -90,6 +91,8 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
   const setDeliveryType = useCheckoutStore((s) => s.setDeliveryType);
   const instructions = useCheckoutStore((s) => s.instructions);
   const setInstructions = useCheckoutStore((s) => s.setInstructions);
+  const giftMessage = useCheckoutStore((s) => s.giftMessage);
+  const setGiftMessage = useCheckoutStore((s) => s.setGiftMessage);
   const resume = useCheckoutStore((s) => s.resume);
   const setResume = useCheckoutStore((s) => s.setResume);
   const gate = useCheckoutGate({ summary, addresses: serverAddresses, signedIn, isGuest });
@@ -182,7 +185,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
   const place = async () => {
     if (!addressId || !s || placingRef.current) return;
     placingRef.current = true; setPlacing(true);
-    const res = await placeOrderAction({ addressId, paymentMethod: payment, deliveryType, instructions, ...scheduledRange() });
+    const res = await placeOrderAction({ addressId, paymentMethod: payment, deliveryType, instructions: orderNote(instructions, giftMessage), ...scheduledRange() });
     if (!res.ok) {
       // Nothing was ordered and the cart is untouched; reload it so any change (stock, limit, price) shows.
       toast.error(res.error);
@@ -191,7 +194,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
       placingRef.current = false; setPlacing(false); return;
     }
     const order = res.data;
-    const done = (q: string) => { leavingForOrder(); closeDrawer(); setSummary(null); setInstructions(""); router.replace(`/orders/${order.order_id}?${q}`); };
+    const done = (q: string) => { leavingForOrder(); closeDrawer(); setSummary(null); setInstructions(""); setGiftMessage(""); router.replace(`/orders/${order.order_id}?${q}`); };
     if (!order.payment_required) { done("placed=1"); return; }
     try {
       const r = await fetch("/api/payments/razorpay/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId: order.order_id }) });
@@ -361,7 +364,8 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
 
               <Card className="p-4">
                 <h3 className="font-display text-base font-bold text-ink">Delivery instructions</h3>
-                <Textarea value={instructions} onChange={(e) => setInstructions(e.target.value.slice(0, 200))} placeholder="e.g. Ring the bell twice, leave with the watchman" className="mt-2" />
+                <Textarea value={instructions} onChange={(e) => setInstructions(e.target.value.slice(0, 200))} placeholder="e.g. Ring the bell twice, leave at hotel reception" className="mt-2" />
+                <Input label="Gift message (optional)" wrapperClassName="mt-2" value={giftMessage} onChange={(e) => setGiftMessage(e.target.value.slice(0, 150))} placeholder="e.g. Happy birthday, Asha!" hint="Ordering for someone else? Put their name and number on the address." />
               </Card>
 
               {suggestions.filter((p) => !items.some((i) => i.product_id === p.id)).length ? (
@@ -395,7 +399,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
                   // Express is offered only where the zone supports it (admins switch it per zone); otherwise it is not shown at all.
                   const opts = ([
                     { id: "express" as const, icon: <Zap className="h-4 w-4 text-saffron-600" aria-hidden />, t: "Express", sub: `+${formatINR(s.express_fee || 20)}`, show: Boolean(s.zone?.express_supported) },
-                    { id: "standard" as const, icon: <Clock className="h-4 w-4 text-brand-600" aria-hidden />, t: "Standard", sub: etaText(s.eta_min_minutes, s.eta_max_minutes, "min") ?? "Standard", show: true },
+                    { id: "standard" as const, icon: <Clock className="h-4 w-4 text-brand-600" aria-hidden />, t: "As soon as possible", sub: etaText(s.eta_min_minutes, s.eta_max_minutes, "min") ?? "Estimate at checkout", show: true },
                     { id: "scheduled" as const, icon: <CalendarClock className="h-4 w-4 text-info" aria-hidden />, t: "Scheduled", sub: "Pick a slot", show: slots.length > 0 },
                   ]).filter((o) => o.show);
                   return (

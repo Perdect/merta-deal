@@ -7,7 +7,7 @@ export const site = {
   seoName: "MertaDeal",
   tagline: "Merta Ki Shopping, Ab Online.",
   description:
-    `Order groceries, fresh fruits and vegetables from Merta Deal in Merta City, Rajasthan. Fast local delivery in ${DELIVERY_WINDOW}.`,
+    `Order groceries, fresh fruits and vegetables from Merta Deal in Merta City, Rajasthan. Local delivery with a ${DELIVERY_WINDOW} target on eligible orders.`,
   deliveryWindow: DELIVERY_WINDOW,
   deliveryWindowShort: "20 min",
   city: "Merta City",
@@ -28,7 +28,7 @@ export const site = {
    * Verified public profiles of the business (Instagram, Facebook, YouTube, WhatsApp channel, Google Business Profile
    * URL…). Listed in Organization `sameAs` and the footer only once they exist; never guessed.
    */
-  socialProfiles: [] as readonly string[],
+  socialProfiles: ["https://www.instagram.com/mertadeal/"] as readonly string[],
 } as const;
 
 /** Mobile bottom navigation. Cart lives in the header and the floating cart bar; orders inside Account. */

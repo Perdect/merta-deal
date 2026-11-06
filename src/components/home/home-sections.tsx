@@ -141,7 +141,7 @@ function OtpIcon() {
 /** Small service strip: what actually happens on every order. */
 export function ServiceStrip({ etaLabel }: { etaLabel: string }) {
   const items = [
-    { Icon: DeliveryIcon, t: <>Delivery in <span className="whitespace-nowrap">{etaLabel}</span></>, key: "delivery", s: null as string | null, tile: "bg-fresh-50 text-fresh" },
+    { Icon: DeliveryIcon, t: <><span className="whitespace-nowrap">{etaLabel}</span> delivery target</>, key: "delivery", s: null as string | null, tile: "bg-fresh-50 text-fresh" },
     { Icon: PaymentIcon, t: "Cash or UPI", key: "pay", s: "Pay on delivery", tile: "bg-saffron-50 text-saffron-700" },
     { Icon: OtpIcon, t: "OTP handover", key: "otp", s: "Safe delivery", tile: "bg-[#e7f3f4] text-[#0f6f78]" },
   ];

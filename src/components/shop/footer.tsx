@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { Mail, Phone, Truck, MapPin, Bike, Megaphone } from "lucide-react";
+import { Mail, Phone, Truck, MapPin, Bike, Megaphone, Store } from "lucide-react";
 import { site } from "@/config/site";
 import { Logo } from "@/components/ui/misc";
 import { InstallButtons } from "@/components/pwa/install-buttons";
 import { SocialLinks } from "@/components/shop/social-links";
 import type { SocialLink } from "@/lib/social";
+import { SERVICE_LINKS } from "@/lib/service-pages";
 
 /**
  * Footer: brand + app badges + social profiles (from settings, only when set), Shop, Help, For Partners (rider sign-up
@@ -19,13 +20,13 @@ export function Footer({ social = [] }: { social?: SocialLink[] }) {
   return (
     <footer className="mt-8 border-t border-line bg-card pb-nav md:mt-12 md:pb-0">
       <div className="mx-auto max-w-6xl px-4 pb-8 pt-9 sm:px-6 md:pb-10 md:pt-12">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-9 md:grid-cols-3 lg:grid-cols-[1.8fr_1fr_1fr_1fr] lg:gap-x-6 xl:gap-x-10">
-          <div className="col-span-2 md:col-span-3 lg:col-span-1">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-9 md:grid-cols-4 lg:grid-cols-[1.6fr_1fr_1fr_1fr_1fr] lg:gap-x-6 xl:gap-x-8">
+          <div className="col-span-2 md:col-span-4 lg:col-span-1">
             <Logo />
             <p className="mt-3 max-w-xs text-sm text-ink-2">{site.tagline}</p>
             <ul className="mt-4 space-y-2 text-[13px] text-ink-3">
               <li className="flex items-center gap-2"><MapPin className={icon} strokeWidth={1.75} aria-hidden />{site.city}, Rajasthan · {site.servicePincodes.join(", ")}</li>
-              <li className="flex items-center gap-2"><Truck className={icon} strokeWidth={1.75} aria-hidden />{site.deliveryWindowShort} delivery across {site.city}</li>
+              <li className="flex items-center gap-2"><Truck className={icon} strokeWidth={1.75} aria-hidden />{site.deliveryWindowShort} delivery target across {site.city}</li>
             </ul>
             <h2 className={`${heading} mt-7`}>Download the app</h2>
             <InstallButtons className="mt-3 flex flex-wrap gap-2 space-y-0 [&>p]:basis-full [&>p]:text-xs" />
@@ -40,6 +41,16 @@ export function Footer({ social = [] }: { social?: SocialLink[] }) {
               <li><Link href="/c/fruits" className={link}>Fruits</Link></li>
               <li><Link href="/categories" className={link}>All categories</Link></li>
               <li><Link href="/delivery-area" className={link}>Delivery area &amp; charges</Link></li>
+              <li><Link href="/restaurants-merta-city" className={link}>Restaurants</Link></li>
+              <li><Link href="/bakeries-merta-city" className={link}>Bakeries</Link></li>
+              <li><Link href="/hotels-merta-city" className={link}>Hotels</Link></li>
+            </ul>
+          </nav>
+
+          <nav aria-labelledby="footer-services">
+            <h2 id="footer-services" className={heading}>Services</h2>
+            <ul className={list}>
+              {SERVICE_LINKS.map((l) => <li key={l.href}><Link href={l.href} className={link}>{l.label}</Link></li>)}
             </ul>
           </nav>
 
@@ -58,6 +69,7 @@ export function Footer({ social = [] }: { social?: SocialLink[] }) {
             <h2 id="footer-partners" className={heading}>For Partners</h2>
             <ul className={list}>
               <li><Link href="/deliver" className={link}><Bike className={icon} strokeWidth={1.75} aria-hidden />Deliver with Merta Deal</Link></li>
+              <li><Link href="/list-your-business" className={link}><Store className={icon} strokeWidth={1.75} aria-hidden />List your business</Link></li>
               {[
                 { icon: Megaphone, label: "Advertise with us" },
               ].map(({ icon: Icon, label }) => (

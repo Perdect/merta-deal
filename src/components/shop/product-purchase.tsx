@@ -59,7 +59,7 @@ export function ProductPurchase({ product, children }: { product: ProductDetail;
       <div className="border-t border-line" />
       <div className="grid grid-cols-2 gap-3 sm:max-w-sm">
         <Tile icon={RotateCcw} label="Damaged item?" sub="Replace or refund within 24 hrs" />
-        <Tile icon={Truck} label="Fast Delivery" sub={eta ? `${eta} to your location` : `Usually ${site.deliveryWindow} across ${site.city}`} />
+        <Tile icon={Truck} label="Fast Delivery" sub={eta ? `${eta} to your location` : `${site.deliveryWindow} target across ${site.city}`} />
       </div>
     </div>
   );

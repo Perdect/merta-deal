@@ -16,6 +16,16 @@ changes take weeks to show in Search Console.
 | delivery charges / areas / timings Merta | `/delivery-area` (built live from delivery_zones + settings) |
 | product names (e.g. "Aashirvaad atta 5 kg Merta") | `/p/<slug>` |
 
+| gift / sweets / food / fast food / cake delivery Merta City | `/gifts-delivery-merta-city`, `/sweets-delivery-merta-city`, `/food-delivery-merta-city`, `/fast-food-delivery-merta-city`, `/cake-delivery-merta-city` |
+| bulk sweets order Merta City | `/bulk-gifts-sweets-merta-city` |
+| urgent delivery Merta City | `/urgent-delivery-merta-city` |
+| home, hotel, office delivery Merta City | `/home-delivery-merta-city`, `/hotel-delivery-merta-city`, `/office-delivery-merta-city` |
+| delivery boy in Merta City | `/delivery-boy-merta-city` |
+| hotels, restaurants, bakeries in Merta City | `/hotels-merta-city`, `/restaurants-merta-city`, `/bakeries-merta-city` (+ `/<slug>` profiles) |
+
+Service page wording lives in `src/lib/service-pages.ts`. Twenty minutes is always a target, never a promise; live figures come from settings.
+Directory pages are `noindex` and out of the sitemap until they have a published profile. Only complete, contact-verified, non-duplicate profiles can be published (enforced by a trigger, migration 0040).
+
 Retired duplicate location pages redirect permanently: `/grocery-merta-city`, `/masala-merta` → `/c/grocery`;
 `/fresh-grocery-merta` → `/c/vegetables`; `/grocery-delivery-merta` → `/delivery-area`; `/stores`, `/s/*` → `/categories`.
 
@@ -82,3 +92,15 @@ unavailable (shared daily API quota exhausted) — run https://pagespeed.web.dev
 `/c/grocery` and a product page, and watch Search Console → Core Web Vitals once field data exists.
 Largest remaining cost: ~320 KB (gzip) of JavaScript per page, of which ~68 KB is the Supabase
 browser client loaded on every page — the next optimisation candidate.
+
+## Google Business Profile: suggestions for the service pages
+- Use the primary category that matches what customers mostly buy, and add only secondary categories the business really operates as. Delivery of gifts and sweets is a service, not a category to claim without a shop.
+- Add each service (gift delivery, sweets delivery, urgent delivery, pickup and drop) with a one-line description and a link to its page.
+- Keep hours, phone and WhatsApp identical to the site, and paste the profile link into Admin → Settings so it joins `sameAs`.
+- Post real photos of packed orders and riders, and ask real customers for reviews. Never buy or write reviews.
+- Posts: festival booking dates for bulk orders, linking to `/bulk-gifts-sweets-merta-city`.
+
+## Homepage: suggestions
+- Add a "Gifts, sweets, cakes and more" tile row once those categories have products.
+- Keep the H1 on grocery until most orders are something else.
+- Replace the share image, which only mentions groceries, once gifts and sweets are live.

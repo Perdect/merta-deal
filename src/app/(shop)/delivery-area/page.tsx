@@ -71,7 +71,7 @@ export default async function DeliveryAreaPage() {
 
       <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {opens && closes ? <Fact icon={Clock} title="Delivery hours" text={`${opens} – ${closes}, every day`} /> : null}
-        <Fact icon={Truck} title="Usual delivery time" text={`${num(settings.delivery_eta_min_minutes, 20)}–${num(settings.delivery_eta_max_minutes, 25)} min after you order`} />
+        <Fact icon={Truck} title="Delivery target" text={`${num(settings.delivery_eta_min_minutes, 20)}–${num(settings.delivery_eta_max_minutes, 25)} min after you order; depends on stock, preparation, distance and riders`} />
         <Fact icon={IndianRupee} title="Charges" text={zones.length ? `${formatINR(Math.min(...zones.map((z) => Number(z.delivery_fee))))} by area; free above ${formatINR(Math.min(...zones.map((z) => Number(z.free_delivery_threshold))))}` : "Shown at checkout"} />
         <Fact icon={Wallet} title="Payment" text={[online ? "UPI, cards and net banking" : null, cod ? "cash on delivery" : null].filter(Boolean).join(" or ") || "Shown at checkout"} />
       </ul>
