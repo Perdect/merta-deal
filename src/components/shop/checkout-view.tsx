@@ -3,11 +3,12 @@ import * as React from "react";
 import Link from "next/link";
 import Script from "next/script";
 import { useRouter } from "next/navigation";
-import { Home, Briefcase, MapPin, Plus, Zap, Clock, CalendarClock, Banknote, Wallet, Smartphone, CreditCard, Landmark, Check, Info } from "lucide-react";
+import { Home, Briefcase, MapPin, Plus, Zap, Clock, CalendarClock, Banknote, Wallet, Smartphone, CreditCard, Landmark, Check } from "lucide-react";
 import type { Address, CartSummary, DeliveryType, PaymentMethod } from "@/types/app";
 import { getCartSummary } from "@/lib/actions/cart";
 import { placeOrderAction } from "@/lib/actions/checkout";
 import { orderNote } from "@/lib/destinations";
+import { useUpiDetails } from "@/hooks/use-upi-details";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { Modal } from "@/components/ui/overlay";
@@ -31,6 +32,7 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
   const [payment, setPayment] = React.useState<PaymentMethod>(codEnabled ? "cod" : razorpayEnabled ? "upi" : "wallet");
   const [instructions, setInstructions] = React.useState("");
   const [gift, setGift] = React.useState("");
+  const upi = useUpiDetails();
   const [summary, setSummary] = React.useState<CartSummary>(initial);
   // Express can only stay selected while the delivery zone offers it.
   if (deliveryType === "express" && summary && !summary.zone?.express_supported) setDeliveryType("standard");
@@ -119,13 +121,12 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
 
         <Section step={3} title="Payment">
           <div className="space-y-2">
-            {codEnabled ? <PayOption active={payment === "cod"} onClick={() => setPayment("cod")} icon={<Banknote className="h-5 w-5 text-brand-600" />} title="Cash on Delivery" subtitle="Pay the rider after OTP handover" /> : null}
+            {codEnabled ? <PayOption active={payment === "cod"} onClick={() => setPayment("cod")} icon={<Banknote className="h-5 w-5 text-brand-600" />} title={upi ? "Cash or UPI on delivery" : "Cash on delivery"} subtitle={upi ? "Pay cash or scan our UPI QR when your order arrives" : "Pay the rider when your order arrives"} /> : null}
             <PayOption active={payment === "wallet"} disabled={!walletOk} onClick={() => setPayment("wallet")} icon={<Wallet className="h-5 w-5 text-saffron-600" />} title="Merta Wallet" subtitle={`Balance ${formatINR(walletBalance)}${walletOk ? "" : " · insufficient"}`} />
-            <PayOption active={payment === "upi"} disabled={!razorpayEnabled} onClick={() => setPayment("upi")} icon={<Smartphone className="h-5 w-5 text-info" />} title="UPI" subtitle="GPay, PhonePe, Paytm via Razorpay" />
-            <PayOption active={payment === "card"} disabled={!razorpayEnabled} onClick={() => setPayment("card")} icon={<CreditCard className="h-5 w-5 text-info" />} title="Credit / Debit card" subtitle="Visa, Mastercard, RuPay" />
-            <PayOption active={payment === "netbanking"} disabled={!razorpayEnabled} onClick={() => setPayment("netbanking")} icon={<Landmark className="h-5 w-5 text-info" />} title="Net banking" subtitle="All major banks" />
+            {razorpayEnabled ? <PayOption active={payment === "upi"} disabled={!razorpayEnabled} onClick={() => setPayment("upi")} icon={<Smartphone className="h-5 w-5 text-info" />} title="UPI" subtitle="GPay, PhonePe, Paytm via Razorpay" /> : null}
+            {razorpayEnabled ? <PayOption active={payment === "card"} disabled={!razorpayEnabled} onClick={() => setPayment("card")} icon={<CreditCard className="h-5 w-5 text-info" />} title="Credit / Debit card" subtitle="Visa, Mastercard, RuPay" /> : null}
+            {razorpayEnabled ? <PayOption active={payment === "netbanking"} disabled={!razorpayEnabled} onClick={() => setPayment("netbanking")} icon={<Landmark className="h-5 w-5 text-info" />} title="Net banking" subtitle="All major banks" /> : null}
           </div>
-          {!razorpayEnabled ? <Alert tone="neutral" icon={<Info className="h-4 w-4" />} className="mt-3">Online payments will be available once Razorpay is configured. Cash on Delivery works today.</Alert> : null}
         </Section>
 
         <Section step={4} title="Delivery instructions (optional)">

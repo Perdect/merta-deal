@@ -22,6 +22,6 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     // Skip static assets, images, the service worker and manifest
-    "/((?!_next/static|_next/image|\\.well-known|favicon.ico|icon.svg|icons/|vendor/|sw.js|manifest.webmanifest|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)",
+    "/((?!_next/static|_next/image|\\.well-known|favicon.ico|icon.svg|icons/|vendor/|sw.js|manifest.webmanifest|robots.txt|sitemap.xml|app-start.html|splash/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)",
   ],
 };

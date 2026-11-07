@@ -29,6 +29,7 @@ let pass = 0, fail = 0;
 const q = async (sql, params) => (await db.query(sql, params)).rows;
 const one = async (sql, params) => (await q(sql, params))[0];
 const ok = (name, cond, detail = "") => { if (cond) { pass++; console.log(`  ok   ${name}`); } else { fail++; console.log(`  FAIL ${name} ${detail}`); } };
+await db.query(`update settings set value = '{"open":"00:00","close":"23:59"}'::jsonb where key = 'business_hours'`);
 const as = async (uid) => db.query(`select set_config('request.jwt.claim.sub', $1, false)`, [uid]);
 const err = async (sql, params) => { try { await db.query(sql, params); return null; } catch (e) { return e.message; } };
 // Run a query as the 'authenticated' DB role so RLS applies (the harness user is a superuser).

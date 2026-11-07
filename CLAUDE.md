@@ -27,6 +27,8 @@ Hyperlocal kirana marketplace for Merta City, Rajasthan. Brand: **Merta Deal** (
 - Service pages: `src/lib/service-pages.ts` (all copy, 11 slugs), `src/components/services/*`, one thin route each. Twenty minutes is a target, never a guarantee. Requests (0039): `submit_service_request`, `/admin/requests`; a request is not a booking. Harness: `node scripts/test-service-requests.mjs "$PWD"`.
 - Destinations: `src/lib/destinations.ts`. Hotel and office details are composed into `addresses.house` so riders, admin and slips show them unchanged; gift messages go into the delivery instructions.
 - Directory (0040): `local_businesses`, `business_menu_items`, `business_listing_requests`; `src/lib/directory.ts`, `src/components/directory/*`, `/admin/businesses`. Never seed businesses. A trigger refuses incomplete, unverified or duplicate profiles. Menu items become orderable by linking a catalogue product. Harness: `node scripts/test-directory.mjs "$PWD"`.
+- UPI on delivery (0041): `src/lib/upi.ts`, `useUpiDetails`, `UpiQr`; no gateway, so a rider's UPI tap never clears money: it stays on `_rider_cash` until `admin_confirm_upi` (Admin → Payments). Harness: `node scripts/test-upi.mjs "$PWD"`.
+- App launch: manifest `start_url` is `public/app-start.html` (served by the service worker, then replaces to `/`); iOS launch images are in `public/splash/`, listed in `src/app/layout.tsx`.
 - Storage buckets: `product-images`, `store-photos`, `avatars`, `banners` (public), `store-documents` (private). Paths must start with `<storeId>/` or `<userId>/` for RLS.
 
 ## Style

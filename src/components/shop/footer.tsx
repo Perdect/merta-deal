@@ -39,6 +39,7 @@ export function Footer({ social = [] }: { social?: SocialLink[] }) {
               <li><Link href="/c/grocery" className={link}>Grocery &amp; kirana</Link></li>
               <li><Link href="/c/vegetables" className={link}>Vegetables</Link></li>
               <li><Link href="/c/fruits" className={link}>Fruits</Link></li>
+              <li><Link href="/c/dry-fruits" className={link}>Dry fruits</Link></li>
               <li><Link href="/categories" className={link}>All categories</Link></li>
               <li><Link href="/delivery-area" className={link}>Delivery area &amp; charges</Link></li>
               <li><Link href="/restaurants-merta-city" className={link}>Restaurants</Link></li>

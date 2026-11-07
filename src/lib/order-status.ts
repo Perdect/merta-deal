@@ -33,5 +33,5 @@ export const PAYMENT_METHOD_LABEL: Record<Enums<"payment_method">, string> = {
 };
 
 export const PAYMENT_STATUS_LABEL: Record<Enums<"payment_status">, string> = {
-  pending: "Payment pending", authorized: "Authorized", paid: "Paid", failed: "Payment failed", refunded: "Refunded", partially_refunded: "Partially refunded", cod_pending: "Pay on delivery", cod_collected: "Cash collected",
+  pending: "Payment pending", authorized: "Authorized", paid: "Paid", failed: "Payment failed", refunded: "Refunded", partially_refunded: "Partially refunded", cod_pending: "Pay on delivery", cod_collected: "Collected on delivery",
 };

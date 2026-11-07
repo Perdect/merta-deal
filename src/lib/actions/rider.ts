@@ -121,11 +121,11 @@ export type OtpResult = { ok: true; status: "delivered"; reward_points: number; 
  * full amount was collected). A wrong OTP is a normal response (`data.ok === false`), not an error.
  * Safe to retry: a repeat after success returns `already: true`.
  */
-export async function verifyOtpAction(assignmentId: string, otp: string, cashCollected = false): Promise<ActionResult<OtpResult>> {
+export async function verifyOtpAction(assignmentId: string, otp: string, cashCollected = false, upiCollected = false): Promise<ActionResult<OtpResult>> {
   const digits = otp.replace(/\D/g, "");
   if (digits.length !== 4) return { ok: false, error: "Enter the 4-digit OTP from the customer." };
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("verify_delivery_otp", { p_assignment_id: assignmentId, p_otp: digits, p_cash_collected: cashCollected } as never);
+  const { data, error } = await supabase.rpc("verify_delivery_otp", { p_assignment_id: assignmentId, p_otp: digits, p_cash_collected: cashCollected, ...(upiCollected ? { p_upi_collected: true } : {}) } as never);
   if (error) return { ok: false, error: friendlyError(error) };
   const res = data as { ok: boolean; reason?: string; attempts_left?: number; reward_points?: number; locked?: boolean; needs_cash?: boolean; already?: boolean };
   revalidatePath("/rider", "layout");

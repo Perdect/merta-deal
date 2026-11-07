@@ -16,6 +16,8 @@ import { cn, formatINR, formatTime } from "@/lib/utils";
 import { site } from "@/config/site";
 import { useRiderStore, fixToTrackingLocation } from "./rider-store";
 import { addressLine, customerOf, formatKm, navigateUrl } from "./rider-utils";
+import { UpiQr } from "@/components/shared/upi-qr";
+import { useUpiDetails } from "@/hooks/use-upi-details";
 
 type StepKey = "accept" | "to_store" | "pickup" | "to_customer" | "deliver" | "otp" | "done";
 const STEPS: { key: StepKey; label: string }[] = [
@@ -248,6 +250,9 @@ function Deliver({ a, verifying, setVerifying, onBack, onCompleted }: { a: Rider
   const [otp, setOtp] = React.useState("");
   const [fail, setFail] = React.useState<{ reason: string; attempts_left?: number; locked?: boolean } | null>(null);
   const [cash, setCash] = React.useState(false);
+  const upi = useUpiDetails();
+  const [mode, setMode] = React.useState<"cash" | "upi">("cash");
+  const byUpi = Boolean(upi) && mode === "upi";
   const [error, setError] = React.useState<string | null>(null);
   const cod = a.order.payment_method === "cod" && Number(a.cod_amount) > 0;
   const c = customerOf(a);
@@ -256,7 +261,7 @@ function Deliver({ a, verifying, setVerifying, onBack, onCompleted }: { a: Rider
     e.preventDefault();
     if (otp.length !== 4 || verifying || (cod && !cash)) return;
     setVerifying(true); setFail(null); setError(null);
-    const r = await verifyOtpAction(a.id, otp, cod && cash);
+    const r = await verifyOtpAction(a.id, otp, cod && cash && !byUpi, cod && cash && byUpi);
     setVerifying(false);
     // Network/server error: nothing changed if it failed, and a retry is safe if it went through.
     if (!r.ok) { setError(`${r.error} You can try again — the delivery is never recorded twice.`); return; }
@@ -268,13 +273,19 @@ function Deliver({ a, verifying, setVerifying, onBack, onCompleted }: { a: Rider
   return (
     <form onSubmit={submit}>
       <div className={cn("rounded-md p-3", cod ? "bg-saffron-50" : "bg-success-50")}>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-3">{cod ? "Collect cash" : "Payment"}</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-3">{cod ? (byUpi ? "Collect by UPI" : "Collect cash") : "Payment"}</p>
         <p className="font-display text-2xl font-extrabold tabular text-ink">{cod ? formatINR(a.cod_amount) : "Prepaid"}</p>
         <p className="text-xs text-ink-2">{cod ? `Collect from ${c.name} before asking for the OTP.` : "Nothing to collect — hand over the order."}</p>
+        {cod && upi ? (
+          <div className="mt-3 grid grid-cols-2 gap-2" role="group" aria-label="How the customer is paying">
+            {(["cash", "upi"] as const).map((m) => <button key={m} type="button" aria-pressed={mode === m} disabled={verifying} onClick={() => { setMode(m); setCash(false); }} className={cn("min-h-11 rounded-md border text-sm font-semibold", mode === m ? "border-brand-600 bg-brand-50 text-brand-700" : "border-line bg-card text-ink-2")}>{m === "cash" ? "Cash" : "UPI"}</button>)}
+          </div>
+        ) : null}
+        {cod && byUpi && upi ? <div className="mt-3 rounded-md bg-card p-3"><UpiQr upi={upi} amount={Number(a.cod_amount)} note={a.order.order_number} /></div> : null}
         {cod ? (
           <label className="mt-3 flex min-h-11 cursor-pointer items-center gap-3 rounded-md border border-saffron-300 bg-card px-3 py-2 text-sm font-semibold text-ink">
             <input type="checkbox" checked={cash} onChange={(e) => setCash(e.target.checked)} className="h-5 w-5 accent-brand-600" disabled={verifying} />
-            I&rsquo;ve collected {formatINR(a.cod_amount)} in cash from {c.name}
+            {byUpi ? <>I saw the payment succeed for {formatINR(a.cod_amount)} on {c.name}&rsquo;s phone</> : <>I&rsquo;ve collected {formatINR(a.cod_amount)} in cash from {c.name}</>}
           </label>
         ) : null}
       </div>

@@ -1,14 +1,16 @@
 /* Merta Deal service worker: offline shell for navigations, cache-first static assets, web push. */
-const VERSION = "md-v8";
+const VERSION = "md-v9";
 const STATIC_CACHE = `${VERSION}-static`;
 const OFFLINE_URL = "/offline.html";
+/* The installed app's first screen: served from here at once, so opening the app never waits on the network. */
+const START_URL = "/app-start.html";
 
 /* No skipWaiting() at install: UpdatePrompt (silent) posts SKIP_WAITING once the new
    worker has installed. The page is never reloaded for an update, so unsaved work
    (a half-filled address form, a cart edit) stays; the next navigation loads the new
    version. */
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(STATIC_CACHE).then((c) => c.addAll([OFFLINE_URL, "/icon.svg", "/manifest.webmanifest"])));
+  event.waitUntil(caches.open(STATIC_CACHE).then((c) => c.addAll([OFFLINE_URL, START_URL, "/icon.svg", "/manifest.webmanifest"])));
 });
 
 self.addEventListener("message", (event) => {
@@ -24,6 +26,10 @@ self.addEventListener("fetch", (event) => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return; // never touch Supabase / Razorpay / Maps
+  if (req.mode === "navigate" && url.pathname === START_URL) {
+    event.respondWith(caches.match(START_URL).then((hit) => hit || fetch(req)));
+    return;
+  }
   if (req.mode === "navigate") {
     // Pages are never cached (they are personal: cart, orders, prices). Offline, the branded
     // offline page is served instead of the browser's error screen.

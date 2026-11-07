@@ -10,6 +10,7 @@ import { applyCouponAction, getCartSummary, removeCouponAction } from "@/lib/act
 import { packLimit, setLineQuantity } from "@/lib/cart-sync";
 import { placeOrderAction } from "@/lib/actions/checkout";
 import { orderNote } from "@/lib/destinations";
+import { useUpiDetails } from "@/hooks/use-upi-details";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useCartStore } from "@/stores/cart-store";
 import { useCheckoutStore } from "@/stores/checkout-store";
@@ -91,6 +92,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
   const setDeliveryType = useCheckoutStore((s) => s.setDeliveryType);
   const instructions = useCheckoutStore((s) => s.instructions);
   const setInstructions = useCheckoutStore((s) => s.setInstructions);
+  const upi = useUpiDetails();
   const giftMessage = useCheckoutStore((s) => s.giftMessage);
   const setGiftMessage = useCheckoutStore((s) => s.setGiftMessage);
   const resume = useCheckoutStore((s) => s.resume);
@@ -416,11 +418,11 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
               </Card>
 
               <div className="space-y-3">
-                <div><p className="mb-1.5 px-1 text-sm font-bold text-ink">Pay by UPI</p><Card><PayRow current={payment} onPick={setPayment} id="upi" icon={<Smartphone className="h-5 w-5" />} title="UPI" sub={razorpayEnabled ? "GPay, PhonePe, Paytm" : "Available once online payments are set up"} disabled={!razorpayEnabled} /></Card></div>
-                <div><p className="mb-1.5 px-1 text-sm font-bold text-ink">Credit & Debit Cards</p><Card><PayRow current={payment} onPick={setPayment} id="card" icon={<CreditCard className="h-5 w-5" />} title="Add New Card" sub={razorpayEnabled ? "Visa, Mastercard, RuPay & more" : "Available once online payments are set up"} disabled={!razorpayEnabled} /></Card></div>
+                {razorpayEnabled ? <div><p className="mb-1.5 px-1 text-sm font-bold text-ink">Pay by UPI</p><Card><PayRow current={payment} onPick={setPayment} id="upi" icon={<Smartphone className="h-5 w-5" />} title="UPI" sub={razorpayEnabled ? "GPay, PhonePe, Paytm" : "Available once online payments are set up"} disabled={!razorpayEnabled} /></Card></div> : null}
+                {razorpayEnabled ? <div><p className="mb-1.5 px-1 text-sm font-bold text-ink">Credit & Debit Cards</p><Card><PayRow current={payment} onPick={setPayment} id="card" icon={<CreditCard className="h-5 w-5" />} title="Add New Card" sub={razorpayEnabled ? "Visa, Mastercard, RuPay & more" : "Available once online payments are set up"} disabled={!razorpayEnabled} /></Card></div> : null}
                 <div><p className="mb-1.5 px-1 text-sm font-bold text-ink">Wallets</p><Card><PayRow current={payment} onPick={setPayment} id="wallet" icon={<Wallet className="h-5 w-5" />} title="Merta Wallet" sub={`Balance ${formatINR(walletBalance)}${walletOk ? "" : " · insufficient for this order"}`} disabled={!walletOk} /></Card></div>
-                <div><p className="mb-1.5 px-1 text-sm font-bold text-ink">Netbanking</p><Card><PayRow current={payment} onPick={setPayment} id="netbanking" icon={<Landmark className="h-5 w-5" />} title="Net banking" sub={razorpayEnabled ? "All major banks" : "Available once online payments are set up"} disabled={!razorpayEnabled} /></Card></div>
-                {codEnabled ? <div><p className="mb-1.5 px-1 text-sm font-bold text-ink">Cash on Delivery</p><Card><PayRow current={payment} onPick={setPayment} id="cod" icon={<Banknote className="h-5 w-5" />} title="Pay by Cash / UPI on delivery" sub="Pay the rider after OTP handover" /></Card></div> : null}
+                {razorpayEnabled ? <div><p className="mb-1.5 px-1 text-sm font-bold text-ink">Netbanking</p><Card><PayRow current={payment} onPick={setPayment} id="netbanking" icon={<Landmark className="h-5 w-5" />} title="Net banking" sub={razorpayEnabled ? "All major banks" : "Available once online payments are set up"} disabled={!razorpayEnabled} /></Card></div> : null}
+                {codEnabled ? <div><p className="mb-1.5 px-1 text-sm font-bold text-ink">Pay on delivery</p><Card><PayRow current={payment} onPick={setPayment} id="cod" icon={<Banknote className="h-5 w-5" />} title={upi ? "Cash or UPI on delivery" : "Cash on delivery"} sub={upi ? "Pay cash or scan our UPI QR when your order arrives" : "Pay the rider when your order arrives"} /></Card></div> : null}
               </div>
             </>
           ) : null}

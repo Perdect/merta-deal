@@ -9,6 +9,9 @@ import { Analytics } from "@/components/shared/analytics";
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap" });
 const jakarta = Plus_Jakarta_Sans({ variable: "--font-jakarta", subsets: ["latin"], display: "swap", weight: ["600", "700", "800"] });
 
+/** Launch images iOS shows while the installed app opens, as [CSS width, CSS height, pixel ratio]. iOS matches them exactly. */
+const IOS_SPLASH = [[440, 956, 3], [430, 932, 3], [428, 926, 3], [414, 896, 3], [414, 896, 2], [414, 736, 3], [402, 874, 3], [393, 852, 3], [390, 844, 3], [375, 812, 3], [375, 667, 2], [320, 568, 2], [768, 1024, 2], [834, 1194, 2], [1024, 1366, 2]] as const;
+
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
   // Every page sets its own title, description and canonical; nothing here may imply one (a
@@ -19,7 +22,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   openGraph: { type: "website", locale: "en_IN", siteName: site.seoName },
   twitter: { card: "summary_large_image" },
-  appleWebApp: { capable: true, statusBarStyle: "default", title: site.name },
+  appleWebApp: { capable: true, statusBarStyle: "default", title: site.name, startupImage: IOS_SPLASH.map(([w, h, r]) => ({ url: `/splash/apple-${w * r}x${h * r}.png`, media: `(device-width: ${w}px) and (device-height: ${h}px) and (-webkit-device-pixel-ratio: ${r}) and (orientation: portrait)` })) },
   formatDetection: { telephone: false },
   ...(process.env.GOOGLE_SITE_VERIFICATION ? { verification: { google: process.env.GOOGLE_SITE_VERIFICATION } } : {}),
 };

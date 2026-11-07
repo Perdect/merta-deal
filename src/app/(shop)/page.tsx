@@ -6,7 +6,7 @@ import { getCategoryTabs } from "@/lib/data/catalog";
 import { EmptyState } from "@/components/ui/states";
 import { Button } from "@/components/ui/button";
 import { CategoryGrid, ProductSection, ServiceStrip } from "@/components/home/home-sections";
-import { LocalIntro, UrgentHighlight } from "@/components/home/local-intro";
+import { CakeRequest, LocalIntro, UrgentHighlight } from "@/components/home/local-intro";
 import { site } from "@/config/site";
 import { paymentPhrase } from "@/lib/seo-copy";
 import type { Metadata } from "next";
@@ -68,6 +68,7 @@ export default async function HomePage() {
       ) : (
         <EmptyState title="Stocking up" description="Products will appear here as soon as they are in stock." action={<Button href="/categories" variant="outline">Browse categories</Button>} compact />
       )}
+      <CakeRequest />
       <ServiceStrip etaLabel={etaLabel} />
       <LocalIntro etaLabel={etaLabel} />
     </div>

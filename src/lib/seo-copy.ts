@@ -10,6 +10,7 @@ export function paymentPhrase(settings: Record<string, unknown>) {
   const cod = settings.cod_enabled !== false;
   const online = onlinePaymentsLive(settings);
   if (cod && online) return "Pay by UPI, card or cash on delivery.";
+  if (cod && settings.upi_on_delivery_enabled === true) return "Pay by cash or UPI on delivery.";
   if (online) return "Pay online by UPI or card.";
   if (cod) return "Cash on delivery available.";
   return "";

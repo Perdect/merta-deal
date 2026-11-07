@@ -21,6 +21,8 @@ import { toast } from "@/components/ui/toast";
 import { formatINR, formatDateTime, formatTime, cn } from "@/lib/utils";
 import type { OrderStatus } from "@/lib/order-status";
 import { DeliveryOtpStrip } from "./delivery-otp-strip";
+import { UpiQr } from "@/components/shared/upi-qr";
+import { useUpiDetails } from "@/hooks/use-upi-details";
 import { PushOptInCard } from "@/components/pwa/push-opt-in-card";
 import { OrderPlacedSplash } from "./order-placed-splash";
 
@@ -64,6 +66,7 @@ export function OrderTrackingView({ initial, placed, paymentState, push }: { ini
   const live = ["rider_assigned", "out_for_delivery"].includes(o.status) && t.assignment && ["accepted", "picked_up"].includes(t.assignment.status);
   const paid = o.payment_method === "cod" || ["paid", "authorized"].includes(o.payment_status);
   const active = !TERMINAL.includes(o.status);
+  const upi = useUpiDetails();
   const eta = o.promised_at ? Math.round((new Date(o.promised_at).getTime() - now) / 60000) : null;
   const late = active && paid && eta != null && eta < 0;
   const addr = o.address_snapshot as unknown as { full_name: string; phone: string; house: string; street: string; area: string; landmark?: string; city: string; pincode: string; lat?: number; lng?: number; label?: string | null };
@@ -107,6 +110,12 @@ export function OrderTrackingView({ initial, placed, paymentState, push }: { ini
           </Alert>
         ) : null}
         {paymentState === "pending" || (o.payment_status === "pending" && o.payment_method !== "cod") ? <Alert tone="warning" icon={<CreditCard className="h-4 w-4" />} title="Payment pending">Your order is saved but payment was not completed. Packing starts once payment is received. <Link href={`/checkout`} className="font-semibold underline">Retry from checkout</Link> or contact support.</Alert> : null}
+        {upi && active && o.payment_method === "cod" && o.payment_status === "cod_pending" ? (
+          <details className="rounded-lg border border-line bg-card px-4 py-3">
+            <summary className="tap min-h-11 cursor-pointer content-center text-sm font-semibold text-ink">Pay by UPI when your order arrives</summary>
+            <div className="pb-2 pt-2"><UpiQr upi={upi} amount={Number(o.total)} note={o.order_number} /><p className="mt-2 text-center text-xs text-ink-3">Pay when the rider is with you, then show the success screen and give your delivery OTP.</p></div>
+          </details>
+        ) : null}
         {paymentState === "setup" ? <Alert tone="warning" title="Online payment unavailable">Razorpay is not configured on this deployment yet. Your order is saved with payment pending; please contact support or choose Cash on Delivery next time.</Alert> : null}
         {paymentState === "failed" ? <Alert tone="danger" title="Payment failed">We could not verify the payment. If money was deducted it will be refunded automatically within 5–7 days.</Alert> : null}
         {placed && active && push ? <PushOptInCard configured={push.configured} vapidPublicKey={push.vapidPublicKey} /> : null}

@@ -14,6 +14,8 @@ const TILE_PRODUCTS: Record<string, string[]> = {
   vegetables: ["onion-pyaz-1-kg", "potato-aloo-1-kg"],
 };
 const SECTION_SIZE = 6;
+/** The dry fruits section carries the festival name until this date, then reads plainly. */
+const DIWALI_ENDS = "2026-11-10T00:00:00+05:30";
 
 /** `cover` = the category's own image (set in admin), shown alone; otherwise two product cut-outs. */
 export type HomeCategory = { id: string; name: string; slug: string; color: string | null; images: string[]; cover: boolean };
@@ -64,10 +66,13 @@ export const getHomeData = cache(async (essentialSlugs: string[], welcomeCode: s
     }
     return out;
   };
+  // Taken first so these items stay in their own section rather than filling the others.
+  const dryFruits = take(products.filter((p) => sellable(p) && allCats.find((c) => c.id === p.category_id)?.slug === "dry-fruits"));
   const essentials = take([...essentialSlugs.map((s) => bySlug.get(s)).filter(sellable), ...products.filter((p) => sellable(p) && p.image_url)]);
   const inTop = (slug: string) => products.filter((p) => sellable(p) && topSlugOf(p) === slug).sort((a, b) => Number(Boolean(b.image_url)) - Number(Boolean(a.image_url)));
   const sections: HomeSection[] = [
     { key: "essentials", title: "Everyday essentials", href: null, products: essentials },
+    { key: "dry-fruits", title: nowIso < new Date(DIWALI_ENDS).toISOString() ? "Dry fruits for Diwali" : "Dry fruits", href: "/c/dry-fruits", products: dryFruits },
     { key: "vegetables", title: "Fresh vegetables", href: "/c/vegetables", products: take(inTop("vegetables")) },
     { key: "fruits", title: "Fresh fruits", href: "/c/fruits", products: take(inTop("fruits")) },
     { key: "grocery", title: "Grocery essentials", href: "/c/grocery", products: take(inTop("grocery")) },
