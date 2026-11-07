@@ -16,6 +16,7 @@ import { Alert } from "@/components/ui/states";
 import { toast } from "@/components/ui/toast";
 import { AddressWizard } from "./address-wizard";
 import { PriceBreakdown, FreeDeliveryBar } from "./price-breakdown";
+import { PlaceOrderSheet, PlacingScreen } from "./place-order-flow";
 import { cn, formatINR } from "@/lib/utils";
 
 declare global { interface Window { Razorpay?: new (opts: Record<string, unknown>) => { open: () => void; on: (e: string, cb: (r: unknown) => void) => void } } }
@@ -38,6 +39,7 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
   if (deliveryType === "express" && summary && !summary.zone?.express_supported) setDeliveryType("standard");
   const [addOpen, setAddOpen] = React.useState(initialAddresses.length === 0);
   const [placing, setPlacing] = React.useState(false);
+  const [confirming, setConfirming] = React.useState(false);
   const [refreshing, startRefresh] = React.useTransition();
 
   React.useEffect(() => {
@@ -67,7 +69,7 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
   };
 
   const place = async () => {
-    if (!addressId) return; setPlacing(true);
+    if (!addressId || placing) return; setConfirming(false); setPlacing(true);
     const res = await placeOrderAction({ addressId, paymentMethod: payment, deliveryType, instructions: orderNote(instructions, gift), ...scheduledRange() });
     if (!res.ok) { toast.error(res.error); setPlacing(false); return; }
     const order = res.data;
@@ -143,10 +145,12 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
           <PriceBreakdown s={summary} />
         </div>
         {blocker ? <Alert tone="warning">{blocker}{!summary.meets_min_order && addressId && summary.serviceable ? <> <Link href="/cart" className="font-semibold underline">Add items</Link></> : null}</Alert> : null}
-        <Button size="lg" fullWidth loading={placing} disabled={!canPlace} onClick={place}>{online.includes(payment) ? `Pay ${formatINR(summary.total, { precise: true })}` : `Place order · ${formatINR(summary.total, { precise: true })}`}</Button>
+        <Button size="lg" fullWidth loading={placing} disabled={!canPlace} onClick={() => setConfirming(true)}>{online.includes(payment) ? `Pay ${formatINR(summary.total, { precise: true })}` : `Place order · ${formatINR(summary.total, { precise: true })}`}</Button>
         <p className="text-center text-[11px] text-ink-3">By placing this order you agree to the terms of service. Delivery OTP will be shared after the order is placed.</p>
       </aside>
 
+      <PlaceOrderSheet open={confirming} onClose={() => setConfirming(false)} onPlace={() => void place()} address={addresses.find((a) => a.id === addressId) ?? null} total={summary.total} payment={payment} upi={Boolean(upi)} />
+      <PlacingScreen open={placing} />
       <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Location information" size="screen">
         <AddressWizard defaultName={user.name} defaultPhone={user.phone} onCancel={addresses.length ? () => setAddOpen(false) : undefined} onSaved={(a) => { setAddresses((cur) => [a, ...cur.filter((x) => x.id !== a.id)]); setAddressId(a.id); setAddOpen(false); }} />
       </Modal>

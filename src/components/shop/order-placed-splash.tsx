@@ -27,6 +27,7 @@ export function OrderPlacedSplash({ orderId, confirmed, label, addressLine, codN
     <div role="status" aria-live="polite" onClick={dismiss}
       className={phase === "out" ? "fixed inset-0 z-[80] bg-card transition-opacity duration-300 opacity-0" : "fixed inset-0 z-[80] bg-card"}
       style={{ paddingTop: "var(--safe-top)", paddingBottom: "var(--safe-bottom)" }}>
+      <button type="button" onClick={dismiss} className="tap absolute right-4 rounded-md border border-line-2 bg-card px-4 py-2 text-sm font-bold text-ink" style={{ top: "calc(var(--safe-top) + 12px)" }}>Skip</button>
       <div className="flex h-full flex-col items-center justify-center px-6 text-center">
         <span className="relative flex h-24 w-24 items-center justify-center rounded-full bg-success text-white animate-tick-pop" aria-hidden>
           <span className="absolute inset-0 rounded-full bg-success animate-tick-ring" />

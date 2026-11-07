@@ -22,6 +22,7 @@ import { Alert } from "@/components/ui/states";
 import { QuantityStepper } from "@/components/ui/misc";
 import { toast } from "@/components/ui/toast";
 import { AddressSheet, addressLine, addressTitle } from "./address-sheet";
+import { PlaceOrderSheet, PlacingScreen } from "./place-order-flow";
 import { DeliveryAddressRow, useCheckoutGate } from "./checkout-gate";
 import { ProductImage } from "./product-image";
 import { ProductCard } from "./product-card";
@@ -109,6 +110,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
   const [code, setCode] = React.useState("");
   const [couponBusy, setCouponBusy] = React.useState(false);
   const [placing, setPlacing] = React.useState(false);
+  const [confirming, setConfirming] = React.useState(false);
   const [suggestions, setSuggestions] = React.useState<ProductCardType[]>([]);
 
   const s = summary;
@@ -186,7 +188,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
   // shows a spinner); place_order itself is transactional, so a retry after a failure is safe.
   const place = async () => {
     if (!addressId || !s || placingRef.current) return;
-    placingRef.current = true; setPlacing(true);
+    placingRef.current = true; setConfirming(false); setPlacing(true);
     const res = await placeOrderAction({ addressId, paymentMethod: payment, deliveryType, instructions: orderNote(instructions, giftMessage), ...scheduledRange() });
     if (!res.ok) {
       // Nothing was ordered and the cart is untouched; reload it so any change (stock, limit, price) shows.
@@ -220,6 +222,8 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
 
   const sheets = (
     <>
+      <PlaceOrderSheet open={confirming} onClose={() => setConfirming(false)} onPlace={() => void place()} address={selectedAddress} total={s?.total ?? 0} payment={payment} upi={Boolean(upi)} />
+      <PlacingScreen open={placing} />
       <AddressSheet open={sheet === "address"} onClose={closeSheet} addresses={addresses} selectedId={addressId} defaultName={user.name} defaultPhone={user.phone}
         onPick={(a, isNew) => { if (isNew) { addAddress(a); router.refresh(); } setAddressId(a.id); void adoptAddress(a); closeSheet(); }} />
       <LoginModal open={sheet === "login" && !account} onClose={() => { closeSheet(); setResume(null); }} eta={`${eta.min}–${eta.max} minutes`} guest={isGuest} title={resume === "pay" ? "Login to place your order" : undefined} />
@@ -441,7 +445,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
             ) : (
               <>
                 {payBlocker ? <Alert tone="warning" className="mb-2">{payBlocker}</Alert> : null}
-                <Button size="lg" fullWidth className="h-13 rounded-xl text-base" loading={placing} disabled={Boolean(payBlocker)} onClick={place}>{ONLINE.includes(payment) ? `Pay ${formatINR(s.total, { precise: true })}` : `Place order · ${formatINR(s.total, { precise: true })}`}</Button>
+                <Button size="lg" fullWidth className="h-13 rounded-xl text-base" loading={placing} disabled={Boolean(payBlocker)} onClick={() => setConfirming(true)}>{ONLINE.includes(payment) ? `Pay ${formatINR(s.total, { precise: true })}` : `Place order · ${formatINR(s.total, { precise: true })}`}</Button>
                 <p className="mt-2 text-center text-[11px] text-ink-3">Delivery OTP will be shared after the order is placed.</p>
               </>
             )}
