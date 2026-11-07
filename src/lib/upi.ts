@@ -13,3 +13,17 @@ export function upiLink(d: UpiDetails, amount: number, note: string) {
   const q = [`pa=${d.id}`, `pn=${encodeURIComponent(d.name)}`, `am=${amount.toFixed(2)}`, "cu=INR", `tn=${encodeURIComponent(note)}`];
   return `upi://pay?${q.join("&")}`;
 }
+
+/**
+ * The same payment opened in a named app. Android resolves upi:// to a chooser; iPhone does not, so
+ * each app gets its own scheme. The parameters are identical to the standard link.
+ */
+export function upiAppLinks(d: UpiDetails, amount: number, note: string) {
+  const q = upiLink(d, amount, note).slice("upi://pay?".length);
+  return [
+    { name: "PhonePe", href: `phonepe://pay?${q}` },
+    { name: "Google Pay", href: `tez://upi/pay?${q}` },
+    { name: "Paytm", href: `paytmmp://pay?${q}` },
+    { name: "Other UPI app", href: `upi://pay?${q}` },
+  ];
+}

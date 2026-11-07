@@ -16,7 +16,7 @@ import { Alert } from "@/components/ui/states";
 import { toast } from "@/components/ui/toast";
 import { AddressWizard } from "./address-wizard";
 import { PriceBreakdown, FreeDeliveryBar } from "./price-breakdown";
-import { PlaceOrderSheet, PlacingScreen } from "./place-order-flow";
+import { PlaceOrderSheet } from "./place-order-flow";
 import { cn, formatINR } from "@/lib/utils";
 
 declare global { interface Window { Razorpay?: new (opts: Record<string, unknown>) => { open: () => void; on: (e: string, cb: (r: unknown) => void) => void } } }
@@ -123,7 +123,7 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
 
         <Section step={3} title="Payment">
           <div className="space-y-2">
-            {codEnabled ? <PayOption active={payment === "cod"} onClick={() => setPayment("cod")} icon={<Banknote className="h-5 w-5 text-brand-600" />} title={upi ? "Cash or UPI on delivery" : "Cash on delivery"} subtitle={upi ? "Pay cash or scan our UPI QR when your order arrives" : "Pay the rider when your order arrives"} /> : null}
+            {codEnabled ? <PayOption active={payment === "cod"} onClick={() => setPayment("cod")} icon={<Banknote className="h-5 w-5 text-brand-600" />} title={upi ? "Cash or UPI on delivery" : "Cash on delivery"} subtitle={upi ? "Pay cash or by PhonePe, Google Pay or Paytm when your order arrives" : "Pay the rider when your order arrives"} /> : null}
             <PayOption active={payment === "wallet"} disabled={!walletOk} onClick={() => setPayment("wallet")} icon={<Wallet className="h-5 w-5 text-saffron-600" />} title="Merta Wallet" subtitle={`Balance ${formatINR(walletBalance)}${walletOk ? "" : " · insufficient"}`} />
             {razorpayEnabled ? <PayOption active={payment === "upi"} disabled={!razorpayEnabled} onClick={() => setPayment("upi")} icon={<Smartphone className="h-5 w-5 text-info" />} title="UPI" subtitle="GPay, PhonePe, Paytm via Razorpay" /> : null}
             {razorpayEnabled ? <PayOption active={payment === "card"} disabled={!razorpayEnabled} onClick={() => setPayment("card")} icon={<CreditCard className="h-5 w-5 text-info" />} title="Credit / Debit card" subtitle="Visa, Mastercard, RuPay" /> : null}
@@ -150,7 +150,6 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
       </aside>
 
       <PlaceOrderSheet open={confirming} onClose={() => setConfirming(false)} onPlace={() => void place()} address={addresses.find((a) => a.id === addressId) ?? null} total={summary.total} payment={payment} upi={Boolean(upi)} />
-      <PlacingScreen open={placing} />
       <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Location information" size="screen">
         <AddressWizard defaultName={user.name} defaultPhone={user.phone} onCancel={addresses.length ? () => setAddOpen(false) : undefined} onSaved={(a) => { setAddresses((cur) => [a, ...cur.filter((x) => x.id !== a.id)]); setAddressId(a.id); setAddOpen(false); }} />
       </Modal>

@@ -108,8 +108,8 @@ export function OrderTrackingView({ initial, placed, paymentState, push }: { ini
         {paymentState === "pending" || (o.payment_status === "pending" && o.payment_method !== "cod") ? <Alert tone="warning" icon={<CreditCard className="h-4 w-4" />} title="Payment pending">Your order is saved but payment was not completed. Packing starts once payment is received. <Link href={`/checkout`} className="font-semibold underline">Retry from checkout</Link> or contact support.</Alert> : null}
         {upi && active && o.payment_method === "cod" && o.payment_status === "cod_pending" ? (
           <details className="rounded-lg border border-line bg-card px-4 py-3">
-            <summary className="tap min-h-11 cursor-pointer content-center text-sm font-semibold text-ink">Pay by UPI when your order arrives</summary>
-            <div className="pb-2 pt-2"><UpiQr upi={upi} amount={Number(o.total)} note={o.order_number} /><p className="mt-2 text-center text-xs text-ink-3">Pay when the rider is with you, then show the success screen and give your delivery OTP.</p></div>
+            <summary className="tap min-h-11 cursor-pointer content-center text-sm font-semibold text-ink">Pay by PhonePe, Google Pay or Paytm, or cash on delivery</summary>
+            <div className="pb-2 pt-2"><UpiQr upi={upi} amount={Number(o.total)} note={o.order_number} /><p className="mt-2 text-center text-xs text-ink-3">Pay now or when the rider is with you, then show the payment success screen and give your delivery OTP.</p></div>
           </details>
         ) : null}
         {paymentState === "setup" ? <Alert tone="warning" title="Online payment unavailable">Razorpay is not configured on this deployment yet. Your order is saved with payment pending; please contact support or choose Cash on Delivery next time.</Alert> : null}

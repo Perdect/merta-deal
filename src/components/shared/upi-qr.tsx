@@ -2,7 +2,7 @@
 import * as React from "react";
 import { Copy } from "lucide-react";
 import { toast } from "@/components/ui/toast";
-import { upiLink, type UpiDetails } from "@/lib/upi";
+import { upiLink, upiAppLinks, type UpiDetails } from "@/lib/upi";
 import { formatINR } from "@/lib/utils";
 
 /** A QR for one order: the amount and order number are filled in. Scanning it proves nothing by itself. */
@@ -22,7 +22,10 @@ export function UpiQr({ upi, amount, note }: { upi: UpiDetails; amount: number; 
       <p className="mt-2 font-display text-xl font-extrabold tabular text-ink">{formatINR(amount, { precise: true })}</p>
       {upi.name ? <p className="text-xs text-ink-2">Pay to {upi.name}</p> : null}
       <button type="button" onClick={copy} className="tap mt-1 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-brand-700"><Copy className="h-4 w-4" aria-hidden />{upi.id}</button>
-      <a href={link} className="tap mx-auto mt-1 hidden h-11 items-center justify-center rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white pointer-coarse:flex">Open UPI app</a>
+      <div className="mt-2 hidden grid-cols-2 gap-2 pointer-coarse:grid">
+        {upiAppLinks(upi, amount, note).map((a, i) => <a key={a.name} href={a.href} className={i === 3 ? "tap flex h-11 items-center justify-center rounded-lg border border-line-2 bg-card px-3 text-sm font-semibold text-ink" : "tap flex h-11 items-center justify-center rounded-lg bg-brand-600 px-3 text-sm font-semibold text-white"}>{a.name}</a>)}
+      </div>
+      <p className="mt-2 hidden text-[11px] text-ink-3 pointer-coarse:block">Or scan the QR from any UPI app on another phone.</p>
     </div>
   );
 }

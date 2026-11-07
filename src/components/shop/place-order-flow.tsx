@@ -15,7 +15,7 @@ const TYPE_ICON = { home: Home, work: Briefcase, other: MapPin };
 function payLine(payment: PaymentMethod, upi: boolean) {
   if (ONLINE.includes(payment)) return "You will pay online in the next step.";
   if (payment === "wallet") return "Paid from your Merta Wallet.";
-  return upi ? "Pay by cash or UPI when your order arrives." : "Pay cash when your order arrives.";
+  return upi ? "Pay by cash, PhonePe, Google Pay or Paytm when your order arrives." : "Pay cash when your order arrives.";
 }
 
 /**
@@ -62,36 +62,5 @@ function PlaceButton({ onPlace, label, ariaLabel }: { onPlace: () => void; label
       <span aria-hidden className={cn("absolute inset-y-0 left-0 bg-brand-800 motion-reduce:hidden", armed ? "w-full" : "w-0")} style={{ transition: armed ? `width ${AUTO_PLACE_MS}ms linear` : "none" }} />
       <span className="relative">{label}</span>
     </button>
-  );
-}
-
-/** After this long the hold screen offers a way out, in case the order page never arrives. */
-const SLOW_AFTER_MS = 15000;
-
-/**
- * Full-screen hold while place_order runs, so a slow connection never shows a dead button. It is
- * only ever a hold: if the order page has not taken over after a while it offers My orders, since
- * the order may well have been placed by then.
- */
-export function PlacingScreen({ open }: { open: boolean }) {
-  return open ? <PlacingBody /> : null;
-}
-
-function PlacingBody() {
-  const [slow, setSlow] = React.useState(false);
-  React.useEffect(() => { const t = setTimeout(() => setSlow(true), SLOW_AFTER_MS); return () => clearTimeout(t); }, []);
-  return (
-    <div role="status" aria-live="assertive" className="fixed inset-0 z-[90] bg-card animate-fade-in motion-reduce:animate-none" style={{ paddingTop: "var(--safe-top)", paddingBottom: "var(--safe-bottom)" }}>
-      <div className="flex h-full flex-col items-center justify-center px-6 text-center">
-        <span className="relative flex h-28 w-28 items-center justify-center" aria-hidden>
-          <span className="absolute inset-0 rounded-full bg-brand-100 animate-pulse-soft motion-reduce:animate-none" />
-          <LogoMark size={72} className="relative drop-shadow-sm" />
-        </span>
-        <h1 className="mt-7 font-display text-2xl font-bold text-ink">Confirming your order…</h1>
-        <p className="mt-2 text-sm text-ink-3">This takes a moment.</p>
-        {slow ? <p className="mt-6 text-sm text-ink-2 animate-fade-in">Taking longer than usual. Your order may already be placed: <a href="/account/orders" className="font-bold text-brand-700 underline underline-offset-2">check My orders</a>.</p> : null}
-      </div>
-      <p className="absolute inset-x-0 bottom-0 bg-brand-50 px-6 py-3 text-center text-xs text-ink-2" style={{ paddingBottom: "calc(0.75rem + var(--safe-bottom))" }}>Please don&rsquo;t close the app or go back until your order is confirmed.</p>
-    </div>
   );
 }
