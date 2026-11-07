@@ -5,6 +5,8 @@ export type AlertOrder = {
   id: string; order_number: string; status: OrderStatus; item_count: number; total: number;
   payment_method: PaymentMethod; payment_status: string; delivery_type: string;
   area: string | null; city: string | null; created_at: string; promised_at: string | null;
+  /** Direct UPI (0042): waiting for the admin to find the payment in the bank; accept = confirm the payment. */
+  upi_pending?: boolean; upi_reference?: string | null; upi_claimed_at?: string | null;
 };
 
 export type AlertFeed = { now: string; ring_seconds: number; reminder_seconds: number; orders: AlertOrder[] };

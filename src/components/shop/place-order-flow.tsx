@@ -3,7 +3,6 @@ import * as React from "react";
 import { Banknote, Wallet, Smartphone, Home, Briefcase, MapPin } from "lucide-react";
 import type { Address, PaymentMethod } from "@/types/app";
 import { BottomSheet } from "@/components/ui/overlay";
-import { LogoMark } from "@/components/ui/misc";
 import { addressLine, addressTitle } from "@/stores/location-store";
 import { cn, formatINR } from "@/lib/utils";
 
@@ -12,7 +11,8 @@ const AUTO_PLACE_MS = 5000;
 const ONLINE: PaymentMethod[] = ["upi", "card", "netbanking"];
 const TYPE_ICON = { home: Home, work: Briefcase, other: MapPin };
 
-function payLine(payment: PaymentMethod, upi: boolean) {
+function payLine(payment: PaymentMethod, upi: boolean, upiNow: boolean) {
+  if (payment === "upi" && upiNow) return "Pay by PhonePe, Google Pay or Paytm right after placing. Packing starts once your payment is confirmed.";
   if (ONLINE.includes(payment)) return "You will pay online in the next step.";
   if (payment === "wallet") return "Paid from your Merta Wallet.";
   return upi ? "Pay by cash, PhonePe, Google Pay or Paytm when your order arrives." : "Pay cash when your order arrives.";
@@ -23,15 +23,16 @@ function payLine(payment: PaymentMethod, upi: boolean) {
  * fills over a few seconds and then places the order by itself, so one tap at checkout is enough,
  * while Cancel stops it. A second tap places it straight away. Nothing is ordered until onPlace runs.
  */
-export function PlaceOrderSheet({ open, onClose, onPlace, address, total, payment, upi }: { open: boolean; onClose: () => void; onPlace: () => void; address: Address | null; total: number; payment: PaymentMethod; upi: boolean }) {
+export function PlaceOrderSheet({ open, onClose, onPlace, address, total, payment, upi, upiNow = false }: { open: boolean; onClose: () => void; onPlace: () => void; address: Address | null; total: number; payment: PaymentMethod; upi: boolean; /** UPI is paid to the business directly after placing, not through a gateway. */ upiNow?: boolean }) {
   const Icon = address ? TYPE_ICON[address.type] : MapPin;
-  const online = ONLINE.includes(payment);
+  const direct = payment === "upi" && upiNow;
+  const online = ONLINE.includes(payment) && !direct;
   return (
-    <BottomSheet open={open} onClose={onClose} title="Ordering now" description={payLine(payment, upi)}>
+    <BottomSheet open={open} onClose={onClose} title="Ordering now" description={payLine(payment, upi, upiNow)}>
       <ul className="mt-2 divide-y divide-dashed divide-line">
         <li className="flex items-center gap-3 py-3">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-surface-2 text-brand-700">{online ? <Smartphone className="h-5 w-5" /> : payment === "wallet" ? <Wallet className="h-5 w-5" /> : <Banknote className="h-5 w-5" />}</span>
-          <span><span className="block font-display text-lg font-bold text-ink tabular">{formatINR(total, { precise: true })}</span><span className="block text-sm text-ink-3">{online ? "Amount to pay now" : "Amount to pay"}</span></span>
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-surface-2 text-brand-700">{online || direct ? <Smartphone className="h-5 w-5" /> : payment === "wallet" ? <Wallet className="h-5 w-5" /> : <Banknote className="h-5 w-5" />}</span>
+          <span><span className="block font-display text-lg font-bold text-ink tabular">{formatINR(total, { precise: true })}</span><span className="block text-sm text-ink-3">{online ? "Amount to pay now" : direct ? "Amount to pay by UPI" : "Amount to pay"}</span></span>
         </li>
         <li className="flex items-center gap-3 py-3">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-surface-2 text-ink-3"><Icon className="h-5 w-5" /></span>

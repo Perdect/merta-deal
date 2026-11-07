@@ -58,7 +58,7 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
     : summary.issues.length ? "Some items are no longer available in the quantity you chose. Update your cart to continue."
     : deliveryType === "scheduled" && !slot ? "Pick a delivery slot to continue."
     : payment === "wallet" && !walletOk ? "Your wallet balance doesn't cover this order. Choose another payment method."
-    : online.includes(payment) && !razorpayEnabled ? "Online payment isn't available yet. Choose Cash on Delivery."
+    : online.includes(payment) && !razorpayEnabled && !(payment === "upi" && upi?.payNow) ? "Online payment isn't available yet. Choose Cash on Delivery."
     : null;
   const canPlace = !blocker;
 
@@ -125,7 +125,7 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
           <div className="space-y-2">
             {codEnabled ? <PayOption active={payment === "cod"} onClick={() => setPayment("cod")} icon={<Banknote className="h-5 w-5 text-brand-600" />} title={upi ? "Cash or UPI on delivery" : "Cash on delivery"} subtitle={upi ? "Pay cash or by PhonePe, Google Pay or Paytm when your order arrives" : "Pay the rider when your order arrives"} /> : null}
             <PayOption active={payment === "wallet"} disabled={!walletOk} onClick={() => setPayment("wallet")} icon={<Wallet className="h-5 w-5 text-saffron-600" />} title="Merta Wallet" subtitle={`Balance ${formatINR(walletBalance)}${walletOk ? "" : " · insufficient"}`} />
-            {razorpayEnabled ? <PayOption active={payment === "upi"} disabled={!razorpayEnabled} onClick={() => setPayment("upi")} icon={<Smartphone className="h-5 w-5 text-info" />} title="UPI" subtitle="GPay, PhonePe, Paytm via Razorpay" /> : null}
+            {razorpayEnabled || upi?.payNow ? <PayOption active={payment === "upi"} onClick={() => setPayment("upi")} icon={<Smartphone className="h-5 w-5 text-info" />} title="UPI · PhonePe, Google Pay, Paytm" subtitle={razorpayEnabled ? "Pay securely in the next step" : "Pay right after ordering; we pack once your payment is confirmed"} /> : null}
             {razorpayEnabled ? <PayOption active={payment === "card"} disabled={!razorpayEnabled} onClick={() => setPayment("card")} icon={<CreditCard className="h-5 w-5 text-info" />} title="Credit / Debit card" subtitle="Visa, Mastercard, RuPay" /> : null}
             {razorpayEnabled ? <PayOption active={payment === "netbanking"} disabled={!razorpayEnabled} onClick={() => setPayment("netbanking")} icon={<Landmark className="h-5 w-5 text-info" />} title="Net banking" subtitle="All major banks" /> : null}
           </div>
@@ -145,11 +145,11 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
           <PriceBreakdown s={summary} />
         </div>
         {blocker ? <Alert tone="warning">{blocker}{!summary.meets_min_order && addressId && summary.serviceable ? <> <Link href="/cart" className="font-semibold underline">Add items</Link></> : null}</Alert> : null}
-        <Button size="lg" fullWidth loading={placing} disabled={!canPlace} onClick={() => setConfirming(true)}>{online.includes(payment) ? `Pay ${formatINR(summary.total, { precise: true })}` : `Place order · ${formatINR(summary.total, { precise: true })}`}</Button>
+        <Button size="lg" fullWidth loading={placing} disabled={!canPlace} onClick={() => setConfirming(true)}>{online.includes(payment) && razorpayEnabled ? `Pay ${formatINR(summary.total, { precise: true })}` : `Place order · ${formatINR(summary.total, { precise: true })}`}</Button>
         <p className="text-center text-[11px] text-ink-3">By placing this order you agree to the terms of service. Delivery OTP will be shared after the order is placed.</p>
       </aside>
 
-      <PlaceOrderSheet open={confirming} onClose={() => setConfirming(false)} onPlace={() => void place()} address={addresses.find((a) => a.id === addressId) ?? null} total={summary.total} payment={payment} upi={Boolean(upi)} />
+      <PlaceOrderSheet open={confirming} onClose={() => setConfirming(false)} onPlace={() => void place()} address={addresses.find((a) => a.id === addressId) ?? null} total={summary.total} payment={payment} upi={Boolean(upi)} upiNow={Boolean(upi?.payNow) && !razorpayEnabled} />
       <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Location information" size="screen">
         <AddressWizard defaultName={user.name} defaultPhone={user.phone} onCancel={addresses.length ? () => setAddOpen(false) : undefined} onSaved={(a) => { setAddresses((cur) => [a, ...cur.filter((x) => x.id !== a.id)]); setAddressId(a.id); setAddOpen(false); }} />
       </Modal>

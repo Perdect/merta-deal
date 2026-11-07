@@ -175,7 +175,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
     : gate.cartBlocker ? gate.cartBlocker
     : deliveryType === "scheduled" && !slot ? "Pick a delivery slot to continue."
     : payment === "wallet" && !walletOk ? "Your wallet balance doesn't cover this order. Choose another payment method."
-    : ONLINE.includes(payment) && !razorpayEnabled ? "Online payment isn't available yet. Choose Cash on Delivery."
+    : ONLINE.includes(payment) && !razorpayEnabled && !(payment === "upi" && upi?.payNow) ? "Online payment isn't available yet. Choose Cash on Delivery."
     : null;
 
   const scheduledRange = () => {
@@ -222,7 +222,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
 
   const sheets = (
     <>
-      <PlaceOrderSheet open={confirming} onClose={() => setConfirming(false)} onPlace={() => void place()} address={selectedAddress} total={s?.total ?? 0} payment={payment} upi={Boolean(upi)} />
+      <PlaceOrderSheet open={confirming} onClose={() => setConfirming(false)} onPlace={() => void place()} address={selectedAddress} total={s?.total ?? 0} payment={payment} upi={Boolean(upi)} upiNow={Boolean(upi?.payNow) && !razorpayEnabled} />
       <AddressSheet open={sheet === "address"} onClose={closeSheet} addresses={addresses} selectedId={addressId} defaultName={user.name} defaultPhone={user.phone}
         onPick={(a, isNew) => { if (isNew) { addAddress(a); router.refresh(); } setAddressId(a.id); void adoptAddress(a); closeSheet(); }} />
       <LoginModal open={sheet === "login" && !account} onClose={() => { closeSheet(); setResume(null); }} eta={`${eta.min}–${eta.max} minutes`} guest={isGuest} title={resume === "pay" ? "Login to place your order" : undefined} />
@@ -421,7 +421,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
               </Card>
 
               <div className="space-y-3">
-                {razorpayEnabled ? <div><p className="mb-1.5 px-1 text-sm font-bold text-ink">Pay by UPI</p><Card><PayRow current={payment} onPick={setPayment} id="upi" icon={<Smartphone className="h-5 w-5" />} title="UPI" sub={razorpayEnabled ? "GPay, PhonePe, Paytm" : "Available once online payments are set up"} disabled={!razorpayEnabled} /></Card></div> : null}
+                {razorpayEnabled || upi?.payNow ? <div><p className="mb-1.5 px-1 text-sm font-bold text-ink">Pay by UPI</p><Card><PayRow current={payment} onPick={setPayment} id="upi" icon={<Smartphone className="h-5 w-5" />} title="UPI · PhonePe, Google Pay, Paytm" sub={razorpayEnabled ? "Pay securely in the next step" : "Pay right after ordering; we pack once your payment is confirmed"} /></Card></div> : null}
                 {razorpayEnabled ? <div><p className="mb-1.5 px-1 text-sm font-bold text-ink">Credit & Debit Cards</p><Card><PayRow current={payment} onPick={setPayment} id="card" icon={<CreditCard className="h-5 w-5" />} title="Add New Card" sub={razorpayEnabled ? "Visa, Mastercard, RuPay & more" : "Available once online payments are set up"} disabled={!razorpayEnabled} /></Card></div> : null}
                 <div><p className="mb-1.5 px-1 text-sm font-bold text-ink">Wallets</p><Card><PayRow current={payment} onPick={setPayment} id="wallet" icon={<Wallet className="h-5 w-5" />} title="Merta Wallet" sub={`Balance ${formatINR(walletBalance)}${walletOk ? "" : " · insufficient for this order"}`} disabled={!walletOk} /></Card></div>
                 {razorpayEnabled ? <div><p className="mb-1.5 px-1 text-sm font-bold text-ink">Netbanking</p><Card><PayRow current={payment} onPick={setPayment} id="netbanking" icon={<Landmark className="h-5 w-5" />} title="Net banking" sub={razorpayEnabled ? "All major banks" : "Available once online payments are set up"} disabled={!razorpayEnabled} /></Card></div> : null}
@@ -444,7 +444,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
             ) : (
               <>
                 {payBlocker ? <Alert tone="warning" className="mb-2">{payBlocker}</Alert> : null}
-                <Button size="lg" fullWidth className="h-13 rounded-xl text-base" loading={placing} disabled={Boolean(payBlocker)} onClick={() => setConfirming(true)}>{ONLINE.includes(payment) ? `Pay ${formatINR(s.total, { precise: true })}` : `Place order · ${formatINR(s.total, { precise: true })}`}</Button>
+                <Button size="lg" fullWidth className="h-13 rounded-xl text-base" loading={placing} disabled={Boolean(payBlocker)} onClick={() => setConfirming(true)}>{ONLINE.includes(payment) && razorpayEnabled ? `Pay ${formatINR(s.total, { precise: true })}` : `Place order · ${formatINR(s.total, { precise: true })}`}</Button>
                 <p className="mt-2 text-center text-[11px] text-ink-3">Delivery OTP will be shared after the order is placed.</p>
               </>
             )}

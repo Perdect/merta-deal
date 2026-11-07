@@ -8,6 +8,7 @@ import { AdminPageHeader, DataTable, CellStack, RowLink, EmptyBlock, ErrorBlock,
 import { RazorpayNotice, PaymentRefundActions } from "@/components/admin/payment-actions";
 import { hrefWith } from "@/components/admin/care/shared";
 import { UpiPending, type PendingUpi } from "@/components/admin/upi-pending";
+import { UpiOrdersPending, type PendingUpiOrder } from "@/components/admin/upi-orders-pending";
 import { createClient } from "@/lib/supabase/server";
 import { PAYMENT_METHOD_OPTIONS, PAYMENT_PROVIDER_OPTIONS } from "@/components/admin/constants";
 import { ORDER_STATUS_META } from "@/lib/order-status";
@@ -25,12 +26,14 @@ export default async function AdminPaymentsPage({ searchParams }: { searchParams
   const viewId = spGet(sp, "view");
   const validView = /^[0-9a-f-]{36}$/.test(viewId);
   const supabase = await createClient();
-  const [list, counts, view, pendingUpi] = await Promise.all([
+  const [list, counts, view, pendingUpi, pendingUpiOrders] = await Promise.all([
     listPaymentsAdmin({ ...filters, tab, page: spPage(sp) }),
     countPayments(filters),
     validView ? getPaymentAdmin(viewId) : Promise.resolve(null),
     // Absent until migration 0041 is applied, which simply shows nothing.
     (supabase.rpc as unknown as (fn: string) => PromiseLike<{ data: PendingUpi[] | null }>).call(supabase, "admin_pending_upi"),
+    // Absent until migration 0042 is applied, which simply shows nothing.
+    (supabase.rpc as unknown as (fn: string) => PromiseLike<{ data: PendingUpiOrder[] | null }>).call(supabase, "admin_pending_upi_orders"),
   ]);
   const { razorpayKeyId, razorpayKeySecret, serviceRoleKey } = serverEnv();
   const rzp = Boolean(razorpayKeyId && razorpayKeySecret && serviceRoleKey);
@@ -42,6 +45,7 @@ export default async function AdminPaymentsPage({ searchParams }: { searchParams
     <>
       <AdminPageHeader title="Payments" description="Every payment attempt, with refunds that still need to be paid back. Method and payment status are shown separately." />
 
+      <UpiOrdersPending items={pendingUpiOrders.data ?? []} />
       <UpiPending items={pendingUpi.data ?? []} />
       <StatusTabs param="tab" items={PAYMENT_TABS.map((t) => ({ value: t, label: TAB_LABEL[t], count: counts[t] ?? null }))} />
       {tab === "refunds" ? <RazorpayNotice configured={rzp} /> : null}

@@ -74,7 +74,7 @@ export async function setDefaultAddressAction(id: string): Promise<ActionResult>
 }
 
 export type PlaceOrderInput = { addressId: string; paymentMethod: PaymentMethod; deliveryType: DeliveryType; instructions?: string; scheduledStart?: string; scheduledEnd?: string };
-export type PlaceOrderResult = { order_id: string; order_number: string; total: number; payment_required: boolean; payment_method: PaymentMethod };
+export type PlaceOrderResult = { order_id: string; order_number: string; total: number; payment_required: boolean; payment_method: PaymentMethod; /** cod | wallet | razorpay | upi (direct, confirmed by the admin) */ payment_provider?: string; upi_pending?: boolean };
 
 export async function placeOrderAction(input: PlaceOrderInput): Promise<ActionResult<PlaceOrderResult>> {
   const supabase = await createClient();

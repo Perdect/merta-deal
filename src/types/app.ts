@@ -95,6 +95,8 @@ export type OrderTracking = {
   history: OrderHistoryEntry[];
   /** Where the order is packed and collected from (settings.pickup_point). */ pickup: PickupPoint;
   payment: { provider: string; method: PaymentMethod; status: Enums<"payment_status">; amount: number; provider_order_id: string | null; refund_required: boolean } | null;
+  /** Direct UPI payment (0042): what the customer told us, and whether the admin looked and found nothing. */
+  upi_claim?: { reference: string | null; claimed_at: string | null; checked_at: string | null } | null;
   assignment: { id: string; status: Enums<"assignment_status">; accepted_at: string | null; picked_up_at: string | null; delivered_at: string | null; distance_km: number | null; earning: number | null; cod_amount: number; expires_at: string; rider: TrackingRider; last_location: TrackingLocation | null } | null;
   customer: { name: string; phone: string } | null;
   /** Only for the customer, only while out for delivery. */ delivery_otp: string | null;

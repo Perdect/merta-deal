@@ -11,11 +11,12 @@ import { useNow } from "@/components/rider/use-now";
 import { useRinger } from "@/lib/alerts/use-ringer";
 import { shouldRing, type AlertFeed, type AlertOrder } from "@/lib/alerts/types";
 import { getOrderAlertsAction, acceptOrderAction, deliverPendingPushAction } from "@/lib/actions/alerts";
+import { confirmUpiOrderPaymentAction } from "@/lib/actions/upi";
 import { PAYMENT_METHOD_LABEL } from "@/lib/order-status";
 import type { Notification } from "@/types/app";
 import type { Tables } from "@/types/database";
 import { SoundChip, type PushConfig } from "@/components/alerts/alert-setup";
-import { cn, formatINR } from "@/lib/utils";
+import { cn, formatINR, timeAgo } from "@/lib/utils";
 
 const SNOOZE_KEY = "md-order-alert-snoozed";
 const CHANNEL = "md-order-alerts";
@@ -149,6 +150,24 @@ export function OrderAlerts({ userId, push }: { userId: string; push: PushConfig
     finally { setBusy(null); }
   };
 
+  // Direct UPI: "received" records the bank reference and confirms the order in one step.
+  const confirmUpi = async (o: AlertOrder, received: boolean, reference: string) => {
+    if (busy) return;
+    setBusy(o.id);
+    try {
+      const r = await confirmUpiOrderPaymentAction(o.id, received, reference);
+      if (!r.ok) { toast.error(received ? "Could not confirm" : "Not saved", r.error); await load(); return; }
+      if (received) {
+        toast.success(`Order ${o.order_number} confirmed`, "Payment received. Pack it, then tap Packed to call a rider.");
+        const next = { ...(feedRef.current ?? { now: new Date().toISOString(), ring_seconds: 0, reminder_seconds: 0, orders: [] }), orders: orders.filter((x) => x.id !== o.id) };
+        feedRef.current = next; setFeed(next);
+      } else toast.info("Marked as not received", "The customer has been told to pay or switch to cash.");
+      try { new BroadcastChannel(CHANNEL).postMessage({ type: "reload" }); } catch { /* unsupported */ }
+      router.refresh();
+    } catch { toast.error("Could not save", "Check your connection and try again."); }
+    finally { setBusy(null); }
+  };
+
   if (!count) return null;
   const i = Math.min(index, count - 1);
   const o = orders[i]!;
@@ -156,18 +175,18 @@ export function OrderAlerts({ userId, push }: { userId: string; push: PushConfig
   const ringingThis = !snoozed.has(o.id) && feed && serverNow ? shouldRing(o, feed, serverNow) : false;
 
   return <OrderAlertView collapsed={collapsed} setCollapsed={setCollapsed} count={count} live={live} o={o} i={i} ageSec={ageSec} ringingThis={ringingThis}
-    ringer={ringer} snoozed={snoozed} loadError={loadError} busy={busy} accept={accept} snooze={snooze} setIndex={setIndex} />;
+    ringer={ringer} snoozed={snoozed} loadError={loadError} busy={busy} accept={accept} confirmUpi={confirmUpi} snooze={snooze} setIndex={setIndex} />;
 }
 
 export type OrderAlertViewProps = {
   collapsed: boolean; setCollapsed: (v: boolean) => void; count: number; live: boolean; o: AlertOrder; i: number; ageSec: number; ringingThis: boolean;
   ringer: { sound: ReturnType<typeof useRinger>["sound"]; leader: boolean; muted: boolean; unlock: () => Promise<boolean>; claim: () => void };
-  snoozed: Set<string>; loadError: string | null; busy: string | null; accept: (o: AlertOrder) => void | Promise<void>; snooze: (id: string) => void; setIndex: React.Dispatch<React.SetStateAction<number>>;
+  snoozed: Set<string>; loadError: string | null; busy: string | null; accept: (o: AlertOrder) => void | Promise<void>; confirmUpi?: (o: AlertOrder, received: boolean, reference: string) => void | Promise<void>; snooze: (id: string) => void; setIndex: React.Dispatch<React.SetStateAction<number>>;
 };
 
 /** The popup itself, free of data fetching so it can be rendered with fixture data. */
 export function OrderAlertView(p: OrderAlertViewProps) {
-  const { collapsed, setCollapsed, count, live, o, i, ageSec, ringingThis, ringer, snoozed, loadError, busy, accept, snooze, setIndex } = p;
+  const { collapsed, setCollapsed, count, live, o, i, ageSec, ringingThis, ringer, snoozed, loadError, busy, accept, confirmUpi, snooze, setIndex } = p;
   if (collapsed) {
     return (
       <button type="button" onClick={() => setCollapsed(false)} aria-label={`${count} unaccepted ${count === 1 ? "order" : "orders"}, open`}
@@ -187,7 +206,7 @@ export function OrderAlertView(p: OrderAlertViewProps) {
             <BellRing className="relative h-4 w-4" aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
-            <p id="order-alert-title" className="text-sm font-bold text-ink">{o.status === "placed" ? "New order · needs acceptance" : "New order"}</p>
+            <p id="order-alert-title" className="text-sm font-bold text-ink">{o.upi_pending ? "New order · waiting for UPI payment" : o.status === "placed" ? "New order · needs acceptance" : "New order"}</p>
             <p className="text-[11px] text-ink-3">{count > 1 ? `${i + 1} of ${count} waiting` : "1 waiting"} · {ageSec < 60 ? `${ageSec}s ago` : `${Math.floor(ageSec / 60)} min ago`}</p>
           </div>
           <SoundChip sound={ringer.sound} leader={ringer.leader} muted={ringer.muted || snoozed.has(o.id)} onClaim={ringer.claim} />
@@ -201,7 +220,7 @@ export function OrderAlertView(p: OrderAlertViewProps) {
           {loadError ? <p className="mt-2 text-xs text-danger">{loadError}</p> : null}
         </div>
         <div className="grid grid-cols-2 gap-2 px-4 pb-3">
-          <Button size="lg" loading={busy === o.id} disabled={busy !== null} onClick={() => accept(o)} className="col-span-2"><Check className="h-4 w-4" /> Accept order</Button>
+          {o.upi_pending ? <UpiAcceptBlock key={o.id} o={o} busy={busy === o.id} disabled={busy !== null} onConfirm={(received, ref) => void confirmUpi?.(o, received, ref)} /> : <Button size="lg" loading={busy === o.id} disabled={busy !== null} onClick={() => accept(o)} className="col-span-2"><Check className="h-4 w-4" /> Accept order</Button>}
           <Button size="md" variant="outline" href={`/admin/orders/${o.id}`} onClick={() => setCollapsed(true)}><ExternalLink className="h-4 w-4" /> View order</Button>
           <Button size="md" variant="outline" onClick={() => snooze(o.id)} aria-pressed={snoozed.has(o.id)}>{snoozed.has(o.id) ? <><Volume2 className="h-4 w-4" /> Unmute</> : <><VolumeX className="h-4 w-4" /> Mute sound</>}</Button>
         </div>
@@ -212,6 +231,22 @@ export function OrderAlertView(p: OrderAlertViewProps) {
             <button type="button" onClick={() => setIndex((x) => (x + 1) % count)} className="tap flex h-9 items-center gap-1 rounded-md px-2 text-xs font-semibold text-ink-2 hover:bg-surface-2">Next <ChevronRight className="h-4 w-4" /></button>
           </div>
         ) : null}
+      </div>
+    </div>
+  );
+}
+
+/** For a direct UPI order: the bank reference and "Payment received", which confirms the order; "Not received" tells the customer. */
+function UpiAcceptBlock({ o, busy, disabled, onConfirm }: { o: AlertOrder; busy: boolean; disabled: boolean; onConfirm: (received: boolean, reference: string) => void }) {
+  const [ref, setRef] = React.useState(o.upi_reference ?? "");
+  return (
+    <div className="col-span-2 rounded-lg border border-line-2 bg-[#fff6dc] p-3">
+      <p className="text-sm font-semibold text-ink">UPI payment of {formatINR(o.total, { precise: true })} to confirm</p>
+      <p className="mt-0.5 text-xs text-ink-2">{o.upi_claimed_at ? `Customer says paid ${timeAgo(o.upi_claimed_at)}${o.upi_reference ? ` · ref ${o.upi_reference}` : ""}.` : "The customer hasn't said they've paid yet."} Check your bank, then confirm.</p>
+      <input value={ref} onChange={(e) => setRef(e.target.value.slice(0, 40))} placeholder="UPI reference / UTR from your bank" aria-label="UPI reference" maxLength={40} className="mt-2 h-11 w-full rounded-md border border-line-2 bg-card px-3 text-sm text-ink" />
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <Button size="md" loading={busy} disabled={disabled || ref.trim().length < 4} onClick={() => onConfirm(true, ref)}><Check className="h-4 w-4" /> Payment received</Button>
+        <Button size="md" variant="outline" disabled={disabled} onClick={() => onConfirm(false, ref)}>Not received</Button>
       </div>
     </div>
   );

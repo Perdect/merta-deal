@@ -23,6 +23,7 @@ import { formatINR, formatDateTime, formatTime, cn } from "@/lib/utils";
 import type { OrderStatus } from "@/lib/order-status";
 import { DeliveryOtpStrip } from "./delivery-otp-strip";
 import { UpiQr } from "@/components/shared/upi-qr";
+import { UpiPayCard } from "./upi-pay-card";
 import { useUpiDetails } from "@/hooks/use-upi-details";
 import { PushOptInCard } from "@/components/pwa/push-opt-in-card";
 import { OrderPlacedSplash } from "./order-placed-splash";
@@ -68,6 +69,8 @@ export function OrderTrackingView({ initial, placed, paymentState, push }: { ini
   const paid = o.payment_method === "cod" || ["paid", "authorized"].includes(o.payment_status);
   const active = !TERMINAL.includes(o.status);
   const upi = useUpiDetails();
+  // A direct UPI payment the customer still has to make; the admin confirms it, which confirms the order.
+  const upiNow = t.payment?.provider === "upi" && o.payment_status === "pending" && o.status === "placed";
   const eta = o.promised_at ? Math.round((new Date(o.promised_at).getTime() - now) / 60000) : null;
   const late = active && paid && eta != null && eta < 0;
   const addr = o.address_snapshot as unknown as { full_name: string; phone: string; house: string; street: string; area: string; landmark?: string; city: string; pincode: string; lat?: number; lng?: number; label?: string | null };
@@ -105,7 +108,8 @@ export function OrderTrackingView({ initial, placed, paymentState, push }: { ini
             {o.status === "ready_for_pickup" ? "Your order is packed and we're still finding a delivery partner." : o.status === "placed" ? "Your order hasn't been confirmed yet." : o.status === "out_for_delivery" || o.status === "rider_assigned" ? "Your delivery partner is taking longer than expected." : "The store is taking longer than usual to pack."} Sorry for the wait.
           </Alert>
         ) : null}
-        {paymentState === "pending" || (o.payment_status === "pending" && o.payment_method !== "cod") ? <Alert tone="warning" icon={<CreditCard className="h-4 w-4" />} title="Payment pending">Your order is saved but payment was not completed. Packing starts once payment is received. <Link href={`/checkout`} className="font-semibold underline">Retry from checkout</Link> or contact support.</Alert> : null}
+        {upiNow && upi ? <UpiPayCard upi={upi} orderId={o.id} orderNumber={o.order_number} amount={Number(o.total)} claim={t.upi_claim ?? null} onChanged={refresh} /> : null}
+        {!upiNow && (paymentState === "pending" || (o.payment_status === "pending" && o.payment_method !== "cod")) ? <Alert tone="warning" icon={<CreditCard className="h-4 w-4" />} title="Payment pending">Your order is saved but payment was not completed. Packing starts once payment is received. <Link href={`/checkout`} className="font-semibold underline">Retry from checkout</Link> or contact support.</Alert> : null}
         {upi && active && o.payment_method === "cod" && o.payment_status === "cod_pending" ? (
           <details className="rounded-lg border border-line bg-card px-4 py-3">
             <summary className="tap min-h-11 cursor-pointer content-center text-sm font-semibold text-ink">Pay by PhonePe, Google Pay or Paytm, or cash on delivery</summary>

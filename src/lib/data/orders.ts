@@ -20,5 +20,12 @@ export const getOrderTracking = cache(async (orderId: string): Promise<OrderTrac
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("order_tracking", { p_order_id: orderId });
   if (error || !data) return null;
-  return data as unknown as OrderTracking;
+  const t = data as unknown as OrderTracking;
+  if (t.payment?.provider === "upi" && t.payment.status === "pending") {
+    // What the customer said about a direct UPI payment lives on the payment row (RLS: own order or staff).
+    const { data: p } = await supabase.from("payments").select("provider_payment_id, raw_response").eq("order_id", orderId).eq("status", "pending").order("created_at", { ascending: false }).limit(1).maybeSingle();
+    const raw = (p?.raw_response ?? {}) as Record<string, unknown>;
+    t.upi_claim = p ? { reference: p.provider_payment_id, claimed_at: typeof raw.claimed_at === "string" ? raw.claimed_at : null, checked_at: typeof raw.checked_at === "string" ? raw.checked_at : null } : null;
+  }
+  return t;
 });
