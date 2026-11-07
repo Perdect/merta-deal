@@ -57,10 +57,19 @@ export async function createRiderAction(input: NewRiderInput): Promise<ActionRes
     await admin.from("profiles").update({ full_name: d.fullName, phone: d.phone, is_active: true }).eq("id", userId);
     const { error: roleErr } = await supabase.rpc("admin_set_user_role", { p_user_id: userId, p_role: "rider" });
     if (roleErr) return { ok: false, error: `Sign-in created, but the rider role was not set: ${friendlyError(roleErr)}` };
-    const { data: rider, error: rErr } = await supabase.from("delivery_partners")
-      .insert({ user_id: userId, vehicle_type: d.vehicle_type, vehicle_number: d.vehicle_number, license_number: d.license_number, city_id: d.city_id, emergency_contact: d.emergency_contact, status: d.approve ? "active" : "pending" })
-      .select("id").single();
-    if (rErr) return { ok: false, error: `Sign-in created, but the rider record failed: ${friendlyError(rErr)}` };
+    // admin_set_user_role already creates a bare rider record for the user (pending, Merta City), so
+    // fill that in rather than inserting a second one; insert only if, for any reason, it is missing.
+    const details = { vehicle_type: d.vehicle_type, vehicle_number: d.vehicle_number, license_number: d.license_number, city_id: d.city_id, emergency_contact: d.emergency_contact, status: d.approve ? "active" : "pending" } as const;
+    let riderId: string | null = null;
+    const { data: existing, error: uErr } = await supabase.from("delivery_partners").update(details).eq("user_id", userId).select("id").maybeSingle();
+    if (uErr) return { ok: false, error: `Sign-in created, but the rider record failed: ${friendlyError(uErr)}` };
+    riderId = existing?.id ?? null;
+    if (!riderId) {
+      const { data: inserted, error: rErr } = await supabase.from("delivery_partners").insert({ user_id: userId, ...details }).select("id").single();
+      if (rErr) return { ok: false, error: `Sign-in created, but the rider record failed: ${friendlyError(rErr)}` };
+      riderId = inserted.id;
+    }
+    const rider = { id: riderId };
     await audit("rider.create", rider.id, { user_id: userId, email: d.email, phone: d.phone, status: d.approve ? "active" : "pending" });
     revalidate("/admin/riders", "/admin/users");
     return { ok: true, data: { id: rider.id } };
