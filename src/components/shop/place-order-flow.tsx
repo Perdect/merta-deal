@@ -65,9 +65,21 @@ function PlaceButton({ onPlace, label, ariaLabel }: { onPlace: () => void; label
   );
 }
 
-/** Full-screen hold while place_order runs, so a slow connection never shows a dead button. */
+/** After this long the hold screen offers a way out, in case the order page never arrives. */
+const SLOW_AFTER_MS = 15000;
+
+/**
+ * Full-screen hold while place_order runs, so a slow connection never shows a dead button. It is
+ * only ever a hold: if the order page has not taken over after a while it offers My orders, since
+ * the order may well have been placed by then.
+ */
 export function PlacingScreen({ open }: { open: boolean }) {
-  if (!open) return null;
+  return open ? <PlacingBody /> : null;
+}
+
+function PlacingBody() {
+  const [slow, setSlow] = React.useState(false);
+  React.useEffect(() => { const t = setTimeout(() => setSlow(true), SLOW_AFTER_MS); return () => clearTimeout(t); }, []);
   return (
     <div role="status" aria-live="assertive" className="fixed inset-0 z-[90] bg-card animate-fade-in motion-reduce:animate-none" style={{ paddingTop: "var(--safe-top)", paddingBottom: "var(--safe-bottom)" }}>
       <div className="flex h-full flex-col items-center justify-center px-6 text-center">
@@ -77,6 +89,7 @@ export function PlacingScreen({ open }: { open: boolean }) {
         </span>
         <h1 className="mt-7 font-display text-2xl font-bold text-ink">Confirming your order…</h1>
         <p className="mt-2 text-sm text-ink-3">This takes a moment.</p>
+        {slow ? <p className="mt-6 text-sm text-ink-2 animate-fade-in">Taking longer than usual. Your order may already be placed: <a href="/account/orders" className="font-bold text-brand-700 underline underline-offset-2">check My orders</a>.</p> : null}
       </div>
       <p className="absolute inset-x-0 bottom-0 bg-brand-50 px-6 py-3 text-center text-xs text-ink-2" style={{ paddingBottom: "calc(0.75rem + var(--safe-bottom))" }}>Please don&rsquo;t close the app or go back until your order is confirmed.</p>
     </div>
