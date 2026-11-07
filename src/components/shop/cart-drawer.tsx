@@ -110,6 +110,9 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
   const [code, setCode] = React.useState("");
   const [couponBusy, setCouponBusy] = React.useState(false);
   const [placing, setPlacing] = React.useState(false);
+  // The drawer lives in the layout and stays mounted while the order page loads, so the hold screen
+  // follows the navigation itself (isPending) rather than a flag nobody resets.
+  const [navPending, startNav] = React.useTransition();
   const [confirming, setConfirming] = React.useState(false);
   const [suggestions, setSuggestions] = React.useState<ProductCardType[]>([]);
 
@@ -198,7 +201,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
       placingRef.current = false; setPlacing(false); return;
     }
     const order = res.data;
-    const done = (q: string) => { leavingForOrder(); closeDrawer(); setSummary(null); setInstructions(""); setGiftMessage(""); router.replace(`/orders/${order.order_id}?${q}`); };
+    const done = (q: string) => { leavingForOrder(); closeDrawer(); setSummary(null); setInstructions(""); setGiftMessage(""); startNav(() => router.replace(`/orders/${order.order_id}?${q}`)); placingRef.current = false; setPlacing(false); };
     if (!order.payment_required) { done("placed=1"); return; }
     try {
       const r = await fetch("/api/payments/razorpay/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId: order.order_id }) });
@@ -223,7 +226,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
   const sheets = (
     <>
       <PlaceOrderSheet open={confirming} onClose={() => setConfirming(false)} onPlace={() => void place()} address={selectedAddress} total={s?.total ?? 0} payment={payment} upi={Boolean(upi)} />
-      <PlacingScreen open={placing} />
+      <PlacingScreen open={placing || navPending} />
       <AddressSheet open={sheet === "address"} onClose={closeSheet} addresses={addresses} selectedId={addressId} defaultName={user.name} defaultPhone={user.phone}
         onPick={(a, isNew) => { if (isNew) { addAddress(a); router.refresh(); } setAddressId(a.id); void adoptAddress(a); closeSheet(); }} />
       <LoginModal open={sheet === "login" && !account} onClose={() => { closeSheet(); setResume(null); }} eta={`${eta.min}–${eta.max} minutes`} guest={isGuest} title={resume === "pay" ? "Login to place your order" : undefined} />

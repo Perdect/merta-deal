@@ -102,6 +102,10 @@
   @keyframes svc-flip { 0%, 72%, 100% { transform: scaleX(1) } 80% { transform: scaleX(0.12) } 88% { transform: scaleX(1) } }
   @keyframes svc-check { 0% { stroke-dashoffset: 14 } 22%, 100% { stroke-dashoffset: 0 } }
   @keyframes svc-ring { 0%, 55% { transform: scale(0.9); opacity: 0 } 65% { opacity: 0.45 } 100% { transform: scale(1.35); opacity: 0 } }
+  /* Order tracking illustration: items dropping into the bag, a clock hand, a tick that draws once. */
+  @keyframes ord-drop { 0% { transform: translateY(-6px); opacity: 0 } 12% { transform: translateY(-3px); opacity: 1 } 30% { transform: translateY(0); opacity: 1 } 52% { transform: translateY(16px); opacity: 1 } 53%, 100% { transform: translateY(16px); opacity: 0 } }
+  @keyframes ord-clock { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
+  @keyframes ord-glow { 0%, 100% { opacity: 0.35 } 50% { opacity: 1 } }
   @keyframes slide-in-left { from { opacity: 0; transform: translateX(-24px) } to { opacity: 1; transform: translateX(0) } }
   @keyframes panel-in { from { opacity: 0; transform: translateX(32px) } to { opacity: 1; transform: translateX(0) } }
   @keyframes slide-in-right { from { opacity: 0; transform: translateX(24px) } to { opacity: 1; transform: translateX(0) } }

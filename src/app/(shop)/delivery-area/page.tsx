@@ -22,7 +22,7 @@ const num = (v: unknown, d: number) => { const n = Number(v); return Number.isFi
 const time12 = (t: string | null | undefined) => {
   if (!t) return null;
   const [h, m] = t.split(":").map(Number);
-  return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "am" : "pm"}`;
+  return `${(((h % 24) + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h % 24 < 12 ? "am" : "pm"}`;
 };
 
 /**

@@ -17,7 +17,7 @@ const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) && 
 const time12 = (t: string | null | undefined) => {
   if (!t) return null;
   const [h, m] = t.split(":").map(Number);
-  return `${((h + 11) % 12) + 1}${m ? `:${String(m).padStart(2, "0")}` : ""} ${h < 12 ? "AM" : "PM"}`;
+  return `${(((h % 24) + 11) % 12) + 1}${m ? `:${String(m).padStart(2, "0")}` : ""} ${h % 24 < 12 ? "AM" : "PM"}`;
 };
 
 /**

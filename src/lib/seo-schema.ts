@@ -42,7 +42,7 @@ export function businessNode(settings: Settings) {
       // Pincodes as plain text: areaServed accepts Text, and no schema.org Place type models a pincode.
       ...site.servicePincodes.map((code) => `${code}, ${site.city}, ${site.state}, India`),
     ],
-    ...(b.hours && b.hoursConfirmed ? { openingHoursSpecification: [{ "@type": "OpeningHoursSpecification", dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], opens: b.hours.open, closes: b.hours.close }] } : {}),
+    ...(b.hours && b.hoursConfirmed ? { openingHoursSpecification: [{ "@type": "OpeningHoursSpecification", dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], opens: b.hours.open, closes: b.hours.close === "24:00" ? "23:59" : b.hours.close }] } : {}),
     contactPoint: { "@type": "ContactPoint", contactType: "customer service", telephone: b.phone, email: b.email, areaServed: "IN", availableLanguage: ["en", "hi"] },
     knowsLanguage: ["en", "hi"],
     ...(sameAs.length ? { sameAs } : {}),

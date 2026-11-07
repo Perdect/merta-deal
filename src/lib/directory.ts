@@ -53,7 +53,7 @@ export const DIRECTORY: Record<BusinessCategory, DirectoryCopy> = {
 export const VEG_LABEL = { pure_veg: "Pure vegetarian", veg_options: "Vegetarian options", not_stated: null } as const;
 export const profilePath = (b: Pick<Business, "category" | "slug">) => `${DIRECTORY[b.category].path}/${b.slug}`;
 
-const time12 = (t: string) => { const [h, m] = t.split(":").map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "am" : "pm"}`; };
+const time12 = (t: string) => { const [h, m] = t.split(":").map(Number); return `${(((h % 24) + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h % 24 < 12 ? "am" : "pm"}`; };
 export const hoursText = (d: { open: string; close: string } | undefined) => (d ? `${time12(d.open)} – ${time12(d.close)}` : "Closed");
 
 /** True or false only when reliable hours exist, null otherwise. Evaluated in India time. */
@@ -84,7 +84,7 @@ export function businessJsonLd(b: Business) {
         ...(b.phone ? { telephone: b.phone } : {}),
         address: { "@type": "PostalAddress", ...(b.address_line ? { streetAddress: b.address_line } : {}), addressLocality: site.city, addressRegion: site.state, ...(b.pincode ? { postalCode: b.pincode } : {}), addressCountry: "IN" },
         ...(b.lat != null && b.lng != null ? { geo: { "@type": "GeoCoordinates", latitude: b.lat, longitude: b.lng } } : {}),
-        ...(b.hours_verified && days.length ? { openingHoursSpecification: days.map(([day, h]) => ({ "@type": "OpeningHoursSpecification", dayOfWeek: DAY_LABEL[day], opens: h.open, closes: h.close })) } : {}),
+        ...(b.hours_verified && days.length ? { openingHoursSpecification: days.map(([day, h]) => ({ "@type": "OpeningHoursSpecification", dayOfWeek: DAY_LABEL[day], opens: h.open, closes: h.close === "24:00" ? "23:59" : h.close })) } : {}),
         ...(b.category !== "hotel" && b.cuisines.length ? { servesCuisine: b.cuisines } : {}),
         ...(b.category === "hotel" && b.facilities.length ? { amenityFeature: b.facilities.map((name) => ({ "@type": "LocationFeatureSpecification", name, value: true })) } : {}),
       },

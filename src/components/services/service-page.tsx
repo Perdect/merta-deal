@@ -17,7 +17,7 @@ import { site } from "@/config/site";
 import { formatINR } from "@/lib/utils";
 
 const num = (v: unknown, d: number) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : d; };
-const time12 = (t: string) => { const [h, m] = t.split(":").map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "am" : "pm"}`; };
+const time12 = (t: string) => { const [h, m] = t.split(":").map(Number); return `${(((h % 24) + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h % 24 < 12 ? "am" : "pm"}`; };
 const listOf = (items: string[]) => (items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`);
 
 /** Everything these pages state about hours, coverage and timing comes from settings and delivery_zones. */

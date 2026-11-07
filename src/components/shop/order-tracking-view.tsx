@@ -9,6 +9,7 @@ import { cancelOrderAction, completeOrderAction } from "@/lib/actions/account";
 import { useOrderRealtime } from "@/hooks/use-order-realtime";
 import { ORDER_STATUS_META, PAYMENT_METHOD_LABEL, PAYMENT_STATUS_LABEL, canCustomerCancel } from "@/lib/order-status";
 import { CustomerOrderSteps, OrderStatusBadge } from "./order-status";
+import { OrderStatusArt } from "./order-status-art";
 import { LiveMap } from "./live-map";
 import { ProductImage } from "./product-image";
 import { ReviewSheet } from "./review-sheet";
@@ -102,11 +103,6 @@ export function OrderTrackingView({ initial, placed, paymentState, push }: { ini
         {late ? (
           <Alert tone="warning" icon={<Clock className="h-4 w-4" />} title={`Running ${Math.abs(eta!)} min late`}>
             {o.status === "ready_for_pickup" ? "Your order is packed and we're still finding a delivery partner." : o.status === "placed" ? "Your order hasn't been confirmed yet." : o.status === "out_for_delivery" || o.status === "rider_assigned" ? "Your delivery partner is taking longer than expected." : "The store is taking longer than usual to pack."} Sorry for the wait.
-            <span className="mt-2 flex flex-wrap gap-2">
-              {t.pickup.phone ? <a href={`tel:${t.pickup.phone}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-line-2 bg-card px-3 text-sm font-semibold text-ink"><Phone className="h-4 w-4" /> Call us</a> : null}
-              <Link href={`/account/support?order=${o.id}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-line-2 bg-card px-3 text-sm font-semibold text-ink"><HelpCircle className="h-4 w-4" /> Get help</Link>
-              {canCustomerCancel(o.status) ? <button type="button" onClick={() => setCancelOpen(true)} className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-line-2 bg-card px-3 text-sm font-semibold text-danger"><XCircle className="h-4 w-4" /> Cancel order</button> : null}
-            </span>
           </Alert>
         ) : null}
         {paymentState === "pending" || (o.payment_status === "pending" && o.payment_method !== "cod") ? <Alert tone="warning" icon={<CreditCard className="h-4 w-4" />} title="Payment pending">Your order is saved but payment was not completed. Packing starts once payment is received. <Link href={`/checkout`} className="font-semibold underline">Retry from checkout</Link> or contact support.</Alert> : null}
@@ -122,11 +118,14 @@ export function OrderTrackingView({ initial, placed, paymentState, push }: { ini
 
         <section className="rounded-lg border border-line bg-card p-4">
           <div className="flex items-start justify-between gap-3">
-            {/* Status changes arrive over Realtime; announce the new headline to screen readers. */}
-            <div aria-live="polite" aria-atomic="true">
-              <p className="text-xs text-ink-3">Order {o.order_number}</p>
-              <h1 className="text-xl font-bold text-ink">{headline(o.status, paid)}</h1>
-              <p className="text-sm text-ink-3">{active && paid && eta != null && eta > 0 ? `Arriving in about ${eta} min · by ${formatTime(o.promised_at!)}` : meta.description}</p>
+            <div className="flex min-w-0 items-center gap-3">
+              <OrderStatusArt key={o.status} status={o.status} />
+              {/* Status changes arrive over Realtime; announce the new headline to screen readers. */}
+              <div aria-live="polite" aria-atomic="true" className="min-w-0">
+                <p className="text-xs text-ink-3">Order {o.order_number}</p>
+                <h1 className="text-xl font-bold text-ink">{headline(o.status, paid)}</h1>
+                <p className="text-sm text-ink-3">{active && paid && eta != null && eta > 0 ? `Arriving in about ${eta} min · by ${formatTime(o.promised_at!)}` : meta.description}</p>
+              </div>
             </div>
             <div className="flex flex-col items-end gap-1.5"><OrderStatusBadge status={o.status} size="md" />{active ? <span role="status" aria-live="polite" className={cn("inline-flex items-center gap-1 text-[11px] font-semibold", connected ? "text-success" : "text-ink-3")}>{connected ? <Wifi className="h-3 w-3" aria-hidden /> : <WifiOff className="h-3 w-3" aria-hidden />}{connected ? "Live updates" : "Reconnecting…"}</span> : null}</div>
           </div>
