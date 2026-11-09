@@ -26,7 +26,7 @@ export function LoginForm({ next, phoneEnabled, guestEnabled, confirmed }: { nex
   React.useEffect(() => { createClient().auth.getUser().then(({ data }) => setGuestId(data.user?.is_anonymous ? data.user.id : "")).catch(() => {}); }, []);
 
   const sendOtp = async () => { setBusy(true); const r = await sendPhoneOtpAction(mobile); setBusy(false); if (r.ok) { setOtpSent(true); toast.success("OTP sent to +91 " + mobile); } else toast.error(r.error); };
-  const verify = async () => { setBusy(true); const r = await verifyPhoneOtpAction(mobile, otp); setBusy(false); if (r.ok) router.replace(safeNext(next, r.redirectTo ?? "/")); else toast.error(r.error); };
+  const verify = async () => { setBusy(true); const r = await verifyPhoneOtpAction(mobile, otp, guestId || undefined); setBusy(false); if (r.ok) router.replace(safeNext(next, r.redirectTo ?? "/")); else toast.error(r.error); };
   const guest = async () => { setGuestBusy(true); const r = await continueAsGuestAction(next); if (r && !r.ok) { toast.error(r.error); setGuestBusy(false); } };
   const fieldErr = (k: string) => (state && !state.ok ? state.fieldErrors?.[k] : undefined);
 

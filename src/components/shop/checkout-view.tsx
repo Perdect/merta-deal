@@ -71,7 +71,12 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
   const place = async () => {
     if (!addressId || placing) return; setConfirming(false); setPlacing(true);
     const res = await placeOrderAction({ addressId, paymentMethod: payment, deliveryType, instructions: orderNote(instructions, gift), ...scheduledRange() });
-    if (!res.ok) { toast.error(res.error); setPlacing(false); return; }
+    if (!res.ok) {
+      toast.error(res.error); setPlacing(false);
+      // The address list on screen can belong to an earlier (guest) session; reload it so the customer picks a current one.
+      if (/delivery address/i.test(res.error)) { setAddressId(null); router.refresh(); }
+      return;
+    }
     const order = res.data;
     if (!order.payment_required) { router.replace(`/orders/${order.order_id}?placed=1`); return; }
     // Online payment via Razorpay Checkout

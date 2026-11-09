@@ -20,7 +20,18 @@ const signUpSchema = z.object({
   mobile: mobileSchema,
   password: pinSchema,
   next: z.string().optional(),
+  guestUserId: z.string().optional(),
 });
+
+/**
+ * A guest (anonymous session) who signs in or signs up keeps their cart and addresses: the client sends the
+ * guest session's id along and merge_guest_cart hands those rows to the account (ignored for non-guest ids).
+ */
+async function mergeGuest(supabase: Awaited<ReturnType<typeof createClient>>, guestId: string | undefined, userId: string) {
+  if (!guestId || !/^[0-9a-f-]{36}$/i.test(guestId) || guestId === userId) return;
+  const { error } = await supabase.rpc("merge_guest_cart", { p_guest_user_id: guestId });
+  if (error) console.error("merge_guest_cart", error.message);
+}
 
 export type AuthResult = { ok: false; error: string; fieldErrors?: Record<string, string> } | { ok: true; message?: string; redirectTo?: string };
 
@@ -33,12 +44,7 @@ export async function signInAction(_prev: AuthResult | null, formData: FormData)
     if (/phone.*(disabled|not enabled)|Unsupported phone provider/i.test(error.message)) return { ok: false, error: "Mobile sign-in is not enabled on the server yet. The Supabase Phone provider must be switched on — see docs/GO-LIVE.md, step A4." };
     return { ok: false, error: friendlyError(error) };
   }
-  // Signing in from the cart drawer: carry the guest session's cart over to this account.
-  const guestId = parsed.data.guestUserId;
-  if (guestId && /^[0-9a-f-]{36}$/i.test(guestId) && guestId !== data.user.id) {
-    const { error: mergeErr } = await supabase.rpc("merge_guest_cart", { p_guest_user_id: guestId });
-    if (mergeErr) console.error("merge_guest_cart", mergeErr.message);
-  }
+  await mergeGuest(supabase, parsed.data.guestUserId, data.user.id);
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", data.user.id).maybeSingle();
   const role = profile?.role ?? "customer";
   redirect(safeNext(parsed.data.next, ROLE_HOME[role] ?? "/"));
@@ -60,18 +66,23 @@ export async function signUpAction(_prev: AuthResult | null, formData: FormData)
     if (/phone.*(disabled|not enabled)|Unsupported phone provider/i.test(error.message)) return { ok: false, error: "Mobile sign-up is not enabled on the server yet. The Supabase Phone provider must be switched on — see docs/GO-LIVE.md, step A4." };
     return { ok: false, error: friendlyError(error) };
   }
-  if (data.session) redirect(safeNext(parsed.data.next, ROLE_HOME[role] ?? "/"));
+  if (data.session) {
+    if (data.user) await mergeGuest(supabase, parsed.data.guestUserId, data.user.id);
+    redirect(safeNext(parsed.data.next, ROLE_HOME[role] ?? "/"));
+  }
   // Phone confirmations are enabled on the project: an SMS OTP must be verified before the first sign-in.
+  // The guest id travels with the verify step so the merge still happens once the account is active.
   return { ok: true, message: `We sent a verification code to +91 ${mobile}. Enter it below to activate your account.`, redirectTo: `verify:${mobile}` };
 }
 
 /** Completes sign-up when the Supabase project has phone confirmations turned on. */
-export async function verifySignupOtpAction(mobile: string, token: string): Promise<AuthResult> {
+export async function verifySignupOtpAction(mobile: string, token: string, guestUserId?: string): Promise<AuthResult> {
   const m = mobileSchema.safeParse(mobile);
   if (!m.success) return { ok: false, error: "Enter a valid mobile number" };
   const supabase = await createClient();
   const { data, error } = await supabase.auth.verifyOtp({ phone: toE164(m.data), token: token.replace(/\D/g, ""), type: "sms" });
   if (error) return { ok: false, error: friendlyError(error) };
+  await mergeGuest(supabase, guestUserId, data.user!.id);
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", data.user!.id).maybeSingle();
   return { ok: true, redirectTo: ROLE_HOME[profile?.role ?? "customer"] ?? "/" };
 }
@@ -146,12 +157,13 @@ export async function sendPhoneOtpAction(phone: string): Promise<AuthResult> {
   return { ok: true, message: "OTP sent" };
 }
 
-export async function verifyPhoneOtpAction(phone: string, token: string): Promise<AuthResult> {
+export async function verifyPhoneOtpAction(phone: string, token: string, guestUserId?: string): Promise<AuthResult> {
   const m = mobileSchema.safeParse(phone);
   if (!m.success) return { ok: false, error: "Enter a valid mobile number" };
   const supabase = await createClient();
   const { data, error } = await supabase.auth.verifyOtp({ phone: toE164(m.data), token: token.replace(/\D/g, ""), type: "sms" });
   if (error) return { ok: false, error: friendlyError(error) };
+  await mergeGuest(supabase, guestUserId, data.user!.id);
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", data.user!.id).maybeSingle();
   return { ok: true, redirectTo: ROLE_HOME[profile?.role ?? "customer"] ?? "/" };
 }
