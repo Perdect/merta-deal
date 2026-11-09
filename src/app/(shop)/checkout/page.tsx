@@ -20,7 +20,7 @@ export default async function CheckoutPage() {
   if (!user) return <PleaseLogin description="Please login to place your order." eta={eta} loginTitle="Login to place your order" />;
   const [summary, addresses, profile, cap] = await Promise.all([getCartSummary(), getMyAddresses(), getMyProfile(), (await createClient()).rpc("order_capacity")]);
   const accepting = (cap.data as { accepting?: boolean } | null)?.accepting !== false;
-  if (profile?.is_guest) return <PleaseLogin description="Please login to place your order. Your cart and address stay with you." eta={eta} loginTitle="Login to place your order" />;
+  if (profile?.is_guest) return <PleaseLogin description="Please login to place your order. Your cart and address stay with you." eta={eta} loginTitle="Login to place your order" defaultMobile={(addresses.find((a) => a.is_default) ?? addresses[0])?.phone} />;
   if (!summary || summary.empty) redirect("/cart");
   const slots = Array.isArray(settings.scheduled_slots) ? (settings.scheduled_slots as string[]) : [];
   return (

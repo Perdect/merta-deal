@@ -115,6 +115,11 @@ export function friendlyError(err: unknown): string {
   if (/^ORDER_NOT_READY/.test(raw)) return "This order is not packed yet.";
   if (/^CANNOT_CANCEL/.test(raw)) return raw.includes("contact support") ? "This order is already being packed. Please contact support." : "This order can no longer be cancelled.";
   if (/^INVALID_STATE/.test(raw)) return "This delivery has already moved on (refresh to see its current state).";
+  // SMS OTP could not be sent (Supabase sms_send_failed). The customer gets a plain line; the provider's text goes to the console for the admin.
+  if (/Error sending confirmation OTP|sms_send_failed|verified tester|predefined SMS templates/i.test(raw)) {
+    console.warn("sms otp:", raw);
+    return /verified tester/i.test(raw) ? "OTP can't be sent to this number yet. Please sign in with your PIN, or try another number." : "We couldn't send the OTP right now. Please try again in a minute or sign in with your PIN.";
+  }
   if (raw.startsWith("ITEMS_UNAVAILABLE")) return "Some items in your cart changed (stock or per-order limit). Review your cart and try again.";
   if (/inventory_stock_qty_check|violates check constraint "inventory_stock/i.test(raw)) return "Some items just sold out. Review your cart and try again.";
   const map: Record<string, string> = {

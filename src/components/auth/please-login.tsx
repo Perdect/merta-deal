@@ -11,8 +11,8 @@ import { LoginModal } from "./login-modal";
  * and says plainly that a login is needed, instead of bouncing to /login. The button opens the phone
  * sign-in sheet; the sign-in returns to this same page, which then renders for real.
  */
-export function PleaseLogin({ title = "Please login", description = "Please login to access your account.", eta, loginTitle }: {
-  title?: string; description?: string; /** "20 mins" style figure for the sign-in sheet. */ eta: string; loginTitle?: string;
+export function PleaseLogin({ title = "Please login", description = "Please login to access your account.", eta, loginTitle, defaultMobile }: {
+  title?: string; description?: string; /** "20 mins" style figure for the sign-in sheet. */ eta: string; loginTitle?: string; /** Mobile from the address a guest already saved, pre-filled in the sheet. */ defaultMobile?: string | null;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = React.useState(false);
@@ -23,7 +23,7 @@ export function PleaseLogin({ title = "Please login", description = "Please logi
       <p className="mt-2 max-w-sm text-sm text-ink-3">{description}</p>
       <Button size="lg" className="mt-7 h-13 w-full max-w-md rounded-xl text-base" onClick={() => setOpen(true)}>Login</Button>
       <p className="mt-4 text-sm text-ink-3">New to Merta Deal? <Link href={`/register?next=${encodeURIComponent(pathname)}`} className="font-semibold text-brand-700">Create account</Link></p>
-      <LoginModal open={open} onClose={() => setOpen(false)} eta={eta} title={loginTitle} />
+      <LoginModal open={open} onClose={() => setOpen(false)} eta={eta} title={loginTitle} defaultMobile={defaultMobile} />
     </section>
   );
 }

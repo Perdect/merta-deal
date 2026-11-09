@@ -23,12 +23,12 @@ import { LoginArt } from "./login-art";
  * guest never loses their place. When a guest session exists its id is sent along so the server
  * can carry the guest cart over to the account (merge_guest_cart).
  */
-export function LoginModal({ open, onClose, eta, guest, onGuestContinue, title = "Login to start ordering" }: { open: boolean; onClose: () => void; eta: string; guest?: boolean; onGuestContinue?: () => void; /** Heading, e.g. "Login to place your order" from the cart. */ title?: string }) {
+export function LoginModal({ open, onClose, eta, guest, onGuestContinue, title = "Login to start ordering", defaultMobile }: { open: boolean; onClose: () => void; eta: string; guest?: boolean; onGuestContinue?: () => void; /** Heading, e.g. "Login to place your order" from the cart. */ title?: string; /** Mobile number already given with the delivery address: pre-filled so it is not typed twice. Pass it as `key` too so a new address refreshes it. */ defaultMobile?: string | null }) {
   const pathname = usePathname();
   const hydrated = useHydrated();
   const [state, formAction, pending] = React.useActionState<AuthResult | null, FormData>(signInAction, null);
   const router = useRouter();
-  const [mobile, setMobile] = React.useState("");
+  const [mobile, setMobile] = React.useState(() => { const d = (defaultMobile ?? "").replace(/\D/g, "").slice(-10); return /^[6-9]\d{9}$/.test(d) ? d : ""; });
   // With an SMS provider on the project the sheet is mobile → OTP (new numbers get an account on the spot);
   // the PIN stays one tap away. Without one it is mobile → PIN as before.
   const otpFirst = env.phoneAuthEnabled;
