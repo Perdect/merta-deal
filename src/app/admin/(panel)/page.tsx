@@ -139,7 +139,9 @@ function Total({ label, value, change, prevLabel, goodWhenUp = true, hasPrev }: 
  * the same every day; each chip opens the matching list.
  */
 function Pipeline({ live }: { live: LiveCounts }) {
-  const stages = ACTIVE_STATUSES.map((s) => ({ status: s, label: ORDER_STATUS_META[s].short, count: live.byStatus[s], href: `/admin/orders?status=${s}`, color: ORDER_STATUS_COLOR[s] }));
+  // Stage names for the strip: each distinct, in the order an order moves (the shared "Packing" short label would repeat).
+  const STAGE_LABEL: Record<(typeof ACTIVE_STATUSES)[number], string> = { placed: "Placed", confirmed: "Confirmed", preparing: "Packing", ready_for_pickup: "Packed", rider_assigned: "Rider assigned", out_for_delivery: "On the way" };
+  const stages = ACTIVE_STATUSES.map((s) => ({ status: s, label: STAGE_LABEL[s], count: live.byStatus[s], href: `/admin/orders?status=${s}`, color: ORDER_STATUS_COLOR[s] }));
   const chip = "flex min-h-11 items-center gap-2 rounded-xl border px-3 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-brand-600";
   return (
     <div className="space-y-3">
