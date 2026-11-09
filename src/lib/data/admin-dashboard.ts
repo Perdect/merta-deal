@@ -136,16 +136,20 @@ export type LiveCounts = {
 export const getLiveCounts = cache(async (): Promise<LiveCounts> => {
   const supabase = await createClient();
   const rpc = supabase.rpc.bind(supabase) as unknown as (fn: string) => PromiseLike<{ data: unknown[] | null }>;
-  const [orders, requests, upiOrders, upiRider, riders] = await Promise.all([
+  const loose = supabase as unknown as { from: (t: string) => { select: (c: string, o: { count: "exact"; head: true }) => { eq: (k: string, v: string) => PromiseLike<{ count: number | null }> } } };
+  const [orders, requests, upiOrders, upiRider, riders, pendingShops, approvedWholesale] = await Promise.all([
     supabase.from("orders").select("status").in("status", [...ACTIVE_STATUSES]).limit(5000),
     (supabase as unknown as { from: (t: string) => { select: (c: string, o: { count: "exact"; head: true }) => { eq: (k: string, v: string) => PromiseLike<{ count: number | null }> } } }).from("service_requests").select("id", { count: "exact", head: true }).eq("status", "new"),
     rpc("admin_pending_upi_orders").then((r) => r.data?.length ?? 0, () => 0),
     rpc("admin_pending_upi").then((r) => r.data?.length ?? 0, () => 0),
     supabase.from("delivery_partners").select("id", { count: "exact", head: true }).eq("status", "active").eq("is_online", true),
+    Promise.resolve(loose.from("kirana_shops").select("id", { count: "exact", head: true }).eq("status", "pending")).then((r) => r.count ?? 0, () => 0),
+    Promise.resolve(loose.from("wholesale_orders").select("id", { count: "exact", head: true }).eq("status", "approved")).then((r) => r.count ?? 0, () => 0),
   ]);
+  const wholesaleTodo = pendingShops + approvedWholesale;
   const byStatus = Object.fromEntries(ACTIVE_STATUSES.map((s) => [s, 0])) as LiveCounts["byStatus"];
   for (const r of orders.data ?? []) if (r.status in byStatus) byStatus[r.status as keyof typeof byStatus] += 1;
   const activeOrders = Object.values(byStatus).reduce((a, b) => a + b, 0);
   const upiToConfirm = upiOrders + upiRider;
-  return { byStatus, activeOrders, newRequests: requests.count ?? 0, upiToConfirm, onlineRiders: riders.count ?? 0, badges: { orders: activeOrders, requests: requests.count ?? 0, payments: upiToConfirm } };
+  return { byStatus, activeOrders, newRequests: requests.count ?? 0, upiToConfirm, onlineRiders: riders.count ?? 0, badges: { orders: activeOrders, requests: requests.count ?? 0, payments: upiToConfirm, wholesale: wholesaleTodo } };
 });

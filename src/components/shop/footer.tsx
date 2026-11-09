@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Mail, Phone, Truck, MapPin, Bike, Megaphone, Store } from "lucide-react";
+import { Mail, Phone, Truck, MapPin, Bike, Megaphone, Store, Warehouse } from "lucide-react";
 import { site } from "@/config/site";
 import { Logo } from "@/components/ui/misc";
 import { InstallButtons } from "@/components/pwa/install-buttons";
@@ -72,6 +72,7 @@ export function Footer({ social = [], categories }: { social?: SocialLink[]; /**
             <ul className={list}>
               <li><Link href="/deliver" className={link}><Bike className={icon} strokeWidth={1.75} aria-hidden />Deliver with Merta Deal</Link></li>
               <li><Link href="/list-your-business" className={link}><Store className={icon} strokeWidth={1.75} aria-hidden />List your business</Link></li>
+              <li><Link href="/wholesale" className={link}><Warehouse className={icon} strokeWidth={1.75} aria-hidden />For kirana shops (wholesale)</Link></li>
               {[
                 { icon: Megaphone, label: "Advertise with us" },
               ].map(({ icon: Icon, label }) => (

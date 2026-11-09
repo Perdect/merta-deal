@@ -16,6 +16,7 @@ const NAV = [
 const MORE = [
   { href: "/account/coupons", label: "Coupons & offers", icon: Ticket },
   { href: "/account/rewards", label: "Rewards", icon: Star },
+  { href: "/account/shop", label: "My shop (wholesale)", icon: Store },
   { href: "/account/notifications", label: "Notifications", icon: Bell },
   { href: "/account/settings", label: "Settings & PIN", icon: Settings },
 ];

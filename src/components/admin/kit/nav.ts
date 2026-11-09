@@ -2,10 +2,10 @@ import {
   Wallet,
   LayoutDashboard, BarChart3, ShoppingBag, MapPinned, Bike, Package, Camera, FolderTree, Tags,
   TicketPercent, Megaphone, Bell, CreditCard, LifeBuoy, Star, Users, Settings, ScrollText, ScanLine, Truck, Tag, IndianRupee, Inbox, Building2, type LucideIcon,
-} from "lucide-react";
+ Warehouse } from "lucide-react";
 
 /** Live counters the shell can show next to a nav item (filled by `getLiveCounts`). */
-export type NavBadgeKey = "orders" | "requests" | "payments";
+export type NavBadgeKey = "orders" | "requests" | "payments" | "wholesale";
 export type AdminNavItem = { href: string; label: string; icon: LucideIcon; /** Which live count to show as a badge. */ badge?: NavBadgeKey };
 export type AdminNavGroup = { label: string; items: AdminNavItem[] };
 
@@ -18,6 +18,7 @@ export const ADMIN_NAV_DAILY: AdminNavItem[] = [
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag, badge: "orders" },
   { href: "/admin/scan", label: "Scan & pack", icon: ScanLine },
   { href: "/admin/requests", label: "Service requests", icon: Inbox, badge: "requests" },
+  { href: "/admin/wholesale", label: "Wholesale", icon: Warehouse, badge: "wholesale" },
   { href: "/admin/riders", label: "Riders", icon: Bike },
   { href: "/admin/payments", label: "Payments", icon: CreditCard, badge: "payments" },
 ];
