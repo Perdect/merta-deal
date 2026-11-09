@@ -93,7 +93,7 @@ export function ServiceRequestForm({ kind, title, hindi, submit, whatsapp, tel, 
   }
 
   return (
-    <form onSubmit={onSubmit} className="rounded-lg border border-line bg-card p-4 shadow-card">
+    <form onSubmit={onSubmit} className="rounded-2xl border border-line bg-card p-4 shadow-card sm:p-6">
       <h2 className="font-display text-lg font-bold text-ink">{title}</h2>
       <p lang="hi" className="mt-0.5 text-sm text-ink-3">{hindi}</p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">

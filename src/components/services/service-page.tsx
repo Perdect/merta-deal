@@ -89,10 +89,10 @@ function ContactButtons({ order, contact }: { order?: { label: string; href: str
 
 function Fact({ icon: Icon, title, text, href }: { icon: LucideIcon; title: string; text: string; href?: string }) {
   return (
-    <li className="flex items-start gap-3 rounded-lg border border-line bg-card p-3.5">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700"><Icon className="h-4 w-4" aria-hidden /></span>
-      <span className="min-w-0"><span className="block text-sm font-semibold text-ink">{title}</span><span className="block text-sm text-ink-2">{href ? <Link href={href} className="font-medium text-brand-700 hover:underline">{text}</Link> : text}</span></span>
-    </li>
+    <div className="flex min-w-0 items-start gap-2.5">
+      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-saffron-700" aria-hidden />
+      <div className="min-w-0"><dt className="text-xs font-medium text-ink-3">{title}</dt><dd className="text-sm font-semibold text-ink">{href ? <Link href={href} className="text-brand-700 hover:underline">{text}</Link> : text}</dd></div>
+    </div>
   );
 }
 
@@ -111,108 +111,109 @@ export async function ServicePage({ slug }: { slug: ServiceSlug }) {
   const charge = slug === "bulk-gifts-sweets-merta-city" ? "Stated in your quotation" : pickupDrop ? (ctx.pickupFrom ? `Starts ${ctx.pickupFrom}, confirmed before booking` : "Confirmed before booking") : "Shown before you confirm";
   const related = SERVICE_LINKS.filter((l) => copy.related.includes(l.slug));
 
+  const [lead, ...moreIntro] = copy.intro;
   return (
     <div className="px-4 pb-8 pt-1 sm:px-0">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdHtml(structuredData(slug, copy, settings)) }} />
       <AppBar title={copy.crumb} back="/" cart className="-mt-1" />
       <nav aria-label="Breadcrumb" className="mt-2 text-xs text-ink-3 max-lg:hidden"><Link href="/" className="tap hover:text-brand-700">Home</Link> / <span className="text-ink">{copy.crumb}</span></nav>
 
-      <header className="max-w-3xl">
-        <h1 className="mt-1 font-display text-2xl font-bold leading-tight text-ink lg:mt-3">{copy.h1}</h1>
-        {copy.intro.map((p) => <p key={p} className="mt-2 text-[15px] leading-relaxed text-ink-2">{p}</p>)}
-        <p lang="hi" className="mt-2 text-sm leading-relaxed text-ink-3">{copy.hindi}</p>
+      {/* 1. What it is, the honest condition, and how to start: one card, nothing else above the form. */}
+      <header className="mt-2 overflow-clip rounded-2xl border border-saffron-200 bg-gradient-to-br from-saffron-50 via-card to-card p-4 sm:p-6 lg:mt-3">
+        <h1 className="font-display text-[22px] font-bold leading-tight text-ink sm:text-[28px]">{copy.h1}</h1>
+        {lead ? <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-ink-2">{lead}</p> : null}
+        {copy.notice ? <p className="mt-3 inline-flex max-w-2xl items-start gap-2 rounded-lg bg-saffron-100/70 px-3 py-2 text-[13px] font-medium text-ink"><CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-saffron-700" aria-hidden />{copy.notice}</p> : null}
+        <div className="mt-4"><ContactButtons order={order} contact={contact} /></div>
+        <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-saffron-200/70 pt-4 lg:grid-cols-4">
+          {pickupDrop ? <Fact icon={Bike} title="Rider availability" text="Check availability" href="#request" /> : null}
+          {ctx.hours ? <Fact icon={Clock} title="Order hours" text={`${ctx.hours}, daily`} /> : null}
+          <Fact icon={MapPin} title="Delivery area" text={`${site.city}${pincodes.length ? `, ${pincodes.join(", ")}` : ""}`} href="/delivery-area" />
+          <Fact icon={IndianRupee} title={pickupDrop ? "Delivery charge" : "Charges"} text={charge} />
+          {!pickupDrop && ctx.pay ? <Fact icon={Wallet} title="Payment" text={slug === "bulk-gifts-sweets-merta-city" ? "Terms stated in your quotation" : ctx.pay} /> : null}
+        </dl>
       </header>
-      {copy.notice ? <p className="mt-3 flex max-w-3xl items-start gap-2 rounded-lg bg-saffron-50 p-3 text-sm font-medium text-ink"><CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-saffron-700" aria-hidden />{copy.notice}</p> : null}
-      <div className="mt-4"><ContactButtons order={order} contact={contact} /></div>
-
-      <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {pickupDrop ? <Fact icon={Bike} title="Rider availability" text="Check availability" href="#request" /> : null}
-        {ctx.hours ? <Fact icon={Clock} title="Order hours" text={`${ctx.hours}, every day`} /> : null}
-        <Fact icon={MapPin} title="Delivery area" text={`${site.city}${pincodes.length ? `, ${pincodes.join(", ")}` : ""}`} href="/delivery-area" />
-        <Fact icon={IndianRupee} title={pickupDrop ? "Delivery charge" : "Charges"} text={charge} />
-        {!pickupDrop && ctx.pay ? <Fact icon={Wallet} title="Payment" text={slug === "bulk-gifts-sweets-merta-city" ? "Terms stated in your quotation" : ctx.pay} /> : null}
-      </ul>
 
       {products.length ? (
         <section className="mt-7" aria-labelledby="products"><h2 id="products" className={`${h2} mb-3`}>Available now</h2><ProductGrid products={products} signedIn={Boolean(user)} priorityCount={0} /></section>
       ) : null}
 
+      {/* 2. The request itself. */}
       {copy.form ? (
-        <section id="request" className="mt-7 max-w-3xl scroll-mt-20">
+        <section id="request" className="mt-6 max-w-3xl scroll-mt-20">
           <ServiceRequestForm kind={copy.form.kind} title={copy.form.title} hindi={copy.form.hindi} submit={copy.form.submit} destination={copy.form.destination} whatsapp={contact.whatsapp} tel={contact.tel} phone={contact.phone} />
         </section>
       ) : null}
 
-      {copy.extra ? (
-        <section className="mt-7" aria-labelledby="extra">
-          <h2 id="extra" className={h2}>{copy.extra.title}</h2>
-          <ul className="mt-3 grid gap-3 sm:grid-cols-3">
-            {copy.extra.items.map((o) => <li key={o.t} className="rounded-lg border border-line bg-card p-3.5"><h3 className="text-sm font-semibold text-ink">{o.t}</h3><p className="mt-0.5 text-sm text-ink-2">{o.s}</p></li>)}
-          </ul>
-        </section>
-      ) : null}
-
-      <section className="mt-7" aria-labelledby="offers">
-        <h2 id="offers" className={h2}>{copy.offersTitle}</h2>
-        <ul className="mt-3 grid gap-3 sm:grid-cols-2">
-          {copy.offers.map((o) => <li key={o.t} className="rounded-lg border border-line bg-card p-3.5"><h3 className="text-sm font-semibold text-ink">{o.t}</h3><p className="mt-0.5 text-sm text-ink-2">{o.s}</p></li>)}
-        </ul>
-      </section>
-
-      <section className="mt-7" aria-labelledby="steps">
+      {/* 3. How it works, in one glance. */}
+      <section className="mt-7 max-w-3xl" aria-labelledby="steps">
         <h2 id="steps" className={h2}>{copy.stepsTitle}</h2>
-        <ol className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {copy.steps.map((s, i) => (
-            <li key={s.t} className="rounded-lg border border-line bg-card p-3.5">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-50 text-sm font-bold text-brand-700" aria-hidden>{i + 1}</span>
-              <h3 className="mt-2 text-sm font-semibold text-ink">{s.t}</h3><p className="mt-0.5 text-sm text-ink-2">{s.s}</p>
+        <ol className="mt-3 space-y-3">
+          {copy.steps.map((st, i) => (
+            <li key={st.t} className="flex gap-3">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white" aria-hidden>{i + 1}</span>
+              <span className="min-w-0 pt-0.5"><span className="block text-sm font-semibold text-ink">{st.t}</span><span className="block text-sm text-ink-2">{st.s}</span></span>
             </li>
           ))}
         </ol>
       </section>
 
-      <section className="mt-7 max-w-3xl" aria-labelledby="conditions">
-        <h2 id="conditions" className={h2}>{copy.conditionsTitle}</h2>
-        <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-ink-2">{copy.conditions.map((c) => <li key={c}>{c}</li>)}</ul>
+      {/* 4. Everything else stays on the page (search engines and curious customers read it) but folded away. */}
+      <section className="mt-7 max-w-3xl" aria-labelledby="details">
+        <h2 id="details" className={h2}>Good to know</h2>
+        <div className="mt-3 divide-y divide-line rounded-xl border border-line bg-card">
+          {moreIntro.length || copy.hindi ? (
+            <Fold title="About this service">
+              {moreIntro.map((t) => <p key={t} className="mb-2 text-sm text-ink-2">{t}</p>)}
+              <p lang="hi" className="text-sm text-ink-3">{copy.hindi}</p>
+            </Fold>
+          ) : null}
+          <Fold title={copy.offersTitle}><ItemList items={copy.offers} /></Fold>
+          {copy.extra ? <Fold title={copy.extra.title}><ItemList items={copy.extra.items} /></Fold> : null}
+          <Fold title={copy.conditionsTitle}><ul className="list-disc space-y-1.5 pl-5 text-sm text-ink-2">{copy.conditions.map((c) => <li key={c}>{c}</li>)}</ul></Fold>
+        </div>
       </section>
 
       <section className="mt-7 max-w-3xl" aria-labelledby="faq">
         <h2 id="faq" className={h2}>Questions people ask</h2>
-        <div className="mt-3 divide-y divide-line rounded-lg border border-line bg-card">
-          {copy.faqs.map((f) => (
-            <details key={f.q} className="group px-3.5">
-              <summary className="tap flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 py-2.5 text-sm font-semibold text-ink [&::-webkit-details-marker]:hidden">{f.q}<ChevronRight className="h-4 w-4 shrink-0 text-ink-3 transition-transform group-open:rotate-90" aria-hidden /></summary>
-              <p className="pb-3 text-sm text-ink-2">{f.a}</p>
-            </details>
-          ))}
+        <div className="mt-3 divide-y divide-line rounded-xl border border-line bg-card">
+          {copy.faqs.map((f) => <Fold key={f.q} title={f.q}><p className="text-sm text-ink-2">{f.a}</p></Fold>)}
         </div>
       </section>
 
-      {copy.shopLinks?.length ? (
-        <nav className="mt-7" aria-labelledby="browse">
-          <h2 id="browse" className={h2}>Browse</h2>
-          <ul className="mt-3 flex flex-wrap gap-2">{liveShopLinks(copy.shopLinks, ctx.activeCategories).map((l) => <li key={l.href}><Link href={l.href} className="tap inline-flex min-h-11 items-center rounded-full border border-line bg-card px-4 text-sm font-semibold text-ink hover:border-brand-300">{l.label}</Link></li>)}</ul>
-        </nav>
-      ) : null}
-
-      <section className="mt-7" aria-labelledby="related">
-        <h2 id="related" className={h2}>Related services</h2>
-        <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {related.map((l) => <li key={l.href}><Link href={l.href} className="block h-full rounded-lg border border-line bg-card p-3.5 hover:border-brand-300"><span className="block text-sm font-semibold text-ink">{l.label} in {site.city}</span><span className="mt-0.5 block text-xs text-ink-3">{l.blurb}</span></Link></li>)}
-          <li><Link href={pickupDrop ? "/deliver" : "/delivery-area"} className="block h-full rounded-lg border border-line bg-card p-3.5 hover:border-brand-300"><span className="block text-sm font-semibold text-ink">{pickupDrop ? `Deliver with ${site.name}` : "Delivery area & charges"}</span><span className="mt-0.5 block text-xs text-ink-3">{pickupDrop ? "Apply to work as a delivery partner" : "Areas, pincodes and timings"}</span></Link></li>
+      {/* 5. Where to go next, and how to reach us — one compact block. */}
+      <section className="mt-7" aria-labelledby="more">
+        <h2 id="more" className={h2}>More from {site.seoName}</h2>
+        <ul className="mt-3 flex flex-wrap gap-2">
+          {related.map((l) => <li key={l.href}><Link href={l.href} className={chip}>{l.label}</Link></li>)}
+          <li><Link href={pickupDrop ? "/deliver" : "/delivery-area"} className={chip}>{pickupDrop ? `Deliver with ${site.name}` : "Delivery area & charges"}</Link></li>
+          {copy.shopLinks?.length ? liveShopLinks(copy.shopLinks, ctx.activeCategories).map((l) => <li key={l.href}><Link href={l.href} className={chip}>{l.label}</Link></li>) : null}
         </ul>
-      </section>
-
-      <section className="mt-7 rounded-lg border border-line bg-card p-4" aria-labelledby="contact">
-        <h2 id="contact" className={h2}>Talk to {site.seoName}</h2>
-        <p lang="hi" className="mt-0.5 text-sm text-ink-3">कॉल या WhatsApp करें, हम हिंदी में बात करते हैं।</p>
-        <div className="mt-3"><ContactButtons order={order} contact={contact} /></div>
-        <ul className="mt-3 space-y-1 text-sm text-ink-2">
-          <li className="flex items-center gap-2"><Mail className="h-4 w-4 shrink-0 text-ink-3" aria-hidden /><a href={`mailto:${facts.email}`} className="font-medium text-brand-700 hover:underline">{facts.email}</a></li>
-          <li className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-ink-3" aria-hidden />{facts.street ? `${facts.street}, ` : ""}{site.city}, {site.state} {site.defaultPincode}</li>
-        </ul>
-        {facts.fssai && (copy.category || slug === "bulk-gifts-sweets-merta-city") ? <p className="mt-2 text-xs text-ink-3">FSSAI licence no. {facts.fssai}</p> : null}
+        <div className="mt-5 flex flex-col gap-1.5 border-t border-line pt-4 text-sm text-ink-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-5">
+          <a href={contact.tel} className="inline-flex items-center gap-2 font-medium text-brand-700 hover:underline"><Phone className="h-4 w-4 shrink-0" aria-hidden />{contact.phone}</a>
+          <a href={`mailto:${facts.email}`} className="inline-flex items-center gap-2 font-medium text-brand-700 hover:underline"><Mail className="h-4 w-4 shrink-0" aria-hidden />{facts.email}</a>
+          <span className="inline-flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-ink-3" aria-hidden />{facts.street ? `${facts.street}, ` : ""}{site.city}, {site.state} {site.defaultPincode}</span>
+          {facts.fssai && (copy.category || slug === "bulk-gifts-sweets-merta-city") ? <span className="text-xs text-ink-3">FSSAI licence no. {facts.fssai}</span> : null}
+        </div>
+        <p lang="hi" className="mt-2 text-xs text-ink-3">कॉल या WhatsApp करें, हम हिंदी में बात करते हैं।</p>
       </section>
     </div>
   );
+}
+
+const chip = "tap inline-flex min-h-11 items-center rounded-full border border-line bg-card px-4 text-sm font-semibold text-ink hover:border-brand-300";
+
+/** A folded section: native details/summary, so it works without JavaScript and its text stays in the page. */
+function Fold({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <details className="group px-4">
+      <summary className="tap flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 py-3 text-sm font-semibold text-ink [&::-webkit-details-marker]:hidden">
+        {title}<ChevronRight className="h-4 w-4 shrink-0 text-ink-3 transition-transform group-open:rotate-90 motion-reduce:transition-none" aria-hidden />
+      </summary>
+      <div className="pb-4">{children}</div>
+    </details>
+  );
+}
+
+function ItemList({ items }: { items: { t: string; s: string }[] }) {
+  return <ul className="space-y-2.5">{items.map((o) => <li key={o.t}><span className="block text-sm font-semibold text-ink">{o.t}</span><span className="block text-sm text-ink-2">{o.s}</span></li>)}</ul>;
 }
