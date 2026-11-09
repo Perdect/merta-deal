@@ -32,7 +32,7 @@ export function businessNode(settings: Settings) {
   const sameAs = [...new Set([...site.socialProfiles, ...socialLinks(settings).map((l) => l.url), ...(b.googleProfile ? [b.googleProfile] : [])])];
   return {
     "@type": ["LocalBusiness", "OnlineStore"], "@id": `${site.url}/#organization`, name: site.seoName, alternateName: [site.name, "MertaDeal.com"], url: `${site.url}/`,
-    description: `Local ordering and delivery service in ${site.city}, ${site.state}: grocery and kirana staples, fresh vegetables and fruits, gifts and sweets, delivered by ${site.seoName}'s own delivery partners.`,
+    description: `${site.descriptionShort} Orders are delivered by ${site.seoName}'s own delivery partners.`,
     logo: { "@type": "ImageObject", url: `${site.url}/icons/icon-512.png`, width: 512, height: 512 },
     image: `${site.url}/opengraph-image`,
     email: b.email, telephone: b.phone, slogan: site.tagline,

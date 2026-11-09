@@ -6,8 +6,11 @@ export const site = {
   /** Brand as written in the logo, titles and structured data (alternate: "Merta Deal"). */
   seoName: "MertaDeal",
   tagline: "Merta Ki Shopping, Ab Online.",
+  /** The owner's one-line description (2026-11-09); the delivery target follows it where there is room. */
   description:
-    `Order groceries, fresh fruits and vegetables from Merta Deal in Merta City, Rajasthan. Local delivery with a ${DELIVERY_WINDOW} target on eligible orders.`,
+    `MertaDeal is an online grocery, sweets, cakes, bakery items, and dry fruits home delivery service operating in Merta City, Rajasthan. Local delivery with a ${DELIVERY_WINDOW} target on eligible orders.`,
+  /** The same sentence on its own, for places that add their own promise. */
+  descriptionShort: "MertaDeal is an online grocery, sweets, cakes, bakery items, and dry fruits home delivery service operating in Merta City, Rajasthan.",
   deliveryWindow: DELIVERY_WINDOW,
   deliveryWindowShort: "20 min",
   city: "Merta City",
