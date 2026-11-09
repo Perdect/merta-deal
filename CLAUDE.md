@@ -11,6 +11,8 @@ Hyperlocal kirana marketplace for Merta City, Rajasthan. Brand: **Merta Deal** (
 - Surface Postgres errors with `friendlyError(err)` from `src/lib/utils.ts`.
 
 ## Where things are
+- Public catalogue reads (`getPublicSettings`, `getCategories`, `getCategoryTabs`, `getBrands`, `getCollections`, `searchProducts`, `getCategoryBySlug`, `getHomeData`) sit behind `unstable_cache` (60 s, tags `catalogue` / `settings`) and use the cookie-free `createPublicClient()` from `src/lib/supabase/public.ts`; anything per-user stays on `createClient()`. Admin actions that change catalogue or settings call `revalidateTag(tag, { expire: 0 })` (see `revalidate()` in `src/lib/actions/admin.ts`).
+- A switched-off category (`is_active = false`) is hidden by RLS and the product view; its page says "not available right now" (read with the service role), an active category with no products shows as "coming soon". Static links to categories go through `liveShopLinks()`.
 - `src/lib/supabase/{server,client,admin}.ts` — `createClient()` (server, cookie-bound) / browser singleton / service-role (only for webhooks & push; may return null when unconfigured).
 - `getSessionUser()` (server) returns `{ id, email, role, fullName, phone, avatarUrl }`.
 - `src/proxy.ts` — session refresh + role-gated routes (`/admin`, `/store`, `/rider`, `/account`, `/orders`, `/checkout`).
