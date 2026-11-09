@@ -101,7 +101,8 @@ export default async function ProductPage({ params }: Props) {
     product.country_of_origin ? { label: "Country of Origin", value: product.country_of_origin } : null,
   ] as (DetailRow | null)[]).filter((r): r is DetailRow => r !== null);
   const seller = ([
-    product.seller_name ? { label: "Seller Name", value: product.seller_name } : null,
+    // MertaDeal is the seller of record unless a product names another seller.
+    { label: "Seller Name", value: product.seller_name || site.seoName },
     product.seller_address ? { label: "Seller Address", value: product.seller_address } : null,
     product.seller_license ? { label: "Seller License No.", value: product.seller_license } : null,
   ] as (DetailRow | null)[]).filter((r): r is DetailRow => r !== null);

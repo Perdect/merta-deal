@@ -49,7 +49,7 @@ function initial(product: Product | null): Snapshot {
       is_local: product?.is_local ?? false, is_veg: product?.is_veg ?? true, is_active: product?.is_active ?? true, popularity_score: product?.popularity_score ?? 0,
     },
     nutritionText: product?.nutrition ? JSON.stringify(product.nutrition, null, 2) : "",
-    seller: { shelf_life: product?.shelf_life ?? "", seller_name: product?.seller_name ?? "", seller_address: product?.seller_address ?? "", seller_license: product?.seller_license ?? "" },
+    seller: { shelf_life: product?.shelf_life ?? "", seller_name: product?.seller_name ?? (product ? "" : "MertaDeal"), seller_address: product?.seller_address ?? "", seller_license: product?.seller_license ?? "" },
   };
 }
 
