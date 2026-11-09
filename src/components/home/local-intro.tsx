@@ -32,15 +32,15 @@ export function CakeRequest() {
 }
 
 /** Compact local context under the shopping sections: what we deliver, where, with links to the main categories. */
-export function LocalIntro({ etaLabel }: { etaLabel: string }) {
+export function LocalIntro({ etaLabel, produce = true }: { etaLabel: string; /** False while the fruit and vegetable categories are switched off. */ produce?: boolean }) {
   const link = "font-semibold text-brand-700 hover:underline";
   return (
     <section aria-labelledby="local-intro" className="mx-4 rounded-[14px] border border-line bg-card px-4 py-3.5 text-sm leading-relaxed text-ink-2 sm:mx-0">
-      <h2 id="local-intro" className="font-display text-[15px] font-bold text-ink">Grocery, fruit and vegetable delivery in {site.city}</h2>
+      <h2 id="local-intro" className="font-display text-[15px] font-bold text-ink">{produce ? `Grocery, fruit and vegetable delivery in ${site.city}` : `Grocery and kirana delivery in ${site.city}`}</h2>
       <p className="mt-1">
-        {site.seoName} delivers <Link href="/c/grocery" className={link}>grocery and kirana</Link>, <Link href="/c/vegetables" className={link}>fresh vegetables</Link> and <Link href="/c/fruits" className={link}>fruits</Link> to homes across {site.city}, Rajasthan, with a delivery target of {etaLabel} on eligible orders.
+        {site.seoName} delivers <Link href="/c/grocery" className={link}>grocery and kirana</Link>{produce ? <>, <Link href="/c/vegetables" className={link}>fresh vegetables</Link> and <Link href="/c/fruits" className={link}>fruits</Link></> : " and daily essentials"} to homes across {site.city}, Rajasthan, with a delivery target of {etaLabel} on eligible orders.
       </p>
-      <p lang="hi" className="mt-1 text-ink-3">मेड़ता सिटी में किराना, फल और सब्ज़ी की होम डिलीवरी।</p>
+      <p lang="hi" className="mt-1 text-ink-3">{produce ? "मेड़ता सिटी में किराना, फल और सब्ज़ी की होम डिलीवरी।" : "मेड़ता सिटी में किराना सामान की होम डिलीवरी।"}</p>
     </section>
   );
 }

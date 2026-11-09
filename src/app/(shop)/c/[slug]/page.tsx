@@ -19,6 +19,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   if (!data) notFound(); // during metadata, so crawlers get a real 404 status, not a soft 404
   const seo = CATEGORY_SEO[slug];
   const name = data.category.name;
+  if (data.hidden) return { title: `${name} – not available right now`, robots: { index: false, follow: true } };
   const title = seo?.title ?? `${name} Online in ${site.city}`;
   const pay = paymentPhrase(settings);
   const description = `${seo?.description ?? `Buy ${name.toLowerCase()} online in ${site.city}, Rajasthan${data.category.description ? ` — ${data.category.description.toLowerCase()}` : ""}. Home delivery from ${site.seoName}.`}${pay ? ` ${pay}` : ""}`;
@@ -40,6 +41,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const { slug } = await params; const sp = await searchParams;
   const data = await getCategoryBySlug(slug);
   if (!data) notFound();
+  if (data.hidden) return <HiddenCategory name={data.category.name} />;
   const { category, children, parent } = data;
   // A grouped tile (e.g. ?category=dal,pulses) narrows to those sub-categories and titles the bar with them.
   // Only this category's own sub-categories are honoured, so /c/grocery?category=fruits can't show fruit.
@@ -77,6 +79,24 @@ export default async function CategoryPage({ params, searchParams }: Props) {
       ) : null}
       <ProductListing result={result} filters={{ brands, categories: children.map((c) => ({ name: c.name, slug: c.slug })) }} signedIn={Boolean(user)} scope={{ category: scopeCategory }} hideCategoryChips
         emptyTitle={`No ${barTitle.toLowerCase()} products right now`} emptyHint="Check back soon, or remove a filter if you added one." />
+    </div>
+  );
+}
+
+/** A category the shop has paused: say so plainly and point at what is on sale, rather than a dead end. */
+function HiddenCategory({ name }: { name: string }) {
+  return (
+    <div className="px-4 pt-1 sm:px-0">
+      <ShopPageHeader title={name} fallback="/categories" cart />
+      <section className="mt-2 rounded-lg border border-line bg-card p-5 text-center">
+        <p className="font-display text-lg font-bold text-ink">{name} are not available right now</p>
+        <p className="mt-1 text-sm text-ink-2">We have paused {name.toLowerCase()} for the moment and will bring them back soon. Grocery and kirana essentials are delivered as usual.</p>
+        <p lang="hi" className="mt-1 text-sm text-ink-3">{name === "Fruits" ? "फल" : name === "Vegetables" ? "सब्ज़ी" : name} फ़िलहाल उपलब्ध नहीं हैं। किराना सामान की डिलीवरी जारी है।</p>
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
+          <Link href="/c/grocery" className="tap inline-flex min-h-11 items-center rounded-full bg-brand-600 px-5 text-sm font-semibold text-white hover:bg-brand-700">Grocery &amp; kirana</Link>
+          <Link href="/categories" className="tap inline-flex min-h-11 items-center rounded-full border border-line bg-card px-5 text-sm font-semibold text-ink hover:border-brand-300">All categories</Link>
+        </div>
+      </section>
     </div>
   );
 }

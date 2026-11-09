@@ -3,7 +3,7 @@ import Link from "next/link";
 import { AppBar } from "@/components/shop/app-bar";
 import { Clock, IndianRupee, Truck, Wallet } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getPublicSettings } from "@/lib/data/catalog";
+import { getActiveCategorySlugs, getPublicSettings } from "@/lib/data/catalog";
 import { site } from "@/config/site";
 import { formatINR } from "@/lib/utils";
 
@@ -31,10 +31,11 @@ const time12 = (t: string | null | undefined) => {
  */
 export default async function DeliveryAreaPage() {
   const supabase = await createClient();
-  const [zonesRes, settings, citiesRes] = await Promise.all([
+  const [zonesRes, settings, citiesRes, active] = await Promise.all([
     supabase.from("delivery_zones").select("name, area, pincode, delivery_fee, min_order_amount, free_delivery_threshold, eta_min_minutes, eta_max_minutes, express_supported").eq("is_active", true).order("delivery_fee"),
     getPublicSettings(),
     supabase.from("cities").select("name, is_active, launch_note").eq("is_active", false),
+    getActiveCategorySlugs(),
   ]);
   if (zonesRes.error) throw new Error(`delivery zones: ${zonesRes.error.message}`);
   const zones = (zonesRes.data ?? []) as Zone[];
@@ -110,8 +111,9 @@ export default async function DeliveryAreaPage() {
 
       <section className="mt-6 grid gap-3 sm:grid-cols-3" aria-label="Shop by category">
         <Link href="/c/grocery" className="rounded-xl border border-line bg-card p-4 text-sm font-semibold text-ink hover:border-brand-300">Grocery & kirana →</Link>
-        <Link href="/c/vegetables" className="rounded-xl border border-line bg-card p-4 text-sm font-semibold text-ink hover:border-brand-300">Fresh vegetables →</Link>
-        <Link href="/c/fruits" className="rounded-xl border border-line bg-card p-4 text-sm font-semibold text-ink hover:border-brand-300">Fresh fruits →</Link>
+        {active.has("vegetables") ? <Link href="/c/vegetables" className="rounded-xl border border-line bg-card p-4 text-sm font-semibold text-ink hover:border-brand-300">Fresh vegetables →</Link> : null}
+        {active.has("fruits") ? <Link href="/c/fruits" className="rounded-xl border border-line bg-card p-4 text-sm font-semibold text-ink hover:border-brand-300">Fresh fruits →</Link> : null}
+        {!active.has("vegetables") || !active.has("fruits") ? <Link href="/c/dry-fruits" className="rounded-xl border border-line bg-card p-4 text-sm font-semibold text-ink hover:border-brand-300">Dry fruits →</Link> : null}
       </section>
 
       <p className="mt-6 text-sm text-ink-2">

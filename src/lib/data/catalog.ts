@@ -15,18 +15,28 @@ export const getCategories = cache(async (): Promise<Category[]> => {
   return (data ?? []) as Category[];
 });
 
+/** Slugs of the categories customers can shop right now (switched-off ones are missing). */
+export const getActiveCategorySlugs = cache(async (): Promise<Set<string>> => new Set((await getCategories()).map((c) => c.slug)));
+
+/** Keeps only the shop links whose category is switched on; links outside /c/ pass through. */
+export function liveShopLinks<T extends { href: string }>(links: T[], active: Set<string>): T[] {
+  return links.filter((l) => { const m = /^\/c\/([^/?#]+)/.exec(l.href); return !m || active.has(m[1]); });
+}
+
 export const getCategoryBySlug = cache(async (slug: string) => {
   const supabase = await createClient();
-  // Switched-off categories are gone for customers (404), not an empty page.
-  const { data, error } = await supabase.from("categories").select("*").eq("slug", slug).eq("is_active", true).maybeSingle();
+  // A switched-off category is kept (hidden: true) so its page can say "not available right now"
+  // instead of pretending it never existed; an unknown slug is a real 404.
+  const { data, error } = await supabase.from("categories").select("*").eq("slug", slug).maybeSingle();
   if (error) throw new Error(`category lookup failed: ${error.message}`);
   if (!data) return null;
+  if (!data.is_active) return { category: data as Category, children: [] as Category[], parent: null as Category | null, hidden: true as const };
   // Sub-categories and the parent are independent lookups: one round trip, not two.
   const [{ data: children }, parentRes] = await Promise.all([
     supabase.from("categories").select("*").eq("parent_id", data.id).eq("is_active", true).order("sort_order"),
     data.parent_id ? supabase.from("categories").select("*").eq("id", data.parent_id).maybeSingle() : Promise.resolve({ data: null }),
   ]);
-  return { category: data as Category, children: (children ?? []) as Category[], parent: (parentRes.data as Category | null) ?? null };
+  return { category: data as Category, children: (children ?? []) as Category[], parent: (parentRes.data as Category | null) ?? null, hidden: false as const };
 });
 
 export type SearchParams = { q?: string; category?: string; brands?: string[]; minPrice?: number; maxPrice?: number; minDiscount?: number; inStock?: boolean; localOnly?: boolean; sort?: string; page?: number; pageSize?: number };
@@ -88,7 +98,9 @@ export const getCollections = cache(async (): Promise<{ id: string; title: strin
     { id: "fresh-sabzi", title: "Fresh sabzi", description: "Onion, potato, tomato, hari mirch from the mandi", kind: "Quick pick", href: "/c/vegetables" },
     { id: "fruit-basket", title: "Fruit basket", description: "Banana, apple, anar, papaya", kind: "Quick pick", href: "/c/fruits" },
   ];
-  return [...promos, ...quick].slice(0, 8);
+  // A quick pick for a switched-off category (fresh produce paused) would land on a notice, not products.
+  const active = await getActiveCategorySlugs();
+  return liveShopLinks([...promos, ...quick], active).slice(0, 8);
 });
 
 /* Categories screen ------------------------------------------------------------------------- */

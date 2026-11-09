@@ -34,6 +34,8 @@ export type ServiceContext = {
   express: { eta: string; fee: string; zones: string } | null;
   /** "from ₹X" for pickup and drop, or null when no figure is published. */
   pickupFrom: string | null;
+  /** Slugs of the categories on sale right now; shop links to others are dropped. */
+  activeCategories: Set<string>;
 };
 
 type Item = { t: string; s: string };

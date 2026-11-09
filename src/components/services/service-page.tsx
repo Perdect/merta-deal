@@ -7,7 +7,7 @@ import { ProductGrid } from "@/components/shop/product-card";
 import { Button } from "@/components/ui/button";
 import { WhatsAppIcon } from "@/components/shared/whatsapp-icon";
 import { ServiceRequestForm } from "@/components/services/service-request-form";
-import { getPublicSettings, searchProducts } from "@/lib/data/catalog";
+import { getActiveCategorySlugs, getPublicSettings, liveShopLinks, searchProducts } from "@/lib/data/catalog";
 import { createClient, getSessionUser } from "@/lib/supabase/server";
 import { paymentPhrase } from "@/lib/seo-copy";
 import { businessFacts, businessNode, jsonLdHtml } from "@/lib/seo-schema";
@@ -23,9 +23,10 @@ const listOf = (items: string[]) => (items.length < 2 ? items.join("") : `${item
 /** Everything these pages state about hours, coverage and timing comes from settings and delivery_zones. */
 const loadContext = cache(async () => {
   const supabase = await createClient();
-  const [settings, zonesRes] = await Promise.all([
+  const [settings, zonesRes, activeCategories] = await Promise.all([
     getPublicSettings(),
     supabase.from("delivery_zones").select("name, pincode, express_supported").eq("is_active", true).order("name"),
+    getActiveCategorySlugs(),
   ]);
   const zones = zonesRes.data ?? [];
   const facts = businessFacts(settings);
@@ -40,6 +41,7 @@ const loadContext = cache(async () => {
     maxQty: num(settings.default_max_order_qty, 5),
     express: expressZones.length ? { eta: `${num(settings.express_eta_min_minutes, 12)}–${num(settings.express_eta_max_minutes, 18)} min`, fee: formatINR(num(settings.express_delivery_fee, 0)), zones: listOf(expressZones) } : null,
     pickupFrom: pickupFrom ? `from ${formatINR(pickupFrom)}` : null,
+    activeCategories,
   };
   return { settings, facts, ctx, pincodes };
 });
@@ -189,7 +191,7 @@ export async function ServicePage({ slug }: { slug: ServiceSlug }) {
       {copy.shopLinks?.length ? (
         <nav className="mt-7" aria-labelledby="browse">
           <h2 id="browse" className={h2}>Browse</h2>
-          <ul className="mt-3 flex flex-wrap gap-2">{copy.shopLinks.map((l) => <li key={l.href}><Link href={l.href} className="tap inline-flex min-h-11 items-center rounded-full border border-line bg-card px-4 text-sm font-semibold text-ink hover:border-brand-300">{l.label}</Link></li>)}</ul>
+          <ul className="mt-3 flex flex-wrap gap-2">{liveShopLinks(copy.shopLinks, ctx.activeCategories).map((l) => <li key={l.href}><Link href={l.href} className="tap inline-flex min-h-11 items-center rounded-full border border-line bg-card px-4 text-sm font-semibold text-ink hover:border-brand-300">{l.label}</Link></li>)}</ul>
         </nav>
       ) : null}
 

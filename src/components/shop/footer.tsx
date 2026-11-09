@@ -11,7 +11,8 @@ import { SERVICE_LINKS } from "@/lib/service-pages";
  * Footer: brand + app badges + social profiles (from settings, only when set), Shop, Help, For Partners (rider sign-up
  * live; ads coming soon), and a bottom bar with the legal links. Phones: brand on top, link columns two-up; desktop: four columns.
  */
-export function Footer({ social = [] }: { social?: SocialLink[] }) {
+export function Footer({ social = [], categories }: { social?: SocialLink[]; /** Active category slugs; the Vegetables / Fruits links show only while those are on sale. Omit to show all. */ categories?: Set<string> | string[] }) {
+  const on = (slug: string) => !categories || (categories instanceof Set ? categories.has(slug) : categories.includes(slug));
   const tel = `tel:+${site.supportPhone.replace(/\D/g, "")}`;
   const link = "inline-flex items-center gap-2 text-ink-2 transition-colors hover:text-brand-700 focus-visible:outline-2 focus-visible:outline-brand-600 pointer-coarse:min-h-11";
   const list = "mt-4 space-y-2.5 text-sm pointer-coarse:space-y-0";
@@ -37,8 +38,8 @@ export function Footer({ social = [] }: { social?: SocialLink[] }) {
             <h2 id="footer-shop" className={heading}>Shop</h2>
             <ul className={list}>
               <li><Link href="/c/grocery" className={link}>Grocery &amp; kirana</Link></li>
-              <li><Link href="/c/vegetables" className={link}>Vegetables</Link></li>
-              <li><Link href="/c/fruits" className={link}>Fruits</Link></li>
+              {on("vegetables") ? <li><Link href="/c/vegetables" className={link}>Vegetables</Link></li> : null}
+              {on("fruits") ? <li><Link href="/c/fruits" className={link}>Fruits</Link></li> : null}
               <li><Link href="/c/dry-fruits" className={link}>Dry fruits</Link></li>
               <li><Link href="/categories" className={link}>All categories</Link></li>
               <li><Link href="/delivery-area" className={link}>Delivery area &amp; charges</Link></li>

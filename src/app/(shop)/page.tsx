@@ -70,7 +70,7 @@ export default async function HomePage() {
       )}
       <CakeRequest />
       <ServiceStrip etaLabel={etaLabel} />
-      <LocalIntro etaLabel={etaLabel} />
+      <LocalIntro etaLabel={etaLabel} produce={home.categories.some((c) => c.slug === "fruits" || c.slug === "vegetables")} />
     </div>
   );
 }
