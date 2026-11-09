@@ -7,7 +7,7 @@ export function PriceBreakdown({ s, className }: { s: CartSummary; className?: s
     { label: `Item total (${s.item_count})`, value: formatINR(s.subtotal) },
     ...(s.item_savings > 0 ? [{ label: "Savings on MRP", value: <span className="text-success">− {formatINR(s.item_savings)}</span> }] : []),
     ...(s.coupon_discount > 0 ? [{ label: `Coupon (${s.coupon?.code})`, value: <span className="text-success">− {formatINR(s.coupon_discount)}</span> }] : []),
-    { label: "Delivery fee", value: s.delivery_fee === 0 ? <span className="text-success">FREE</span> : formatINR(s.delivery_fee) },
+    { label: "Delivery fee", value: s.delivery_fee === 0 ? <span className="text-success">{s.referral_delivery_credit ? "FREE · referral reward" : "FREE"}</span> : formatINR(s.delivery_fee) },
     ...(s.express_fee > 0 ? [{ label: "Express delivery", value: formatINR(s.express_fee) }] : []),
     // Fees are settings (platform_fee, tax_rate_percent); when switched off they are not listed at ₹0.
     ...(s.platform_fee > 0 ? [{ label: "Platform fee", value: formatINR(s.platform_fee) }] : []),
@@ -18,6 +18,7 @@ export function PriceBreakdown({ s, className }: { s: CartSummary; className?: s
 }
 
 export function FreeDeliveryBar({ s }: { s: CartSummary }) {
+  if (s.referral_delivery_credit) return <div className="rounded-md bg-success-50 px-3.5 py-3 text-sm font-semibold text-brand-800">Your referral reward covers this order&apos;s standard delivery.</div>;
   if (s.free_delivery_threshold <= 0) return null;
   const pct = Math.min(100, Math.round((s.subtotal / s.free_delivery_threshold) * 100));
   return (

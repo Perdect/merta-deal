@@ -340,7 +340,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
                 </div>
                 <div className="px-4 py-1">
                   <Row label="Item Total" value={formatINR(s.subtotal)} strike={s.mrp_total > s.subtotal ? s.mrp_total : undefined} />
-                  <Row label="Delivery Fee" value={s.delivery_fee === 0 ? <span className="font-bold text-success">FREE</span> : formatINR(s.delivery_fee)} strike={s.delivery_fee === 0 && deliveryWaived > 0 ? deliveryWaived : undefined} sub={s.free_delivery_threshold > 0 && s.free_delivery_gap > 0 ? `Free above ${formatINR(s.free_delivery_threshold)} (Unlock by adding ${formatINR(s.free_delivery_gap)} more)` : !selectedAddress ? "Confirmed for your address" : undefined} />
+                  <Row label="Delivery Fee" value={s.delivery_fee === 0 ? <span className="font-bold text-success">FREE</span> : formatINR(s.delivery_fee)} strike={s.delivery_fee === 0 && deliveryWaived > 0 ? deliveryWaived : undefined} sub={s.referral_delivery_credit ? "Your referral reward covers standard delivery" : s.free_delivery_threshold > 0 && s.free_delivery_gap > 0 ? `Free above ${formatINR(s.free_delivery_threshold)} (Unlock by adding ${formatINR(s.free_delivery_gap)} more)` : !selectedAddress ? "Confirmed for your address" : undefined} />
                   {s.express_fee > 0 ? <Row label="Express delivery" value={formatINR(s.express_fee)} /> : null}
                   {s.coupon_discount > 0 ? <Row label={`Coupon (${s.coupon?.code})`} value={<span className="text-success">− {formatINR(s.coupon_discount)}</span>} /> : null}
                   {s.platform_fee > 0 ? <Row label="Platform fee" value={formatINR(s.platform_fee)} /> : null}

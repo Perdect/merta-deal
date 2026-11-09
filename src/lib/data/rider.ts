@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthUser } from "@/lib/supabase/server";
 import type { Enums } from "@/types/database";
 import type { DeliveryPartner, Notification, RiderAssignment, RiderStats } from "@/types/app";
 
@@ -8,7 +8,7 @@ export type AssignmentStatus = Enums<"assignment_status">;
 /** The signed-in user's delivery_partners row (RLS: own row), or null when they never registered. */
 export const getMyRiderProfile = cache(async (): Promise<DeliveryPartner | null> => {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return null;
   const { data } = await supabase.from("delivery_partners").select("*").eq("user_id", user.id).maybeSingle();
   return (data as DeliveryPartner | null) ?? null;
@@ -39,7 +39,7 @@ export const hasActiveDelivery = cache(async (riderId: string): Promise<boolean>
 
 export const getRiderNotifications = cache(async (limit = 30): Promise<{ items: Notification[]; unread: number }> => {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return { items: [], unread: 0 };
   const { data } = await supabase.from("notifications").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(limit);
   const { count } = await supabase.from("notifications").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("is_read", false);

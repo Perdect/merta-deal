@@ -1,12 +1,12 @@
 import { cache } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthUser } from "@/lib/supabase/server";
 import type { Order, OrderTracking } from "@/types/app";
 
 export type OrderListItem = Order & { items: { product_name: string; quantity: number; image_url: string | null }[] };
 
 export const getMyOrders = cache(async (opts: { status?: "active" | "past" | "all"; limit?: number; page?: number } = {}): Promise<{ orders: OrderListItem[]; total: number }> => {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return { orders: [], total: 0 };
   const limit = opts.limit ?? 20; const page = opts.page ?? 1;
   let q = supabase.from("orders").select("*, items:order_items(product_name, quantity, image_url)", { count: "exact" }).eq("user_id", user.id).order("created_at", { ascending: false }).range((page - 1) * limit, page * limit - 1);

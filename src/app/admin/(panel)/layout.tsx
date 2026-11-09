@@ -17,12 +17,14 @@ export const dynamic = "force-dynamic";
  * admin data. Every admin server action and admin RPC checks again.
  */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const user = await getSessionUser();
-  if (!user) redirect("/admin/login");
+  // Everything the frame needs starts at once. The counts are RLS-protected and return nothing for a
+  // non-admin, and nothing renders until the checks below have passed.
   const supabase = await createClient();
-  const { data: isAdmin } = await supabase.rpc("is_admin");
+  const [user, { data: isAdmin }, { unread }, live] = await Promise.all([
+    getSessionUser(), supabase.rpc("is_admin"), getAdminNotifications(1), getLiveCounts().catch(() => null),
+  ]);
+  if (!user) redirect("/admin/login");
   if (!isAdmin || (user.role !== "admin" && user.role !== "super_admin")) redirect("/admin/login?denied=1");
-  const [{ unread }, live] = await Promise.all([getAdminNotifications(1), getLiveCounts().catch(() => null)]);
   return (
     <div className="theme-admin contents">
       <PortalTheme portal="admin" />

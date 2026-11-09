@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAuthUser } from "@/lib/supabase/server";
 import type { Enums, Json, Tables } from "@/types/database";
 import type { AdminStats, Coupon, DeliveryZone, OrderTracking, Product, Setting } from "@/types/app";
 
@@ -403,7 +403,7 @@ export const getReport = cache(async (start: string, end: string): Promise<Admin
 
 export const getAdminNotifications = cache(async (limit = 50) => {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return { items: [], unread: 0 };
   const [{ data }, { count }] = await Promise.all([
     supabase.from("notifications").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(limit),

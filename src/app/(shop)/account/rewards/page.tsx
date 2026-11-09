@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 export default async function RewardsPage() {
   const user = await getSessionUser();
   if (!user) redirect("/login?next=/account/rewards");
-  const [{ points, referralCode, transactions }, settings] = await Promise.all([getRewards(), getPublicSettings()]);
+  const [{ points, referralCode, transactions, referralStats }, settings] = await Promise.all([getRewards(), getPublicSettings()]);
   const per100 = Number(settings.reward_points_per_100 ?? 1) || 1;
   const steps = [
     { icon: <ShoppingBag className="h-4 w-4" />, title: "Shop anything", body: "Every order counts, whether it is COD, UPI or wallet." },
@@ -46,7 +46,7 @@ export default async function RewardsPage() {
           </ol>
         </section>
 
-        <ReferralCard code={referralCode ?? null} />
+        <ReferralCard code={referralCode ?? null} stats={referralStats} />
 
         <section>
           <SectionHeader title="Points history" subtitle="Last 50 entries" className="px-0" />

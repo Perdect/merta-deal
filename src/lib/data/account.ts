@@ -42,10 +42,16 @@ export const getWallet = cache(async () => {
 
 export const getRewards = cache(async () => {
   const [supabase, user] = await Promise.all([createClient(), getAuthUser()]);
-  if (!user) return { points: 0, transactions: [] };
+  const emptyReferralStats = { pending: 0, rewarded: 0, creditsAvailable: 0 };
+  if (!user) return { points: 0, transactions: [], referralStats: emptyReferralStats };
   const { data: profile } = await supabase.from("profiles").select("reward_points, referral_code").eq("id", user.id).maybeSingle();
-  const { data: txns } = await supabase.from("reward_transactions").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50);
-  return { points: Number(profile?.reward_points ?? 0), referralCode: profile?.referral_code ?? null, transactions: txns ?? [] };
+  const [{ data: txns }, { data: statsData }] = await Promise.all([
+    supabase.from("reward_transactions").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50),
+    supabase.rpc("my_referral_stats" as never),
+  ]);
+  const s = statsData as unknown as { pending?: number; rewarded?: number; credits_available?: number } | null;
+  const referralStats = s ? { pending: Number(s.pending ?? 0), rewarded: Number(s.rewarded ?? 0), creditsAvailable: Number(s.credits_available ?? 0) } : emptyReferralStats;
+  return { points: Number(profile?.reward_points ?? 0), referralCode: profile?.referral_code ?? null, transactions: txns ?? [], referralStats };
 });
 
 export const getMyTickets = cache(async () => {

@@ -14,6 +14,7 @@ import { socialLinks } from "@/lib/social";
 import { PwaClient } from "@/components/pwa/pwa-client";
 import { ConnectionIndicator } from "@/components/pwa/connection-indicator";
 import { UpdatePrompt } from "@/components/pwa/update-prompt";
+import { ReferralCapture } from "@/components/account/referral-capture";
 
 export default async function ShopLayout({ children }: { children: React.ReactNode }) {
   const user = await getSessionUser();
@@ -31,6 +32,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
   const slots = Array.isArray(settings.scheduled_slots) ? (settings.scheduled_slots as string[]) : [];
   return (
     <CartProvider initial={cart} signedIn={Boolean(user)}>
+      <ReferralCapture signedIn={Boolean(user)} />
       <NavHistory />
       <ChromePart part="header"><Header user={user} addresses={addresses} unread={notifications.unread} defaultEta={defaultEta} /></ChromePart>
       <main className="mx-auto w-full max-w-6xl flex-1 pb-2 sm:px-6 md:pb-10">{children}</main>
