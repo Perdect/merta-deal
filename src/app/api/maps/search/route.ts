@@ -19,10 +19,13 @@ export async function GET(req: NextRequest) {
   const session = (req.nextUrl.searchParams.get("session") ?? "").slice(0, 64);
   if (q.length < 2) return NextResponse.json({ results: [] });
 
-  const [local, remote] = await Promise.all([localPlaces(q), serverEnv().mapsServerKey ? google(q, session) : photon(q)]);
+  const useGoogle = Boolean(serverEnv().mapsServerKey);
+  const [local, fromGoogle] = await Promise.all([localPlaces(q), useGoogle ? google(q, session) : Promise.resolve([] as PlaceSuggestion[])]);
+  // OpenStreetMap whenever Google is off or declines, so search is never worse than without a key.
+  const remote = fromGoogle.length ? fromGoogle : await photon(q);
   const seen = new Set<string>();
   const results = [...local, ...remote].filter((r) => { const k = r.title.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 8);
-  return NextResponse.json({ results, provider: serverEnv().mapsServerKey ? "google" : "osm" });
+  return NextResponse.json({ results, provider: fromGoogle.length ? "google" : "osm" });
 }
 
 async function localPlaces(q: string): Promise<PlaceSuggestion[]> {
@@ -45,7 +48,7 @@ async function google(q: string, session: string): Promise<PlaceSuggestion[]> {
       }),
       cache: "no-store",
     });
-    if (!r.ok) return [];
+    if (!r.ok) { console.warn("maps/search: Google Places returned", r.status, (await r.text()).slice(0, 200)); return []; }
     const d = await r.json() as { suggestions?: { placePrediction?: { placeId: string; structuredFormat?: { mainText?: { text: string }; secondaryText?: { text: string } }; text?: { text: string } } }[] };
     return (d.suggestions ?? []).flatMap((s) => {
       const p = s.placePrediction; if (!p) return [];

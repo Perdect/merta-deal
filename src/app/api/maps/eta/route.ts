@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
     if (d.status === "OK" && el?.status === "OK") {
       return NextResponse.json({ estimate: false, distance_km: el.distance.value / 1000, duration_min: Math.round((el.duration_in_traffic ?? el.duration).value / 60), source: "google_distance_matrix" });
     }
+    console.warn("maps/eta: Google Distance Matrix returned", d.status, (d as { error_message?: string }).error_message ?? "");
   }
   const km = haversineKm(olat, olng, dlat, dlng);
   return NextResponse.json({ estimate: true, distance_km: Number(km.toFixed(2)), duration_min: Math.max(2, Math.round((km * 1.3 / 22) * 60)), source: "straight_line", note: key ? "Distance Matrix returned no route" : "GOOGLE_MAPS_SERVER_API_KEY not configured" });

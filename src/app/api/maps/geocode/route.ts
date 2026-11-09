@@ -18,7 +18,8 @@ export async function GET(req: NextRequest) {
   if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return NextResponse.json({ ok: false, message: "lat/lng required" }, { status: 400 });
   const key = serverEnv().mapsServerKey;
   try {
-    const result = key ? await google(lat, lng, key) : await osm(lat, lng);
+    // Google first when a key is set; OpenStreetMap whenever Google declines (key restrictions, quota, API off).
+    const result = (key ? await google(lat, lng, key).catch(() => null) : null) ?? await osm(lat, lng);
     return NextResponse.json(result ?? NO_MATCH);
   } catch {
     return NextResponse.json(NO_MATCH);
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
 async function google(lat: number, lng: number, key: string): Promise<Suggestion | null> {
   const r = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&region=in&key=${key}`);
   const d = await r.json() as { status: string; results: { formatted_address: string; address_components: { long_name: string; types: string[] }[] }[] };
-  if (d.status !== "OK" || !d.results.length) return null;
+  if (d.status !== "OK" || !d.results.length) { if (d.status !== "ZERO_RESULTS") console.warn("maps/geocode: Google returned", d.status); return null; }
   const comps = d.results[0].address_components;
   const pick = (t: string) => comps.find((c) => c.types.includes(t))?.long_name;
   return { ok: true, source: "google", formatted: d.results[0].formatted_address, street: pick("route"), area: pick("sublocality_level_1") ?? pick("sublocality") ?? pick("neighborhood"), city: pick("locality"), pincode: pick("postal_code") };
