@@ -18,7 +18,7 @@ export function LoginForm({ next, phoneEnabled, guestEnabled, confirmed }: { nex
   const [state, formAction, pending] = React.useActionState<AuthResult | null, FormData>(signInAction, null);
   const [mobile, setMobile] = React.useState("");
   const [showPw, setShowPw] = React.useState(false);
-  const [otpMode, setOtpMode] = React.useState(false);
+  const [otpMode, setOtpMode] = React.useState(phoneEnabled);
   const [otp, setOtp] = React.useState(""); const [otpSent, setOtpSent] = React.useState(false); const [busy, setBusy] = React.useState(false);
   const [guestBusy, setGuestBusy] = React.useState(false);
   // A guest (anonymous session) signing in keeps their cart and addresses: the id lets the server merge them.

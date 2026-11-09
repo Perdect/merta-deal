@@ -2,9 +2,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { X, Lock, Zap, ChevronLeft } from "lucide-react";
-import { signInAction, type AuthResult } from "@/lib/actions/auth";
+import { signInAction, sendPhoneOtpAction, verifyPhoneOtpAction, type AuthResult } from "@/lib/actions/auth";
+import { env } from "@/lib/env";
+import { toast } from "@/components/ui/toast";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,9 +27,31 @@ export function LoginModal({ open, onClose, eta, guest, onGuestContinue, title =
   const pathname = usePathname();
   const hydrated = useHydrated();
   const [state, formAction, pending] = React.useActionState<AuthResult | null, FormData>(signInAction, null);
+  const router = useRouter();
   const [mobile, setMobile] = React.useState("");
-  const [step, setStep] = React.useState<"mobile" | "pin">("mobile");
+  // With an SMS provider on the project the sheet is mobile → OTP (new numbers get an account on the spot);
+  // the PIN stays one tap away. Without one it is mobile → PIN as before.
+  const otpFirst = env.phoneAuthEnabled;
+  const [step, setStep] = React.useState<"mobile" | "pin" | "otp">("mobile");
+  const [otp, setOtp] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
   const [guestId, setGuestId] = React.useState("");
+
+  const sendOtp = async () => {
+    setBusy(true);
+    const r = await sendPhoneOtpAction(mobile);
+    setBusy(false);
+    if (r.ok) { setOtp(""); setStep("otp"); toast.success(`OTP sent to +91 ${mobile}`); } else toast.error(r.error);
+  };
+  const verifyOtp = async () => {
+    setBusy(true);
+    const r = await verifyPhoneOtpAction(mobile, otp, guestId || undefined);
+    if (!r.ok) { setBusy(false); toast.error(r.error); return; }
+    // Signed in: the page re-renders for the account; the sheet closes with it.
+    router.refresh();
+    onClose();
+    setBusy(false);
+  };
 
   // The guest session's id goes along with the sign-in so the server can hand its cart and addresses to the account.
   React.useEffect(() => {
@@ -65,7 +89,18 @@ export function LoginModal({ open, onClose, eta, guest, onGuestContinue, title =
               <>
                 <Input name="mobile" type="tel" inputMode="numeric" autoComplete="tel-national" maxLength={10} value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))} autoFocus
                   leftIcon={<span className="inline-flex items-center gap-1 text-sm font-bold text-ink"><span aria-hidden>🇮🇳</span>+91</span>} className="h-14 pl-20 text-base" placeholder="Enter Phone Number" aria-label="Mobile number" error={fieldErr("mobile")} />
-                <Button type="button" size="lg" fullWidth className="h-13 rounded-xl text-base" disabled={mobile.length !== 10} onClick={() => setStep("pin")}>Continue</Button>
+                <Button type="button" size="lg" fullWidth className="h-13 rounded-xl text-base" disabled={mobile.length !== 10} loading={busy} onClick={() => (otpFirst ? void sendOtp() : setStep("pin"))}>{otpFirst ? "Get OTP" : "Continue"}</Button>
+              </>
+            ) : step === "otp" ? (
+              <>
+                <button type="button" onClick={() => setStep("mobile")} aria-label={`Change mobile number +91 ${mobile}`} className="tap inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-ink-2"><ChevronLeft className="h-4 w-4" aria-hidden /> +91 {mobile}</button>
+                <Input type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} autoFocus
+                  leftIcon={<Lock className="h-4 w-4" />} className="h-14 text-base tracking-[0.3em]" placeholder="6-digit OTP" aria-label="OTP" />
+                <Button type="button" size="lg" fullWidth className="h-13 rounded-xl text-base" disabled={otp.length !== 6} loading={busy} onClick={() => void verifyOtp()}><Zap className="h-4 w-4" /> Verify &amp; continue</Button>
+                <p className="flex justify-between text-xs">
+                  <button type="button" onClick={() => void sendOtp()} disabled={busy} className="font-semibold text-brand-700">Resend OTP</button>
+                  <button type="button" onClick={() => setStep("pin")} className="font-semibold text-brand-700">Use PIN instead</button>
+                </p>
               </>
             ) : (
               <>
@@ -75,7 +110,7 @@ export function LoginModal({ open, onClose, eta, guest, onGuestContinue, title =
                   leftIcon={<Lock className="h-4 w-4" />} className="h-14 text-base tracking-[0.3em]" placeholder="6-digit PIN" aria-label="PIN" error={fieldErr("password")} />
                 {state && !state.ok && !state.fieldErrors ? <div role="alert"><Alert tone="danger">{state.error}</Alert></div> : null}
                 <Button type="submit" size="lg" fullWidth className="h-13 rounded-xl text-base" loading={pending}><Zap className="h-4 w-4" /> Sign in</Button>
-                <p className="text-center text-xs"><Link href="/forgot-password" className="font-semibold text-brand-700">Forgot PIN?</Link></p>
+                <p className="flex justify-between text-xs"><Link href="/forgot-password" className="font-semibold text-brand-700">Forgot PIN?</Link>{otpFirst ? <button type="button" onClick={() => void sendOtp()} disabled={busy} className="font-semibold text-brand-700">Sign in with OTP</button> : null}</p>
               </>
             )}
           </form>

@@ -164,7 +164,10 @@ export async function verifyPhoneOtpAction(phone: string, token: string, guestUs
   const { data, error } = await supabase.auth.verifyOtp({ phone: toE164(m.data), token: token.replace(/\D/g, ""), type: "sms" });
   if (error) return { ok: false, error: friendlyError(error) };
   await mergeGuest(supabase, guestUserId, data.user!.id);
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", data.user!.id).maybeSingle();
+  const { data: profile } = await supabase.from("profiles").select("role, full_name, is_guest").eq("id", data.user!.id).maybeSingle();
+  // A number signing in by OTP for the first time gets its account here; the profile trigger named it "Guest"
+  // (no name was given), so clear that and the account page asks for the name instead.
+  if (profile && !profile.is_guest && profile.full_name === "Guest") await supabase.from("profiles").update({ full_name: null }).eq("id", data.user!.id);
   return { ok: true, redirectTo: ROLE_HOME[profile?.role ?? "customer"] ?? "/" };
 }
 
