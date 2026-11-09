@@ -28,8 +28,8 @@ export async function GET(req: NextRequest) {
 
 async function google(lat: number, lng: number, key: string): Promise<Suggestion | null> {
   const r = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&region=in&key=${key}`, { headers: { Referer: `${site.url}/` } });
-  const d = await r.json() as { status: string; results: { formatted_address: string; address_components: { long_name: string; types: string[] }[] }[] };
-  if (d.status !== "OK" || !d.results.length) { if (d.status !== "ZERO_RESULTS") console.warn("maps/geocode: Google returned", d.status); return null; }
+  const d = await r.json() as { status: string; error_message?: string; results: { formatted_address: string; address_components: { long_name: string; types: string[] }[] }[] };
+  if (d.status !== "OK" || !d.results.length) { if (d.status !== "ZERO_RESULTS") console.warn("maps/geocode: Google returned", d.status, d.error_message ?? ""); return null; }
   const comps = d.results[0].address_components;
   const pick = (t: string) => comps.find((c) => c.types.includes(t))?.long_name;
   return { ok: true, source: "google", formatted: d.results[0].formatted_address, street: pick("route"), area: pick("sublocality_level_1") ?? pick("sublocality") ?? pick("neighborhood"), city: pick("locality"), pincode: pick("postal_code") };
