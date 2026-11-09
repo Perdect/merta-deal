@@ -75,8 +75,11 @@ const cachedHomeData = unstable_cache(async (essentialSlugs: string[], welcomeCo
   const sections: HomeSection[] = [
     { key: "essentials", title: "Everyday essentials", href: null, products: essentials },
     { key: "dry-fruits", title: nowIso < new Date(DIWALI_ENDS).toISOString() ? "Dry fruits for Diwali" : "Dry fruits", href: "/c/dry-fruits", products: dryFruits },
-    { key: "vegetables", title: "Fresh vegetables", href: "/c/vegetables", products: take(inTop("vegetables")) },
-    { key: "fruits", title: "Fresh fruits", href: "/c/fruits", products: take(inTop("fruits")) },
+    // Every other live top-level category gets its own row in catalogue order (Sweets, Bakery, and
+    // Fruits / Vegetables when they are back), so a new line shows up here without a code change.
+    ...top.filter((c) => !["grocery", "dry-fruits"].includes(c.slug)).map((c) => ({
+      key: c.slug, title: c.slug === "vegetables" ? "Fresh vegetables" : c.slug === "fruits" ? "Fresh fruits" : c.name, href: `/c/${c.slug}`, products: take(inTop(c.slug)),
+    })),
     { key: "grocery", title: "Grocery essentials", href: "/c/grocery", products: take(inTop("grocery")) },
   ].filter((s) => s.products.length);
 
