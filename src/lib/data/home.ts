@@ -1,5 +1,7 @@
 import { cache } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
+import { unstable_cache } from "next/cache";
+import { CATALOGUE_TAG } from "@/lib/data/catalog";
 import type { ProductCard } from "@/types/app";
 
 /** Launch staples shown first under "Everyday essentials". Override with the `home_essentials` setting (JSON array of slugs). */
@@ -28,8 +30,8 @@ export type HomeData = { categories: HomeCategory[]; sections: HomeSection[]; of
  * (small at launch — one query, ranked by popularity), and the welcome coupon if it is live.
  * Each product appears in at most one section, so a small catalogue never looks repetitive.
  */
-export const getHomeData = cache(async (essentialSlugs: string[], welcomeCode: string): Promise<HomeData> => {
-  const supabase = await createClient();
+const cachedHomeData = unstable_cache(async (essentialSlugs: string[], welcomeCode: string): Promise<HomeData> => {
+  const supabase = createPublicClient();
   const nowIso = new Date().toISOString();
   const [cats, cards, coupon] = await Promise.all([
     supabase.from("categories").select("id, name, slug, color, image_url, parent_id, sort_order").eq("is_active", true).order("sort_order"),
@@ -84,4 +86,6 @@ export const getHomeData = cache(async (essentialSlugs: string[], welcomeCode: s
     .sort((a, b) => Number(b.code === welcomeCode) - Number(a.code === welcomeCode));
 
   return { categories, sections, offers };
-});
+}, ["home-data"], { tags: [CATALOGUE_TAG, "coupons"], revalidate: 60 });
+/** Served from the data cache for a minute: the home screen is the same for every visitor. */
+export const getHomeData = cache((essentialSlugs: string[], welcomeCode: string) => cachedHomeData(essentialSlugs, welcomeCode));

@@ -1,5 +1,5 @@
 "use server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { friendlyError } from "@/lib/utils";
@@ -42,6 +42,7 @@ function revalidateProduct(productId: string, slug?: string | null) {
   revalidatePath("/admin/products/images");
   if (slug) revalidatePath(`/p/${slug}`);
   revalidatePath("/");
+  revalidateTag("catalogue", { expire: 0 });
 }
 
 const price = (label: string) => z.coerce.number({ message: `Enter the ${label}` }).refine((v) => Number.isFinite(v), `Enter the ${label}`).refine((v) => v > 0, `${label[0].toUpperCase()}${label.slice(1)} must be more than ₹0`).refine((v) => v <= 1_000_000, `${label[0].toUpperCase()}${label.slice(1)} looks too high`);

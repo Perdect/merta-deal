@@ -1,6 +1,6 @@
 "use server";
 import { randomInt } from "node:crypto";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { headers } from "next/headers";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
@@ -45,7 +45,8 @@ async function audit(action: string, entity: string, entityId: string | null, be
   await supabase.rpc("admin_audit", { p_action: action, p_entity: entity, p_entity_id: entityId ?? "", p_before: (before ?? undefined) as Json | undefined, p_after: (after ?? undefined) as Json | undefined });
 }
 
-function revalidate(...paths: string[]) { for (const p of paths) revalidatePath(p); }
+// Admin edits also clear the shared catalogue/settings cache so the shop shows them at once.
+function revalidate(...paths: string[]) { for (const p of paths) revalidatePath(p); revalidateTag("catalogue", { expire: 0 }); revalidateTag("settings", { expire: 0 }); }
 
 /* ------------------------------------------------------------------------------------------------
  * Users

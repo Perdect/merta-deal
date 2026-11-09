@@ -1,6 +1,8 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createPublicClient } from "@/lib/supabase/public";
+import { unstable_cache } from "next/cache";
 import type { Category, HomeFeed, ProductCard, ProductDetail, SearchResult } from "@/types/app";
 
 export const getHomeFeed = cache(async (lat?: number | null, lng?: number | null): Promise<HomeFeed | null> => {
@@ -10,11 +12,20 @@ export const getHomeFeed = cache(async (lat?: number | null, lng?: number | null
   return data as unknown as HomeFeed;
 });
 
-export const getCategories = cache(async (): Promise<Category[]> => {
-  const supabase = await createClient();
-  const { data } = await supabase.from("categories").select("*").eq("is_active", true).order("sort_order");
+/**
+ * Public catalogue reads are served from the Next data cache for a minute (per deployment, shared by
+ * every visitor), so a signed-in page load only waits for that person's own rows. Admin actions clear
+ * the tags when they change the catalogue or settings.
+ */
+export const CATALOGUE_TAG = "catalogue";
+export const SETTINGS_TAG = "settings";
+const PUBLIC_TTL = 60;
+
+const cachedCategories = unstable_cache(async (): Promise<Category[]> => {
+  const { data } = await createPublicClient().from("categories").select("*").eq("is_active", true).order("sort_order");
   return (data ?? []) as Category[];
-});
+}, ["categories"], { tags: [CATALOGUE_TAG], revalidate: PUBLIC_TTL });
+export const getCategories = cache(() => cachedCategories());
 
 /** Slugs of the categories customers can shop right now (switched-off ones are missing). */
 export const getActiveCategorySlugs = cache(async (): Promise<Set<string>> => new Set((await getCategories()).map((c) => c.slug)));
@@ -24,8 +35,8 @@ export function liveShopLinks<T extends { href: string }>(links: T[], active: Se
   return links.filter((l) => { const m = /^\/c\/([^/?#]+)/.exec(l.href); return !m || active.has(m[1]); });
 }
 
-export const getCategoryBySlug = cache(async (slug: string) => {
-  const supabase = await createClient();
+const cachedCategoryBySlug = unstable_cache(async (slug: string) => {
+  const supabase = createPublicClient();
   const { data, error } = await supabase.from("categories").select("*").eq("slug", slug).maybeSingle();
   if (error) throw new Error(`category lookup failed: ${error.message}`);
   if (!data) {
@@ -42,12 +53,13 @@ export const getCategoryBySlug = cache(async (slug: string) => {
     data.parent_id ? supabase.from("categories").select("*").eq("id", data.parent_id).maybeSingle() : Promise.resolve({ data: null }),
   ]);
   return { category: data as Category, children: (children ?? []) as Category[], parent: (parentRes.data as Category | null) ?? null, hidden: false as const };
-});
+}, ["category-by-slug"], { tags: [CATALOGUE_TAG], revalidate: PUBLIC_TTL });
+export const getCategoryBySlug = cache((slug: string) => cachedCategoryBySlug(slug));
 
 export type SearchParams = { q?: string; category?: string; brands?: string[]; minPrice?: number; maxPrice?: number; minDiscount?: number; inStock?: boolean; localOnly?: boolean; sort?: string; page?: number; pageSize?: number };
 
-export async function searchProducts(p: SearchParams): Promise<SearchResult> {
-  const supabase = await createClient();
+const cachedSearch = unstable_cache(async (p: SearchParams): Promise<SearchResult> => {
+  const supabase = createPublicClient();
   const { data, error } = await supabase.rpc("search_products", {
     p_query: p.q || undefined, p_category_slug: p.category || undefined, p_brand_slugs: p.brands?.length ? p.brands : undefined,
     p_min_price: p.minPrice, p_max_price: p.maxPrice, p_min_discount: p.minDiscount, p_in_stock: p.inStock ?? false,
@@ -56,7 +68,9 @@ export async function searchProducts(p: SearchParams): Promise<SearchResult> {
   // A failed query is reported as such (`error`), never shown to shoppers as "no products".
   if (error) { console.error("search_products", error.message); return { items: [], total: 0, page: p.page ?? 1, page_size: p.pageSize ?? 24, has_more: false, error: true }; }
   return data as unknown as SearchResult;
-}
+}, ["search-products"], { tags: [CATALOGUE_TAG], revalidate: PUBLIC_TTL });
+/** Listing results are public and identical for every visitor, so they come from the data cache. */
+export const searchProducts = (p: SearchParams) => cachedSearch(p);
 
 export const getProductDetail = cache(async (slug: string): Promise<ProductDetail | null> => {
   const supabase = await createClient();
@@ -69,17 +83,17 @@ export const getProductDetail = cache(async (slug: string): Promise<ProductDetai
   return data as unknown as ProductDetail;
 });
 
-export const getBrands = cache(async () => {
-  const supabase = await createClient();
-  const { data } = await supabase.from("brands").select("id, name, slug").eq("is_active", true).order("name");
+const cachedBrands = unstable_cache(async () => {
+  const { data } = await createPublicClient().from("brands").select("id, name, slug").eq("is_active", true).order("name");
   return data ?? [];
-});
+}, ["brands"], { tags: [CATALOGUE_TAG], revalidate: 300 });
+export const getBrands = cache(() => cachedBrands());
 
-export const getPublicSettings = cache(async (): Promise<Record<string, unknown>> => {
-  const supabase = await createClient();
-  const { data } = await supabase.rpc("public_settings");
+const cachedPublicSettings = unstable_cache(async (): Promise<Record<string, unknown>> => {
+  const { data } = await createPublicClient().rpc("public_settings");
   return (data as Record<string, unknown>) ?? {};
-});
+}, ["public-settings"], { tags: [SETTINGS_TAG], revalidate: PUBLIC_TTL });
+export const getPublicSettings = cache(() => cachedPublicSettings());
 
 export async function getProductsByIds(ids: string[]): Promise<ProductCard[]> {
   if (!ids.length) return [];
@@ -89,8 +103,8 @@ export async function getProductsByIds(ids: string[]): Promise<ProductCard[]> {
 }
 
 /** Curated collections shown on the home screen (from `promotions` + quick-picks). */
-export const getCollections = cache(async (): Promise<{ id: string; title: string; description: string | null; href: string; kind: string }[]> => {
-  const supabase = await createClient();
+const cachedCollections = unstable_cache(async (): Promise<{ id: string; title: string; description: string | null; href: string; kind: string }[]> => {
+  const supabase = createPublicClient();
   const { data } = await supabase.from("promotions").select("id, title, description, promo_type, category_id, product_ids, categories:categories(slug)").eq("is_active", true).order("sort_order").limit(8);
   const promos = (data ?? []).map((p) => {
     const cat = (p.categories as unknown as { slug: string } | null)?.slug;
@@ -104,9 +118,10 @@ export const getCollections = cache(async (): Promise<{ id: string; title: strin
     { id: "fruit-basket", title: "Fruit basket", description: "Banana, apple, anar, papaya", kind: "Quick pick", href: "/c/fruits" },
   ];
   // A quick pick for a switched-off category (fresh produce paused) would land on a notice, not products.
-  const active = await getActiveCategorySlugs();
+  const active = new Set((await cachedCategories()).map((c) => c.slug));
   return liveShopLinks([...promos, ...quick], active).slice(0, 8);
-});
+}, ["collections"], { tags: [CATALOGUE_TAG], revalidate: PUBLIC_TTL });
+export const getCollections = cache(() => cachedCollections());
 
 /* Categories screen ------------------------------------------------------------------------- */
 
@@ -128,10 +143,10 @@ const TILE_ORDER: Record<string, string[]> = { grocery: ["atta", "flour", "rice"
  * visible before its first product); tiles = their sub-categories with at least one listed product. Tile pictures come from the most popular
  * listed product (approved catalogue photos), falling back to the category's own image.
  */
-export const getCategoryTabs = cache(async (): Promise<CategoryTab[]> => {
-  const supabase = await createClient();
+const cachedCategoryTabs = unstable_cache(async (): Promise<CategoryTab[]> => {
+  const supabase = createPublicClient();
   const [cats, cards] = await Promise.all([
-    getCategories(),
+    cachedCategories(),
     supabase.from("v_product_cards").select("category_id, image_url, popularity_score").not("inventory_id", "is", null).order("popularity_score", { ascending: false }).limit(2000),
   ]);
   if (cards.error) throw new Error(`category tiles failed: ${cards.error.message}`);
@@ -170,4 +185,5 @@ export const getCategoryTabs = cache(async (): Promise<CategoryTab[]> => {
     const count = own.count + children.reduce((n, c) => n + stat(c.id).count, 0);
     return { id: p.id, slug: p.slug, name: p.name, image: p.image_url ?? own.image, count, tiles: tiles.map((t) => ({ key: t.key, label: t.label, href: t.href, image: t.image, count: t.count })) };
   });
-});
+}, ["category-tabs"], { tags: [CATALOGUE_TAG], revalidate: PUBLIC_TTL });
+export const getCategoryTabs = cache(() => cachedCategoryTabs());
