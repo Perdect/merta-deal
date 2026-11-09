@@ -46,10 +46,14 @@ export function OrderAlerts({ userId, push }: { userId: string; push: PushConfig
   const feedRef = React.useRef<AlertFeed | null>(null);
   const seenRef = React.useRef<Set<string>>(new Set());
 
+  // Consecutive failures while the browser is online usually mean the site was redeployed under an
+  // open tab (its server-action ids no longer exist): reload once so the popup keeps working.
+  const failures = React.useRef(0);
   const load = React.useCallback(async () => {
     try {
       const r = await getOrderAlertsAction();
       if (!r.ok) { setLoadError(r.error); return; }
+      failures.current = 0;
       setLoadError(null);
       setOffset(new Date(r.data.now).getTime() - Date.now());
       feedRef.current = r.data;
@@ -58,7 +62,15 @@ export function OrderAlerts({ userId, push }: { userId: string; push: PushConfig
       const fresh = r.data.orders.filter((o) => !seenRef.current.has(o.id));
       fresh.forEach((o) => seenRef.current.add(o.id));
       if (fresh.length) setCollapsed(false);
-    } catch { setLoadError("No connection. Retrying…"); }
+    } catch {
+      failures.current += 1;
+      const online = typeof navigator === "undefined" || navigator.onLine;
+      if (online && failures.current >= 2) {
+        const last = Number(sessionStorage.getItem("md-alerts-reload") ?? 0);
+        if (Date.now() - last > 120_000) { sessionStorage.setItem("md-alerts-reload", String(Date.now())); setLoadError("Site updated · reloading…"); window.location.reload(); return; }
+      }
+      setLoadError(online ? "Could not reach the server. Retrying…" : "No connection. Retrying…");
+    }
   }, []);
 
   // Snooze state is per browser session and shared with every tab (the ringing tab may be another one).
