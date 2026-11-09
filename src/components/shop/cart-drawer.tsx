@@ -27,6 +27,8 @@ import { DeliveryAddressRow, useCheckoutGate } from "./checkout-gate";
 import { ProductImage } from "./product-image";
 import { ProductCard } from "./product-card";
 import { LoginModal } from "@/components/auth/login-modal";
+import { ScheduleSheet } from "./schedule-sheet";
+import { parseSlotKey, slotSummary, slotWindow } from "@/lib/slots";
 import { cn, formatINR } from "@/lib/utils";
 import { etaText } from "@/lib/eta";
 import { site } from "@/config/site";
@@ -35,7 +37,7 @@ declare global { interface Window { Razorpay?: new (opts: Record<string, unknown
 
 type Coupon = { code: string; title: string; min_order_amount: number };
 type Props = {
-  signedIn: boolean; isGuest: boolean; addresses: Address[]; walletBalance: number; razorpayEnabled: boolean; codEnabled: boolean; slots: string[];
+  signedIn: boolean; isGuest: boolean; addresses: Address[]; walletBalance: number; razorpayEnabled: boolean; codEnabled: boolean; slots: string[]; /** Slot rules from settings: lead time and days offered. */ slotRules: { leadMinutes: number; daysAhead: number };
   coupons: Coupon[]; user: { name: string | null; phone: string | null }; eta: { min: number; max: number };
 };
 const TYPE_ICON = { home: Home, work: Briefcase, other: MapPin };
@@ -73,7 +75,7 @@ function PayRow({ id, current, onPick, icon, title, sub, disabled }: { id: Payme
  * through place_order — this component only arranges them. The address and sign-in sheets live here
  * too and open from any page (cart store `sheet`), the panel itself need not be open.
  */
-export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, walletBalance, razorpayEnabled, codEnabled, slots, coupons, user, eta }: Props) {
+export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, walletBalance, razorpayEnabled, codEnabled, slots, slotRules, coupons, user, eta }: Props) {
   const router = useRouter();
   const hydrated = useHydrated();
   const step = useCartStore((s) => s.drawer);
@@ -101,7 +103,8 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
   const gate = useCheckoutGate({ summary, addresses: serverAddresses, signedIn, isGuest });
   const { addresses, addressId, selectedAddress } = gate;
 
-  const [slot, setSlot] = React.useState(slots[0] ?? "");
+  const slotKey = useCheckoutStore((st) => st.slotKey);
+  const setSlotKey = useCheckoutStore((st) => st.setSlotKey);
   const [payment, setPayment] = React.useState<PaymentMethod>(codEnabled ? "cod" : razorpayEnabled ? "upi" : "wallet");
   const pending = useCartStore((st) => st.pending);
   const notice = useCartStore((st) => st.notice);
@@ -116,6 +119,12 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
   const s = summary;
   // Express can only stay selected while the delivery zone offers it.
   if (deliveryType === "express" && s && !s.zone?.express_supported) setDeliveryType("standard");
+  // A persisted slot that has already started is no longer a choice; instant delivery is off outside business hours.
+  // "Now" is read once per mount (a render must stay pure); the sheet itself recomputes slots when it opens.
+  const [now] = React.useState(() => Date.now());
+  const slotParsed = parseSlotKey(slotKey);
+  const chosenSlot = deliveryType === "scheduled" && slotParsed && slotWindow(slotParsed.date, slotParsed.range).start.getTime() > now ? slotKey : null;
+  const instantOk = s?.business_open !== false;
   const items = s?.items ?? [];
   const open = Boolean(step);
   const account = signedIn && !isGuest;
@@ -173,15 +182,17 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
   const payBlocker = !s ? null : !addressId ? "Select or add a delivery address to continue."
     : !s.serviceable ? (s.service_message ?? "We don't deliver to this address yet.")
     : gate.cartBlocker ? gate.cartBlocker
-    : deliveryType === "scheduled" && !slot ? "Pick a delivery slot to continue."
+    : deliveryType === "scheduled" && !chosenSlot ? "Pick a delivery slot to continue."
+    : deliveryType !== "scheduled" && !instantOk ? "We're closed right now. Schedule your order for a slot instead."
     : payment === "wallet" && !walletOk ? "Your wallet balance doesn't cover this order. Choose another payment method."
     : ONLINE.includes(payment) && !razorpayEnabled && !(payment === "upi" && upi?.payNow) ? "Online payment isn't available yet. Choose Cash on Delivery."
     : null;
 
   const scheduledRange = () => {
-    if (deliveryType !== "scheduled" || !slot) return {};
-    const [a, b] = slot.split("-"); const mk = (t: string) => { const [h, m] = t.split(":").map(Number); const d = new Date(); d.setHours(h, m, 0, 0); if (d < new Date()) d.setDate(d.getDate() + 1); return d.toISOString(); };
-    return { scheduledStart: mk(a), scheduledEnd: mk(b) };
+    const p = parseSlotKey(chosenSlot);
+    if (deliveryType !== "scheduled" || !p) return {};
+    const w = slotWindow(p.date, p.range);
+    return { scheduledStart: w.start.toISOString(), scheduledEnd: w.end.toISOString() };
   };
 
   // One order per tap: `placingRef` blocks re-entry while the request is in flight (the button also
@@ -223,6 +234,11 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
   const sheets = (
     <>
       <PlaceOrderSheet open={confirming} onClose={() => setConfirming(false)} onPlace={() => void place()} address={selectedAddress} total={s?.total ?? 0} payment={payment} upi={Boolean(upi)} upiNow={Boolean(upi?.payNow) && !razorpayEnabled} />
+      {sheet === "schedule" && s ? (
+        <ScheduleSheet onClose={closeSheet} ranges={slots} leadMinutes={slotRules.leadMinutes} daysAhead={slotRules.daysAhead} instantAvailable={instantOk} etaLabel={etaLabel} itemCount={s.item_count}
+          current={chosenSlot ? { type: "scheduled", key: chosenSlot } : { type: "standard" }}
+          onConfirm={(c) => { if (c.type === "scheduled") { setSlotKey(c.key); setDeliveryType("scheduled"); } else if (deliveryType === "scheduled") setDeliveryType("standard"); closeSheet(); }} />
+      ) : null}
       <AddressSheet open={sheet === "address"} onClose={closeSheet} addresses={addresses} selectedId={addressId} defaultName={user.name} defaultPhone={user.phone}
         onPick={(a, isNew) => { if (isNew) { addAddress(a); router.refresh(); } setAddressId(a.id); void adoptAddress(a); closeSheet(); }} />
       <LoginModal key={selectedAddress?.phone ?? ""} defaultMobile={selectedAddress?.phone} open={sheet === "login" && !account} onClose={() => { closeSheet(); setResume(null); }} eta={`${eta.min}–${eta.max} minutes`} guest={isGuest} title={resume === "pay" ? "Login to place your order" : undefined} />
@@ -299,10 +315,21 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
                 {s.coupon && !s.coupon.valid ? <p className="mt-2 text-xs text-danger">{s.coupon.reason}</p> : null}
               </Card>
 
+              {slots.length > 0 ? (
+                <Card className={cn("flex items-center gap-3 p-4", !instantOk && !chosenSlot && "border-saffron-300 bg-saffron-50")}>
+                  <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-md border", chosenSlot ? "border-brand-200 bg-brand-50 text-brand-700" : "border-line bg-card text-ink")}><CalendarClock className="h-5 w-5" aria-hidden /></span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-display text-base font-bold text-ink">{chosenSlot ? "Scheduled delivery" : "Schedule for later"}</p>
+                    <p className="text-xs text-ink-2">{chosenSlot ? slotSummary(chosenSlot) : instantOk ? (etaLabel ? `Or get it now in ${etaLabel}` : "Pick a convenient slot") : "Instant delivery is unavailable right now"}</p>
+                  </div>
+                  <Button size="sm" variant={chosenSlot ? "outline" : "secondary"} className="rounded-lg" onClick={() => openSheet("schedule")}>{chosenSlot ? "Change" : "Schedule"}</Button>
+                </Card>
+              ) : null}
+
               <Card>
                 <div className="flex items-center gap-3 border-b border-line px-4 py-3.5">
                   <span className="flex h-11 w-11 items-center justify-center rounded-md border border-line bg-card text-ink"><Clock className="h-5 w-5" /></span>
-                  <div className="min-w-0 flex-1"><p className="font-display text-base font-bold text-ink">{etaLabel ? `Delivering in ${etaLabel}` : selectedAddress ? "Delivery time unavailable here" : "Add an address to see delivery time"}</p><p className="text-xs text-ink-3">{s.item_count} item{s.item_count === 1 ? "" : "s"}{selectedAddress ? ` · to ${addressTitle(selectedAddress)}` : ""}</p></div>
+                  <div className="min-w-0 flex-1"><p className="font-display text-base font-bold text-ink">{chosenSlot ? `Delivering ${slotSummary(chosenSlot)}` : etaLabel && instantOk ? `Delivering in ${etaLabel}` : !instantOk ? "Closed now · schedule for later" : selectedAddress ? "Delivery time unavailable here" : "Add an address to see delivery time"}</p><p className="text-xs text-ink-3">{s.item_count} item{s.item_count === 1 ? "" : "s"}{selectedAddress ? ` · to ${addressTitle(selectedAddress)}` : ""}</p></div>
                 </div>
                 <ul className="divide-y divide-line px-4">
                   {items.map((line) => {
@@ -403,21 +430,21 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
                 {(() => {
                   // Express is offered only where the zone supports it (admins switch it per zone); otherwise it is not shown at all.
                   const opts = ([
-                    { id: "express" as const, icon: <Zap className="h-4 w-4 text-saffron-600" aria-hidden />, t: "Express", sub: `+${formatINR(s.express_fee || 20)}`, show: Boolean(s.zone?.express_supported) },
-                    { id: "standard" as const, icon: <Clock className="h-4 w-4 text-brand-600" aria-hidden />, t: "As soon as possible", sub: etaText(s.eta_min_minutes, s.eta_max_minutes, "min") ?? "Estimate at checkout", show: true },
-                    { id: "scheduled" as const, icon: <CalendarClock className="h-4 w-4 text-info" aria-hidden />, t: "Scheduled", sub: "Pick a slot", show: slots.length > 0 },
+                    { id: "express" as const, icon: <Zap className="h-4 w-4 text-saffron-600" aria-hidden />, t: "Express", sub: instantOk ? `+${formatINR(s.express_fee || 20)}` : "Unavailable now", show: Boolean(s.zone?.express_supported), off: !instantOk },
+                    { id: "standard" as const, icon: <Clock className="h-4 w-4 text-brand-600" aria-hidden />, t: "As soon as possible", sub: instantOk ? (etaText(s.eta_min_minutes, s.eta_max_minutes, "min") ?? "Estimate at checkout") : "Unavailable now", show: true, off: !instantOk },
+                    { id: "scheduled" as const, icon: <CalendarClock className="h-4 w-4 text-info" aria-hidden />, t: "Scheduled", sub: chosenSlot ? slotSummary(chosenSlot)! : "Pick a slot", show: slots.length > 0, off: false },
                   ]).filter((o) => o.show);
                   return (
                     <div className="mt-2 grid gap-2" style={{ gridTemplateColumns: `repeat(${opts.length}, minmax(0, 1fr))` }}>
                       {opts.map((o) => (
-                        <button key={o.id} type="button" aria-pressed={deliveryType === o.id} onClick={() => setDeliveryType(o.id)} className={cn("min-h-11 rounded-xl border p-2.5 text-left", deliveryType === o.id ? "border-brand-600 bg-brand-50" : "border-line bg-card")}>
+                        <button key={o.id} type="button" disabled={o.off} aria-pressed={deliveryType === o.id} onClick={() => (o.id === "scheduled" ? openSheet("schedule") : setDeliveryType(o.id))} className={cn("min-h-11 rounded-xl border p-2.5 text-left disabled:opacity-50", deliveryType === o.id ? "border-brand-600 bg-brand-50" : "border-line bg-card")}>
                           <span className="flex items-center gap-1.5 text-sm font-bold text-ink">{o.icon}{o.t}</span><span className="block text-[11px] text-ink-3">{o.sub}</span>
                         </button>
                       ))}
                     </div>
                   );
                 })()}
-                {deliveryType === "scheduled" ? <div className="scroll-x mt-3">{slots.map((x) => <button key={x} type="button" onClick={() => setSlot(x)} className={cn("rounded-full border px-3.5 py-2 text-sm font-medium", slot === x ? "border-brand-600 bg-brand-50 text-brand-700" : "border-line-2 bg-card text-ink-2")}>{x.replace("-", " – ")}</button>)}</div> : null}
+                {deliveryType === "scheduled" ? <div className="mt-3 flex items-center justify-between rounded-xl bg-surface-2 px-3 py-2.5 text-sm"><span className="font-medium text-ink">{chosenSlot ? slotSummary(chosenSlot) : "No slot picked yet"}</span><button type="button" onClick={() => openSheet("schedule")} className="font-bold text-brand-700">{chosenSlot ? "Change" : "Pick a slot"}</button></div> : null}
               </Card>
 
               <div className="space-y-3">
@@ -438,7 +465,9 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
               <>
                 {gate.cartBlocker && selectedAddress ? <Alert tone="warning" className="mb-2">{gate.cartBlocker}</Alert> : null}
                 {!gate.cartBlocker && selectedAddress && !gate.unserved && items.some((l) => l.price_changed) ? <Alert tone="info" className="mb-2">Some prices changed since you added these items. The bill above uses today&rsquo;s prices.</Alert> : null}
-                <Button size="lg" fullWidth className="h-13 rounded-xl text-base" disabled={gate.ctaDisabled} onClick={() => void gate.proceed()}>{gate.ctaLabel}</Button>
+                {!instantOk && !chosenSlot && selectedAddress && !gate.unserved
+                  ? <Button size="lg" fullWidth className="h-13 rounded-xl text-base" onClick={() => openSheet("schedule")}>Select delivery options</Button>
+                  : <Button size="lg" fullWidth className="h-13 rounded-xl text-base" disabled={gate.ctaDisabled} onClick={() => void gate.proceed()}>{gate.ctaLabel}</Button>}
                 {gate.needsLogin && selectedAddress && !gate.unserved ? <p className="mt-2 text-center text-[11px] text-ink-3">You&rsquo;ll sign in with your mobile number before paying. Your cart and address are kept.</p> : null}
               </>
             ) : (

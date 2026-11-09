@@ -26,7 +26,7 @@ export default async function CheckoutPage() {
   return (
     <div className="pt-1">
       <ShopPageHeader title="Checkout" back="/cart" subtitle={`${summary.item_count} item${summary.item_count === 1 ? "" : "s"}`} />
-      <CheckoutView initial={summary} addresses={addresses} walletBalance={Number(profile?.wallet_balance ?? 0)} razorpayEnabled={isRazorpayConfigured() && settings.online_payments_enabled !== false} codEnabled={settings.cod_enabled !== false} slots={slots} accepting={accepting} user={{ name: profile?.full_name ?? user.fullName, phone: profile?.phone ?? user.phone }} />
+      <CheckoutView initial={summary} addresses={addresses} walletBalance={Number(profile?.wallet_balance ?? 0)} razorpayEnabled={isRazorpayConfigured() && settings.online_payments_enabled !== false} codEnabled={settings.cod_enabled !== false} slots={slots} slotRules={{ leadMinutes: Number(settings.scheduled_slot_lead_minutes) || 30, daysAhead: Number(settings.scheduled_days_ahead) || 2 }} accepting={accepting} user={{ name: profile?.full_name ?? user.fullName, phone: profile?.phone ?? user.phone }} />
     </div>
   );
 }

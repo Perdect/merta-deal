@@ -13,6 +13,8 @@ import type { Address, DeliveryType } from "@/types/app";
 type CheckoutState = {
   addressId: string | null;
   deliveryType: DeliveryType;
+  /** Chosen scheduled slot as "YYYY-MM-DD|HH:MM-HH:MM" (see src/lib/slots.ts); only used while deliveryType is "scheduled". */
+  slotKey: string | null;
   instructions: string;
   giftMessage: string;
   /** Set when a guest is sent to sign in from "Proceed to Pay": the payment step reopens once signed in. */
@@ -21,6 +23,7 @@ type CheckoutState = {
   added: Address[];
   setAddressId: (id: string | null) => void;
   setDeliveryType: (t: DeliveryType) => void;
+  setSlotKey: (k: string | null) => void;
   setInstructions: (s: string) => void;
   setGiftMessage: (v: string) => void;
   setResume: (r: "pay" | null) => void;
@@ -30,14 +33,16 @@ type CheckoutState = {
 export const useCheckoutStore = create<CheckoutState>()(persist((set) => ({
   addressId: null,
   deliveryType: "standard",
+  slotKey: null,
   instructions: "",
   giftMessage: "",
   resume: null,
   added: [],
   setAddressId: (addressId) => set({ addressId }),
   setDeliveryType: (deliveryType) => set({ deliveryType }),
+  setSlotKey: (slotKey) => set({ slotKey }),
   setInstructions: (instructions) => set({ instructions }),
   setGiftMessage: (giftMessage) => set({ giftMessage }),
   setResume: (resume) => set({ resume }),
   addAddress: (a) => set((s) => ({ added: [a, ...s.added.filter((x) => x.id !== a.id)] })),
-}), { name: "md-checkout", partialize: (s) => ({ addressId: s.addressId, deliveryType: s.deliveryType, instructions: s.instructions, giftMessage: s.giftMessage, resume: s.resume }) }));
+}), { name: "md-checkout", partialize: (s) => ({ addressId: s.addressId, deliveryType: s.deliveryType, slotKey: s.slotKey, instructions: s.instructions, giftMessage: s.giftMessage, resume: s.resume }) }));

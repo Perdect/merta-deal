@@ -40,7 +40,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
       <ChromePart part="cartBar"><StickyCartBar /></ChromePart>
       <NavSpacer />
       <CartDrawerLazy signedIn={Boolean(user)} isGuest={Boolean(profile?.is_guest)} addresses={addresses} walletBalance={Number(profile?.wallet_balance ?? 0)}
-        razorpayEnabled={isRazorpayConfigured() && settings.online_payments_enabled !== false} codEnabled={settings.cod_enabled !== false} slots={slots}
+        razorpayEnabled={isRazorpayConfigured() && settings.online_payments_enabled !== false} codEnabled={settings.cod_enabled !== false} slots={slots} slotRules={{ leadMinutes: num("scheduled_slot_lead_minutes", 30), daysAhead: num("scheduled_days_ahead", 2) }}
         coupons={coupons.map((c) => ({ code: c.code, title: c.title, min_order_amount: Number(c.min_order_amount) }))}
         user={{ name: profile?.full_name ?? user?.fullName ?? null, phone: profile?.phone ?? user?.phone ?? null }} eta={defaultEta} />
       <ChromePart part="bottomNav"><BottomNav unread={notifications.unread} /></ChromePart>

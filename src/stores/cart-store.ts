@@ -12,14 +12,14 @@ type CartState = {
   pending: Record<string, number>; // inventory_id -> optimistic qty
   /** Slide-in cart panel: closed, the cart itself, or the payment step. */
   drawer: null | "cart" | "pay";
-  /** Sheets that can open over any page (the cart panel owns them): pick/add an address, or sign in. */
-  sheet: null | "address" | "login";
+  /** Sheets that can open over any page (the cart panel owns them): pick/add an address, sign in, or pick a delivery slot. */
+  sheet: null | "address" | "login" | "schedule";
   /** Explanation shown at the top of the cart until dismissed (e.g. what a reorder changed). */
   notice: { title: string; lines: string[] } | null;
   setNotice: (n: { title: string; lines: string[] } | null) => void;
   openDrawer: (step?: "cart" | "pay") => void;
   closeDrawer: () => void;
-  openSheet: (sheet: "address" | "login") => void;
+  openSheet: (sheet: "address" | "login" | "schedule") => void;
   closeSheet: () => void;
   setSummary: (s: CartSummary | null) => void;
   setLoading: (v: boolean) => void;

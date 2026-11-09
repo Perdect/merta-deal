@@ -17,19 +17,29 @@ import { toast } from "@/components/ui/toast";
 import { AddressWizard } from "./address-wizard";
 import { PriceBreakdown, FreeDeliveryBar } from "./price-breakdown";
 import { PlaceOrderSheet } from "./place-order-flow";
+import { ScheduleSheet } from "./schedule-sheet";
+import { useCheckoutStore } from "@/stores/checkout-store";
+import { parseSlotKey, slotSummary, slotWindow } from "@/lib/slots";
 import { cn, formatINR } from "@/lib/utils";
 
 declare global { interface Window { Razorpay?: new (opts: Record<string, unknown>) => { open: () => void; on: (e: string, cb: (r: unknown) => void) => void } } }
 
-type Props = { initial: CartSummary; addresses: Address[]; walletBalance: number; razorpayEnabled: boolean; codEnabled: boolean; slots: string[]; user: { name: string | null; phone: string | null }; /** false while the shop is at its active-order limit */ accepting?: boolean };
+type Props = { initial: CartSummary; addresses: Address[]; walletBalance: number; razorpayEnabled: boolean; codEnabled: boolean; slots: string[]; slotRules: { leadMinutes: number; daysAhead: number }; user: { name: string | null; phone: string | null }; /** false while the shop is at its active-order limit */ accepting?: boolean };
 const TYPE_ICON = { home: Home, work: Briefcase, other: MapPin };
 
-export function CheckoutView({ initial, addresses: initialAddresses, walletBalance, razorpayEnabled, codEnabled, slots, user, accepting = true }: Props) {
+export function CheckoutView({ initial, addresses: initialAddresses, walletBalance, razorpayEnabled, codEnabled, slots, slotRules, user, accepting = true }: Props) {
   const router = useRouter();
   const [addresses, setAddresses] = React.useState(initialAddresses);
   const [addressId, setAddressId] = React.useState<string | null>(initialAddresses.find((a) => a.is_default)?.id ?? initialAddresses[0]?.id ?? null);
   const [deliveryType, setDeliveryType] = React.useState<DeliveryType>("standard");
-  const [slot, setSlot] = React.useState<string>(slots[0] ?? "");
+  const slotKey = useCheckoutStore((st) => st.slotKey);
+  const setSlotKey = useCheckoutStore((st) => st.setSlotKey);
+  const [scheduleOpen, setScheduleOpen] = React.useState(false);
+  // "Now" is read once per mount (a render must stay pure); the sheet itself recomputes slots when it opens.
+  const [now] = React.useState(() => Date.now());
+  const slotParsed = parseSlotKey(slotKey);
+  const chosenSlot = slotParsed && slotWindow(slotParsed.date, slotParsed.range).start.getTime() > now ? slotKey : null;
+  const instantOk = initial.business_open !== false;
   const [payment, setPayment] = React.useState<PaymentMethod>(codEnabled ? "cod" : razorpayEnabled ? "upi" : "wallet");
   const [instructions, setInstructions] = React.useState("");
   const [gift, setGift] = React.useState("");
@@ -56,16 +66,18 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
     : !summary.serviceable ? (summary.service_message ?? "We don't deliver to this address yet.")
     : !summary.meets_min_order ? `Minimum order is ${formatINR(summary.min_order_amount)} for your area. Add ${formatINR(summary.min_order_amount - summary.subtotal)} more to place this order.`
     : summary.issues.length ? "Some items are no longer available in the quantity you chose. Update your cart to continue."
-    : deliveryType === "scheduled" && !slot ? "Pick a delivery slot to continue."
+    : deliveryType === "scheduled" && !chosenSlot ? "Pick a delivery slot to continue."
+    : deliveryType !== "scheduled" && !instantOk ? "We're closed right now. Schedule your order for a slot instead."
     : payment === "wallet" && !walletOk ? "Your wallet balance doesn't cover this order. Choose another payment method."
     : online.includes(payment) && !razorpayEnabled && !(payment === "upi" && upi?.payNow) ? "Online payment isn't available yet. Choose Cash on Delivery."
     : null;
   const canPlace = !blocker;
 
   const scheduledRange = () => {
-    if (deliveryType !== "scheduled" || !slot) return {};
-    const [a, b] = slot.split("-"); const today = new Date(); const mk = (t: string) => { const [h, m] = t.split(":").map(Number); const d = new Date(today); d.setHours(h, m, 0, 0); if (d < new Date()) d.setDate(d.getDate() + 1); return d.toISOString(); };
-    return { scheduledStart: mk(a), scheduledEnd: mk(b) };
+    const p = parseSlotKey(chosenSlot);
+    if (deliveryType !== "scheduled" || !p) return {};
+    const w = slotWindow(p.date, p.range);
+    return { scheduledStart: w.start.toISOString(), scheduledEnd: w.end.toISOString() };
   };
 
   const place = async () => {
@@ -119,10 +131,10 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
         <Section step={2} title="Delivery option">
           <div className={cn("grid gap-2", summary.zone?.express_supported ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
             {summary.zone?.express_supported ? <Option active={deliveryType === "express"} disabled={!summary.zone?.express_supported} onClick={() => setDeliveryType("express")} icon={<Zap className="h-5 w-5 text-saffron-600" />} title="Express" subtitle={summary.zone?.express_supported ? `20–35 min · +${formatINR(summary.express_fee || 20)}` : "Not in your zone yet"} /> : null}
-            <Option active={deliveryType === "standard"} onClick={() => setDeliveryType("standard")} icon={<Clock className="h-5 w-5 text-brand-600" />} title="As soon as possible" subtitle={`${summary.eta_min_minutes}–${summary.eta_max_minutes} min`} />
-            <Option active={deliveryType === "scheduled"} onClick={() => setDeliveryType("scheduled")} icon={<CalendarClock className="h-5 w-5 text-info" />} title="Scheduled" subtitle="Pick a slot" />
+            <Option active={deliveryType === "standard"} disabled={!instantOk} onClick={() => setDeliveryType("standard")} icon={<Clock className="h-5 w-5 text-brand-600" />} title="As soon as possible" subtitle={instantOk ? `${summary.eta_min_minutes}–${summary.eta_max_minutes} min` : "Unavailable now"} />
+            <Option active={deliveryType === "scheduled"} onClick={() => setScheduleOpen(true)} icon={<CalendarClock className="h-5 w-5 text-info" />} title="Scheduled" subtitle={chosenSlot && deliveryType === "scheduled" ? slotSummary(chosenSlot)! : "Pick a slot"} />
           </div>
-          {deliveryType === "scheduled" ? <div className="scroll-x mt-3">{slots.map((s) => <button key={s} type="button" onClick={() => setSlot(s)} className={cn("rounded-full border px-3.5 py-2 text-sm font-medium", slot === s ? "border-brand-600 bg-brand-50 text-brand-700" : "border-line-2 bg-card text-ink-2")}>{s.replace("-", " – ")}</button>)}</div> : null}
+          {deliveryType === "scheduled" ? <div className="mt-3 flex items-center justify-between rounded-md bg-surface-2 px-3 py-2.5 text-sm"><span className="font-medium text-ink">{chosenSlot ? slotSummary(chosenSlot) : "No slot picked yet"}</span><button type="button" onClick={() => setScheduleOpen(true)} className="font-bold text-brand-700">{chosenSlot ? "Change" : "Pick a slot"}</button></div> : null}
           <p className="mt-2 text-xs text-ink-3">ETA is based on packing time and your zone. We show real estimates, never guarantees.</p>
         </Section>
 
@@ -154,6 +166,11 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
         <p className="text-center text-[11px] text-ink-3">By placing this order you agree to the terms of service. Delivery OTP will be shared after the order is placed.</p>
       </aside>
 
+      {scheduleOpen ? (
+        <ScheduleSheet onClose={() => setScheduleOpen(false)} ranges={slots} leadMinutes={slotRules.leadMinutes} daysAhead={slotRules.daysAhead} instantAvailable={instantOk} etaLabel={`${summary.eta_min_minutes}–${summary.eta_max_minutes} min`} itemCount={summary.item_count}
+          current={chosenSlot && deliveryType === "scheduled" ? { type: "scheduled", key: chosenSlot } : { type: "standard" }}
+          onConfirm={(c) => { if (c.type === "scheduled") { setSlotKey(c.key); setDeliveryType("scheduled"); } else if (deliveryType === "scheduled") setDeliveryType("standard"); setScheduleOpen(false); }} />
+      ) : null}
       <PlaceOrderSheet open={confirming} onClose={() => setConfirming(false)} onPlace={() => void place()} address={addresses.find((a) => a.id === addressId) ?? null} total={summary.total} payment={payment} upi={Boolean(upi)} upiNow={Boolean(upi?.payNow) && !razorpayEnabled} />
       <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Location information" size="screen">
         <AddressWizard defaultName={user.name} defaultPhone={user.phone} onCancel={addresses.length ? () => setAddOpen(false) : undefined} onSaved={(a) => { setAddresses((cur) => [a, ...cur.filter((x) => x.id !== a.id)]); setAddressId(a.id); setAddOpen(false); }} />
