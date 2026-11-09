@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/supabase/server";
 import { getMyProfile } from "@/lib/data/account";
 import { PasswordForm, PreferencesForm, SaveAccountForm, DeleteAccountRequest } from "@/components/account/settings-forms";
@@ -12,9 +11,9 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ reset?: string }> }) {
   const { reset } = await searchParams;
   const user = await getSessionUser();
-  if (!user) redirect("/login?next=/account/settings");
+  if (!user) return null; // the account layout shows the login prompt
   const profile = await getMyProfile();
-  if (!profile) redirect("/login?next=/account/settings");
+  if (!profile) return null;
   return (
     <div className="pt-1">
       <PageHeader title="Settings" back="/account" />

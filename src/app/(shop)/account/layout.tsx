@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/supabase/server";
 import { getMyProfile } from "@/lib/data/account";
+import { getPublicSettings } from "@/lib/data/catalog";
+import { etaText } from "@/lib/eta";
+import { PleaseLogin } from "@/components/auth/please-login";
 import { AccountShell, type WorkspaceLink } from "@/components/account/account-shell";
 
 /** Private customer area: never indexed (authentication protects it regardless). */
@@ -9,9 +11,11 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 export default async function AccountLayout({ children }: { children: React.ReactNode }) {
   const user = await getSessionUser();
-  if (!user) redirect("/login?next=/account");
-  const profile = await getMyProfile();
-  if (!profile) redirect("/login?next=/account");
+  const profile = user ? await getMyProfile() : null;
+  if (!user || !profile) {
+    const settings = await getPublicSettings();
+    return <PleaseLogin eta={etaText(Number(settings.delivery_eta_min_minutes), Number(settings.delivery_eta_max_minutes)) ?? "minutes"} loginTitle="Login to access your account" />;
+  }
   const workspace: WorkspaceLink[] = [];
   if (profile.role === "rider") workspace.push({ href: "/rider", label: "Rider app", icon: "bike" });
   if (profile.role === "admin" || profile.role === "super_admin") workspace.push({ href: "/admin", label: "Admin console", icon: "layout" });

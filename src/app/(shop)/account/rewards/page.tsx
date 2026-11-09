@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { Star, ShoppingBag, PackageCheck, Coins, Plus, Minus } from "lucide-react";
 import { getSessionUser } from "@/lib/supabase/server";
 import { getRewards } from "@/lib/data/account";
@@ -16,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 export default async function RewardsPage() {
   const user = await getSessionUser();
-  if (!user) redirect("/login?next=/account/rewards");
+  if (!user) return null; // the account layout shows the login prompt
   const [{ points, referralCode, transactions, referralStats }, settings] = await Promise.all([getRewards(), getPublicSettings()]);
   const per100 = Number(settings.reward_points_per_100 ?? 1) || 1;
   const steps = [

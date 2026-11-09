@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/supabase/server";
 import { getMyNotifications } from "@/lib/data/account";
 import { env, isPushConfigured } from "@/lib/env";
@@ -12,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function NotificationsPage() {
   const user = await getSessionUser();
-  if (!user) redirect("/login?next=/account/notifications");
+  if (!user) return null; // the account layout shows the login prompt
   const { items } = await getMyNotifications(50);
   return (
     <div className="pt-1">

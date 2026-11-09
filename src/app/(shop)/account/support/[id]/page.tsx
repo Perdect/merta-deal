@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { Package } from "lucide-react";
 import { getSessionUser } from "@/lib/supabase/server";
 import { getTicket } from "@/lib/data/account";
@@ -21,7 +21,7 @@ const STATUS: Record<Enums<"ticket_status">, { label: string; tone: BadgeTone }>
 export default async function TicketPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await getSessionUser();
-  if (!user) redirect(`/login?next=/account/support/${id}`);
+  if (!user) return null; // the account layout shows the login prompt
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const data = await getTicket(id);
   if (!data) notFound();

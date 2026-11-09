@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { Ticket, BadgePercent } from "lucide-react";
 import { createClient, getSessionUser } from "@/lib/supabase/server";
 import { getAvailableCoupons } from "@/lib/data/account";
@@ -22,7 +21,7 @@ function activeCoupons(all: Coupon[]) {
 
 export default async function CouponsPage() {
   const user = await getSessionUser();
-  if (!user) redirect("/login?next=/account/coupons");
+  if (!user) return null; // the account layout shows the login prompt
   const supabase = await createClient();
   const [all, { data: usage }] = await Promise.all([
     getAvailableCoupons(),

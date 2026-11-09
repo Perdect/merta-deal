@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/supabase/server";
 import { getMyProfile } from "@/lib/data/account";
 import { AccountSection } from "@/components/account/account-section";
@@ -12,9 +11,9 @@ export const dynamic = "force-dynamic";
 
 export default async function ProfilePage() {
   const user = await getSessionUser();
-  if (!user) redirect("/login?next=/account/profile");
+  if (!user) return null; // the account layout shows the login prompt
   const profile = await getMyProfile();
-  if (!profile) redirect("/login?next=/account/profile");
+  if (!profile) return null;
   return (
     <AccountSection title="Profile">
       {/* A guest only needs to save the account; editing and deletion apply to registered accounts. */}

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { Wallet, ArrowDownLeft, ArrowUpRight, RotateCcw, Sparkles } from "lucide-react";
 import { getSessionUser } from "@/lib/supabase/server";
 import { getWallet } from "@/lib/data/account";
@@ -25,7 +24,7 @@ const TXN: Record<Enums<"wallet_txn_type">, { label: string; tone: BadgeTone; ic
 
 export default async function WalletPage() {
   const user = await getSessionUser();
-  if (!user) redirect("/login?next=/account/wallet");
+  if (!user) return null; // the account layout shows the login prompt
   const { balance, transactions } = await getWallet();
   return (
     <div className="pt-1">

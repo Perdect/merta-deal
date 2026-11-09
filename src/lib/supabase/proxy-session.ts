@@ -59,6 +59,8 @@ export async function updateSession(request: NextRequest) {
   const rule = PROTECTED.find((r) => path === r.prefix || path.startsWith(r.prefix + "/"));
   if (rule) {
     const back = path + request.nextUrl.search;
+    // Customer pages (account, orders, checkout) show their own "Please login" screen inside the shop frame.
+    if (!user && !portalLogin) return response;
     // Admin and rider areas need a real (non-guest) account; each portal has its own sign-in page.
     if (!user || (portalLogin && user.is_anonymous)) {
       const url = new URL(portalLogin ?? "/login", request.url);

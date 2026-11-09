@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { Phone, Mail, LifeBuoy, ChevronRight } from "lucide-react";
 import { getSessionUser } from "@/lib/supabase/server";
 import { getMyTickets } from "@/lib/data/account";
@@ -34,7 +33,7 @@ function num(v: unknown, fallback: number) { const n = Number(v); return Number.
 export default async function SupportPage({ searchParams }: { searchParams: Promise<{ order?: string; new?: string }> }) {
   const sp = await searchParams;
   const user = await getSessionUser();
-  if (!user) redirect("/login?next=/account/support");
+  if (!user) return null; // the account layout shows the login prompt
   const [ticketsAll, settings, { orders }] = await Promise.all([getMyTickets(), getPublicSettings(), getMyOrders({ limit: 20 })]);
   const tickets = ticketsAll.slice(0, 50);
   const orderOptions: TicketOrderOption[] = orders.map((o) => ({ id: o.id, order_number: o.order_number, total: Number(o.total), created_at: o.created_at }));
