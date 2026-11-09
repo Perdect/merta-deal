@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, X } from "lucide-react";
+import { Barcode, ScanLine, Trash2, X } from "lucide-react";
 import { Input, Select, Switch, Textarea } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/overlay";
 import { toast } from "@/components/ui/toast";
@@ -12,6 +12,7 @@ import { WEIGHT_UNIT_OPTIONS } from "@/components/admin/constants";
 import { deleteProductAction, type ProductInput } from "@/lib/actions/admin";
 import { saveCatalogueProductAction, type SellerInput } from "@/lib/actions/admin-catalogue";
 import { setBarcodeAction } from "@/lib/actions/scan";
+import { Scanner } from "@/components/admin/scan/scanner";
 import type { Product } from "@/types/app";
 import { slugify } from "@/lib/utils";
 
@@ -71,6 +72,12 @@ export function ProductForm({ product, categories, brands, barcode }: { product:
   const router = useRouter();
   const [state, setState] = React.useState<Snapshot>(() => initial(product));
   const [base, setBase] = React.useState<Snapshot>(() => initial(product));
+  // Packet barcode (EAN/UPC): typed or scanned here, or handed over from Scan & pack via ?barcode=. Saved
+  // through admin_set_product_barcode after the product row exists; empty clears it.
+  const [bc, setBc] = React.useState(() => barcode ?? product?.barcode ?? "");
+  const [scanning, setScanning] = React.useState(false);
+  const bcBase = product?.barcode ?? "";
+  const bcValid = bc === "" || /^[0-9]{8,14}$/.test(bc);
   const [busy, setBusy] = React.useState<"save" | "delete" | null>(null);
   const [del, setDel] = React.useState(false);
   const [slugTouched, setSlugTouched] = React.useState(Boolean(product));
@@ -85,7 +92,7 @@ export function ProductForm({ product, categories, brands, barcode }: { product:
     setBase((s) => ({ ...s, f: { ...s.f, is_active: product.is_active } }));
   }
 
-  const dirty = JSON.stringify(state) !== JSON.stringify(base);
+  const dirty = JSON.stringify(state) !== JSON.stringify(base) || bc !== bcBase;
   const confirmDiscard = useUnsavedChanges(dirty && busy === null);
   const set = <K extends keyof ProductInput>(k: K, v: ProductInput[K]) => setState((s) => ({ ...s, f: { ...s.f, [k]: v } }));
   const setSeller = (k: keyof Seller, v: string) => setState((s) => ({ ...s, seller: { ...s.seller, [k]: v } }));
@@ -102,6 +109,7 @@ export function ProductForm({ product, categories, brands, barcode }: { product:
     popularity_score: !Number.isInteger(Number(f.popularity_score)) || Number(f.popularity_score) < 0 ? "Use a whole number, 0 or more" : undefined,
     nutrition: nutrition.ok ? undefined : "Use JSON with text or number values, e.g. {\"energy_kcal\": 340}",
     seller_address: seller.seller_address.length > 400 ? "Keep the address under 400 characters" : undefined,
+    barcode: bcValid ? undefined : "A packet barcode is 8 to 14 digits (EAN-8, EAN-13, UPC)",
   };
   const errorKeys = Object.keys(errors).filter((k) => errors[k]);
   const err = (k: string) => (showErrors ? errors[k] : undefined);
@@ -127,15 +135,17 @@ export function ProductForm({ product, categories, brands, barcode }: { product:
     setBusy(null);
     if (!r.ok) { toast.error(product ? "Couldn't save the product" : "Couldn't create the product", r.error); return; }
     setBase(state); setShowErrors(false);
+    let bcNote: string | null = null;
+    if (bc !== bcBase) {
+      const res = await setBarcodeAction(r.data.id, bc);
+      if (!res.ok) toast.error(product ? "Saved, but the barcode was not changed" : "Product created, but the barcode was not attached", res.error);
+      else bcNote = bc ? "Barcode attached." : "Barcode removed.";
+    }
     if (!product) {
-      if (barcode) {
-        const bc = await setBarcodeAction(r.data.id, barcode);
-        if (!bc.ok) toast.error(`Product created, but the barcode was not attached: ${bc.error}`);
-      }
-      toast.success("Product created", barcode ? "Barcode attached. Next: set its selling price and stock." : "Next: set its selling price and stock.");
+      toast.success("Product created", `${bcNote ? `${bcNote} ` : ""}Next: set its selling price and stock.`);
       router.push(`/admin/products/${r.data.id}`);
     }
-    else { toast.success("Product saved"); router.refresh(); }
+    else { toast.success("Product saved", bcNote ?? undefined); router.refresh(); }
   };
 
   const remove = async () => {
@@ -170,6 +180,19 @@ export function ProductForm({ product, categories, brands, barcode }: { product:
               <Input id="pf-pack_label" label="Pack label" placeholder="1 kg, Pack of 6" value={f.pack_label ?? ""} onChange={(e) => { set("pack_label", e.target.value); if (!slugTouched) set("slug", slugify(`${f.name} ${e.target.value}`)); }} />
               <Input id="pf-mrp" label="MRP (₹)" type="number" step="0.01" min={0} required value={f.mrp as number} error={err("mrp")} onChange={(e) => set("mrp", e.target.value === "" ? "" : Number(e.target.value))} />
             </div>
+          </FormSection>
+
+          <FormSection title="Packet barcode" description="Scan the printed EAN/UPC on the packet so staff can find this product with the camera in Scan & pack. Loose items without a barcode get a printed QR label instead.">
+            <div className="flex flex-wrap items-end gap-2">
+              <Input id="pf-barcode" label="Barcode (8–14 digits)" inputMode="numeric" placeholder="e.g. 8901030835289" value={bc} error={err("barcode")} onChange={(e) => setBc(e.target.value.replace(/\s/g, ""))} leftIcon={<Barcode className="h-4 w-4" />} wrapperClassName="min-w-[16rem] flex-1" />
+              <button type="button" onClick={() => setScanning((v) => !v)} aria-pressed={scanning} className={btn.outline}><ScanLine className="h-4 w-4" aria-hidden />{scanning ? "Stop camera" : "Scan with camera"}</button>
+              {bc ? <button type="button" onClick={() => { setBc(""); setScanning(false); }} className={btn.outline}><X className="h-4 w-4" aria-hidden />Clear</button> : null}
+            </div>
+            {scanning ? (
+              <div className="mt-3">
+                <Scanner active={scanning} onCode={(code) => { const c = code.replace(/\s/g, ""); if (/^[0-9]{8,14}$/.test(c)) { setBc(c); setScanning(false); toast.success("Barcode read", c); } else toast.error("That is not a packet barcode", "Point the camera at the printed EAN/UPC bars on the packet."); }} manualLabel="Or type the barcode" hint="Hold the packet's barcode inside the frame." />
+              </div>
+            ) : null}
           </FormSection>
 
           <FormSection title="Details and nutrition" description="Shown under Product details on the customer page. Leave a field empty to hide it.">
