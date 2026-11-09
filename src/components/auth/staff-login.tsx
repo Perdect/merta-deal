@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import Link from "next/link";
-import { AtSign, Bike, Eye, EyeOff, KeyRound, Lock, LogIn, ShieldCheck, Smartphone } from "lucide-react";
+import { AtSign, Bike, Eye, EyeOff, KeyRound, Lock, LogIn, ShieldCheck } from "lucide-react";
 import { staffSignInAction, type AuthResult, type StaffPortal } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +31,7 @@ const COPY = {
 } as const;
 
 /**
- * Staff sign-in (admin / delivery partner). Same mobile + PIN accounts as everywhere else, but the server
+ * Staff sign-in (admin: email + password; delivery partner: mobile + PIN). The server
  * admits only accounts holding the portal's role (staffSignInAction). No customer sign-up, guest shopping
  * or cart links here — this page only gets staff into their portal.
  */
@@ -40,8 +40,8 @@ export function StaffLogin({ portal, next, denied, signedOut, signedInAs }: { po
   const [state, formAction, pending] = React.useActionState<AuthResult | null, FormData>(staffSignInAction, null);
   const [mobile, setMobile] = React.useState("");
   const [showPin, setShowPin] = React.useState(false);
-  // Admin accounts can be phone + PIN or email + password; delivery partners always use phone + PIN.
-  const [method, setMethod] = React.useState<"mobile" | "email">("mobile");
+  // Admins sign in with email + password; delivery partners always use phone + PIN.
+  const method: "mobile" | "email" = portal === "admin" ? "email" : "mobile";
   const [email, setEmail] = React.useState("");
   const byEmail = portal === "admin" && method === "email";
   const fieldErr = (k: string) => (state && !state.ok ? state.fieldErrors?.[k] : undefined);
@@ -71,16 +71,6 @@ export function StaffLogin({ portal, next, denied, signedOut, signedInAs }: { po
           <form action={formAction} className="mt-5 space-y-4" noValidate>
             <input type="hidden" name="portal" value={portal} />
             <input type="hidden" name="next" value={next ?? ""} />
-            {portal === "admin" ? (
-              <div className="grid grid-cols-2 gap-1 rounded-md bg-surface-2 p-1" role="group" aria-label="Sign in with">
-                {([["mobile", "Mobile + PIN", Smartphone], ["email", "Email", AtSign]] as const).map(([m, label, Icon]) => (
-                  <button key={m} type="button" onClick={() => setMethod(m)} aria-pressed={method === m}
-                    className={cn("flex min-h-11 items-center justify-center gap-1.5 rounded-sm text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-brand-600", method === m ? "bg-card text-brand-700 shadow-card" : "text-ink-2 hover:text-ink")}>
-                    <Icon className="h-4 w-4" aria-hidden />{label}
-                  </button>
-                ))}
-              </div>
-            ) : null}
             {byEmail ? (
               <>
                 <Input key="email" name="email" type="email" inputMode="email" label="Email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value.trim())} placeholder="you@mertadeal.com" leftIcon={<AtSign className="h-4 w-4" />} error={fieldErr("email")} />
