@@ -26,15 +26,26 @@ export const createClient = cache(async () => {
   });
 });
 
+/** What a render needs to know about the signed-in person; the rest lives in `profiles`. */
+export type AuthUser = { id: string; email: string | null; phone: string | null; is_anonymous: boolean; user_metadata: Record<string, unknown> };
+
 /**
- * The signed-in auth user, fetched once per request. `auth.getUser()` is a network call to Supabase
- * Auth; without this cache a page that needs the user in several places (layout, cart,
- * addresses…) paid for it several times over.
+ * The signed-in auth user, resolved once per request. The project signs its JWTs with an asymmetric
+ * key, so `getClaims()` verifies the token locally against the published JWKS instead of a round trip
+ * to Supabase Auth on every page (`getUser()` cost 150–250 ms each). Every data query still carries
+ * the JWT and is authorised by RLS in Postgres, so nothing here is trusted beyond identifying the row
+ * owner. Falls back to `getUser()` if claims cannot be verified locally.
  */
-export const getAuthUser = cache(async () => {
+export const getAuthUser = cache(async (): Promise<AuthUser | null> => {
   const supabase = await createClient();
+  const { data, error } = await supabase.auth.getClaims();
+  if (!error && data?.claims?.sub) {
+    const c = data.claims;
+    return { id: c.sub, email: c.email ?? null, phone: c.phone ?? null, is_anonymous: Boolean(c.is_anonymous), user_metadata: (c.user_metadata ?? {}) as Record<string, unknown> };
+  }
+  if (error) return null;
   const { data: { user } } = await supabase.auth.getUser();
-  return user;
+  return user ? { id: user.id, email: user.email ?? null, phone: user.phone ?? null, is_anonymous: Boolean(user.is_anonymous), user_metadata: (user.user_metadata ?? {}) as Record<string, unknown> } : null;
 });
 
 export type SessionUser = { id: string; email: string | null; role: Database["public"]["Enums"]["user_role"]; fullName: string | null; phone: string | null; avatarUrl: string | null };

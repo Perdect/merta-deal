@@ -37,7 +37,10 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  const { data: { user } } = await supabase.auth.getUser();
+  // Local JWT verification (asymmetric signing keys): no Auth round trip per request. An expired
+  // session is refreshed here and the new cookies are written to the response.
+  const { data: claims } = await supabase.auth.getClaims();
+  const user = claims?.claims?.sub ? { id: claims.claims.sub, is_anonymous: Boolean(claims.claims.is_anonymous) } : null;
   const path = request.nextUrl.pathname;
   const portal = path === "/admin" || path.startsWith("/admin/") ? "admin" : path === "/rider" || path.startsWith("/rider/") ? "rider" : null;
   const portalLogin = portal ? `/${portal}/login` : null;
