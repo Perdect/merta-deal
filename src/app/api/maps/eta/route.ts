@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { serverEnv } from "@/lib/env";
+import { site } from "@/config/site";
 import { haversineKm } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
     try {
       const r = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-Goog-Api-Key": key, "X-Goog-FieldMask": "routes.duration,routes.distanceMeters" },
+        headers: { "Content-Type": "application/json", "X-Goog-Api-Key": key, "X-Goog-FieldMask": "routes.duration,routes.distanceMeters", Referer: `${site.url}/` },
         body: JSON.stringify({
           origin: { location: { latLng: { latitude: olat, longitude: olng } } },
           destination: { location: { latLng: { latitude: dlat, longitude: dlng } } },

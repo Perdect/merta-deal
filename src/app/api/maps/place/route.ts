@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { serverEnv } from "@/lib/env";
+import { site } from "@/config/site";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,7 @@ export async function GET(req: NextRequest) {
   if (!key || !/^[A-Za-z0-9_-]{10,300}$/.test(id)) return NextResponse.json({ ok: false }, { status: 400 });
   try {
     const r = await fetch(`https://places.googleapis.com/v1/places/${id}${session ? `?sessionToken=${encodeURIComponent(session)}` : ""}`, {
-      headers: { "X-Goog-Api-Key": key, "X-Goog-FieldMask": "location,formattedAddress,displayName" }, cache: "no-store",
+      headers: { "X-Goog-Api-Key": key, Referer: `${site.url}/`, "X-Goog-FieldMask": "location,formattedAddress,displayName" }, cache: "no-store",
     });
     if (!r.ok) return NextResponse.json({ ok: false });
     const d = await r.json() as { location?: { latitude: number; longitude: number }; formattedAddress?: string };

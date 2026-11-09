@@ -41,7 +41,7 @@ async function google(q: string, session: string): Promise<PlaceSuggestion[]> {
   try {
     const r = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-Goog-Api-Key": serverEnv().mapsServerKey },
+      headers: { "Content-Type": "application/json", "X-Goog-Api-Key": serverEnv().mapsServerKey, Referer: `${site.url}/` },
       body: JSON.stringify({
         input: q, includedRegionCodes: ["in"], languageCode: "en", ...(session ? { sessionToken: session } : {}),
         locationBias: { circle: { center: { latitude: site.center.lat, longitude: site.center.lng }, radius: 30000 } },

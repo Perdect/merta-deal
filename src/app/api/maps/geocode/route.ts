@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
 }
 
 async function google(lat: number, lng: number, key: string): Promise<Suggestion | null> {
-  const r = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&region=in&key=${key}`);
+  const r = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&region=in&key=${key}`, { headers: { Referer: `${site.url}/` } });
   const d = await r.json() as { status: string; results: { formatted_address: string; address_components: { long_name: string; types: string[] }[] }[] };
   if (d.status !== "OK" || !d.results.length) { if (d.status !== "ZERO_RESULTS") console.warn("maps/geocode: Google returned", d.status); return null; }
   const comps = d.results[0].address_components;
