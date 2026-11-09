@@ -431,7 +431,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
                   // Express is offered only where the zone supports it (admins switch it per zone); otherwise it is not shown at all.
                   const opts = ([
                     { id: "express" as const, icon: <Zap className="h-4 w-4 text-saffron-600" aria-hidden />, t: "Express", sub: instantOk ? `+${formatINR(s.express_fee || 20)}` : "Unavailable now", show: Boolean(s.zone?.express_supported), off: !instantOk },
-                    { id: "standard" as const, icon: <Clock className="h-4 w-4 text-brand-600" aria-hidden />, t: "As soon as possible", sub: instantOk ? (etaText(s.eta_min_minutes, s.eta_max_minutes, "min") ?? "Estimate at checkout") : "Unavailable now", show: true, off: !instantOk },
+                    { id: "standard" as const, icon: <Clock className="h-4 w-4 text-brand-600" aria-hidden />, t: "Instant Delivery", sub: instantOk ? (etaText(s.eta_min_minutes, s.eta_max_minutes, "min") ?? "Estimate at checkout") : "Unavailable now", show: true, off: !instantOk },
                     { id: "scheduled" as const, icon: <CalendarClock className="h-4 w-4 text-info" aria-hidden />, t: "Scheduled", sub: chosenSlot ? slotSummary(chosenSlot)! : "Pick a slot", show: slots.length > 0, off: false },
                   ]).filter((o) => o.show);
                   return (

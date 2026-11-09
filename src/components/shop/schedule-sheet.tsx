@@ -45,7 +45,7 @@ export function ScheduleSheet({ onClose, ranges, leadMinutes, daysAhead, instant
       <div className="grid grid-cols-2 gap-2">
         <button type="button" disabled={!instantAvailable} aria-pressed={mode === "instant"} onClick={() => setMode("instant")}
           className={cn("flex items-start justify-between rounded-xl border p-3 text-left disabled:cursor-not-allowed", mode === "instant" ? "border-brand-600 bg-brand-50" : "border-line bg-surface-2", !instantAvailable && "opacity-70")}>
-          <span><span className="block text-sm font-bold text-ink">Instant Delivery</span><span className="block text-xs text-ink-3">{instantAvailable ? (etaLabel ? `In about ${etaLabel}` : "As soon as possible") : "Unavailable right now"}</span></span>
+          <span><span className="block text-sm font-bold text-ink">Instant Delivery</span><span className="block text-xs text-ink-3">{instantAvailable ? (etaLabel ? `In about ${etaLabel}` : "Right away") : "Unavailable right now"}</span></span>
           <Zap className={cn("h-5 w-5", instantAvailable ? "text-brand-600" : "text-ink-4")} aria-hidden />
         </button>
         <button type="button" aria-pressed={mode === "scheduled"} onClick={() => setMode("scheduled")}
