@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/supabase/server";
 import { getAdminNotifications } from "@/lib/data/admin";
+import { getLiveCounts } from "@/lib/data/admin-dashboard";
 import { AdminShell } from "@/components/admin/kit/shell";
 import { PortalTheme } from "@/components/shared/portal-theme";
 import { createClient } from "@/lib/supabase/server";
@@ -21,11 +22,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const supabase = await createClient();
   const { data: isAdmin } = await supabase.rpc("is_admin");
   if (!isAdmin || (user.role !== "admin" && user.role !== "super_admin")) redirect("/admin/login?denied=1");
-  const { unread } = await getAdminNotifications(1);
+  const [{ unread }, live] = await Promise.all([getAdminNotifications(1), getLiveCounts().catch(() => null)]);
   return (
     <div className="theme-admin contents">
       <PortalTheme portal="admin" />
-      <AdminShell user={{ name: user.fullName, email: user.email, role: user.role, avatarUrl: user.avatarUrl }} userId={user.id} unread={unread} push={{ configured: isPushConfigured(), vapidPublicKey: env.vapidPublicKey }}>
+      <AdminShell user={{ name: user.fullName, email: user.email, role: user.role, avatarUrl: user.avatarUrl }} userId={user.id} unread={unread} counts={live?.badges ?? null} push={{ configured: isPushConfigured(), vapidPublicKey: env.vapidPublicKey }}>
         {children}
       </AdminShell>
     </div>

@@ -202,7 +202,7 @@ export function OrderAlertView(p: OrderAlertViewProps) {
   if (collapsed) {
     return (
       <button type="button" onClick={() => setCollapsed(false)} aria-label={`${count} unaccepted ${count === 1 ? "order" : "orders"}, open`}
-        className="fixed bottom-4 right-4 z-[65] flex h-12 items-center gap-2 rounded-full bg-brand-600 pl-3 pr-4 text-sm font-bold text-white shadow-float animate-pop focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
+        className="fixed bottom-[calc(var(--admin-bottom-nav,0px)+1rem)] right-4 z-[65] flex h-12 items-center gap-2 rounded-full bg-brand-600 pl-3 pr-4 text-sm font-bold text-white shadow-float animate-pop focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
         <span className="relative flex h-6 w-6 items-center justify-center"><span className={cn("absolute inset-0 rounded-full bg-white/30", live && "animate-ping")} /><BellRing className="relative h-4 w-4" aria-hidden /></span>
         {count} {count === 1 ? "order" : "orders"} waiting
       </button>
@@ -210,7 +210,7 @@ export function OrderAlertView(p: OrderAlertViewProps) {
   }
 
   return (
-    <div role="alertdialog" aria-labelledby="order-alert-title" aria-describedby="order-alert-body" className="fixed inset-x-3 bottom-3 z-[65] mx-auto max-w-md sm:inset-x-auto sm:right-6 sm:w-[400px]" style={{ bottom: "calc(var(--safe-bottom) + 12px)" }}>
+    <div role="alertdialog" aria-labelledby="order-alert-title" aria-describedby="order-alert-body" className="fixed inset-x-3 bottom-[calc(var(--admin-bottom-nav,0px)+0.75rem)] z-[65] mx-auto max-w-md sm:inset-x-auto sm:right-6 sm:w-[400px]" style={{ bottom: "calc(var(--safe-bottom) + 12px)" }}>
       <div className={cn("rounded-2xl border-2 bg-card shadow-float animate-slide-up", ringingThis ? "border-brand-500" : "border-line-2")}>
         <div className="flex items-center gap-2 border-b border-line px-4 py-2.5">
           <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-brand-50 text-brand-700">

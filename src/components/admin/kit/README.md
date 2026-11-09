@@ -10,6 +10,12 @@ visible shadow (`card` class string), compact tables, green accent (`brand-*`), 
 at `h-4 w-4` / `strokeWidth 1.9`. Transitions 150–250 ms, always `motion-safe:` / `motion-reduce:`.
 Status = coloured dot + words (`StatusPill`, `OrderStatusPill`, `PaymentStatusPill`, `StatusText`).
 
+## Navigation
+`nav.ts` holds the sidebar: `ADMIN_NAV_DAILY` (always visible: Dashboard, Orders, Scan & pack, Service requests, Riders,
+Payments, with live badges from `getLiveCounts`), `ADMIN_NAV` (collapsible groups: Catalogue, Marketing, Finance, Delivery
+setup, Customer care; the active group is always open, others remember their state per browser), `ADMIN_NAV_FOOTER`
+(Settings, Audit logs) and `ADMIN_NAV_MOBILE` (phone bottom bar). A new route goes in exactly one of these.
+
 ## Page skeleton
 ```tsx
 <>

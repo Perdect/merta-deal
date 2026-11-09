@@ -8,7 +8,7 @@ import { Logo, LogoMark, Avatar } from "@/components/ui/misc";
 import { staffSignOutAction } from "@/lib/actions/auth";
 import { cn } from "@/lib/utils";
 import { useBackToClose } from "@/hooks/use-back-to-close";
-import { ADMIN_NAV, ADMIN_NAV_FOOTER, activeNavHref, breadcrumbs, type AdminNavItem } from "./nav";
+import { ADMIN_NAV, ADMIN_NAV_DAILY, ADMIN_NAV_FOOTER, ADMIN_NAV_MOBILE, activeNavHref, breadcrumbs, navSectionFor, type AdminNavItem, type NavBadgeKey } from "./nav";
 import { AdminTrail } from "./client";
 import { OrderAlerts } from "@/components/admin/alerts/order-alerts";
 import { AlertBanner, type PushConfig } from "@/components/alerts/alert-setup";
@@ -28,7 +28,9 @@ type ShellUser = { name: string | null; email: string | null; role: string; avat
  * compact top bar with breadcrumbs, notifications, the customer site and the account menu.
  * Page headings live in each page (AdminPageHeader), never here, so there is exactly one h1.
  */
-export function AdminShell({ user, userId, unread, push, children }: { user: ShellUser; userId: string; unread: number; push: PushConfig; children: React.ReactNode }) {
+export type NavCounts = Record<NavBadgeKey, number>;
+
+export function AdminShell({ user, userId, unread, counts, push, children }: { user: ShellUser; userId: string; unread: number; /** Live counts for the sidebar badges (null when they could not be loaded). */ counts?: NavCounts | null; push: PushConfig; children: React.ReactNode }) {
   const pathname = usePathname();
   const collapsed = React.useSyncExternalStore(subscribe, readCollapsed, () => false);
   const [drawer, setDrawer] = React.useState(false);
@@ -47,7 +49,7 @@ export function AdminShell({ user, userId, unread, push, children }: { user: She
   }, [drawer]);
 
   return (
-    <div className="flex min-h-dvh bg-[#f4f5f3] text-ink">
+    <div className="flex min-h-dvh bg-[#f4f5f3] text-ink [--admin-bottom-nav:3.75rem] lg:[--admin-bottom-nav:0px]">
       <React.Suspense fallback={null}><AdminTrail /></React.Suspense>
       <a href="#admin-main" className="sr-only z-[70] rounded-md bg-card px-3 py-2 text-sm font-semibold focus:not-sr-only focus:fixed focus:left-3 focus:top-3">Skip to content</a>
 
@@ -56,7 +58,7 @@ export function AdminShell({ user, userId, unread, push, children }: { user: She
         <div className={cn("flex h-14 items-center border-b border-line", collapsed ? "justify-center px-2" : "gap-2 px-4")}>
           {collapsed ? <Link href="/admin" aria-label="Merta Deal admin home"><LogoMark size={30} /></Link> : <><Logo size="sm" /><span className="rounded-md bg-brand-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-700">Admin</span></>}
         </div>
-        <SidebarNav active={active} collapsed={collapsed} />
+        <SidebarNav active={active} collapsed={collapsed} counts={counts ?? null} />
         <div className="border-t border-line p-2">
           <button type="button" onClick={() => writeCollapsed(!collapsed)} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} aria-expanded={!collapsed} className={cn("group relative flex h-9 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium text-ink-3 transition-colors duration-150 hover:bg-surface-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-brand-600", collapsed && "justify-center px-0")}>
             {collapsed ? <ChevronsRight className="h-[18px] w-[18px]" /> : <><ChevronsLeft className="h-[18px] w-[18px]" />Collapse</>}
@@ -74,7 +76,7 @@ export function AdminShell({ user, userId, unread, push, children }: { user: She
               <span className="flex items-center gap-2"><Logo size="sm" /><span className="rounded-md bg-brand-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-700">Admin</span></span>
               <button type="button" onClick={() => setDrawer(false)} aria-label="Close menu" className="tap flex h-9 w-9 items-center justify-center rounded-lg text-ink-2 hover:bg-surface-2"><X className="h-5 w-5" /></button>
             </div>
-            <SidebarNav active={active} collapsed={false} />
+            <SidebarNav active={active} collapsed={false} counts={counts ?? null} />
           </div>
         </div>
       ) : null}
@@ -82,7 +84,7 @@ export function AdminShell({ user, userId, unread, push, children }: { user: She
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 border-b border-line bg-card/95 pt-[env(safe-area-inset-top)] backdrop-blur">
           <div className="flex h-14 items-center gap-2 px-3 sm:px-5">
-          <button type="button" onClick={() => setDrawer(true)} aria-label="Open menu" className="tap flex h-9 w-9 items-center justify-center rounded-lg text-ink-2 hover:bg-surface-2 lg:hidden"><Menu className="h-5 w-5" /></button>
+          <button type="button" onClick={() => setDrawer(true)} aria-label="Open menu" className="tap hidden h-9 w-9 items-center justify-center rounded-lg text-ink-2 hover:bg-surface-2 md:flex lg:hidden"><Menu className="h-5 w-5" /></button>
           <nav aria-label="Breadcrumb" className="min-w-0 flex-1">
             <ol className="flex min-w-0 items-center gap-1 text-sm">
               {crumbs.map((c, i) => {
@@ -109,43 +111,98 @@ export function AdminShell({ user, userId, unread, push, children }: { user: She
           </div>
           </div>
         </header>
-        <main id="admin-main" className="min-w-0 flex-1 px-3 py-4 pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] sm:px-5 sm:py-5 lg:px-7 lg:py-6">
+        <main id="admin-main" className="min-w-0 flex-1 px-3 py-4 pb-[calc(var(--admin-bottom-nav)+1rem+var(--safe-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] sm:px-5 sm:py-5 sm:pb-[calc(var(--admin-bottom-nav)+1.25rem+var(--safe-bottom))] lg:px-7 lg:py-6">
           <div className="mx-auto w-full max-w-[1400px]"><AlertBanner portal="admin" push={push} href="/admin/notifications#alerts" />{children}</div>
         </main>
+        <MobileBar active={active} counts={counts ?? null} onMenu={() => setDrawer(true)} />
       </div>
       <OrderAlerts userId={userId} push={push} />
     </div>
   );
 }
 
-function SidebarNav({ active, collapsed }: { active: string | null; collapsed: boolean }) {
+/* Which "More tools" groups the operator has opened, kept per browser like the collapsed state and read
+   through useSyncExternalStore so server and client agree (server: none open). */
+const OPEN_KEY = "md-admin-nav-open";
+const openListeners = new Set<() => void>();
+function readOpenRaw() { try { return window.localStorage.getItem(OPEN_KEY) ?? "[]"; } catch { return "[]"; } }
+function writeOpen(groups: string[]) { try { window.localStorage.setItem(OPEN_KEY, JSON.stringify(groups)); } catch { /* private mode */ } openListeners.forEach((l) => l()); }
+function subscribeOpen(l: () => void) { openListeners.add(l); return () => { openListeners.delete(l); }; }
+
+function SidebarNav({ active, collapsed, counts }: { active: string | null; collapsed: boolean; counts: NavCounts | null }) {
+  const section = navSectionFor(active);
+  const raw = React.useSyncExternalStore(subscribeOpen, readOpenRaw, () => "[]");
+  const saved = React.useMemo<string[]>(() => { try { const v = JSON.parse(raw); return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []; } catch { return []; } }, [raw]);
+  // The group holding the current page is always open; the others remember what the operator chose.
+  const open = (label: string) => label === section || saved.includes(label);
+  const toggleGroup = (label: string) => writeOpen(saved.includes(label) ? saved.filter((g) => g !== label) : [...saved, label]);
+
   return (
-    <nav className="flex-1 overflow-y-auto px-2 py-3 no-scrollbar">
-      {ADMIN_NAV.map((g) => (
-        <div key={g.label} className="mb-3">
-          {collapsed ? <div className="mx-3 mb-1.5 h-px bg-line first:hidden" aria-hidden /> : <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-4">{g.label}</p>}
-          <ul className="space-y-0.5">{g.items.map((i) => <NavLink key={i.href} item={i} active={active === i.href} collapsed={collapsed} />)}</ul>
-        </div>
-      ))}
+    <nav className="flex-1 overflow-y-auto px-2 py-3 no-scrollbar" aria-label="Admin sections">
+      {!collapsed ? <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-4">Daily</p> : null}
+      <ul className="space-y-0.5">{ADMIN_NAV_DAILY.map((i) => <NavLink key={i.href} item={i} active={active === i.href} collapsed={collapsed} count={i.badge && counts ? counts[i.badge] : 0} />)}</ul>
+      {!collapsed ? <p className="mt-4 px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-ink-4">More tools</p> : <div className="mx-3 my-3 h-px bg-line" aria-hidden />}
+      {ADMIN_NAV.map((g) => {
+        const current = g.label === section;
+        return (
+          <div key={g.label} className="mb-1">
+            {collapsed ? <div className="mx-3 my-1.5 h-px bg-line first:hidden" aria-hidden /> : (
+              <button type="button" onClick={() => toggleGroup(g.label)} aria-expanded={open(g.label)}
+                className={cn("group flex w-full items-center justify-between rounded-md px-3 py-2 text-[13px] font-semibold transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-brand-600", current ? "text-brand-800" : "text-ink-2")}>
+                <span className="flex items-center gap-2">{current ? <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-brand-600" /> : null}{g.label}</span>
+                <ChevronDown className={cn("h-3.5 w-3.5 text-ink-4 transition-transform duration-150", open(g.label) && "rotate-180")} aria-hidden />
+              </button>
+            )}
+            {(collapsed || open(g.label)) ? <ul className={cn("space-y-0.5", !collapsed && "mb-1 ml-2 border-l border-line pl-1")}>{g.items.map((i) => <NavLink key={i.href} item={i} active={active === i.href} collapsed={collapsed} count={i.badge && counts ? counts[i.badge] : 0} />)}</ul> : null}
+          </div>
+        );
+      })}
       <div className="mt-2 border-t border-line pt-3">
-        <ul className="space-y-0.5">{ADMIN_NAV_FOOTER.map((i) => <NavLink key={i.href} item={i} active={active === i.href} collapsed={collapsed} />)}</ul>
+        <ul className="space-y-0.5">{ADMIN_NAV_FOOTER.map((i) => <NavLink key={i.href} item={i} active={active === i.href} collapsed={collapsed} count={0} />)}</ul>
       </div>
     </nav>
   );
 }
 
-function NavLink({ item, active, collapsed }: { item: AdminNavItem; active: boolean; collapsed: boolean }) {
+function NavLink({ item, active, collapsed, count = 0 }: { item: AdminNavItem; active: boolean; collapsed: boolean; count?: number }) {
   const Icon = item.icon;
   return (
     <li>
-      <Link href={item.href} aria-current={active ? "page" : undefined} aria-label={collapsed ? item.label : undefined}
+      <Link href={item.href} aria-current={active ? "page" : undefined} aria-label={collapsed ? (count ? `${item.label}, ${count}` : item.label) : undefined}
         className={cn("group relative flex h-9 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-brand-600 pointer-coarse:h-11",
           collapsed && "justify-center px-0",
           active ? "bg-brand-50 text-brand-800" : "text-ink-2 hover:bg-surface-2 hover:text-ink")}>
         <Icon className={cn("h-[18px] w-[18px] shrink-0", active ? "text-brand-600" : "text-ink-3 group-hover:text-ink-2")} strokeWidth={1.9} aria-hidden />
-        {collapsed ? <Tip>{item.label}</Tip> : <span className="truncate">{item.label}</span>}
+        {collapsed ? <>{count > 0 ? <span aria-hidden className="absolute right-2.5 top-1.5 h-2 w-2 rounded-full bg-saffron-500" /> : null}<Tip>{count ? `${item.label} · ${count}` : item.label}</Tip></> : (
+          <>
+            <span className="truncate">{item.label}</span>
+            {count > 0 ? <span className={cn("ml-auto rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular", active ? "bg-brand-100 text-brand-800" : "bg-surface-2 text-ink-2")}>{count > 99 ? "99+" : count}</span> : null}
+          </>
+        )}
       </Link>
     </li>
+  );
+}
+
+/** Phone bottom bar: the four most-used screens plus the full menu. Hidden on large screens, where the sidebar is. */
+function MobileBar({ active, counts, onMenu }: { active: string | null; counts: NavCounts | null; onMenu: () => void }) {
+  return (
+    <nav aria-label="Admin quick navigation" className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-card/95 backdrop-blur lg:hidden" style={{ paddingBottom: "var(--safe-bottom)" }}>
+      <ul className="grid h-[3.75rem] grid-cols-5">
+        {ADMIN_NAV_MOBILE.map((i) => {
+          const Icon = i.icon; const on = active === i.href; const count = i.badge && counts ? counts[i.badge] : 0;
+          return (
+            <li key={i.href} className="min-w-0">
+              <Link href={i.href} aria-current={on ? "page" : undefined} className={cn("relative flex h-full flex-col items-center justify-center gap-0.5 text-[11px] font-medium", on ? "text-brand-700" : "text-ink-3")}>
+                <span className="relative"><Icon className="h-5 w-5" strokeWidth={on ? 2.2 : 1.9} aria-hidden />{count > 0 ? <span className="absolute -right-2.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-saffron-500 px-1 text-[10px] font-bold leading-none text-ink">{count > 99 ? "99+" : count}</span> : null}</span>
+                <span className="truncate">{i.label === "Service requests" ? "Requests" : i.label === "Scan & pack" ? "Scan" : i.label}</span>
+              </Link>
+            </li>
+          );
+        })}
+        <li><button type="button" onClick={onMenu} className="flex h-full w-full flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-ink-3"><Menu className="h-5 w-5" strokeWidth={1.9} aria-hidden />Menu</button></li>
+      </ul>
+    </nav>
   );
 }
 

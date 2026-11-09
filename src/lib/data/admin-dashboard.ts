@@ -2,6 +2,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Enums } from "@/types/database";
 import { getReport, type AdminReport } from "./admin";
+import type { NavBadgeKey } from "@/components/admin/kit/nav";
 
 export const ACTIVE_STATUSES = ["placed", "confirmed", "preparing", "ready_for_pickup", "rider_assigned", "out_for_delivery"] as const;
 export const RANGE_OPTIONS = [
@@ -117,3 +118,34 @@ export function pctChange(curr: number, prev: number | null | undefined): number
   if (prev == null || prev === 0) return null;
   return Math.round(((curr - prev) / prev) * 100);
 }
+
+export type LiveCounts = {
+  /** Active orders by status, right now. */
+  byStatus: Record<(typeof ACTIVE_STATUSES)[number], number>;
+  activeOrders: number;
+  /** Service requests nobody has contacted yet. */
+  newRequests: number;
+  /** Direct UPI orders waiting for the admin to find the payment, plus rider-recorded UPI to confirm. */
+  upiToConfirm: number;
+  onlineRiders: number;
+  /** The same figures keyed for the sidebar badges. */
+  badges: Record<NavBadgeKey, number>;
+};
+
+/** Live figures for the "Right now" strip and the sidebar badges (one request-scoped fetch for both). */
+export const getLiveCounts = cache(async (): Promise<LiveCounts> => {
+  const supabase = await createClient();
+  const rpc = supabase.rpc.bind(supabase) as unknown as (fn: string) => PromiseLike<{ data: unknown[] | null }>;
+  const [orders, requests, upiOrders, upiRider, riders] = await Promise.all([
+    supabase.from("orders").select("status").in("status", [...ACTIVE_STATUSES]).limit(5000),
+    (supabase as unknown as { from: (t: string) => { select: (c: string, o: { count: "exact"; head: true }) => { eq: (k: string, v: string) => PromiseLike<{ count: number | null }> } } }).from("service_requests").select("id", { count: "exact", head: true }).eq("status", "new"),
+    rpc("admin_pending_upi_orders").then((r) => r.data?.length ?? 0, () => 0),
+    rpc("admin_pending_upi").then((r) => r.data?.length ?? 0, () => 0),
+    supabase.from("delivery_partners").select("id", { count: "exact", head: true }).eq("status", "active").eq("is_online", true),
+  ]);
+  const byStatus = Object.fromEntries(ACTIVE_STATUSES.map((s) => [s, 0])) as LiveCounts["byStatus"];
+  for (const r of orders.data ?? []) if (r.status in byStatus) byStatus[r.status as keyof typeof byStatus] += 1;
+  const activeOrders = Object.values(byStatus).reduce((a, b) => a + b, 0);
+  const upiToConfirm = upiOrders + upiRider;
+  return { byStatus, activeOrders, newRequests: requests.count ?? 0, upiToConfirm, onlineRiders: riders.count ?? 0, badges: { orders: activeOrders, requests: requests.count ?? 0, payments: upiToConfirm } };
+});
