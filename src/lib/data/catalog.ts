@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { Category, HomeFeed, ProductCard, ProductDetail, SearchResult } from "@/types/app";
 
 export const getHomeFeed = cache(async (lat?: number | null, lng?: number | null): Promise<HomeFeed | null> => {
@@ -25,12 +26,16 @@ export function liveShopLinks<T extends { href: string }>(links: T[], active: Se
 
 export const getCategoryBySlug = cache(async (slug: string) => {
   const supabase = await createClient();
-  // A switched-off category is kept (hidden: true) so its page can say "not available right now"
-  // instead of pretending it never existed; an unknown slug is a real 404.
   const { data, error } = await supabase.from("categories").select("*").eq("slug", slug).maybeSingle();
   if (error) throw new Error(`category lookup failed: ${error.message}`);
-  if (!data) return null;
-  if (!data.is_active) return { category: data as Category, children: [] as Category[], parent: null as Category | null, hidden: true as const };
+  if (!data) {
+    // RLS hides switched-off categories from customers. Their page should still say "not available
+    // right now" rather than pretend the category never existed, so the name is read with the
+    // service role (name and slug only); an unknown slug stays a real 404.
+    const admin = createAdminClient();
+    const { data: paused } = admin ? await admin.from("categories").select("*").eq("slug", slug).eq("is_active", false).maybeSingle() : { data: null };
+    return paused ? { category: paused as Category, children: [] as Category[], parent: null as Category | null, hidden: true as const } : null;
+  }
   // Sub-categories and the parent are independent lookups: one round trip, not two.
   const [{ data: children }, parentRes] = await Promise.all([
     supabase.from("categories").select("*").eq("parent_id", data.id).eq("is_active", true).order("sort_order"),
