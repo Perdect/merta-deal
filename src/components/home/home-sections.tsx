@@ -7,7 +7,7 @@ import { ProductGrid } from "@/components/shop/product-card";
 import { ProductImage } from "@/components/shop/product-image";
 import { cn } from "@/lib/utils";
 
-const TILE_BG: Record<string, string> = { grocery: "bg-[#FFF4E2]", "dry-fruits": "bg-[#F3EDE0]", sweets: "bg-[#FFF1E6]", "bakery-cakes": "bg-[#FBE9EF]", "fast-food": "bg-[#FFF4DB]", fruits: "bg-[#FDEFF0]", vegetables: "bg-[#EAF6EC]" };
+const TILE_BG: Record<string, string> = { grocery: "bg-[#FFF4E2]", "dry-fruits": "bg-[#F3EDE0]", sweets: "bg-[#FFF1E6]", "bakery-cakes": "bg-[#FBE9EF]", fruits: "bg-[#FDEFF0]", vegetables: "bg-[#EAF6EC]" };
 
 /**
  * Compact category row (quick-commerce style): one tile per top-level category with a product
@@ -15,7 +15,7 @@ const TILE_BG: Record<string, string> = { grocery: "bg-[#FFF4E2]", "dry-fruits":
  * something to buy appear; the "See all" link opens the full categories screen.
  */
 export function CategoryGrid({ tabs, fallback }: { tabs: CategoryTab[]; fallback: HomeCategory[] }) {
-  const order = ["grocery", "dry-fruits", "sweets", "bakery-cakes", "fast-food", "fruits", "vegetables"];
+  const order = ["grocery", "dry-fruits", "sweets", "bakery-cakes", "fruits", "vegetables"];
   const rank = (slug: string) => { const i = order.indexOf(slug); return i === -1 ? order.length : i; };
   const tiles: (CategoryTile & { bg?: string })[] = [...tabs].sort((a, b) => rank(a.slug) - rank(b.slug))
     .map((t) => ({ key: t.slug, label: t.tiles.length ? `All ${t.name.toLowerCase()}` : t.name, href: `/c/${t.slug}`, image: t.image, count: t.count, bg: TILE_BG[t.slug] }));
