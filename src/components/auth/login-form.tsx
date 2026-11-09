@@ -68,7 +68,7 @@ export function LoginForm({ next, phoneEnabled, guestEnabled, confirmed }: { nex
         </div>
       ) : null}
 
-      <p className="mt-6 text-center text-sm text-ink-3">New to Merta Deal? <Link href={`/register${next ? `?next=${encodeURIComponent(next)}` : ""}`} className="font-semibold text-brand-700">Create account</Link></p>
+      {phoneEnabled ? null : <p className="mt-6 text-center text-sm text-ink-3">New to Merta Deal? <Link href={`/register${next ? `?next=${encodeURIComponent(next)}` : ""}`} className="font-semibold text-brand-700">Create account</Link></p>}
       <p className="mt-3 text-center text-xs text-ink-3">Staff: <Link href="/rider/login" className="font-semibold text-ink-2 underline-offset-2 hover:underline">Delivery partner login</Link></p>
     </div>
   );

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LoginModal } from "./login-modal";
+import { env } from "@/lib/env";
 
 /**
  * Signed-out visitor on a private page (account, orders, checkout): the page stays in the shop frame
@@ -22,7 +23,7 @@ export function PleaseLogin({ title = "Please login", description = "Please logi
       <h1 className="font-display text-2xl font-extrabold text-ink">{title}</h1>
       <p className="mt-2 max-w-sm text-sm text-ink-3">{description}</p>
       <Button size="lg" className="mt-7 h-13 w-full max-w-md rounded-xl text-base" onClick={() => setOpen(true)}>Login</Button>
-      <p className="mt-4 text-sm text-ink-3">New to Merta Deal? <Link href={`/register?next=${encodeURIComponent(pathname)}`} className="font-semibold text-brand-700">Create account</Link></p>
+      {env.phoneAuthEnabled ? <p className="mt-4 text-sm text-ink-3">Just your mobile number and an OTP. No account to create.</p> : <p className="mt-4 text-sm text-ink-3">New to Merta Deal? <Link href={`/register?next=${encodeURIComponent(pathname)}`} className="font-semibold text-brand-700">Create account</Link></p>}
       <LoginModal open={open} onClose={() => setOpen(false)} eta={eta} title={loginTitle} defaultMobile={defaultMobile} />
     </section>
   );

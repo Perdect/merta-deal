@@ -40,7 +40,7 @@ export function useCheckoutGate({ summary, addresses: serverAddresses, signedIn,
   const unserved = Boolean(selectedAddress && s && !s.serviceable);
   const needsLogin = isGuest || !signedIn;
 
-  const ctaLabel = !selectedAddress ? "Add Address to proceed" : unserved ? "Change address" : `Proceed to Pay ${formatINR(s?.total ?? 0, { precise: true })}`;
+  const ctaLabel = !selectedAddress ? "Add Address to proceed" : unserved ? "Change address" : needsLogin ? "Login to Proceed" : `Proceed to Pay ${formatINR(s?.total ?? 0, { precise: true })}`;
   const ctaDisabled = Boolean(selectedAddress && !unserved && (cartBlocker || pendingCount > 0));
 
   const proceed = async () => {
