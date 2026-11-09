@@ -26,7 +26,7 @@ export const site = {
   cityHindi: "मेड़ता सिटी",
   cityHindiAlt: "मेरता सिटी",
   /** Pincodes with at least one active delivery zone (kept in step with `delivery_zones`). */
-  servicePincodes: ["341510", "341511"],
+  servicePincodes: ["341510"],
   /**
    * Verified public profiles of the business (Instagram, Facebook, YouTube, WhatsApp channel, Google Business Profile
    * URL…). Listed in Organization `sameAs` and the footer only once they exist; never guessed.
