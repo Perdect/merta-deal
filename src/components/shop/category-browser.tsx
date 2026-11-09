@@ -98,7 +98,9 @@ export function CategoryBrowser({ tabs, initial, products, signedIn }: { tabs: C
                 <ProductGrid products={listed.items} signedIn={signedIn} priorityCount={t.slug === active ? 4 : 0} />
                 {listed.total > listed.items.length ? (
                   <Link href={`/c/${t.slug}`} className="mt-4 flex min-h-11 items-center justify-center gap-1 rounded-xl border border-line bg-card text-sm font-semibold text-brand-800 focus-visible:outline-2 focus-visible:outline-brand-600">See all {listed.total} {t.name.toLowerCase()} <ChevronRight className="h-4 w-4" aria-hidden /></Link>
-                ) : null}
+                ) : (
+              <p className="rounded-xl border border-dashed border-line bg-surface px-4 py-6 text-center text-sm text-ink-2">{t.name} is coming soon. We&rsquo;re adding products here; grocery and kirana essentials are on sale now.</p>
+            )}
               </>
             ) : (
               <p className="rounded-xl border border-line bg-card px-4 py-8 text-center text-sm text-ink-3">Nothing in {t.name.toLowerCase()} right now — check back soon.</p>

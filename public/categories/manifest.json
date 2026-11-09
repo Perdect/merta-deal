@@ -1,0 +1,53 @@
+{
+ "sweets": {
+  "file": "/categories/sweets.f341e814.webp",
+  "variant": "cutout",
+  "kind": "commodity",
+  "source": "Wikimedia Commons",
+  "source_url": "https://commons.wikimedia.org/wiki/File:Motichoor_Laddu.jpg",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "attribution": "UdayKarthik Kesanapalli",
+  "barcode": null,
+  "matched_name": "Motichoor Laddu.jpg",
+  "matched_quantity": null,
+  "size_match": null,
+  "confidence": 1,
+  "notes": "category tile; background removed (ISNet), transparent cutout",
+  "updated_at": "2026-11-09T03:42:02.014363Z"
+ },
+ "bakery-cakes": {
+  "file": "/categories/bakery-cakes.1f73fc08.webp",
+  "variant": "cutout",
+  "kind": "commodity",
+  "source": "Wikimedia Commons",
+  "source_url": "https://commons.wikimedia.org/wiki/File:Birthday_Cake_Bloomsburg,_Pennsylvania.jpg",
+  "license": "CC0",
+  "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "attribution": "Tim-desser",
+  "barcode": null,
+  "matched_name": "Birthday Cake Bloomsburg, Pennsylvania.jpg",
+  "matched_quantity": null,
+  "size_match": null,
+  "confidence": 1,
+  "notes": "category tile; background removed (ISNet), transparent cutout",
+  "updated_at": "2026-11-09T03:42:02.014363Z"
+ },
+ "fast-food": {
+  "file": "/categories/fast-food.ce9b62d9.webp",
+  "variant": "cutout",
+  "kind": "commodity",
+  "source": "Wikimedia Commons",
+  "source_url": "https://commons.wikimedia.org/wiki/File:Indian_Samosa_by_clumsy_home_chef.jpg",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "attribution": "ClumsyHomeChef",
+  "barcode": null,
+  "matched_name": "Indian Samosa by clumsy home chef.jpg",
+  "matched_quantity": null,
+  "size_match": null,
+  "confidence": 1,
+  "notes": "category tile; background removed (ISNet), transparent cutout",
+  "updated_at": "2026-11-09T03:42:02.014363Z"
+ }
+}

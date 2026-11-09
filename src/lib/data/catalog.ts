@@ -124,8 +124,8 @@ const TILE_GROUPS: Record<string, { slugs: string[]; label: string }[]> = {
 const TILE_ORDER: Record<string, string[]> = { grocery: ["atta", "flour", "rice", "dal", "oil", "sugar", "salt", "dry-fruits"] };
 
 /**
- * Tabs = active top-level categories that customers can actually buy from; tiles = their sub-categories
- * with at least one listed product (empty ones are hidden). Tile pictures come from the most popular
+ * Tabs = active top-level categories (an empty one shows as "coming soon" so a new line like Sweets is
+ * visible before its first product); tiles = their sub-categories with at least one listed product. Tile pictures come from the most popular
  * listed product (approved catalogue photos), falling back to the category's own image.
  */
 export const getCategoryTabs = cache(async (): Promise<CategoryTab[]> => {
@@ -169,5 +169,5 @@ export const getCategoryTabs = cache(async (): Promise<CategoryTab[]> => {
     const own = stat(p.id);
     const count = own.count + children.reduce((n, c) => n + stat(c.id).count, 0);
     return { id: p.id, slug: p.slug, name: p.name, image: p.image_url ?? own.image, count, tiles: tiles.map((t) => ({ key: t.key, label: t.label, href: t.href, image: t.image, count: t.count })) };
-  }).filter((t) => t.count > 0);
+  });
 });

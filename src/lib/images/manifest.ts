@@ -10,3 +10,11 @@ export function readProductImageManifest(): Record<string, ProductImageRecord> {
   try { cache = JSON.parse(readFileSync(path.join(process.cwd(), "public", "products", "manifest.json"), "utf8")); } catch { cache = {}; }
   return cache!;
 }
+
+let catCache: Record<string, ProductImageRecord> | null = null;
+/** public/categories/manifest.json: source and licence for each category tile photo, keyed by category slug. */
+export function readCategoryImageManifest(): Record<string, ProductImageRecord> {
+  if (catCache) return catCache;
+  try { catCache = JSON.parse(readFileSync(path.join(process.cwd(), "public", "categories", "manifest.json"), "utf8")); } catch { catCache = {}; }
+  return catCache!;
+}

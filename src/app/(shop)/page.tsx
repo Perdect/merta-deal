@@ -1,5 +1,5 @@
 import { getSessionUser } from "@/lib/supabase/server";
-import { getPublicSettings } from "@/lib/data/catalog";
+import { getPublicSettings, getCategories } from "@/lib/data/catalog";
 import { businessNode, jsonLdHtml } from "@/lib/seo-schema";
 import { getHomeData, DEFAULT_ESSENTIALS } from "@/lib/data/home";
 import { getCategoryTabs } from "@/lib/data/catalog";
@@ -13,6 +13,10 @@ import type { Metadata } from "next";
 
 export const revalidate = 60;
 
+/** "grocery, sweets and fast food" — the categories on sale, so the copy never promises a paused one. */
+const listNames = (names: string[]) => { const n = names.length ? names : ["grocery"]; return n.length === 1 ? `${n[0]} and daily essentials` : `${n.slice(0, -1).join(", ")} and ${n[n.length - 1]}`; };
+const capitalise = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+
 const homeTitle = `${site.seoName} | Online Grocery Delivery in ${site.city}`;
 const homeH1 = `Online grocery delivery in ${site.city}`;
 
@@ -20,7 +24,8 @@ const homeH1 = `Online grocery delivery in ${site.city}`;
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getPublicSettings();
   const pay = paymentPhrase(settings);
-  const homeDescription = `Order groceries, fruits, vegetables and daily essentials online in ${site.city}, Rajasthan with ${site.seoName}. Check delivery availability for your pincode and shop online.${pay ? ` ${pay}` : ""}`;
+  const cats = (await getCategories()).filter((c) => !c.parent_id).map((c) => c.name.toLowerCase());
+  const homeDescription = `Order ${listNames(cats)} online in ${site.city}, Rajasthan with ${site.seoName}. Check delivery availability for your pincode and shop online.${pay ? ` ${pay}` : ""}`;
   return {
     title: { absolute: homeTitle },
     description: homeDescription,
@@ -59,7 +64,7 @@ export default async function HomePage() {
       {/* The page's one H1 is visible and says what the service is (one compact line on phones); the shopping sections follow. */}
       <header className="px-4 sm:px-0">
         <h1 className="font-display text-[17px] font-bold leading-tight text-ink sm:text-2xl">{homeH1}</h1>
-        <p className="mt-0.5 line-clamp-1 text-[13px] text-ink-2 sm:line-clamp-none sm:text-sm">Grocery, fruits, vegetables and daily essentials delivered to your home in {site.city}, Rajasthan, with a {etaLabel} delivery target.</p>
+        <p className="mt-0.5 line-clamp-1 text-[13px] text-ink-2 sm:line-clamp-none sm:text-sm">{capitalise(listNames(home.categories.map((c) => c.name.toLowerCase())))} delivered to your home in {site.city}, Rajasthan, with a {etaLabel} delivery target.</p>
       </header>
       <CategoryGrid tabs={tabs} fallback={home.categories} />
       <UrgentHighlight etaLabel={etaLabel} />

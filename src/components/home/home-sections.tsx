@@ -7,7 +7,7 @@ import { ProductGrid } from "@/components/shop/product-card";
 import { ProductImage } from "@/components/shop/product-image";
 import { cn } from "@/lib/utils";
 
-const TILE_BG: Record<string, string> = { grocery: "bg-[#FFF4E2]", fruits: "bg-[#FDEFF0]", vegetables: "bg-[#EAF6EC]" };
+const TILE_BG: Record<string, string> = { grocery: "bg-[#FFF4E2]", "dry-fruits": "bg-[#F3EDE0]", sweets: "bg-[#FFF1E6]", "bakery-cakes": "bg-[#FBE9EF]", "fast-food": "bg-[#FFF4DB]", fruits: "bg-[#FDEFF0]", vegetables: "bg-[#EAF6EC]" };
 
 /**
  * Compact category row (quick-commerce style): one tile per top-level category with a product
@@ -15,7 +15,7 @@ const TILE_BG: Record<string, string> = { grocery: "bg-[#FFF4E2]", fruits: "bg-[
  * something to buy appear; the "See all" link opens the full categories screen.
  */
 export function CategoryGrid({ tabs, fallback }: { tabs: CategoryTab[]; fallback: HomeCategory[] }) {
-  const order = ["fruits", "vegetables"];
+  const order = ["grocery", "dry-fruits", "sweets", "bakery-cakes", "fast-food", "fruits", "vegetables"];
   const rank = (slug: string) => { const i = order.indexOf(slug); return i === -1 ? order.length : i; };
   const tiles: (CategoryTile & { bg?: string })[] = [...tabs].sort((a, b) => rank(a.slug) - rank(b.slug))
     .map((t) => ({ key: t.slug, label: t.tiles.length ? `All ${t.name.toLowerCase()}` : t.name, href: `/c/${t.slug}`, image: t.image, count: t.count, bg: TILE_BG[t.slug] }));
@@ -30,11 +30,12 @@ export function CategoryGrid({ tabs, fallback }: { tabs: CategoryTab[]; fallback
       <ul className="grid gap-x-2.5 gap-y-3 sm:flex sm:gap-4" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
         {tiles.map((t) => (
           <li key={t.key} className="min-w-0 sm:w-[140px]">
-            <Link href={t.href} className="group block rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600" aria-label={`${t.label}, ${t.count} product${t.count === 1 ? "" : "s"}`}>
+            <Link href={t.href} className="group block rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600" aria-label={t.count ? `${t.label}, ${t.count} product${t.count === 1 ? "" : "s"}` : `${t.label}, coming soon`}>
               <span aria-hidden className={cn("block aspect-square overflow-hidden rounded-2xl p-2 transition-transform duration-200 group-hover:-translate-y-0.5 group-active:scale-[0.97] motion-reduce:transform-none", t.bg ?? "bg-surface-2")}>
                 <ProductImage image={t.image} productName={t.label} className="h-full w-full" rounded="rounded-xl" sizes="(max-width: 640px) 30vw, 140px" />
               </span>
               <span className="mt-1.5 block text-center text-[13px] font-semibold leading-tight text-ink sm:text-sm">{t.label}</span>
+              {t.count === 0 ? <span className="mt-0.5 block text-center text-[11px] font-medium text-saffron-700">Coming soon</span> : null}
             </Link>
           </li>
         ))}

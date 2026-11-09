@@ -50,6 +50,8 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const barTitle = pickedNames.length ? pickedNames.join(" & ") : category.name;
   const scopeCategory = picked.length ? picked.join(",") : slug;
   const listingParams = parseListingParams(sp, { category: scopeCategory });
+  // A brand-new category with nothing listed yet and no filters applied reads as "coming soon", not "no products found".
+  const fresh = !LISTING_FILTER_KEYS.some((k) => sp[k] != null && sp[k] !== "");
   const [user, result, brands] = await Promise.all([getSessionUser(), searchProducts(listingParams), getBrands()]);
   const seo = CATEGORY_SEO[slug];
   const crumbs = [{ name: "Home", url: `${site.url}/` }, ...(parent ? [{ name: parent.name, url: `${site.url}/c/${parent.slug}` }] : []), { name: category.name, url: `${site.url}/c/${slug}` }];
@@ -78,7 +80,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
         </div>
       ) : null}
       <ProductListing result={result} filters={{ brands, categories: children.map((c) => ({ name: c.name, slug: c.slug })) }} signedIn={Boolean(user)} scope={{ category: scopeCategory }} hideCategoryChips
-        emptyTitle={`No ${barTitle.toLowerCase()} products right now`} emptyHint="Check back soon, or remove a filter if you added one." />
+        emptyTitle={fresh ? `${category.name} coming soon` : `No ${barTitle.toLowerCase()} products right now`} emptyHint={fresh ? "We're adding products to this category. Grocery and kirana essentials are on sale now." : "Check back soon, or remove a filter if you added one."} />
     </div>
   );
 }
