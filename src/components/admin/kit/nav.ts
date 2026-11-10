@@ -2,7 +2,7 @@ import {
   Wallet,
   LayoutDashboard, BarChart3, ShoppingBag, MapPinned, Bike, Package, Camera, FolderTree, Tags,
   TicketPercent, Megaphone, Bell, CreditCard, LifeBuoy, Star, Users, Settings, ScrollText, ScanLine, Truck, Tag, IndianRupee, Inbox, Building2, type LucideIcon,
- Warehouse } from "lucide-react";
+ Warehouse, Boxes } from "lucide-react";
 
 /** Live counters the shell can show next to a nav item (filled by `getLiveCounts`). */
 export type NavBadgeKey = "orders" | "requests" | "payments" | "wholesale";
@@ -27,6 +27,7 @@ export const ADMIN_NAV_DAILY: AdminNavItem[] = [
 export const ADMIN_NAV: AdminNavGroup[] = [
   { label: "Catalogue", items: [
     { href: "/admin/products", label: "Products", icon: Package },
+    { href: "/admin/inventory", label: "Inventory", icon: Boxes },
     { href: "/admin/products/images", label: "Photo studio", icon: Camera },
     { href: "/admin/categories", label: "Categories", icon: FolderTree },
     { href: "/admin/brands", label: "Brands", icon: Tags },

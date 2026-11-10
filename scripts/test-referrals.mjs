@@ -43,7 +43,7 @@ await q(`update delivery_partners set is_online = false, current_lat = null, cur
 await q(`update delivery_assignments set status = 'cancelled' where status in ('offered','accepted','picked_up')`);
 await q(`update orders set status = 'cancelled' where status not in ('delivered','completed','cancelled','rejected')`);
 await q(`delete from notifications`);
-const stock = await one(`select id, selling_price from inventory where stock_qty > 30 and selling_price between 50 and 400 order by id limit 1`);
+const stock = await one(`select id, selling_price from inventory where stock_qty > 30 and selling_price between 100 and 400 order by selling_price desc, id limit 1`);
 
 // Two brand-new customers (no orders yet), with a default address copied from the seeded customer.
 const addrRow = await one(`select * from addresses where user_id = $1 order by is_default desc limit 1`, [CUST]);

@@ -146,6 +146,8 @@ export function friendlyError(err: unknown): string {
     NOT_A_RIDER: "This account is not registered as a delivery partner.",
     PRICE_ABOVE_MRP: "Selling price cannot be higher than MRP.",
     NEGATIVE_STOCK: "Stock cannot go below zero.",
+    RESERVATION_MISMATCH: "Reserved stock does not match this order. Check the inventory passbook before retrying.",
+    PASSBOOK_IMMUTABLE: "Passbook entries cannot be changed. Record a correction instead.",
     ORDER_NOT_DELIVERED: "You can review an order after it is delivered.",
     INSUFFICIENT_STOCK: "Some items just sold out. Review your cart and try again.",
     CONFIRMATION_REQUIRED: "Confirm before saving this change.",

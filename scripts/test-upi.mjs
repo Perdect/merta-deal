@@ -64,7 +64,7 @@ async function toDoor(o) {
   return { id: off.id, otp: (await one(`select delivery_otp from order_secrets where order_id = $1`, [o])).delivery_otp };
 }
 const due = async () => Number((await one(`select (public._rider_cash($1::uuid) ->> 'due') d`, [r1])).d);
-const stock2 = await one(`select id, selling_price from inventory where stock_qty > 20 and selling_price between 50 and 400 order by id limit 1`);
+const stock2 = await one(`select id, selling_price from inventory where stock_qty > 20 and selling_price between 100 and 400 order by selling_price desc, id limit 1`);
 const pub = await fnv(`public.public_settings()`);
 ok("UPI details are public and switched on", pub.upi_on_delivery_enabled === true && pub.upi_id === "8875020202@hdfc" && pub.upi_payee_name === "DESHWALI MINERALS", JSON.stringify(pub.upi_id));
 
