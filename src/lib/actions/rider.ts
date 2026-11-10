@@ -180,3 +180,31 @@ export async function reportFailedDeliveryAction(assignmentId: string, reason: F
   revalidatePath("/rider");
   return { ok: true, data: { order_status: String((data as { order_status: string }).order_status) } };
 }
+
+/* ---------- Public application (0047): no account needed; an admin creates the email sign-in after review ---------- */
+export type RiderApplicationInput = { fullName: string; phone: string; email: string; vehicle_type: string; vehicle_number?: string; license_number?: string; aadhaar_last4?: string; emergency_contact?: string; note?: string };
+const applicationSchema = z.object({
+  fullName: z.string().trim().min(2, "Enter your name").max(80),
+  phone: z.string().transform((v) => v.replace(/\D/g, "").slice(-10)).pipe(z.string().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number")),
+  email: z.string().trim().toLowerCase().email("Enter a valid email address"),
+  vehicle_type: z.enum(["bicycle", "bike", "scooter", "auto", "van"]),
+  vehicle_number: z.string().trim().max(15).optional().or(z.literal("")),
+  license_number: z.string().trim().max(30).optional().or(z.literal("")),
+  aadhaar_last4: z.string().trim().regex(/^(\d{4})?$/, "Enter the last 4 digits of your Aadhaar").optional().or(z.literal("")),
+  emergency_contact: z.string().transform((v) => v.replace(/\D/g, "")).pipe(z.string().regex(/^([6-9]\d{9})?$/, "Enter a 10-digit mobile number")).optional().or(z.literal("")),
+  note: z.string().trim().max(500).optional().or(z.literal("")),
+});
+export async function submitRiderApplicationAction(input: RiderApplicationInput): Promise<ActionResult<{ id: string }> & { fieldErrors?: Record<string, string> }> {
+  const parsed = applicationSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Please check the form", fieldErrors: flatten(parsed.error) };
+  const d = parsed.data;
+  const supabase = await createClient();
+  type Rpc = (fn: string, args?: Record<string, unknown>) => PromiseLike<{ data: unknown; error: { message: string } | null }>;
+  const { data, error } = await (supabase.rpc.bind(supabase) as unknown as Rpc)("submit_rider_application", {
+    p_full_name: d.fullName, p_phone: d.phone, p_email: d.email, p_vehicle_type: d.vehicle_type,
+    p_vehicle_number: d.vehicle_number || null, p_license_number: d.license_number || null, p_aadhaar_last4: d.aadhaar_last4 || null,
+    p_emergency_contact: d.emergency_contact || null, p_note: d.note || null,
+  });
+  if (error) return { ok: false, error: friendlyError(error) };
+  return { ok: true, data: data as { id: string } };
+}

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BadgeCheck, Bike, Clock, IndianRupee, KeyRound, MapPinned, ShieldCheck, Smartphone, UserPlus } from "lucide-react";
+import { Bike, ClipboardList, Clock, IndianRupee, KeyRound, MapPinned, PhoneCall, ShieldCheck, Smartphone } from "lucide-react";
+import { RiderApplyForm } from "@/components/rider/apply-form";
 import { AppBar } from "@/components/shop/app-bar";
 import { Button } from "@/components/ui/button";
 import { createClient, getSessionUser } from "@/lib/supabase/server";
@@ -22,8 +23,9 @@ const time12 = (t: string | null | undefined) => {
 
 /**
  * Delivery partner recruitment (orange rider theme). Pay rates and hours come from the same settings and
- * business hours the order system uses — nothing here is hard-coded. Applying needs a real Merta Deal account;
- * the application is reviewed by an admin, and only approval grants the delivery partner role.
+ * business hours the order system uses — nothing here is hard-coded. Applying needs no account (0047): the
+ * visitor leaves their details, an admin calls to verify and creates the email + password sign-in; only that
+ * grants the delivery partner role.
  */
 export default async function DeliverPage() {
   const supabase = await createClient();
@@ -36,19 +38,16 @@ export default async function DeliverPage() {
   const base = num(settings.rider_base_earning); const perKm = num(settings.rider_per_km_earning);
   const opens = time12(hours.open); const closes = time12(hours.close);
 
-  const cta = !signedIn
-    ? { primary: { href: "/register?next=%2Frider", label: "Create account to apply", Icon: UserPlus }, secondary: { href: "/login?next=%2Frider", label: "I already have a Merta Deal account" } }
-    : application?.status === "active"
-      ? { primary: { href: "/rider", label: "Open the delivery partner app", Icon: Bike }, secondary: null }
-      : application
-        ? { primary: { href: "/rider", label: "View my application", Icon: BadgeCheck }, secondary: null }
-        : { primary: { href: "/rider", label: "Apply now", Icon: Bike }, secondary: null };
+  const isRider = signedIn && application?.status === "active";
+  const cta = isRider
+    ? { href: "/rider", label: "Open the delivery partner app", Icon: Bike }
+    : { href: "#apply", label: "Apply now", Icon: ClipboardList };
 
   const steps = [
-    { Icon: UserPlus, t: "Create your account", s: "Sign up with your mobile number and a 6-digit PIN (skip this if you already shop with us)." },
-    { Icon: Bike, t: "Fill in your details", s: "Vehicle, driving licence (not needed for a cycle), last 4 digits of Aadhaar and an emergency contact." },
-    { Icon: ShieldCheck, t: "We verify you", s: "Merta Deal checks your details and activates your account. You get a notification when you're approved." },
-    { Icon: KeyRound, t: "Start delivering", s: "Sign in at Delivery partner login, go online, accept requests and hand over with the customer's OTP." },
+    { Icon: ClipboardList, t: "Send your details", s: "Name, mobile, email, vehicle, driving licence (not needed for a cycle). No account to create." },
+    { Icon: PhoneCall, t: "We call you", s: "Merta Deal checks your details on the phone, usually within a day." },
+    { Icon: KeyRound, t: "You get your sign-in", s: "We create your delivery partner login (your email + a password) and share it with you privately." },
+    { Icon: Bike, t: "Start delivering", s: "Sign in at Delivery partner login, go online, accept requests and hand over with the customer's OTP." },
   ];
 
   return (
@@ -59,10 +58,9 @@ export default async function DeliverPage() {
         <h1 className="mt-3 font-display text-2xl font-extrabold leading-tight text-ink sm:text-3xl">Deliver groceries in {site.city}. Earn on your own time.</h1>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-2">Short trips inside the city, from Merta Deal&apos;s pickup point to homes nearby. You choose when to go online, and every request shows your earning before you accept.</p>
         <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-          <Button href={cta.primary.href} size="lg"><cta.primary.Icon className="h-5 w-5" aria-hidden /> {cta.primary.label}</Button>
-          {cta.secondary ? <Button href={cta.secondary.href} size="lg" variant="outline">{cta.secondary.label}</Button> : null}
+          <Button href={cta.href} size="lg"><cta.Icon className="h-5 w-5" aria-hidden /> {cta.label}</Button>
         </div>
-        {signedIn ? null : <p className="mt-3 text-xs text-ink-3">Already approved? <Link href="/rider/login" className="font-semibold text-brand-700 underline-offset-2 hover:underline">Delivery partner login</Link></p>}
+        {isRider ? null : <p className="mt-3 text-xs text-ink-3">Already a delivery partner? <Link href="/rider/login" className="font-semibold text-brand-700 underline-offset-2 hover:underline">Delivery partner login</Link></p>}
       </section>
 
       <section className="mt-6 grid gap-3 sm:grid-cols-3" aria-label="Pay and hours">
@@ -94,6 +92,14 @@ export default async function DeliverPage() {
           ))}
         </ol>
       </section>
+
+      {isRider ? null : (
+        <section id="apply" className="mt-8 scroll-mt-24" aria-labelledby="apply-h">
+          <h2 id="apply-h" className="font-display text-lg font-bold text-ink">Apply now</h2>
+          <p className="mt-1 mb-3 text-sm text-ink-3">Takes two minutes. We call to verify, then send your sign-in.</p>
+          <RiderApplyForm />
+        </section>
+      )}
 
       <section className="mt-8 rounded-lg border border-line bg-card p-4" aria-labelledby="need">
         <h2 id="need" className="font-semibold text-ink">What you need</h2>

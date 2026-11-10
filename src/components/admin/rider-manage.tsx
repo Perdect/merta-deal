@@ -35,20 +35,26 @@ function RiderFields({ f, setF, cities }: { f: Form; setF: (f: Form) => void; ci
   );
 }
 
-/** Header button: create a rider with a sign-in, vehicle details, and optionally approved at once. */
-export function AddRiderButton({ cities }: { cities: CityRow[] }) {
+export type RiderPrefill = Partial<Form> & { email?: string; applicationId?: string };
+
+/**
+ * Header button: create a rider with a sign-in, vehicle details, and optionally approved at once.
+ * With `prefill` (from an application, 0047) the fields start filled and the application is marked created.
+ */
+export function AddRiderButton({ cities, prefill, label = "Add rider", compact }: { cities: CityRow[]; prefill?: RiderPrefill; label?: string; compact?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const [showPw, setShowPw] = React.useState(false);
-  const [f, setF] = React.useState<Form>(blank);
-  const [login, setLogin] = React.useState({ email: "", password: "", approve: true });
+  const start = (): Form => ({ ...blank, ...Object.fromEntries(Object.entries(prefill ?? {}).filter(([k, v]) => k in blank && v != null)) });
+  const [f, setF] = React.useState<Form>(start);
+  const [login, setLogin] = React.useState({ email: prefill?.email ?? "", password: "", approve: true });
   const [err, setErr] = React.useState<string | null>(null);
-  const reset = () => { setF(blank); setLogin({ email: "", password: "", approve: true }); setErr(null); setShowPw(false); };
+  const reset = () => { setF(start()); setLogin({ email: prefill?.email ?? "", password: "", approve: true }); setErr(null); setShowPw(false); };
   const save = async () => {
     setBusy(true); setErr(null);
     try {
-      const r = await createRiderAction({ ...f, email: login.email, password: login.password, approve: login.approve });
+      const r = await createRiderAction({ ...f, email: login.email, password: login.password, approve: login.approve, applicationId: prefill?.applicationId ?? null });
       if (!r.ok) { setErr(r.error); return; }
       toast.success("Rider added", login.approve ? `${f.fullName} can sign in and go online now.` : `${f.fullName} is waiting under Pending approval.`);
       setOpen(false); reset(); router.refresh();
@@ -56,7 +62,7 @@ export function AddRiderButton({ cities }: { cities: CityRow[] }) {
   };
   return (
     <>
-      <button type="button" className={btn.primary} onClick={() => { reset(); setOpen(true); }}><UserPlus className="h-4 w-4" aria-hidden />Add rider</button>
+      <button type="button" className={compact ? btn.secondary : btn.primary} onClick={() => { reset(); setOpen(true); }}><UserPlus className="h-4 w-4" aria-hidden />{label}</button>
       <Modal open={open} onClose={() => (busy ? undefined : setOpen(false))} title="Add a rider" description="Creates the rider's sign-in and their delivery partner record. They can change the password after signing in." size="md"
         footer={<div className="flex gap-2"><Button variant="outline" className="flex-1" disabled={busy} onClick={() => setOpen(false)}>Cancel</Button><Button className="flex-1" loading={busy} onClick={save}>Add rider</Button></div>}>
         <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); void save(); }}>

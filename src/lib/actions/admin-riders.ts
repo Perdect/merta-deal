@@ -34,7 +34,7 @@ async function audit(action: string, entityId: string, after: Record<string, unk
 }
 const revalidate = (...paths: string[]) => paths.forEach((p) => revalidatePath(p));
 
-export type NewRiderInput = { fullName: string; phone: string; email: string; password: string; vehicle_type: Enums<"vehicle_type">; vehicle_number?: string | null; license_number?: string | null; city_id?: string | null; emergency_contact?: string | null; approve: boolean };
+export type NewRiderInput = { fullName: string; phone: string; email: string; password: string; vehicle_type: Enums<"vehicle_type">; vehicle_number?: string | null; license_number?: string | null; city_id?: string | null; emergency_contact?: string | null; approve: boolean; /** Application (0047) this rider is created from; marked "created" afterwards. */ applicationId?: string | null };
 
 /**
  * Adds a delivery partner from the admin panel: creates the sign-in (email + password, confirmed),
@@ -42,7 +42,7 @@ export type NewRiderInput = { fullName: string; phone: string; email: string; pa
  * online at once; otherwise they wait under Pending approval like a self sign-up.
  */
 export async function createRiderAction(input: NewRiderInput): Promise<ActionResult<{ id: string }>> {
-  const parsed = z.object({ ...riderFields, email: z.string().trim().toLowerCase().email("Enter a valid email address"), password: z.string().min(8, "Use at least 8 characters").max(72), approve: z.boolean() }).safeParse(input);
+  const parsed = z.object({ ...riderFields, email: z.string().trim().toLowerCase().email("Enter a valid email address"), password: z.string().min(8, "Use at least 8 characters").max(72), approve: z.boolean(), applicationId: z.string().uuid().optional().nullable() }).safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
   const d = parsed.data;
   try {
@@ -70,7 +70,11 @@ export async function createRiderAction(input: NewRiderInput): Promise<ActionRes
       riderId = inserted.id;
     }
     const rider = { id: riderId };
-    await audit("rider.create", rider.id, { user_id: userId, email: d.email, phone: d.phone, status: d.approve ? "active" : "pending" });
+    if (d.applicationId) {
+      type Rpc = (fn: string, args?: Record<string, unknown>) => PromiseLike<{ error: { message: string } | null }>;
+      await (supabase.rpc.bind(supabase) as unknown as Rpc)("admin_link_rider_application", { p_id: d.applicationId, p_user_id: userId });
+    }
+    await audit("rider.create", rider.id, { user_id: userId, email: d.email, phone: d.phone, status: d.approve ? "active" : "pending", application_id: d.applicationId ?? null });
     revalidate("/admin/riders", "/admin/users");
     return { ok: true, data: { id: rider.id } };
   } catch (e) { return fail(e); }
@@ -133,5 +137,17 @@ export async function deleteRiderAction(riderId: string): Promise<ActionResult<{
     await audit("rider.delete", riderId, { user_id: rider.user_id, name: u?.full_name ?? null, email: u?.email ?? null, account_deleted: accountDeleted });
     revalidate("/admin/riders", "/admin/users");
     return { ok: true, data: { accountDeleted } };
+  } catch (e) { return fail(e); }
+}
+
+/** Decline (or reopen) a delivery partner application with a note (0047). */
+export async function reviewRiderApplicationAction(id: string, status: "declined" | "new", note: string): Promise<ActionResult<null>> {
+  try {
+    const { supabase } = await requireAdmin();
+    type Rpc = (fn: string, args?: Record<string, unknown>) => PromiseLike<{ error: { message: string } | null }>;
+    const { error } = await (supabase.rpc.bind(supabase) as unknown as Rpc)("admin_review_rider_application", { p_id: id, p_status: status, p_note: note.trim().slice(0, 300) || null });
+    if (error) return { ok: false, error: friendlyError(error) };
+    revalidate("/admin/riders");
+    return { ok: true, data: null };
   } catch (e) { return fail(e); }
 }

@@ -110,7 +110,6 @@ export function AddressForm({ initial, onSaved, onCancel, defaultName, defaultPh
       </div>
       {isPlace ? <Checkbox label={dest === "hotel" ? "Hand over at hotel reception" : "Hand over at office reception"} checked={place.reception} onChange={(e) => setPlace({ ...place, reception: e.target.checked })} /> : null}
       {areaError ? <div role="alert"><Alert tone="danger" title="Outside our delivery area">{areaError} We deliver in {site.city} (pincodes {site.servicePincodes.join(", ")}).</Alert></div> : null}
-      <Checkbox label="Make this my default address" checked={Boolean(form.is_default)} onChange={(e) => set("is_default", e.target.checked)} />
       <div className="flex gap-2">
         {onCancel ? <Button type="button" variant="outline" onClick={onCancel} disabled={busy} className="flex-1">Cancel</Button> : null}
         <Button type="submit" loading={busy} disabled={busy} className="flex-1">{busy ? "Saving…" : "Save address"}</Button>

@@ -138,7 +138,7 @@ export function friendlyError(err: unknown): string {
     INVALID_REASON: "Pick what went wrong.",
     REASON_REQUIRED: "Describe what happened (at least 5 characters).",
     INVALID_AMOUNT: "Enter an amount above zero.",
-    ACCOUNT_REQUIRED: "Create a Merta Deal account (mobile number + PIN) before applying. Guest sessions can't apply.",
+    ACCOUNT_REQUIRED: "Apply from the Deliver with Merta Deal page; we create your delivery partner sign-in after a call.",
     OFFER_EXPIRED: "This delivery request has expired.",
     OFFER_TAKEN: "Another rider accepted this delivery first.",
     ALREADY_ON_DELIVERY: "Finish your current delivery before accepting another.",

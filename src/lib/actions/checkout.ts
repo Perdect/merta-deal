@@ -46,6 +46,11 @@ export async function saveAddressAction(input: AddressInput): Promise<ActionResu
   const zoneRow = zone as unknown as { id: string | null } | null;
   const { id, ...rest } = parsed.data;
   const payload = { ...rest, user_id: user.id, zone_id: zoneRow?.id ?? null, lat: rest.lat ?? null, lng: rest.lng ?? null, landmark: rest.landmark ?? null, label: rest.label ?? null };
+  // No checkbox in the form: the first saved address becomes the default; later ones only when chosen under Saved addresses.
+  if (!payload.is_default && !id) {
+    const { count } = await supabase.from("addresses").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("is_default", true);
+    if (!count) payload.is_default = true;
+  }
   if (payload.is_default) await supabase.from("addresses").update({ is_default: false }).eq("user_id", user.id);
   const q = id ? supabase.from("addresses").update(payload).eq("id", id).eq("user_id", user.id).select().single() : supabase.from("addresses").insert(payload).select().single();
   const { data, error } = await q;

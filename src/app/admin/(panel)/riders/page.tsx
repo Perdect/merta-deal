@@ -7,6 +7,8 @@ import { AdminPageHeader, Panel, DataTable, CellStack, RowLink, EmptyBlock, Erro
 import { RidersLiveBoard } from "@/components/admin/riders-map";
 import { RiderStatusActions } from "@/components/admin/rider-actions";
 import { AddRiderButton, RiderRowActions } from "@/components/admin/rider-manage";
+import { RiderApplications } from "@/components/admin/rider-applications";
+import { getRiderApplications } from "@/lib/data/rider-applications";
 import { getSessionUser } from "@/lib/supabase/server";
 import { RiderStatusPill, OnlinePill, ActivePill, VEHICLE_LABEL } from "@/components/admin/ops/pills";
 import { VEHICLE_OPTIONS } from "@/components/admin/constants";
@@ -27,13 +29,14 @@ export default async function AdminRidersPage({ searchParams }: { searchParams: 
   const filters: RiderFilters = { q: spGet(sp, "q"), status: spGet(sp, "status"), online: spGet(sp, "online"), vehicle: spGet(sp, "vehicle") };
   const viewId = spGet(sp, "view");
   const validView = /^[0-9a-f-]{36}$/.test(viewId);
-  const [list, counts, live, view, cities, me] = await Promise.all([
+  const [list, counts, live, view, cities, me, applications] = await Promise.all([
     listRidersOps({ ...filters, page: spPage(sp) }),
     countRidersByStatus(filters),
     getLiveRiders(),
     validView ? getRiderDetail(viewId) : Promise.resolve(null),
     getCities(),
     getSessionUser(),
+    getRiderApplications("new"),
   ]);
   const selfId = me?.id ?? "";
   const { items, total, page, pageSize, error } = list;
@@ -50,6 +53,10 @@ export default async function AdminRidersPage({ searchParams }: { searchParams: 
         <RidersLiveBoard initial={live} />
       </Panel>
 
+      <Panel title={applications.length ? `Applications (${applications.length})` : "Applications"} description="From the Deliver with Merta Deal page. Call the applicant, then create their email sign-in from the application; the password you set is what they use at the delivery partner login." className="mb-5" flush>
+        <RiderApplications items={applications} cities={cities} />
+      </Panel>
+
       <h2 className="mb-2 text-[15px] font-semibold text-ink">All riders</h2>
       <StatusTabs items={TABS.map((t) => ({ ...t, count: counts[t.value] ?? null }))} />
       <ListToolbar searchPlaceholder="Name, phone, vehicle or licence number" filters={[
@@ -63,7 +70,7 @@ export default async function AdminRidersPage({ searchParams }: { searchParams: 
         <DataTable caption="Riders" rows={items} rowKey={(r) => r.id} selectedKey={validView ? viewId : null}
           empty={filtered || filters.status
             ? <EmptyBlock icon={SearchX} title="No riders match" description="Try another tab, remove a filter chip, or search by phone or vehicle number." />
-            : <EmptyBlock icon={Bike} title="No riders yet" description="People sign up as delivery partners from the customer site; new sign-ups appear here under Pending approval." />}
+            : <EmptyBlock icon={Bike} title="No riders yet" description="Add a rider with the button above, or create one from an application." />}
           columns={[
             { key: "rider", header: "Rider", render: (r) => (
               <span className="flex min-w-0 items-center gap-3">
