@@ -116,6 +116,7 @@ export async function staffSignInAction(_prev: AuthResult | null, formData: Form
     : await supabase.auth.signInWithPassword({ phone: toE164(parsed.data.mobile), password: parsed.data.password });
   if (error) {
     if (/phone.*(disabled|not enabled)|Unsupported phone provider/i.test(error.message)) return { ok: false, error: "Mobile sign-in is not enabled on the server yet." };
+    if (byEmail && /invalid login credentials/i.test(error.message)) return { ok: false, error: "Wrong email or password. Check them and try again." };
     return { ok: false, error: friendlyError(error) };
   }
   const { data: profile } = await supabase.from("profiles").select("role, is_active").eq("id", data.user.id).maybeSingle();
