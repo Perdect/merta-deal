@@ -2,7 +2,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CalendarClock, ClipboardList, PackageCheck, Pause, Play, Plus } from "lucide-react";
+import { CalendarClock, ClipboardList, PackageCheck, Pause, Play, Plus, ShoppingBasket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { Alert } from "@/components/ui/states";
@@ -11,36 +11,41 @@ import { ProductImage } from "@/components/shop/product-image";
 import { toast } from "@/components/ui/toast";
 import { pauseWholesaleListAction, proposeWholesaleOrderAction, reviewWholesaleOrderAction, saveWholesaleListAction } from "@/lib/actions/wholesale";
 import { formatINR, formatDateTime, cn } from "@/lib/utils";
-import { ordinal, restockDateLabel, SHOP_STATUS_LABEL, WHOLESALE_ORDER_LABEL, type MyShop, type WholesaleCatalogueItem, type WholesaleOrder } from "@/lib/wholesale";
+import { buyerLabel, ordinal, restockDateLabel, BUYER_STATUS_LABEL, WHOLESALE_ORDER_LABEL, type MyWholesale, type WholesaleCatalogueItem, type WholesaleOrder } from "@/lib/wholesale";
 
 type Line = { product_id: string; cases: number };
 const byId = (items: WholesaleCatalogueItem[]) => Object.fromEntries(items.map((i) => [i.product_id, i]));
 
-/** The shop owner's page: status, the monthly list, the order waiting for review, and past orders. */
-export function ShopDashboard({ data, catalogue }: { data: MyShop; catalogue: WholesaleCatalogueItem[] }) {
-  const shop = data.shop!;
-  const approved = shop.status === "approved";
+/** The customer's wholesale page: delivery details, the order waiting for review, the optional monthly list, and past orders. */
+export function ShopDashboard({ data, catalogue }: { data: MyWholesale; catalogue: WholesaleCatalogueItem[] }) {
+  const buyer = data.shop;
+  const paused = buyer?.status === "suspended";
   const proposed = (data.orders ?? []).find((o) => o.status === "proposed") ?? null;
   return (
     <div className="space-y-5">
-      <section className={cn("rounded-2xl border p-4", approved ? "border-brand-100 bg-brand-50" : shop.status === "pending" ? "border-saffron-200 bg-saffron-50" : "border-line bg-card")}>
-        <p className="text-xs font-bold uppercase tracking-wide text-ink-3">{SHOP_STATUS_LABEL[shop.status]}</p>
-        <h2 className="mt-0.5 font-display text-xl font-bold text-ink">{shop.shop_name}</h2>
-        <p className="text-sm text-ink-2">{shop.owner_name} · +91 {shop.phone}{shop.gstin ? ` · GSTIN ${shop.gstin}` : ""}</p>
-        {shop.address ? <p className="mt-1 text-sm text-ink-2">{[shop.address.house, shop.address.street, shop.address.area, `${shop.address.city} – ${shop.address.pincode}`].filter(Boolean).join(", ")}</p> : <p className="mt-1 text-sm text-danger">No delivery address on file. <Link href="/wholesale/register" className="font-semibold underline">Add one</Link>.</p>}
-        {shop.status === "pending" ? <p className="mt-2 text-sm text-ink-2">We are checking your details and will call {shop.phone}. You can set up your list as soon as the shop is approved.</p> : null}
-        {shop.status === "rejected" ? <p className="mt-2 text-sm text-ink-2">{shop.review_note ?? "We could not approve the registration."} <Link href="/wholesale/register" className="font-semibold text-brand-700">Update and resubmit</Link>.</p> : null}
-        {shop.status === "suspended" ? <p className="mt-2 text-sm text-ink-2">{shop.review_note ?? "Wholesale ordering is paused for this shop."} Call us to resume.</p> : null}
+      <section className={cn("rounded-2xl border p-4", paused ? "border-line bg-card" : "border-brand-100 bg-brand-50")}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-ink-3">{buyer ? BUYER_STATUS_LABEL[buyer.status] : "Wholesale"}</p>
+            <h2 className="mt-0.5 font-display text-xl font-bold text-ink">{buyer ? buyerLabel(buyer) : "Full cases at wholesale prices"}</h2>
+            {buyer ? <p className="text-sm text-ink-2">{buyer.shop_name ? `${buyer.owner_name} · ` : ""}+91 {buyer.phone}{buyer.gstin ? ` · GSTIN ${buyer.gstin}` : ""}</p> : <p className="text-sm text-ink-2">Order now from the wholesale range, or keep a monthly list below.</p>}
+          </div>
+          <Button href="/wholesale#range" size="sm" className="shrink-0 rounded-lg"><ShoppingBasket className="h-4 w-4" /> Order now</Button>
+        </div>
+        {buyer ? (buyer.address ? <p className="mt-2 text-sm text-ink-2">Delivers to {[buyer.address.house, buyer.address.street, buyer.address.area, `${buyer.address.city} – ${buyer.address.pincode}`].filter(Boolean).join(", ")}</p>
+          : <p className="mt-2 text-sm text-danger">No delivery address on file. <Link href="/wholesale/register" className="font-semibold underline">Add one</Link>.</p>) : null}
+        {paused ? <p className="mt-2 text-sm text-ink-2">{buyer?.review_note ?? "Wholesale ordering is paused for your account."} Call us to resume.</p> : null}
+        <p className="mt-2 text-xs text-ink-3"><Link href="/wholesale/register" className="font-semibold text-brand-700">{buyer?.shop_name || buyer?.gstin ? "Edit shop details" : "Run a shop? Add its name and GSTIN for your bills"}</Link></p>
       </section>
 
-      {approved && proposed ? <ProposalReview order={proposed} catalogue={catalogue} settings={data.settings} /> : null}
-      {approved ? <ListEditor list={data.list ?? null} catalogue={catalogue} hasProposal={Boolean(proposed)} leadDays={data.settings?.lead_days ?? 2} /> : null}
+      {!paused && proposed ? <ProposalReview order={proposed} catalogue={catalogue} settings={data.settings} /> : null}
+      {!paused ? <ListEditor list={data.list ?? null} catalogue={catalogue} hasProposal={Boolean(proposed)} leadDays={data.settings?.lead_days ?? 2} /> : null}
       <OrderHistory orders={(data.orders ?? []).filter((o) => o.status !== "proposed")} />
     </div>
   );
 }
 
-function ListEditor({ list, catalogue, hasProposal, leadDays }: { list: MyShop["list"] | null; catalogue: WholesaleCatalogueItem[]; hasProposal: boolean; leadDays: number }) {
+function ListEditor({ list, catalogue, hasProposal, leadDays }: { list: MyWholesale["list"] | null; catalogue: WholesaleCatalogueItem[]; hasProposal: boolean; leadDays: number }) {
   const router = useRouter();
   const cat = byId(catalogue);
   const [day, setDay] = React.useState<number>(list?.restock_day ?? 1);
@@ -57,7 +62,7 @@ function ListEditor({ list, catalogue, hasProposal, leadDays }: { list: MyShop["
     const r = await saveWholesaleListAction(day, lines);
     setBusy(null);
     if (!r.ok) { setError(r.error); return; }
-    toast.success("Restock list saved", `Next restock: ${restockDateLabel(r.data.next_run_date)}. We will ask you to review it ${leadDays} day${leadDays === 1 ? "" : "s"} before.`);
+    toast.success("Monthly list saved", `Next restock: ${restockDateLabel(r.data.next_run_date)}. We will ask you to review it ${leadDays} day${leadDays === 1 ? "" : "s"} before.`);
     router.refresh();
   };
   const propose = async () => {
@@ -75,8 +80,8 @@ function ListEditor({ list, catalogue, hasProposal, leadDays }: { list: MyShop["
     <section className="rounded-lg border border-line bg-card p-4 shadow-card">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="flex items-center gap-2 font-display text-base font-bold text-ink"><ClipboardList className="h-5 w-5 text-brand-700" aria-hidden /> Monthly restock list</h2>
-          <p className="mt-0.5 text-xs text-ink-3">{list ? <>Next restock <strong>{restockDateLabel(list.next_run_date)}</strong>{list.is_active ? "" : " · paused"}</> : "Pick what you need every month and the day you want it."}</p>
+          <h2 className="flex items-center gap-2 font-display text-base font-bold text-ink"><ClipboardList className="h-5 w-5 text-brand-700" aria-hidden /> Monthly list (optional)</h2>
+          <p className="mt-0.5 text-xs text-ink-3">{list ? <>Next restock <strong>{restockDateLabel(list.next_run_date)}</strong>{list.is_active ? "" : " · paused"}</> : "Same cases every month? Pick them and the day you want them. You review each order before it is placed."}</p>
         </div>
         {list ? <Button size="sm" variant="ghost" onClick={pause} loading={busy === "pause"}>{list.is_active ? <><Pause className="h-4 w-4" /> Pause</> : <><Play className="h-4 w-4" /> Resume</>}</Button> : null}
       </div>
@@ -135,7 +140,7 @@ function ListEditor({ list, catalogue, hasProposal, leadDays }: { list: MyShop["
   );
 }
 
-function ProposalReview({ order, catalogue, settings }: { order: WholesaleOrder; catalogue: WholesaleCatalogueItem[]; settings: MyShop["settings"] }) {
+function ProposalReview({ order, catalogue, settings }: { order: WholesaleOrder; catalogue: WholesaleCatalogueItem[]; settings: MyWholesale["settings"] }) {
   const router = useRouter();
   const cat = byId(catalogue);
   const [lines, setLines] = React.useState<Line[]>(order.items.map((i) => ({ product_id: i.product_id, cases: i.cases })));
@@ -200,7 +205,7 @@ function OrderHistory({ orders }: { orders: WholesaleOrder[] }) {
         {orders.map((o) => (
           <li key={o.id} className="flex items-center gap-3 px-4 py-3 text-sm">
             <div className="min-w-0 flex-1">
-              <p className="font-semibold text-ink">Restock {restockDateLabel(o.restock_date)}{o.order_number ? ` · ${o.order_number}` : ""}</p>
+              <p className="font-semibold text-ink">{o.list_id ? "Restock" : "Delivery"} {restockDateLabel(o.restock_date)}{o.order_number ? ` · ${o.order_number}` : ""}</p>
               <p className="text-xs text-ink-3">{WHOLESALE_ORDER_LABEL[o.status]}{o.order_status ? ` · ${o.order_status.replace(/_/g, " ")}` : ""} · {o.items.length} product{o.items.length === 1 ? "" : "s"} · {formatINR(o.subtotal)}{o.placed_at ? ` · ${formatDateTime(o.placed_at)}` : ""}</p>
               {o.admin_note ? <p className="text-xs text-ink-2">{o.admin_note}</p> : null}
             </div>

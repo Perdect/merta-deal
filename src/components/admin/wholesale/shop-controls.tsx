@@ -4,28 +4,27 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/toast";
-import { adminReviewShopAction } from "@/lib/actions/wholesale";
-import type { ShopStatus } from "@/lib/wholesale";
+import { adminReviewBuyerAction } from "@/lib/actions/wholesale";
+import type { BuyerStatus } from "@/lib/wholesale";
 
-export function ShopControls({ shopId, status }: { shopId: string; status: ShopStatus }) {
+/** Pause or resume a buyer's wholesale ordering; the note is sent to them. Buyers need no approval to start. */
+export function BuyerControls({ buyerId, status }: { buyerId: string; status: BuyerStatus }) {
   const router = useRouter();
   const [note, setNote] = React.useState("");
   const [busy, setBusy] = React.useState<string | null>(null);
-  const act = async (next: "approved" | "rejected" | "suspended" | "pending") => {
+  const act = async (next: "approved" | "suspended") => {
     setBusy(next);
-    const r = await adminReviewShopAction(shopId, next, note);
+    const r = await adminReviewBuyerAction(buyerId, next, note);
     setBusy(null);
     if (!r.ok) { toast.error(r.error); return; }
-    toast.success(`Shop ${next}`); setNote(""); router.refresh();
+    toast.success(next === "suspended" ? "Wholesale ordering paused" : "Wholesale ordering resumed"); setNote(""); router.refresh();
   };
   return (
     <div className="space-y-2">
-      <Input value={note} onChange={(e) => setNote(e.target.value.slice(0, 300))} placeholder="Note to the shop (optional, sent with the decision)" aria-label="Note to the shop" />
+      <Input value={note} onChange={(e) => setNote(e.target.value.slice(0, 300))} placeholder="Note to the buyer (optional, sent with the change)" aria-label="Note to the buyer" />
       <div className="flex flex-wrap gap-2">
-        {status !== "approved" ? <Button size="sm" onClick={() => act("approved")} loading={busy === "approved"}>Approve</Button> : null}
-        {status === "pending" ? <Button size="sm" variant="outline" onClick={() => act("rejected")} loading={busy === "rejected"}>Reject</Button> : null}
-        {status === "approved" ? <Button size="sm" variant="outline" onClick={() => act("suspended")} loading={busy === "suspended"}>Pause ordering</Button> : null}
-        {status === "rejected" || status === "suspended" ? <Button size="sm" variant="ghost" onClick={() => act("pending")} loading={busy === "pending"}>Back to review</Button> : null}
+        {status === "approved" ? <Button size="sm" variant="outline" onClick={() => act("suspended")} loading={busy === "suspended"}>Pause ordering</Button>
+          : <Button size="sm" onClick={() => act("approved")} loading={busy === "approved"}>Resume ordering</Button>}
       </div>
     </div>
   );

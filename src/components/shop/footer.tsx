@@ -72,7 +72,7 @@ export function Footer({ social = [], categories }: { social?: SocialLink[]; /**
             <ul className={list}>
               <li><Link href="/deliver" className={link}><Bike className={icon} strokeWidth={1.75} aria-hidden />Deliver with Merta Deal</Link></li>
               <li><Link href="/list-your-business" className={link}><Store className={icon} strokeWidth={1.75} aria-hidden />List your business</Link></li>
-              <li><Link href="/wholesale" className={link}><Warehouse className={icon} strokeWidth={1.75} aria-hidden />For kirana shops (wholesale)</Link></li>
+              <li><Link href="/wholesale" className={link}><Warehouse className={icon} strokeWidth={1.75} aria-hidden />Wholesale (full cases)</Link></li>
               {[
                 { icon: Megaphone, label: "Advertise with us" },
               ].map(({ icon: Icon, label }) => (
