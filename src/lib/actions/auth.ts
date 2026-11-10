@@ -94,18 +94,19 @@ export async function signOutAction() {
 }
 
 /* ------------------------------------------------------------------------------------------------
- * Staff portals (admin, delivery partner): same mobile + PIN accounts, but the portal is only entered
- * after the server confirms the account holds that role. A valid PIN without the role is signed straight
+ * Staff portals (admin, delivery partner): email + password accounts created by an admin (mobile + PIN is
+ * still accepted for older accounts), but the portal is only entered
+ * after the server confirms the account holds that role. A valid password without the role is signed straight
  * back out, so a customer session can never ride into a staff portal and no half-signed-in state remains.
  * ---------------------------------------------------------------------------------------------- */
 export type StaffPortal = "admin" | "rider";
 const staffSignInSchema = z.object({ mobile: mobileSchema, password: pinSchema, next: z.string().optional(), portal: z.enum(["admin", "rider"]) });
-/** Admins may also sign in with an email + password account (no PIN rule: these are ordinary passwords). */
-const staffEmailSchema = z.object({ email: z.string().trim().toLowerCase().email("Enter a valid email address"), password: z.string().min(6, "Enter your password").max(72), next: z.string().optional(), portal: z.literal("admin") });
+/** Email + password accounts (no PIN rule: these are ordinary passwords, or the 6-digit one an admin reset gives). */
+const staffEmailSchema = z.object({ email: z.string().trim().toLowerCase().email("Enter a valid email address"), password: z.string().min(6, "Enter your password").max(72), next: z.string().optional(), portal: z.enum(["admin", "rider"]) });
 
 export async function staffSignInAction(_prev: AuthResult | null, formData: FormData): Promise<AuthResult> {
   const raw = Object.fromEntries(formData);
-  const byEmail = raw.portal === "admin" && typeof raw.email === "string";
+  const byEmail = typeof raw.email === "string";
   const parsed = byEmail ? staffEmailSchema.safeParse(raw) : staffSignInSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "Please check the form", fieldErrors: flatten(parsed.error) };
   const { portal } = parsed.data;
@@ -132,7 +133,7 @@ export async function staffSignInAction(_prev: AuthResult | null, formData: Form
         ? "This account is deactivated. Contact Merta Deal support."
         : portal === "admin"
           ? "This account doesn't have admin access. Shoppers sign in from the Merta Deal website."
-          : "This number isn't registered as a Merta Deal delivery partner. Apply from the \"Deliver with Merta Deal\" page first.",
+          : "This account isn't registered as a Merta Deal delivery partner. Use the email Merta Deal gave you, or apply from the \"Deliver with Merta Deal\" page first.",
     };
   }
   redirect(safeNext(parsed.data.next, `/${portal}`, `/${portal}`));
