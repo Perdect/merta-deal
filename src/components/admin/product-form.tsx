@@ -199,7 +199,6 @@ export function ProductForm({ product, categories, brands, barcode }: { product:
             <div className="space-y-3">
               <div className="grid gap-3 sm:grid-cols-3">
                 <Input id="pf-manufacturer" label="Manufacturer" value={f.manufacturer ?? ""} onChange={(e) => set("manufacturer", e.target.value)} />
-                <Input id="pf-country" label="Country of origin" value={f.country_of_origin ?? ""} onChange={(e) => set("country_of_origin", e.target.value)} />
                 <Input id="pf-bin" label="Bin / shelf location" placeholder="e.g. A-12, Cold room 2" maxLength={40} value={f.bin_location ?? ""} onChange={(e) => set("bin_location", e.target.value)} hint="Printed on pick lists so packers find it fast." />
                 <Input id="pf-shelf_life" label="Shelf life" placeholder="e.g. 3 days, 6 months" maxLength={80} value={seller.shelf_life} onChange={(e) => setSeller("shelf_life", e.target.value)} />
               </div>

@@ -98,7 +98,6 @@ export default async function ProductPage({ params }: Props) {
     product.shelf_life ? { label: "Shelf Life", value: product.shelf_life } : null,
     product.ingredients ? { label: "Ingredients", value: product.ingredients } : null,
     nutrition.length ? { label: "Nutrition", value: nutrition.join(", ") } : null,
-    product.country_of_origin ? { label: "Country of Origin", value: product.country_of_origin } : null,
   ] as (DetailRow | null)[]).filter((r): r is DetailRow => r !== null);
   const seller = ([
     // MertaDeal is the seller of record unless a product names another seller.
