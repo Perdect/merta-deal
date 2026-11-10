@@ -101,7 +101,6 @@ export function AddressForm({ initial, onSaved, onCancel, defaultName, defaultPh
           </>
         ) : <Input label="House / Flat / Shop no." required value={form.house} onChange={(e) => set("house", e.target.value)} error={errors.house} placeholder="e.g. 12, First floor" autoComplete="address-line1" />}
         <Input label="Area / Colony" required value={form.area} onChange={(e) => set("area", e.target.value)} error={errors.area} placeholder="e.g. Sadar Bazaar" autoComplete="address-level3" />
-        <Input label="Street / Road (optional)" value={form.street ?? ""} onChange={(e) => set("street", e.target.value)} error={errors.street} placeholder="e.g. Station Road" autoComplete="address-line2" />
         <Input label="Landmark (optional)" value={form.landmark ?? ""} onChange={(e) => set("landmark", e.target.value)} error={errors.landmark} placeholder="e.g. opposite SBI bank" hint="Helps the rider find you faster." />
         <Input label="Receiver's name" required value={nameValue} onChange={(e) => set("full_name", e.target.value)} error={errors.full_name} autoComplete="name" hint="Ordering for someone else? Enter their name and number." />
         <Input label="Mobile number" required inputMode="numeric" value={form.phone} onChange={(e) => set("phone", e.target.value.replace(/\D/g, "").slice(0, 10))} error={errors.phone} autoComplete="tel-national" placeholder="10-digit number" hint="The rider calls this number." />

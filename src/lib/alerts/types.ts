@@ -9,7 +9,7 @@ export type AlertOrder = {
   upi_pending?: boolean; upi_reference?: string | null; upi_claimed_at?: string | null;
 };
 
-export type AlertFeed = { now: string; ring_seconds: number; reminder_seconds: number; orders: AlertOrder[] };
+export type AlertFeed = { now: string; ring_seconds: number; reminder_seconds: number; /** False = no-accept mode (0046): orders only ring, nothing waits. */ require_accept?: boolean; orders: AlertOrder[] };
 
 export type AcceptResult = { ok: true; already: boolean; status: OrderStatus; accepted_at: string | null; accepted_by: string | null; accepted_by_name: string | null };
 

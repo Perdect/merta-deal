@@ -140,6 +140,7 @@ export function friendlyError(err: unknown): string {
     INVALID_AMOUNT: "Enter an amount above zero.",
     ACCOUNT_REQUIRED: "Create a Merta Deal account (mobile number + PIN) before applying. Guest sessions can't apply.",
     OFFER_EXPIRED: "This delivery request has expired.",
+    OFFER_TAKEN: "Another rider accepted this delivery first.",
     ALREADY_ON_DELIVERY: "Finish your current delivery before accepting another.",
     RIDER_NOT_ACTIVE: "Your rider account is pending approval.",
     NOT_A_RIDER: "This account is not registered as a delivery partner.",

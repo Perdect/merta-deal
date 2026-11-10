@@ -152,8 +152,10 @@ export function OrderAlerts({ userId, push }: { userId: string; push: PushConfig
     try {
       const r = await acceptOrderAction(o.id);
       if (!r.ok) { toast.error("Could not accept", r.error); await load(); return; }
-      if (r.data.already) toast.info(`Order ${o.order_number} was already accepted by ${r.data.accepted_by_name ?? "another admin"}`);
-      else toast.success(`Order ${o.order_number} accepted`, "Pack it, then tap Packed to call a rider.");
+      const requireAccept = feedRef.current?.require_accept !== false;
+      if (r.data.already) toast.info(`Order ${o.order_number} was already ${requireAccept ? "accepted" : "seen"} by ${r.data.accepted_by_name ?? "another admin"}`);
+      else if (requireAccept) toast.success(`Order ${o.order_number} accepted`, "Pack it, then tap Packed to call a rider.");
+      else toast.success(`Order ${o.order_number} noted`, "It is already confirmed. Pack it, then tap Packed to call a rider.");
       const next = { ...(feedRef.current ?? { now: new Date().toISOString(), ring_seconds: 0, reminder_seconds: 0, orders: [] }), orders: orders.filter((x) => x.id !== o.id) };
       feedRef.current = next; setFeed(next);
       try { new BroadcastChannel(CHANNEL).postMessage({ type: "reload" }); } catch { /* unsupported */ }
@@ -186,25 +188,27 @@ export function OrderAlerts({ userId, push }: { userId: string; push: PushConfig
   const ageSec = serverNow ? Math.max(0, Math.round((serverNow - new Date(o.created_at).getTime()) / 1000)) : 0;
   const ringingThis = !snoozed.has(o.id) && feed && serverNow ? shouldRing(o, feed, serverNow) : false;
 
-  return <OrderAlertView collapsed={collapsed} setCollapsed={setCollapsed} count={count} live={live} o={o} i={i} ageSec={ageSec} ringingThis={ringingThis}
+  return <OrderAlertView collapsed={collapsed} setCollapsed={setCollapsed} count={count} live={live} o={o} i={i} ageSec={ageSec} ringingThis={ringingThis} requireAccept={feed?.require_accept}
     ringer={ringer} snoozed={snoozed} loadError={loadError} busy={busy} accept={accept} confirmUpi={confirmUpi} snooze={snooze} setIndex={setIndex} />;
 }
 
 export type OrderAlertViewProps = {
   collapsed: boolean; setCollapsed: (v: boolean) => void; count: number; live: boolean; o: AlertOrder; i: number; ageSec: number; ringingThis: boolean;
   ringer: { sound: ReturnType<typeof useRinger>["sound"]; leader: boolean; muted: boolean; unlock: () => Promise<boolean>; claim: () => void };
+  /** From the feed: false = no-accept mode, the button only dismisses. */ requireAccept?: boolean;
   snoozed: Set<string>; loadError: string | null; busy: string | null; accept: (o: AlertOrder) => void | Promise<void>; confirmUpi?: (o: AlertOrder, received: boolean, reference: string) => void | Promise<void>; snooze: (id: string) => void; setIndex: React.Dispatch<React.SetStateAction<number>>;
 };
 
 /** The popup itself, free of data fetching so it can be rendered with fixture data. */
 export function OrderAlertView(p: OrderAlertViewProps) {
   const { collapsed, setCollapsed, count, live, o, i, ageSec, ringingThis, ringer, snoozed, loadError, busy, accept, confirmUpi, snooze, setIndex } = p;
+  const requireAccept = p.requireAccept !== false;
   if (collapsed) {
     return (
-      <button type="button" onClick={() => setCollapsed(false)} aria-label={`${count} unaccepted ${count === 1 ? "order" : "orders"}, open`}
+      <button type="button" onClick={() => setCollapsed(false)} aria-label={`${count} ${requireAccept ? "unaccepted" : "new"} ${count === 1 ? "order" : "orders"}, open`}
         className="fixed bottom-[calc(var(--admin-bottom-nav,0px)+1rem)] right-4 z-[65] flex h-12 items-center gap-2 rounded-full bg-brand-600 pl-3 pr-4 text-sm font-bold text-white shadow-float animate-pop focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
         <span className="relative flex h-6 w-6 items-center justify-center"><span className={cn("absolute inset-0 rounded-full bg-white/30", live && "animate-ping")} /><BellRing className="relative h-4 w-4" aria-hidden /></span>
-        {count} {count === 1 ? "order" : "orders"} waiting
+        {count} {requireAccept ? (count === 1 ? "order waiting" : "orders waiting") : (count === 1 ? "new order" : "new orders")}
       </button>
     );
   }
@@ -218,8 +222,8 @@ export function OrderAlertView(p: OrderAlertViewProps) {
             <BellRing className="relative h-4 w-4" aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
-            <p id="order-alert-title" className="text-sm font-bold text-ink">{o.upi_pending ? "New order · waiting for UPI payment" : o.status === "placed" ? "New order · needs acceptance" : "New order"}</p>
-            <p className="text-[11px] text-ink-3">{count > 1 ? `${i + 1} of ${count} waiting` : "1 waiting"} · {ageSec < 60 ? `${ageSec}s ago` : `${Math.floor(ageSec / 60)} min ago`}</p>
+            <p id="order-alert-title" className="text-sm font-bold text-ink">{o.upi_pending ? "New order · waiting for UPI payment" : requireAccept && o.status === "placed" ? "New order · needs acceptance" : requireAccept ? "New order" : "New order · confirmed"}</p>
+            <p className="text-[11px] text-ink-3">{requireAccept ? (count > 1 ? `${i + 1} of ${count} waiting` : "1 waiting") : (count > 1 ? `${i + 1} of ${count}` : "Already confirmed · pack it")} · {ageSec < 60 ? `${ageSec}s ago` : `${Math.floor(ageSec / 60)} min ago`}</p>
           </div>
           <SoundChip sound={ringer.sound} leader={ringer.leader} muted={ringer.muted || snoozed.has(o.id)} onClaim={ringer.claim} />
           <button type="button" onClick={() => setCollapsed(true)} aria-label="Minimise" className="tap flex h-8 w-8 items-center justify-center rounded-md text-ink-3 hover:bg-surface-2"><ChevronDown className="h-4 w-4" /></button>
@@ -232,14 +236,14 @@ export function OrderAlertView(p: OrderAlertViewProps) {
           {loadError ? <p className="mt-2 text-xs text-danger">{loadError}</p> : null}
         </div>
         <div className="grid grid-cols-2 gap-2 px-4 pb-3">
-          {o.upi_pending ? <UpiAcceptBlock key={o.id} o={o} busy={busy === o.id} disabled={busy !== null} onConfirm={(received, ref) => void confirmUpi?.(o, received, ref)} /> : <Button size="lg" loading={busy === o.id} disabled={busy !== null} onClick={() => accept(o)} className="col-span-2"><Check className="h-4 w-4" /> Accept order</Button>}
+          {o.upi_pending ? <UpiAcceptBlock key={o.id} o={o} busy={busy === o.id} disabled={busy !== null} onConfirm={(received, ref) => void confirmUpi?.(o, received, ref)} /> : <Button size="lg" loading={busy === o.id} disabled={busy !== null} onClick={() => accept(o)} className="col-span-2"><Check className="h-4 w-4" /> {requireAccept ? "Accept order" : "Got it"}</Button>}
           <Button size="md" variant="outline" href={`/admin/orders/${o.id}`} onClick={() => setCollapsed(true)}><ExternalLink className="h-4 w-4" /> View order</Button>
           <Button size="md" variant="outline" onClick={() => snooze(o.id)} aria-pressed={snoozed.has(o.id)}>{snoozed.has(o.id) ? <><Volume2 className="h-4 w-4" /> Unmute</> : <><VolumeX className="h-4 w-4" /> Mute sound</>}</Button>
         </div>
         {count > 1 ? (
           <div className="flex items-center justify-between border-t border-line px-2 py-1.5">
             <button type="button" onClick={() => setIndex((x) => (x - 1 + count) % count)} className="tap flex h-9 items-center gap-1 rounded-md px-2 text-xs font-semibold text-ink-2 hover:bg-surface-2"><ChevronLeft className="h-4 w-4" /> Previous</button>
-            <Link href="/admin/orders?status=confirmed" className="text-xs font-semibold text-brand-700 underline" onClick={() => setCollapsed(true)}>All waiting orders</Link>
+            <Link href="/admin/orders?status=confirmed" className="text-xs font-semibold text-brand-700 underline" onClick={() => setCollapsed(true)}>{requireAccept ? "All waiting orders" : "All new orders"}</Link>
             <button type="button" onClick={() => setIndex((x) => (x + 1) % count)} className="tap flex h-9 items-center gap-1 rounded-md px-2 text-xs font-semibold text-ink-2 hover:bg-surface-2">Next <ChevronRight className="h-4 w-4" /></button>
           </div>
         ) : null}
