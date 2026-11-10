@@ -184,6 +184,21 @@ export async function resetPasswordAction(_prev: AuthResult | null, formData: Fo
   return { ok: true, message: "We sent a code to your mobile. Enter it to sign in, then set a new PIN in Settings.", redirectTo: `verify:${m.data}` };
 }
 
+/**
+ * Email password reset for staff accounts (admin, delivery partner). Supabase emails a one-time link to
+ * /auth/callback, which signs the person in and sends them to Settings to choose a new password. The reply
+ * is the same whether or not the address exists, so the form cannot be used to probe for accounts.
+ */
+export async function requestEmailResetAction(email: string): Promise<AuthResult> {
+  const e = z.string().trim().toLowerCase().email().safeParse(email);
+  if (!e.success) return { ok: false, error: "Enter the email you sign in with." };
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(e.data, { redirectTo: `${env.siteUrl}/auth/callback?next=${encodeURIComponent("/account/settings?reset=1")}` });
+  if (error && /rate limit|too many/i.test(error.message)) return { ok: false, error: "Too many reset emails just now. Wait a few minutes and try again." };
+  if (error) console.warn("requestEmailResetAction:", error.message);
+  return { ok: true, message: `If ${e.data} has a Merta Deal sign-in, a reset link is on its way. Open it on this device, then choose a new password.` };
+}
+
 function flatten(err: z.ZodError) {
   const out: Record<string, string> = {};
   for (const issue of err.issues) { const k = String(issue.path[0] ?? "form"); if (!out[k]) out[k] = issue.message; }

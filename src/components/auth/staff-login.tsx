@@ -2,7 +2,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { AtSign, Bike, Eye, EyeOff, KeyRound, Lock, LogIn, ShieldCheck } from "lucide-react";
-import { staffSignInAction, type AuthResult, type StaffPortal } from "@/lib/actions/auth";
+import { staffSignInAction, requestEmailResetAction, type AuthResult, type StaffPortal } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/states";
@@ -41,6 +41,9 @@ export function StaffLogin({ portal, next, denied, signedOut, signedInAs }: { po
   const [showPin, setShowPin] = React.useState(false);
   // Both portals sign in with the email + password an admin created (Admin → Users / Admin → Riders).
   const [email, setEmail] = React.useState("");
+  const [resetState, setResetState] = React.useState<AuthResult | null>(null);
+  const [resetBusy, setResetBusy] = React.useState(false);
+  const sendReset = async () => { setResetBusy(true); setResetState(await requestEmailResetAction(email)); setResetBusy(false); };
   const fieldErr = (k: string) => (state && !state.ok ? state.fieldErrors?.[k] : undefined);
 
   return (
@@ -79,16 +82,14 @@ export function StaffLogin({ portal, next, denied, signedOut, signedInAs }: { po
             <summary className="flex min-h-8 cursor-pointer list-none items-center gap-2 font-semibold text-brand-700 focus-visible:outline-2 focus-visible:outline-brand-600">
               <KeyRound className="h-4 w-4" aria-hidden /> Forgot your password?
             </summary>
-            {portal === "admin" ? (
-              <p className="mt-2 text-ink-2">
-                Admin PINs and passwords are reset by a super admin: <span className="font-semibold">Admin → Users → open the account → Reset PIN</span>. They share the new PIN with you in person or by phone; change it afterwards in your account settings.
-                {" "}If no super admin is available, email <a href={`mailto:${site.supportEmail}`} className="font-semibold text-brand-700 underline">{site.supportEmail}</a>.
-              </p>
-            ) : (
-              <p className="mt-2 text-ink-2">
-                Call Merta Deal on <a href={`tel:${site.supportPhone.replace(/\s/g, "")}`} className="font-semibold text-brand-700 underline">{site.supportPhone}</a>. After confirming it&apos;s you, an admin resets your password and tells you the new one.
-              </p>
-            )}
+            <div className="mt-2 space-y-2 text-ink-2">
+              <p>Enter the email you sign in with above, and we email you a link to choose a new password.</p>
+              <Button type="button" variant="outline" size="sm" onClick={sendReset} loading={resetBusy} disabled={!email.includes("@")}>Email me a reset link</Button>
+              {resetState ? <Alert tone={resetState.ok ? "success" : "warning"}>{resetState.ok ? resetState.message : resetState.error}</Alert> : null}
+              {portal === "admin"
+                ? <p className="text-xs text-ink-3">A super admin can also reset it for you under <span className="font-semibold">Admin → Users → open the account → Reset PIN</span>.</p>
+                : <p className="text-xs text-ink-3">No email access? Call Merta Deal on <a href={`tel:${site.supportPhone.replace(/\s/g, "")}`} className="font-semibold text-brand-700 underline">{site.supportPhone}</a> and an admin resets it for you.</p>}
+            </div>
           </details>
         </div>
 
