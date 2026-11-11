@@ -3,6 +3,8 @@ import * as React from "react";
 import { MapPin, ChevronDown, AlertCircle } from "lucide-react";
 import type { Address, CartSummary } from "@/types/app";
 import { acknowledgeCartPricesAction } from "@/lib/actions/cart";
+import { saveGuestContactAction } from "@/lib/actions/guest";
+import { toast } from "@/components/ui/toast";
 import { useCartStore } from "@/stores/cart-store";
 import { useCheckoutStore } from "@/stores/checkout-store";
 import { cn, formatINR } from "@/lib/utils";
@@ -13,7 +15,9 @@ import { addressLine, addressTitle } from "./address-sheet";
  * cart panel and the /cart page behave the same:
  *   no address            → "Add Address to proceed" (address sheet; guests included)
  *   address not served    → "Change address"
- *   guest                 → "Proceed to Pay" opens sign-in; the payment step resumes after it
+ *   guest                 → "Proceed to Pay" saves the address's name + mobile on the guest profile (no OTP)
+ *                           and opens the payment step; the order is placed under that number
+ *   no session at all     → "Login to Proceed" opens sign-in (only when guest sessions are switched off)
  *   signed in             → "Proceed to Pay" opens the payment step
  * The rules (minimum order, stock, serviceability) come from cart_summary, never from here.
  */
@@ -38,7 +42,7 @@ export function useCheckoutGate({ summary, addresses: serverAddresses, signedIn,
     : s.issues.length ? "Some items are no longer available in the quantity you chose. Update the quantities to continue."
     : null;
   const unserved = Boolean(selectedAddress && s && !s.serviceable);
-  const needsLogin = isGuest || !signedIn;
+  const needsLogin = !signedIn;
 
   const ctaLabel = !selectedAddress ? "Add Address to proceed" : unserved ? "Change address" : needsLogin ? "Login to Proceed" : `Proceed to Pay ${formatINR(s?.total ?? 0, { precise: true })}`;
   const ctaDisabled = Boolean(selectedAddress && !unserved && (cartBlocker || pendingCount > 0));
@@ -47,6 +51,10 @@ export function useCheckoutGate({ summary, addresses: serverAddresses, signedIn,
     if (!selectedAddress || unserved) { openSheet("address"); return; }
     if (cartBlocker) return;
     if (needsLogin) { setResume("pay"); openSheet("login"); return; }
+    if (isGuest) {
+      const r = await saveGuestContactAction({ full_name: selectedAddress.full_name, phone: selectedAddress.phone });
+      if (!r.ok) { toast.error(r.error); openSheet("address"); return; }
+    }
     if (s?.items.some((l) => l.price_changed)) await acknowledgeCartPricesAction();
     openDrawer("pay");
   };

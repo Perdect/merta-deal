@@ -20,13 +20,14 @@ export default async function CheckoutPage() {
   if (!user) return <PleaseLogin description="Please login to place your order." eta={eta} loginTitle="Login to place your order" />;
   const [summary, addresses, profile, cap] = await Promise.all([getCartSummary(), getMyAddresses(), getMyProfile(), (await createClient()).rpc("order_capacity")]);
   const accepting = (cap.data as { accepting?: boolean } | null)?.accepting !== false;
-  if (profile?.is_guest) return <PleaseLogin description="Please login to place your order. Your cart and address stay with you." eta={eta} loginTitle="Login to place your order" defaultMobile={(addresses.find((a) => a.is_default) ?? addresses[0])?.phone} />;
+  // Guests check out without an OTP: the order carries the name and mobile given with the address.
   if (!summary || summary.empty) redirect("/cart");
+  const addr = addresses.find((a) => a.is_default) ?? addresses[0];
   const slots = Array.isArray(settings.scheduled_slots) ? (settings.scheduled_slots as string[]) : [];
   return (
     <div className="pt-1">
       <ShopPageHeader title="Checkout" back="/cart" subtitle={`${summary.item_count} item${summary.item_count === 1 ? "" : "s"}`} />
-      <CheckoutView initial={summary} addresses={addresses} walletBalance={Number(profile?.wallet_balance ?? 0)} razorpayEnabled={isRazorpayConfigured() && settings.online_payments_enabled !== false} codEnabled={settings.cod_enabled !== false} slots={slots} slotRules={{ leadMinutes: Number(settings.scheduled_slot_lead_minutes) || 30, daysAhead: Number(settings.scheduled_days_ahead) || 2 }} accepting={accepting} user={{ name: profile?.full_name ?? user.fullName, phone: profile?.phone ?? user.phone }} />
+      <CheckoutView initial={summary} addresses={addresses} walletBalance={Number(profile?.wallet_balance ?? 0)} razorpayEnabled={isRazorpayConfigured() && settings.online_payments_enabled !== false} codEnabled={settings.cod_enabled !== false} slots={slots} slotRules={{ leadMinutes: Number(settings.scheduled_slot_lead_minutes) || 30, daysAhead: Number(settings.scheduled_days_ahead) || 2 }} accepting={accepting} user={{ name: (profile?.is_guest ? addr?.full_name : null) ?? profile?.full_name ?? user.fullName, phone: (profile?.is_guest ? addr?.phone : null) ?? profile?.phone ?? user.phone }} />
     </div>
   );
 }
