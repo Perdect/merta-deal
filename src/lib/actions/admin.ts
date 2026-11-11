@@ -103,9 +103,11 @@ const productSchema = z.object({
   country_of_origin: z.string().trim().max(80).optional().nullable().transform((v) => v || "India"),
   bin_location: z.string().trim().max(40).optional().nullable().transform((v) => v || null),
   weight_value: z.coerce.number().positive("Weight must be positive"),
-  weight_unit: z.enum(["g", "kg", "ml", "l", "pcs", "pack"]),
+  weight_unit: z.enum(["g", "kg", "lb", "ml", "l", "pcs", "pack"]),
   pack_label: optionalText,
   mrp: money,
+  // Made-to-order cake options (0049).
+  eggless_option: z.boolean().default(false), eggless_extra: money.default(0), cake_message: z.boolean().default(false),
   image_url: nullableUrl,
   images: z.array(imageRef).max(8).default([]),
   tags: z.array(z.string().trim().min(1).max(40)).max(30).default([]),

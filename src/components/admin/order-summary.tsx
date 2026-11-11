@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { lineOptionsText } from "@/lib/cake";
 import { MapPin, Phone, ShieldCheck, Store as StoreIcon, User, Bike } from "lucide-react";
 import type { OrderTracking } from "@/types/app";
 import { OrderTimeline } from "@/components/shop/order-status";
@@ -78,6 +79,7 @@ export function OrderFacts({ t, compact }: { t: OrderTracking; compact?: boolean
               <span className="min-w-0 flex-1">
                 <Link href={`/admin/products/${i.product_id}`} className="line-clamp-1 text-sm font-medium text-ink hover:underline">{i.product_name}</Link>
                 <span className="text-xs text-ink-3">{i.pack_label} · {i.quantity} × {formatINR(i.unit_price)}</span>
+                {lineOptionsText(i) ? <span className="block text-xs font-semibold text-saffron-700">{lineOptionsText(i)}</span> : null}
               </span>
               <span className="text-sm font-semibold tabular text-ink">{formatINR(i.line_total)}</span>
             </li>

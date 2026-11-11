@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { lineOptionsText } from "@/lib/cake";
 import { Check, Phone, Navigation, Store as StoreIcon, Home, Package, ShieldCheck, Banknote, ChevronLeft, MessageSquareText, ChevronRight } from "lucide-react";
 import type { RiderAssignment } from "@/types/app";
 import { pickupAction, verifyOtpAction, reportFailedDeliveryAction, riderArrivedAction, type OtpResult, type FailedDeliveryReason } from "@/lib/actions/rider";
@@ -210,7 +211,7 @@ function Pickup({ a, onBack, onChanged }: { a: RiderAssignment; onBack: () => vo
         {a.items.map((it, i) => (
           <li key={`${it.name}-${i}`} className="flex items-center gap-3 px-3 py-2.5 text-sm">
             <span className="flex h-7 min-w-7 items-center justify-center rounded-sm bg-surface-2 px-1.5 text-xs font-bold tabular text-ink">× {it.quantity}</span>
-            <span className="min-w-0 flex-1"><span className="line-clamp-2 font-medium text-ink">{it.name}</span>{it.pack_label ? <span className="text-xs text-ink-3">{it.pack_label}</span> : null}</span>
+            <span className="min-w-0 flex-1"><span className="line-clamp-2 font-medium text-ink">{it.name}</span>{it.pack_label ? <span className="text-xs text-ink-3">{it.pack_label}</span> : null}{lineOptionsText(it) ? <span className="block text-xs font-semibold text-saffron-700">{lineOptionsText(it)}</span> : null}</span>
           </li>
         ))}
       </ul>

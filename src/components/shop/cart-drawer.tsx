@@ -4,6 +4,7 @@ import Link from "next/link";
 import Script from "next/script";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import { lineOptionsText } from "@/lib/cake";
 import { ChevronLeft, X, Clock, TicketPercent, ReceiptText, Check, Plus, Home, Briefcase, MapPin, Zap, CalendarClock, Smartphone, CreditCard, Landmark, Wallet, Banknote, ShoppingBag, BadgePercent, Truck } from "lucide-react";
 import type { Address, CartLine, PaymentMethod, ProductCard as ProductCardType } from "@/types/app";
 import { applyCouponAction, getCartSummary, removeCouponAction } from "@/lib/actions/cart";
@@ -347,6 +348,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
                       <div className="min-w-0 flex-1">
                         <Link href={`/p/${line.slug}`} onClick={closeDrawer} className="line-clamp-2 text-[15px] font-semibold leading-snug text-ink">{line.name}</Link>
                         <p className="text-xs text-ink-3">{qty} {qty === 1 ? "pack" : "packs"}{line.pack_label ? ` (${line.pack_label})` : ""}</p>
+                        {lineOptionsText(line) ? <p className="mt-0.5 text-xs font-medium text-brand-800">{lineOptionsText(line)}</p> : null}
                         {note ? <p className="mt-0.5 text-xs font-semibold text-danger" role="status">{note}</p>
                           : qty >= lim.max ? <p className="mt-0.5 text-xs font-medium text-saffron-700">{lim.message}</p> : null}
                         {line.price_changed && line.price_at_add != null ? <p className="mt-0.5 text-xs font-medium text-info">Price {Number(line.unit_price) < Number(line.price_at_add) ? "dropped" : "changed"} from {formatINR(line.price_at_add)} to {formatINR(line.unit_price)}</p> : null}

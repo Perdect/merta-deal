@@ -13,6 +13,7 @@ const NUMBER_WORDS: Record<string, number> = {
 const UNIT_WORDS: Record<string, string> = {
   kg: "kg", kilo: "kg", kilos: "kg", kilogram: "kg", kilograms: "kg", g: "g", gm: "g", gram: "g", grams: "g", gms: "g",
   l: "l", ltr: "l", litre: "l", liter: "l", litres: "l", liters: "l", ml: "ml", millilitre: "ml",
+  lb: "lb", lbs: "lb", pound: "lb", pounds: "lb",
   packet: "pack", packets: "pack", pack: "pack", packs: "pack", pkt: "pack", piece: "pcs", pieces: "pcs", pcs: "pcs", pc: "pcs", nag: "pcs",
   bottle: "bottle", bottles: "bottle", dozen: "dozen", darjan: "dozen", box: "box", jar: "jar", bag: "bag",
 };
@@ -55,7 +56,7 @@ export function parseOrderText(text: string): ParsedLine[] {
 /** Converts a parsed quantity+unit into a suggested pack count given a product pack (e.g. 2 kg of a 1 kg pack => 2). */
 export function suggestedPacks(line: ParsedLine, packValue: number | null, packUnit: string | null) {
   if (!line.unit || !packValue || !packUnit) return Math.max(1, Math.round(line.quantity));
-  const toBase = (v: number, u: string) => (u === "kg" || u === "l" ? v * 1000 : u === "g" || u === "ml" ? v : null);
+  const toBase = (v: number, u: string) => (u === "kg" || u === "l" ? v * 1000 : u === "g" || u === "ml" ? v : u === "lb" ? v * 453.592 : null);
   const want = toBase(line.quantity, line.unit);
   const have = toBase(packValue, packUnit);
   if (want == null || have == null || have === 0) return Math.max(1, Math.round(line.quantity));

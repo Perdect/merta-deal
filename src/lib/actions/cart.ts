@@ -14,9 +14,10 @@ export async function getCartSummary(addressId?: string | null, deliveryType: De
   return data as unknown as CartSummary;
 }
 
-export async function addToCartAction(inventoryId: string, quantity: number): Promise<ActionResult<{ quantity: number }>> {
+/** `options` (cake lines, 0049): omitted keeps what the line has; an empty message clears it. */
+export async function addToCartAction(inventoryId: string, quantity: number, options?: { eggless?: boolean; message?: string }): Promise<ActionResult<{ quantity: number }>> {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("add_to_cart", { p_inventory_id: inventoryId, p_quantity: quantity });
+  const { data, error } = await supabase.rpc("add_to_cart", { p_inventory_id: inventoryId, p_quantity: quantity, p_eggless: options?.eggless, p_cake_message: options?.message });
   if (error) return { ok: false, error: friendlyError(error) };
   const res = data as { ok: boolean; quantity?: number };
   revalidatePath("/cart");

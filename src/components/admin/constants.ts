@@ -31,7 +31,7 @@ export const DOC_STATUS_TONE: Record<string, BadgeTone> = { pending: "warning", 
 
 export const BANNER_PLACEMENT_OPTIONS = [{ value: "home_hero", label: "Home hero" }, { value: "home_mid", label: "Home middle" }, { value: "category", label: "Category page" }, { value: "checkout", label: "Checkout" }];
 export const PROMO_TYPE_OPTIONS = [{ value: "collection", label: "Collection" }, { value: "flash_sale", label: "Flash sale" }, { value: "bogo", label: "Buy one get one" }];
-export const WEIGHT_UNIT_OPTIONS = ["g", "kg", "ml", "l", "pcs", "pack"].map((u) => ({ value: u, label: u }));
+export const WEIGHT_UNIT_OPTIONS = ["g", "kg", "lb", "ml", "l", "pcs", "pack"].map((u) => ({ value: u, label: u === "lb" ? "lb (pound)" : u }));
 
 /** Icon names that DynamicIcon (src/components/shared/dynamic-icon.tsx) can render. Keep in sync. */
 export const CATEGORY_ICON_OPTIONS = ["wheat", "flame", "milk", "cookie", "cup-soda", "sparkles", "spray-can", "leafy-green", "baby", "heart", "cooking-pot", "map-pin", "grip", "circle-dot", "bean", "candy", "shaker", "droplet", "leaf", "sprout", "circle", "square", "triangle", "nut", "coffee", "glass-water", "bath", "smile", "scissors", "shirt", "carrot", "apple", "utensils", "package", "basket", "home", "grid", "cart", "store", "tag", "star", "receipt"];

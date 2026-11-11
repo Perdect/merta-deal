@@ -47,6 +47,7 @@ function initial(product: Product | null): Snapshot {
       image_url: product?.image_url ?? null, images: product?.images ?? [], tags: product?.tags ?? [], synonyms: product?.synonyms ?? [],
       nutrition: (product?.nutrition as Record<string, string | number> | null) ?? null,
       is_local: product?.is_local ?? false, is_veg: product?.is_veg ?? true, is_active: product?.is_active ?? true, popularity_score: product?.popularity_score ?? 0,
+      eggless_option: product?.eggless_option ?? false, eggless_extra: product?.eggless_extra ?? 0, cake_message: product?.cake_message ?? false,
     },
     nutritionText: product?.nutrition ? JSON.stringify(product.nutrition, null, 2) : "",
     seller: { shelf_life: product?.shelf_life ?? "", seller_name: product?.seller_name ?? (product ? "" : "MertaDeal"), seller_address: product?.seller_address ?? "", seller_license: product?.seller_license ?? "" },
@@ -107,6 +108,7 @@ export function ProductForm({ product, categories, brands, barcode }: { product:
     weight_value: !(Number(f.weight_value) > 0) ? "Enter a weight or volume above 0" : undefined,
     mrp: !(Number(f.mrp) >= 0) || f.mrp === "" ? "Enter the MRP (0 or more)" : undefined,
     popularity_score: !Number.isInteger(Number(f.popularity_score)) || Number(f.popularity_score) < 0 ? "Use a whole number, 0 or more" : undefined,
+    eggless_extra: f.eggless_option && !(Number(f.eggless_extra) >= 0) ? "Enter the extra for eggless (0 = no extra)" : undefined,
     nutrition: nutrition.ok ? undefined : "Use JSON with text or number values, e.g. {\"energy_kcal\": 340}",
     seller_address: seller.seller_address.length > 400 ? "Keep the address under 400 characters" : undefined,
     barcode: bcValid ? undefined : "A packet barcode is 8 to 14 digits (EAN-8, EAN-13, UPC)",
@@ -235,6 +237,13 @@ export function ProductForm({ product, categories, brands, barcode }: { product:
               <Switch checked={Boolean(f.is_active)} onChange={(v) => set("is_active", v)} label="Active (visible)" />
               <Switch checked={Boolean(f.is_veg)} onChange={(v) => set("is_veg", v)} label="Vegetarian" />
               <Switch checked={Boolean(f.is_local)} onChange={(v) => set("is_local", v)} label="Local product of Merta" />
+            </div>
+          </FormSection>
+          <FormSection title="Made to order (cakes)" description="Lets the customer choose an eggless version and type a message to be written on the cake. Both reach the packing slip and the rider. The note shown on such products lives in Settings.">
+            <div className="space-y-3">
+              <Switch checked={Boolean(f.eggless_option)} onChange={(v) => set("eggless_option", v)} label="Offer an eggless version" />
+              {f.eggless_option ? <Input id="pf-eggless_extra" label="Extra for eggless (₹ per cake)" type="number" step="1" min={0} value={f.eggless_extra as number} error={err("eggless_extra")} onChange={(e) => set("eggless_extra", e.target.value === "" ? "" : Number(e.target.value))} hint="0 means no extra charge." /> : null}
+              <Switch checked={Boolean(f.cake_message)} onChange={(v) => set("cake_message", v)} label="Accept a message on the cake (up to 40 characters)" />
             </div>
           </FormSection>
           {product ? (

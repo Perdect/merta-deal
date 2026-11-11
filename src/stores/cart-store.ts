@@ -1,6 +1,7 @@
 "use client";
 import { create } from "zustand";
 import type { CartSummary } from "@/types/app";
+import type { CakeChoice } from "@/lib/cake";
 
 /**
  * Client mirror of the server cart. The database is the source of truth (cart_summary RPC);
@@ -10,6 +11,9 @@ type CartState = {
   summary: CartSummary | null;
   loading: boolean;
   pending: Record<string, number>; // inventory_id -> optimistic qty
+  /** Cake options chosen on the product page per inventory_id (0049); sent with every quantity change of that line. */
+  draft: Record<string, CakeChoice>;
+  setDraft: (inventoryId: string, choice: CakeChoice | null) => void;
   /** Slide-in cart panel: closed, the cart itself, or the payment step. */
   drawer: null | "cart" | "pay";
   /** Sheets that can open over any page (the cart panel owns them): pick/add an address, sign in, or pick a delivery slot. */
@@ -32,6 +36,12 @@ export const useCartStore = create<CartState>((set, get) => ({
   summary: null,
   loading: false,
   pending: {},
+  draft: {},
+  setDraft: (inventoryId, choice) => set((s) => {
+    const draft = { ...s.draft };
+    if (choice == null) delete draft[inventoryId]; else draft[inventoryId] = choice;
+    return { draft };
+  }),
   drawer: null,
   sheet: null,
   notice: null,

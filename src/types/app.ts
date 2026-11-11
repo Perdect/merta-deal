@@ -62,12 +62,15 @@ export type ProductDetail = ProductCard & {
   tags: string[]; created_at: string;
   description: string | null; ingredients: string | null; nutrition: Record<string, number | string> | null; manufacturer: string | null; country_of_origin: string | null;
   shelf_life: string | null; seller_name: string | null; seller_address: string | null; seller_license: string | null;
+  /** Made-to-order cake options (0049): what this product offers. */
+  eggless_option: boolean; eggless_extra: number; cake_message: boolean;
   offers: ProductOffer[]; related: ProductCard[]; frequently_bought: ProductCard[]; more_from_brand: ProductCard[]; reviews: ProductReview[];
 };
 
 export type CartLine = { id: string; inventory_id: string; product_id: string; name: string; slug: string; image_url: string | null; pack_label: string | null; brand_name: string | null; quantity: number; unit_price: number; unit_mrp: number; line_total: number; stock_qty: number; max_order_qty: number; available: boolean;
   /** Quantity is above the product's per-order limit (limit lowered after adding). */ over_limit?: boolean;
-  /** Price when the quantity was last set; `price_changed` once the current price differs. */ price_at_add?: number | null; price_changed?: boolean };
+  /** Price when the quantity was last set; `price_changed` once the current price differs. */ price_at_add?: number | null; price_changed?: boolean;
+  /** Cake options chosen on this line (0049); `unit_price` already includes `eggless_extra`. */ eggless?: boolean; eggless_extra?: number; cake_message?: string | null };
 export type CartIssue = { product_id: string; inventory_id?: string; name: string; quantity?: number; available_qty: number; max_order_qty?: number; reason?: "unavailable" | "stock" | "limit" };
 /** reorder RPC: lines left out, and lines added with fewer packs than ordered last time. */
 export type ReorderResult = { added: number; skipped: { name: string; reason?: string }[]; adjusted?: { name: string; requested: number; added: number; reason: "limit" | "stock" }[] };
@@ -111,7 +114,7 @@ export type RiderAssignment = {
   distance_km: number | null; earning: number; cod_amount: number; pickup_lat: number; pickup_lng: number; drop_lat: number | null; drop_lng: number | null;
   order: { id: string; order_number: string; status: OrderStatus; total: number; item_count: number; payment_method: PaymentMethod; delivery_instructions: string | null; address: Address; promised_at: string | null; created_at: string };
   pickup: PickupPoint & { lat: number; lng: number };
-  items: { name: string; quantity: number; pack_label: string | null }[];
+  items: { name: string; quantity: number; pack_label: string | null; eggless?: boolean; cake_message?: string | null }[];
 };
 
 export type RiderStats = { rider: DeliveryPartner; today_deliveries: number; today_earnings: number; week_earnings: number; cod_in_hand: number; cash_due?: number; new_requests: number; active: number };

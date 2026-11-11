@@ -2,6 +2,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { lineOptionsText } from "@/lib/cake";
 import { Phone, Store as StoreIcon, MapPin, Star, HelpCircle, XCircle, CheckCircle2, Wifi, WifiOff, CreditCard, Clock } from "lucide-react";
 import type { OrderTracking, TrackingLocation } from "@/types/app";
 import { getOrderTrackingAction } from "@/lib/actions/tracking";
@@ -157,7 +158,7 @@ export function OrderTrackingView({ initial, placed, paymentState, push }: { ini
 
         <section className="rounded-lg border border-line bg-card p-4">
           <h2 className="mb-3 text-base font-bold text-ink">Items ({o.item_count})</h2>
-          <ul className="divide-y divide-line">{t.items.map((i) => <li key={i.id} className="flex items-center gap-3 py-2.5"><ProductImage image={i.image_url} brand={i.brand_name} productName={i.product_name} packSize={i.pack_label} className="h-12 w-12 rounded-sm" sizes="48px" /><span className="min-w-0 flex-1"><span className="line-clamp-1 text-sm font-medium text-ink">{i.product_name}</span><span className="text-xs text-ink-3">{i.pack_label} · {i.quantity} × {formatINR(i.unit_price)}</span></span><span className="text-sm font-bold tabular text-ink">{formatINR(i.line_total)}</span></li>)}</ul>
+          <ul className="divide-y divide-line">{t.items.map((i) => <li key={i.id} className="flex items-center gap-3 py-2.5"><ProductImage image={i.image_url} brand={i.brand_name} productName={i.product_name} packSize={i.pack_label} className="h-12 w-12 rounded-sm" sizes="48px" /><span className="min-w-0 flex-1"><span className="line-clamp-1 text-sm font-medium text-ink">{i.product_name}</span><span className="text-xs text-ink-3">{i.pack_label} · {i.quantity} × {formatINR(i.unit_price)}</span>{lineOptionsText(i) ? <span className="block text-xs font-medium text-brand-800">{lineOptionsText(i)}</span> : null}</span><span className="text-sm font-bold tabular text-ink">{formatINR(i.line_total)}</span></li>)}</ul>
         </section>
       </div>
 

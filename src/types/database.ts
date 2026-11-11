@@ -281,8 +281,10 @@ export type Database = {
       }
       cart_items: {
         Row: {
+          cake_message: string | null
           cart_id: string
           created_at: string
+          eggless: boolean
           id: string
           inventory_id: string
           price_at_add: number | null
@@ -291,8 +293,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cake_message?: string | null
           cart_id: string
           created_at?: string
+          eggless?: boolean
           id?: string
           inventory_id: string
           price_at_add?: number | null
@@ -301,8 +305,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cake_message?: string | null
           cart_id?: string
           created_at?: string
+          eggless?: boolean
           id?: string
           inventory_id?: string
           price_at_add?: number | null
@@ -1294,7 +1300,9 @@ export type Database = {
       order_items: {
         Row: {
           brand_name: string | null
+          cake_message: string | null
           created_at: string
+          eggless: boolean
           id: string
           image_url: string | null
           inventory_id: string | null
@@ -1310,7 +1318,9 @@ export type Database = {
         }
         Insert: {
           brand_name?: string | null
+          cake_message?: string | null
           created_at?: string
+          eggless?: boolean
           id?: string
           image_url?: string | null
           inventory_id?: string | null
@@ -1326,7 +1336,9 @@ export type Database = {
         }
         Update: {
           brand_name?: string | null
+          cake_message?: string | null
           created_at?: string
+          eggless?: boolean
           id?: string
           image_url?: string | null
           inventory_id?: string | null
@@ -1819,9 +1831,12 @@ export type Database = {
           bin_location: string | null
           brand_id: string | null
           category_id: string
+          cake_message: boolean
           country_of_origin: string | null
           created_at: string
           description: string | null
+          eggless_extra: number
+          eggless_option: boolean
           id: string
           image_url: string | null
           images: string[]
@@ -1857,9 +1872,12 @@ export type Database = {
           bin_location?: string | null
           brand_id?: string | null
           category_id: string
+          cake_message?: boolean
           country_of_origin?: string | null
           created_at?: string
           description?: string | null
+          eggless_extra?: number
+          eggless_option?: boolean
           id?: string
           image_url?: string | null
           images?: string[]
@@ -1895,9 +1913,12 @@ export type Database = {
           bin_location?: string | null
           brand_id?: string | null
           category_id?: string
+          cake_message?: boolean
           country_of_origin?: string | null
           created_at?: string
           description?: string | null
+          eggless_extra?: number
+          eggless_option?: boolean
           id?: string
           image_url?: string | null
           images?: string[]
@@ -2874,6 +2895,8 @@ export type Database = {
       acknowledge_cart_prices: { Args: never; Returns: undefined }
       add_to_cart: {
         Args: {
+          p_cake_message?: string
+          p_eggless?: boolean
           p_inventory_id: string
           p_quantity?: number
           p_replace?: boolean

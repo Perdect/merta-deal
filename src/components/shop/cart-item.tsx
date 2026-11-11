@@ -7,12 +7,14 @@ import { QuantityStepper, Price } from "@/components/ui/misc";
 import { packLimit } from "@/lib/cart-sync";
 import { useCartStore } from "@/stores/cart-store";
 import { cn, formatINR } from "@/lib/utils";
+import { lineOptionsText } from "@/lib/cake";
 
 /** One cart line (full /cart page). Quantity = packs; limits and problems are explained inline. */
 export function CartItem({ line, onQty, issue }: { line: CartLine; onQty: (inventoryId: string, qty: number) => void; issue?: CartIssue }) {
   const pending = useCartStore((s) => s.pending[line.inventory_id]);
   const qty = pending ?? line.quantity;
   const lim = packLimit(line.max_order_qty, line.stock_qty);
+  const options = lineOptionsText(line);
   const note = issue
     ? issue.reason === "unavailable" ? "No longer available. Remove it to continue."
       : issue.reason === "stock" ? (issue.available_qty > 0 ? `Only ${issue.available_qty} available. Reduce the quantity to continue.` : "Sold out. Remove it to continue.")
@@ -24,6 +26,7 @@ export function CartItem({ line, onQty, issue }: { line: CartLine; onQty: (inven
       <div className="min-w-0 flex-1">
         <Link href={`/p/${line.slug}`} className="line-clamp-2 text-sm font-semibold leading-snug text-ink">{line.name}</Link>
         <p className="text-xs text-ink-3">{line.brand_name ? `${line.brand_name} · ` : ""}{line.pack_label ? `${line.pack_label} pack` : "1 pack"}</p>
+        {options ? <p className="mt-0.5 text-xs font-medium text-brand-800">{options}</p> : null}
         {note ? <p className="mt-0.5 text-xs font-semibold text-danger" role="status">{note}</p>
           : qty >= lim.max ? <p className="mt-0.5 text-xs font-medium text-saffron-700">{lim.message}</p> : null}
         {line.price_changed && line.price_at_add != null ? <p className="mt-0.5 text-xs font-medium text-info">Price changed from {formatINR(line.price_at_add)} to {formatINR(line.unit_price)}</p> : null}

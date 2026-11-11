@@ -24,6 +24,17 @@ export function packLimit(maxQty?: number | null, stockQty?: number | null) {
 const lines = new Map<string, { desired: number; run: Promise<SetQtyResult> }>();
 
 /**
+ * Cake options for a line (0049): remembered for the next ADD, and sent at once when the line is already
+ * in the cart (the server keeps the quantity). An empty message clears the message.
+ */
+export function setLineOptions(inventoryId: string, choice: { eggless: boolean; message: string }): Promise<SetQtyResult> | undefined {
+  const store = useCartStore.getState();
+  store.setDraft(inventoryId, choice);
+  const qty = store.qtyFor(inventoryId);
+  return qty > 0 ? setLineQuantity(inventoryId, qty) : undefined;
+}
+
+/**
  * Sets one cart line to `qty` packs (0 removes it). The screen updates at once; the server gets one
  * request at a time per product, and taps made while a request is in flight are folded into the
  * next one, so rapid taps are neither lost nor duplicated. The server enforces the limits; after
@@ -43,7 +54,8 @@ export function setLineQuantity(inventoryId: string, qty: number, opts: { quiet?
     try {
       for (;;) {
         const target = line.desired;
-        const res = await addToCartAction(inventoryId, target);
+        const draft = useCartStore.getState().draft[inventoryId];
+        const res = await addToCartAction(inventoryId, target, draft ? { eggless: draft.eggless, message: draft.message } : undefined);
         if (!res.ok) { result = { ok: false, error: res.error }; break; }
         if (line.desired !== target) continue;
         const summary = await getCartSummary();

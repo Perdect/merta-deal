@@ -10,6 +10,8 @@ import { AppBar } from "@/components/shop/app-bar";
 import { ProductPurchase, EtaBadge } from "@/components/shop/product-purchase";
 import { ProductBuyBar } from "@/components/shop/product-buy-bar";
 import { PackChips } from "@/components/shop/pack-chips";
+import { CakeOptions } from "@/components/shop/cake-options";
+import { isMadeToOrder, weightLabel } from "@/lib/cake";
 import { DetailSection, type DetailRow } from "@/components/shop/product-details";
 import { ProductRail } from "@/components/shop/product-card";
 import { VegMark } from "@/components/ui/badge";
@@ -94,7 +96,7 @@ export default async function ProductPage({ params }: Props) {
   const highlights = ([
     product.brand_name ? { label: "Brand", value: product.brand_name } : null,
     { label: "Product Type", value: product.category_name },
-    { label: "Weight", value: `${product.weight_value} ${product.weight_unit}` },
+    { label: "Weight", value: product.pack_label ?? weightLabel(product.weight_value, product.weight_unit) },
     product.shelf_life ? { label: "Shelf Life", value: product.shelf_life } : null,
     product.ingredients ? { label: "Ingredients", value: product.ingredients } : null,
     nutrition.length ? { label: "Nutrition", value: nutrition.join(", ") } : null,
@@ -138,12 +140,13 @@ export default async function ProductPage({ params }: Props) {
                 {product.is_local ? <span className="rounded-md bg-saffron-100 px-2 py-1 text-xs font-bold text-saffron-700">MERTA LOCAL</span> : null}
               </div>
               <h1 className="mt-2 font-display text-[22px] font-bold leading-tight text-ink md:text-2xl">{product.name}</h1>
-              <p className="mt-1.5 text-[15px] text-ink-3">Net Qty: {product.pack_label ?? `${product.weight_value} ${product.weight_unit}`}</p>
+              <p className="mt-1.5 text-[15px] text-ink-3">Net Qty: {product.pack_label ?? weightLabel(product.weight_value, product.weight_unit)}</p>
             </div>
             <ShareButton name={product.name} price={price} className="hidden shrink-0 md:flex" />
           </div>
           <EtaBadge className="mt-3" />
           <PackChips current={product.id} options={product.variants ?? []} className="mt-4" />
+          {isMadeToOrder(product) ? <CakeOptions product={product} note={str(settings.cake_variance_note, "") || null} slots={Array.isArray(settings.scheduled_slots) && settings.scheduled_slots.length > 0} /> : null}
           <div className="mt-4">
             <ProductPurchase product={product}>
               {brandHref && product.brand_name ? (
