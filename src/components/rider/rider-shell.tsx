@@ -143,9 +143,9 @@ function StateLine({ gpsOn }: { gpsOn: boolean }) {
   const network = useNetworkOnline();
   const conn = !network ? { label: "No internet", tone: "text-danger", Icon: WifiOff } : realtime === "live" ? { label: "Live", tone: "text-success", Icon: Wifi } : realtime === "connecting" ? { label: "Connecting…", tone: "text-ink-3", Icon: WifiOff } : { label: "Reconnecting…", tone: "text-[#8a6300]", Icon: WifiOff };
   return (
-    <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11.5px] font-semibold leading-tight" role="status">
+    <p className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[11.5px] font-semibold leading-tight" role="status">
       <span className={cn("inline-flex shrink-0 items-center gap-1", conn.tone)}><conn.Icon className="h-3 w-3" aria-hidden />{conn.label}</span>
-      {gpsOn ? <><span className="text-ink-4" aria-hidden>·</span><GpsIndicator /></> : null}
+      {gpsOn ? <GpsIndicator /> : null}
     </p>
   );
 }
@@ -161,10 +161,10 @@ export function GpsIndicator({ className }: { className?: string }) {
   const stale = fixAge != null && fixAge > GPS_STALE_MS;
   const blocked = gps.status === "denied" || gps.status === "unavailable";
   const tone = blocked ? "text-danger" : stale || gps.sendError || (gps.status === "error" && !gps.fix) ? "text-[#8a6300]" : gps.status === "watching" && gps.fix ? "text-success" : "text-ink-3";
-  const label = blocked ? (gps.status === "denied" ? "Location blocked" : "No GPS on this device")
-    : !gps.fix ? (gps.status === "error" ? "Waiting for GPS signal" : "Finding GPS…")
-    : stale ? `GPS stale · last fix ${agoLabel(fixAge!)}`
-    : `GPS live · ${agoLabel(fixAge!)}${gps.fix.accuracy != null ? ` · ±${Math.round(gps.fix.accuracy)} m` : ""}${gps.sendError ? " · not reaching Merta Deal" : ""}`;
+  const label = blocked ? (gps.status === "denied" ? "Location blocked" : "No GPS")
+    : !gps.fix ? (gps.status === "error" ? "No GPS signal" : "Finding GPS…")
+    : stale ? `GPS stale · ${agoLabel(fixAge!)}`
+    : `GPS ${agoLabel(fixAge!)}${gps.fix.accuracy != null ? ` · ±${Math.round(gps.fix.accuracy)} m` : ""}${gps.sendError ? " · not syncing" : ""}`;
   const Icon = blocked ? MapPinOff : gps.status === "watching" && !stale ? SatelliteDish : Satellite;
   return (
     <span className={cn("inline-flex min-w-0 items-center gap-1", tone, className)}>

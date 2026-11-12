@@ -217,7 +217,7 @@ function GoToPickup({ a, onReached }: { a: RiderAssignment; onReached: () => voi
       <Place icon={<StoreIcon className="h-5 w-5" aria-hidden />} tone="brand" title={a.pickup.name} line={[a.pickup.address_line1, a.pickup.area].filter(Boolean).join(", ") || "Pickup point"}>
         <p className="mt-0.5 text-xs text-ink-3">{a.order.item_count} {a.order.item_count === 1 ? "item" : "items"} to collect</p>
       </Place>
-      <ActionRow phone={a.pickup.phone} dest={{ lat: a.pickup_lat ?? a.pickup.lat, lng: a.pickup_lng ?? a.pickup.lng }} phoneLabel="Call Merta Deal" />
+      <ActionRow phone={a.pickup.phone} dest={{ lat: a.pickup_lat ?? a.pickup.lat, lng: a.pickup_lng ?? a.pickup.lng }} phoneLabel="Call shop" />
       <FoldedMap a={a} leg="store" />
       <Button size="lg" fullWidth className="mt-3 h-14 text-base" onClick={onReached}>I&apos;ve reached the pickup point <ChevronRight className="h-5 w-5" /></Button>
     </div>
