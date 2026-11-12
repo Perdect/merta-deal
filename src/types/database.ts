@@ -850,6 +850,7 @@ export type Database = {
           id: string
           is_online: boolean
           last_location_at: string | null
+          last_seen_at: string | null
           license_number: string | null
           rating_avg: number
           rating_count: number
@@ -871,6 +872,7 @@ export type Database = {
           id?: string
           is_online?: boolean
           last_location_at?: string | null
+          last_seen_at?: string | null
           license_number?: string | null
           rating_avg?: number
           rating_count?: number
@@ -892,6 +894,7 @@ export type Database = {
           id?: string
           is_online?: boolean
           last_location_at?: string | null
+          last_seen_at?: string | null
           license_number?: string | null
           rating_avg?: number
           rating_count?: number
@@ -2917,6 +2920,10 @@ export type Database = {
         Args: { p_order_id: string; p_rider_id: string }
         Returns: string
       }
+      admin_unassign_rider: {
+        Args: { p_note?: string; p_order_id: string }
+        Returns: Json
+      }
       admin_price_apply: { Args: { p_confirm_below_cost?: boolean; p_effective_at?: string; p_filter: Json; p_mode: string; p_reason?: string; p_value: number }; Returns: Json }
       admin_price_preview: { Args: { p_filter: Json; p_mode: string; p_value: number }; Returns: Json }
       admin_product_costs: { Args: { p_ids: string[] }; Returns: Json }
@@ -3069,6 +3076,7 @@ export type Database = {
       can_see_costs: { Args: never; Returns: boolean }
       customer_resolve_exception: { Args: { p_approve: boolean; p_exception_id: string }; Returns: Json }
       dispatch_pending: { Args: never; Returns: number }
+      run_order_housekeeping: { Args: never; Returns: Json }
       escalate_unattended_orders: { Args: never; Returns: number }
       expand_search_query: { Args: { p_query: string }; Returns: string }
       expire_item_exceptions: { Args: never; Returns: number }

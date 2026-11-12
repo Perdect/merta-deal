@@ -8,6 +8,13 @@ import { ProductImage } from "@/components/shop/product-image";
 import { cn } from "@/lib/utils";
 
 const TILE_BG: Record<string, string> = { grocery: "bg-[#FFF4E2]", "dry-fruits": "bg-[#F3EDE0]", sweets: "bg-[#FFF1E6]", "bakery-cakes": "bg-[#FBE9EF]", fruits: "bg-[#FDEFF0]", vegetables: "bg-[#EAF6EC]" };
+const TILE_COLLAGES: Record<string, string> = {
+  sweets: "/categories/sweets-collage.webp",
+  "bakery-cakes": "/categories/bakery-cakes-collage.webp",
+  beverages: "/categories/beverages-collage.webp",
+  fruits: "/categories/fruits-collage.webp",
+  vegetables: "/categories/vegetables-collage.webp",
+};
 
 /**
  * Compact category row (quick-commerce style): one tile per top-level category with a product
@@ -32,7 +39,11 @@ export function CategoryGrid({ tabs, fallback }: { tabs: CategoryTab[]; fallback
           <li key={t.key} className="min-w-0 sm:w-[140px]">
             <Link href={t.href} className="group block rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600" aria-label={t.count ? `${t.label}, ${t.count} product${t.count === 1 ? "" : "s"}` : `${t.label}, coming soon`}>
               <span aria-hidden className={cn("block aspect-square overflow-hidden rounded-2xl p-2 transition-transform duration-200 group-hover:-translate-y-0.5 group-active:scale-[0.97] motion-reduce:transform-none", t.bg ?? "bg-surface-2")}>
-                <ProductImage image={t.image} productName={t.label} className="h-full w-full" rounded="rounded-xl" sizes="(max-width: 640px) 30vw, 140px" />
+                {t.key === "dry-fruits" ? (
+                  <DryFruitCollage />
+                ) : (
+                  <ProductImage image={TILE_COLLAGES[t.key] ?? t.image} productName={t.label} className="h-full w-full" rounded="rounded-xl" sizes="(max-width: 640px) 30vw, 140px" />
+                )}
               </span>
               <span className="mt-1.5 block text-center text-[13px] font-semibold leading-tight text-ink sm:text-sm">{t.label}</span>
               {t.count === 0 ? <span className="mt-0.5 block text-center text-[11px] font-medium text-saffron-700">Coming soon</span> : null}
@@ -41,6 +52,32 @@ export function CategoryGrid({ tabs, fallback }: { tabs: CategoryTab[]; fallback
         ))}
       </ul>
     </section>
+  );
+}
+
+/** A compact collage of real dry-fruit catalog photos, arranged like a small market assortment. */
+function DryFruitCollage() {
+  return (
+    <span aria-hidden className="relative block h-full w-full overflow-hidden rounded-xl bg-white">
+      <span className="absolute bottom-[2%] right-[1%] h-[96%] w-[67%]">
+        <Image
+          src="/products/happilo-premium-almonds-250-g.3d72c57f.webp"
+          alt=""
+          fill
+          sizes="(max-width: 640px) 24vw, 110px"
+          className="object-contain object-right-bottom p-[2%] transition-transform duration-300 ease-out group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+        />
+      </span>
+      <span className="absolute bottom-[1%] left-[-4%] z-20 h-[62%] w-[64%]">
+        <Image
+          src="/products/cashew-w320-250-g.8ef99478.webp"
+          alt=""
+          fill
+          sizes="(max-width: 640px) 20vw, 90px"
+          className="object-contain object-left-bottom p-[2%] drop-shadow-sm transition-transform duration-300 ease-out group-hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:group-hover:transform-none"
+        />
+      </span>
+    </span>
   );
 }
 

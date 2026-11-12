@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { getPublicSettings } from "@/lib/data/catalog";
 import { createClient } from "@/lib/supabase/server";
 import { env } from "@/lib/env";
 import { friendlyError } from "@/lib/utils";
@@ -26,7 +27,13 @@ const addressSchema = z.object({
 });
 export type AddressInput = z.input<typeof addressSchema>;
 
-export async function saveAddressAction(input: AddressInput): Promise<ActionResult<Address> & { fieldErrors?: Record<string, string> }> {
+/**
+ * Saves an address for the signed-in (or newly started guest) user. The delivery zone is decided here,
+ * by `find_zone` (pin first, then pincode): an address outside every zone is refused with
+ * `outsideArea`, never stored, so no client-side check can let one through. The zone lookup and the
+ * "is there a default yet" count run in parallel; one round trip each instead of a chain.
+ */
+export async function saveAddressAction(input: AddressInput): Promise<ActionResult<Address> & { fieldErrors?: Record<string, string>; outsideArea?: boolean }> {
   const parsed = addressSchema.safeParse(input);
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
@@ -42,15 +49,19 @@ export async function saveAddressAction(input: AddressInput): Promise<ActionResu
     if (anonErr || !anon.user) return { ok: false, error: anonErr ? friendlyError(anonErr) : "Please sign in to save an address" };
     user = anon.user;
   }
-  const { data: zone } = await supabase.rpc("find_zone", { p_pincode: parsed.data.pincode, p_lat: parsed.data.lat ?? undefined, p_lng: parsed.data.lng ?? undefined });
-  const zoneRow = zone as unknown as { id: string | null } | null;
   const { id, ...rest } = parsed.data;
-  const payload = { ...rest, user_id: user.id, zone_id: zoneRow?.id ?? null, lat: rest.lat ?? null, lng: rest.lng ?? null, landmark: rest.landmark ?? null, label: rest.label ?? null };
-  // No checkbox in the form: the first saved address becomes the default; later ones only when chosen under Saved addresses.
-  if (!payload.is_default && !id) {
-    const { count } = await supabase.from("addresses").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("is_default", true);
-    if (!count) payload.is_default = true;
+  const [{ data: zone }, defaults] = await Promise.all([
+    supabase.rpc("find_zone", { p_pincode: rest.pincode, p_lat: rest.lat ?? undefined, p_lng: rest.lng ?? undefined }),
+    // No checkbox in the form: the first saved address becomes the default; later ones only when chosen under Saved addresses.
+    !rest.is_default && !id ? supabase.from("addresses").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("is_default", true) : Promise.resolve({ count: null as number | null }),
+  ]);
+  const zoneRow = zone as unknown as { id: string | null } | null;
+  if (!zoneRow?.id) {
+    const brand = String((await getPublicSettings()).brand_name ?? "Merta Deal");
+    return { ok: false, outsideArea: true, error: `Sorry, ${brand} doesn't deliver to this ${rest.lat != null && rest.lng != null ? "location" : "pincode"} yet.` };
   }
+  const payload = { ...rest, user_id: user.id, zone_id: zoneRow.id, lat: rest.lat ?? null, lng: rest.lng ?? null, landmark: rest.landmark ?? null, label: rest.label ?? null };
+  if (!payload.is_default && !id && !defaults.count) payload.is_default = true;
   if (payload.is_default) await supabase.from("addresses").update({ is_default: false }).eq("user_id", user.id);
   const q = id ? supabase.from("addresses").update(payload).eq("id", id).eq("user_id", user.id).select().single() : supabase.from("addresses").insert(payload).select().single();
   const { data, error } = await q;

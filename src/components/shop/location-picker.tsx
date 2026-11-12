@@ -1,18 +1,18 @@
 "use client";
 import * as React from "react";
-import { MapPin, ChevronDown, ChevronRight, Zap, LocateFixed, Home, Briefcase, Map as MapIcon, CheckCircle2, AlertCircle, Search, Plus, Loader2 } from "lucide-react";
+import { MapPin, ChevronDown, ChevronRight, Zap, LocateFixed, Home, Briefcase, Map as MapIcon, CheckCircle2, AlertCircle, Plus, Loader2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useLocationStore, adoptAddress, addressLine, addressTitle } from "@/stores/location-store";
 import { useCheckoutStore } from "@/stores/checkout-store";
 import { useCartStore } from "@/stores/cart-store";
 import { Modal } from "@/components/ui/overlay";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { site } from "@/config/site";
 import type { Address, Serviceability } from "@/types/app";
-import { cn, isValidPincode } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { etaText } from "@/lib/eta";
 import { useHydrated } from "@/hooks/use-hydrated";
+import { afterOverlayClose } from "@/hooks/use-back-to-close";
 
 async function check(params: Record<string, string>): Promise<Serviceability> {
   const r = await fetch(`/api/location/serviceability?${new URLSearchParams(params)}`);
@@ -31,8 +31,7 @@ async function locality(lat: number, lng: number): Promise<{ label: string; deta
 /**
  * Delivery location in the header. Nothing is assumed: until the customer picks a location it reads
  * "Select delivery location" and no delivery time is shown. The selector offers the browser's
- * position (permission is asked only on that tap), saved addresses, a pincode check, and the
- * address sheet (search, map pin, manual entry). Every choice is checked against the delivery zones
+ * position (permission is asked only on that tap), saved addresses, and the address sheet (search, map pin, manual entry). Every choice is checked against the delivery zones
  * (by coordinates when there are any) and the chosen address is the one the cart and checkout use.
  */
 export function LocationPicker({ addresses = [], className, light, variant = "inline", fallbackEta }: {
@@ -51,8 +50,7 @@ export function LocationPicker({ addresses = [], className, light, variant = "in
   const openSheet = useCartStore((s) => s.openSheet);
   const sp = useSearchParams();
   const [open, setOpen] = React.useState(() => sp.get("pick") === "1");
-  const [pincode, setPincode] = React.useState("");
-  const [busy, setBusy] = React.useState<"gps" | "pin" | "address" | null>(null);
+  const [busy, setBusy] = React.useState<"gps" | "address" | null>(null);
   const [result, setResult] = React.useState<Serviceability | null>(null);
   const hydrated = useHydrated();
   void fallbackEta;
@@ -75,10 +73,10 @@ export function LocationPicker({ addresses = [], className, light, variant = "in
   }, [hydrated, location, setLocation]);
 
   const locateMe = () => {
-    if (!navigator.geolocation) { setResult({ serviceable: false, message: "Location is not supported on this device. Enter your pincode or add an address instead." }); return; }
+    if (!navigator.geolocation) { setResult({ serviceable: false, message: "Location is not supported on this device. Add an address instead." }); return; }
     // Browsers only expose geolocation on secure origins. Catch it here so the customer is told
     // the real reason rather than being sent to permission settings that cannot help.
-    if (!window.isSecureContext) { setResult({ serviceable: false, message: "Location needs a secure (https) connection. Enter your pincode or add an address instead." }); return; }
+    if (!window.isSecureContext) { setResult({ serviceable: false, message: "Location needs a secure (https) connection. Add an address instead." }); return; }
     setBusy("gps");
 
     const onPosition = async (pos: GeolocationPosition) => {
@@ -94,7 +92,7 @@ export function LocationPicker({ addresses = [], className, light, variant = "in
         setAddressId(null);
         if (s.serviceable && !rough) setOpen(false);
       } catch {
-        setResult({ serviceable: false, message: "Couldn't check your location. Try again, enter your pincode or add an address." });
+        setResult({ serviceable: false, message: "Couldn't check your location. Try again or add an address." });
       } finally {
         setBusy(null);
       }
@@ -103,8 +101,8 @@ export function LocationPicker({ addresses = [], className, light, variant = "in
     // settings advice is true; a timeout or unavailable fix needs a different next step.
     const fail = async (err: GeolocationPositionError) => {
       let message =
-        err.code === err.POSITION_UNAVAILABLE ? "We couldn't work out where you are right now. Enter your pincode or pick the spot on the map."
-        : "Finding your location is taking too long. Enter your pincode or pick the spot on the map.";
+        err.code === err.POSITION_UNAVAILABLE ? "We couldn't work out where you are right now. Pick the spot on the map or type your address."
+        : "Finding your location is taking too long. Pick the spot on the map or type your address.";
       if (err.code === err.PERMISSION_DENIED) {
         // Browsers report "site blocked" and "location off for the whole browser/device" the same way.
         // The Permissions API tells them apart, so the customer gets the fix that actually applies.
@@ -125,23 +123,6 @@ export function LocationPicker({ addresses = [], className, light, variant = "in
       }
       fail(err);
     }, { enableHighAccuracy: true, timeout: 10000 });
-  };
-
-  const checkPin = async () => {
-    if (!isValidPincode(pincode)) { setResult({ serviceable: false, message: "Enter a valid 6-digit pincode" }); return; }
-    setBusy("pin");
-    try {
-      const s = await check({ pincode });
-      setResult(s);
-      // A pincode only says which zone it falls in; the label says so (no "current location").
-      fromServiceability(s, { label: `${s.area ?? s.city ?? site.city} · ${pincode}`, area: s.area ?? "", pincode, source: "pincode" });
-      setAddressId(null);
-      if (s.serviceable) setOpen(false);
-    } catch {
-      setResult({ serviceable: false, message: "Couldn't check this pincode. Check your connection and try again." });
-    } finally {
-      setBusy(null);
-    }
   };
 
   // Delivery time only once the location is a real, served one; never a default.
@@ -165,7 +146,9 @@ export function LocationPicker({ addresses = [], className, light, variant = "in
       setBusy(null);
     }
   };
-  const addNew = () => { setOpen(false); openSheet("address"); };
+  // Closing this dialog pops its history entry asynchronously; opening the sheet in the same tick would be
+  // undone by that pop (the sheet closed itself at once), so the sheet opens once the pop has landed.
+  const addNew = () => { setOpen(false); afterOverlayClose(() => openSheet("address")); };
 
   return (
     <>
@@ -203,11 +186,6 @@ export function LocationPicker({ addresses = [], className, light, variant = "in
             </button>
           </div>
 
-          <form onSubmit={(e) => { e.preventDefault(); checkPin(); }} className="mt-4 flex gap-2">
-            <Input value={pincode} onChange={(e) => setPincode(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" placeholder="Check delivery by pincode" aria-label="Pincode" leftIcon={<Search className="h-4 w-4" />} className="h-12 bg-card" wrapperClassName="flex-1" />
-            <Button type="submit" variant="secondary" className="h-12 rounded-xl" loading={busy === "pin"} disabled={busy !== null}>Check</Button>
-          </form>
-
           <div role="status" aria-live="polite">
             {result ? (
               <div className={cn("mt-4 rounded-xl px-3 py-2.5 text-sm", result.serviceable ? "bg-success-50 text-brand-800" : "bg-danger-50 text-[#8a1f18]")}>
@@ -242,7 +220,7 @@ export function LocationPicker({ addresses = [], className, light, variant = "in
               </ul>
             </div>
           ) : null}
-          <p className="mt-4 text-xs text-ink-3">We currently deliver across {site.city}, Rajasthan (pincodes {site.servicePincodes.join(", ")}).</p>
+          <p className="mt-4 text-xs text-ink-3">We currently deliver across {site.city}, Rajasthan.</p>
         </div>
       </Modal>
     </>

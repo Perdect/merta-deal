@@ -1,5 +1,5 @@
 /* Merta Deal service worker: offline shell for navigations, cache-first static assets, web push. */
-const VERSION = "md-v9";
+const VERSION = "md-v10";
 const STATIC_CACHE = `${VERSION}-static`;
 const OFFLINE_URL = "/offline.html";
 /* The installed app's first screen: served from here at once, so opening the app never waits on the network. */
@@ -10,7 +10,7 @@ const START_URL = "/app-start.html";
    (a half-filled address form, a cart edit) stays; the next navigation loads the new
    version. */
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(STATIC_CACHE).then((c) => c.addAll([OFFLINE_URL, START_URL, "/icon.svg", "/manifest.webmanifest"])));
+  event.waitUntil(caches.open(STATIC_CACHE).then((c) => c.addAll([OFFLINE_URL, START_URL, "/icon.svg", "/manifest.webmanifest", "/rider.webmanifest"])));
 });
 
 self.addEventListener("message", (event) => {

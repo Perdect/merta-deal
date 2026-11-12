@@ -288,6 +288,22 @@ export async function assignRiderAction(orderId: string, riderId: string): Promi
   } catch (e) { return fail(e); }
 }
 
+/** A rider accepted but never collected the bag (0050): cancels their assignment, returns the order to packed and offers it again. */
+export async function unassignRiderAction(orderId: string, note?: string): Promise<ActionResult<{ reassignedTo: string | null }>> {
+  if (!uuid.safeParse(orderId).success) return { ok: false, error: "Invalid order" };
+  try {
+    const supabase = await requireAdmin();
+    const { data, error } = await supabase.rpc("admin_unassign_rider", { p_order_id: orderId, ...(note?.trim() ? { p_note: note.trim() } : {}) });
+    if (error) {
+      const m = /^(PICKED_UP|NO_RIDER):\s*(.+)$/.exec(error.message);
+      return { ok: false, error: m ? m[2] : friendlyError(error) };
+    }
+    revalidate(`/admin/orders/${orderId}`, "/admin/orders", "/admin");
+    const res = data as { reassigned_to?: string | null } | null;
+    return { ok: true, data: { reassignedTo: res?.reassigned_to ?? null } };
+  } catch (e) { return fail(e); }
+}
+
 export async function redispatchAction(orderId: string): Promise<ActionResult<{ assignmentId: string | null }>> {
   if (!uuid.safeParse(orderId).success) return { ok: false, error: "Invalid order" };
   try {

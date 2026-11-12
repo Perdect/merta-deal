@@ -1,0 +1,27 @@
+{
+  "name": "Merta Deal Rider",
+  "short_name": "MD Rider",
+  "description": "Delivery partner app for Merta Deal: go online, accept delivery requests, deliver with the customer's OTP.",
+  "id": "/rider",
+  "start_url": "/rider?source=pwa",
+  "scope": "/rider",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#fff7ed",
+  "theme_color": "#ea580c",
+  "lang": "en-IN",
+  "dir": "ltr",
+  "categories": ["business", "productivity"],
+  "launch_handler": { "client_mode": "navigate-existing" },
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Deliveries", "short_name": "Deliveries", "url": "/rider/deliveries?source=pwa", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Earnings", "short_name": "Earnings", "url": "/rider/earnings?source=pwa", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] }
+  ]
+}

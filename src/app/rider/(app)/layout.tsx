@@ -11,6 +11,9 @@ import { env, isPushConfigured } from "@/lib/env";
 export const metadata: Metadata = {
   title: { default: "Delivery partner", template: "%s · Delivery partner | Merta Deal" },
   robots: { index: false, follow: false },
+  // The rider app installs on its own (scope /rider) so the home-screen icon opens the rider screens, not the shop.
+  manifest: "/rider.webmanifest",
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "MD Rider" },
 };
 
 /**

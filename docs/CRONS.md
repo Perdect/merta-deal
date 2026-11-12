@@ -6,6 +6,14 @@ Two endpoints need to run on a timer:
 | --- | --- | --- | --- |
 | `/api/cron/notifications` | Fans out queued push/SMS/WhatsApp notifications | every 5 min | daily 03:00 UTC |
 | `/api/cron/expire-unpaid`  | Releases stock held by orders that were never paid | every 5 min | daily 03:00 UTC |
+| `/api/cron/housekeeping` | `run_order_housekeeping()` (0050): expires stale rider offers and re-offers waiting orders, sets quiet riders offline, expires item exceptions, escalates unattended orders, cancels unpaid orders after `payment_pending_minutes` | every minute | daily 03:05 UTC |
+
+**Housekeeping does not need Vercel at all.** Migration 0050 schedules `select public.run_order_housekeeping()`
+every minute with `pg_cron` inside the Supabase database when that extension is available (it is on
+Supabase; the migration enables it and creates the job `merta_order_housekeeping`). Check with
+`select * from cron.job` and `select * from cron.job_run_details order by start_time desc limit 10`.
+The Vercel entry above is only a fallback. Push delivery still needs the notifications route, so that
+one still wants a real schedule.
 
 `vercel.json` ships the **daily** schedule because a Hobby account rejects anything
 more frequent (`Hobby accounts are limited to daily cron jobs`). Daily is too slow for

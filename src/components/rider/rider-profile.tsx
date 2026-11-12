@@ -16,6 +16,7 @@ import { toast } from "@/components/ui/toast";
 import { cn, formatNumber, timeAgo } from "@/lib/utils";
 import { useRiderStore } from "./rider-store";
 import { VEHICLE_OPTIONS } from "./rider-utils";
+import { InstallCard } from "./install-card";
 
 type ProfileUser = { id: string; name: string | null; phone: string | null; email: string | null; avatarUrl: string | null };
 const STATUS_TONE = { active: "success", pending: "warning", suspended: "danger" } as const;
@@ -39,6 +40,8 @@ export function RiderProfile({ user, rider: initialRider, notifications }: { use
           <p className="mt-1 flex items-center gap-3 text-xs text-ink-2"><StarRating value={rider.rating_avg} count={rider.rating_count} /><span>{formatNumber(rider.total_deliveries)} deliveries</span></p>
         </div>
       </section>
+
+      <InstallCard />
 
       <form action={action} className="space-y-4 rounded-lg border border-line bg-card p-4 shadow-card" aria-labelledby="vehicle-head">
         <h2 id="vehicle-head" className="text-sm font-bold text-ink">Vehicle &amp; documents</h2>
@@ -78,8 +81,29 @@ function SignOutButton() {
   return <Button type="submit" variant="outline" size="lg" className="text-danger" loading={pending}><LogOut className="h-5 w-5" /> {pending ? "Signing out…" : "Sign out"}</Button>;
 }
 
+type NotificationGroup = { key: string; latest: Notification; count: number; unread: boolean };
+
+/**
+ * One row per order and type: the server keeps one `delivery_offer` row per order (0051) and refreshes it,
+ * but older rows, and other types repeated for the same order (cancelled, reassigned), are folded here so
+ * the list reads as events, not as a log of every retry. The count says how many there were.
+ */
+export function groupNotifications(items: Notification[]): NotificationGroup[] {
+  const groups = new Map<string, NotificationGroup>();
+  for (const n of items) {
+    const orderId = (n.data as { order_id?: string } | null)?.order_id;
+    const offers = Number((n.data as { offers?: number } | null)?.offers ?? 1);
+    const key = orderId ? `${n.type}:${orderId}` : n.id;
+    const g = groups.get(key);
+    if (!g) groups.set(key, { key, latest: n, count: offers, unread: !n.is_read });
+    else { g.count += offers; g.unread = g.unread || !n.is_read; if (n.created_at > g.latest.created_at) g.latest = n; }
+  }
+  return [...groups.values()].sort((a, b) => (a.latest.created_at < b.latest.created_at ? 1 : -1));
+}
+
 function NotificationsSection({ userId, initial }: { userId: string; initial: Notification[] }) {
   const { items, unread, setItems } = useNotifications(userId, initial, { toastNew: false });
+  const groups = React.useMemo(() => groupNotifications(items), [items]);
   const [busy, setBusy] = React.useState(false);
   const markAll = async () => {
     if (busy) return;
@@ -97,13 +121,13 @@ function NotificationsSection({ userId, initial }: { userId: string; initial: No
       </div>
       {items.length === 0 ? <EmptyState compact title="No notifications yet" description="Delivery requests and updates will appear here." /> : (
         <ul className="divide-y divide-line">
-          {items.slice(0, 20).map((n) => (
-            <li key={n.id} className={cn("flex gap-3 px-4 py-3", !n.is_read && "bg-brand-50/60")}>
-              <span className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", n.is_read ? "bg-transparent" : "bg-brand-600")} aria-hidden />
+          {groups.slice(0, 20).map(({ key, latest: n, count, unread: isUnread }) => (
+            <li key={key} className={cn("flex gap-3 px-4 py-3", isUnread && "bg-brand-50/60")}>
+              <span className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", isUnread ? "bg-brand-600" : "bg-transparent")} aria-hidden />
               <div className="min-w-0 flex-1">
-                <p className={cn("text-sm text-ink", !n.is_read && "font-semibold")}>{n.title}</p>
+                <p className={cn("flex items-center gap-2 text-sm text-ink", isUnread && "font-semibold")}><span className="min-w-0 truncate">{n.title}</span>{count > 1 ? <Badge tone="neutral" size="xs" title={`${count} times`}>×{count}</Badge> : null}</p>
                 <p className="text-xs text-ink-2">{n.body}</p>
-                <p className="mt-0.5 text-[11px] text-ink-3">{timeAgo(n.created_at)}</p>
+                <p className="mt-0.5 text-[11px] text-ink-3">{count > 1 ? `Latest ${timeAgo(n.created_at)}` : timeAgo(n.created_at)}</p>
               </div>
             </li>
           ))}

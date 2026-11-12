@@ -58,23 +58,30 @@ export function MapPicker({ initial, onConfirm, confirmLabel = "Confirm & Contin
   const searchSeq = React.useRef(0);
   const session = React.useRef("");
 
+  const lookupCtrl = React.useRef<AbortController | null>(null);
+  React.useEffect(() => () => lookupCtrl.current?.abort(), []);
+  /* Zone check and reverse geocode run side by side; a new pan cancels both. The zone answer (the one
+     that gates Confirm) usually lands first; the address text is a convenience that may arrive later or
+     not at all, and Confirm never waits for it. */
   const lookup = React.useCallback(async (c: LatLng) => {
     const seq = ++lookupSeq.current;
-    setLooking(true); setServiceable(null);
-    let next: PickedLocation = { ...c };
-    try {
-      const r = await fetch(`/api/maps/geocode?lat=${c.lat.toFixed(6)}&lng=${c.lng.toFixed(6)}`);
-      const d = await r.json() as { ok: boolean; formatted?: string; area?: string; pincode?: string; street?: string; city?: string };
-      if (d.ok) next = { ...c, area: d.area, pincode: d.pincode, street: d.street, city: d.city, formatted: d.formatted };
-    } catch { /* address text is optional */ }
-    if (seq !== lookupSeq.current) return;
-    setPlace(next);
-    try {
-      const q = new URLSearchParams({ lat: String(c.lat), lng: String(c.lng), ...(next.pincode ? { pincode: next.pincode } : {}) });
-      const s = await (await fetch(`/api/location/serviceability?${q}`)).json() as { serviceable: boolean };
-      if (seq === lookupSeq.current) setServiceable(Boolean(s.serviceable));
-    } catch { if (seq === lookupSeq.current) setServiceable(null); }
-    if (seq === lookupSeq.current) setLooking(false);
+    lookupCtrl.current?.abort();
+    const ctrl = new AbortController(); lookupCtrl.current = ctrl;
+    setLooking(true); setServiceable(null); setPlace({ ...c });
+    const zone = (async () => {
+      try {
+        const s = await (await fetch(`/api/location/serviceability?${new URLSearchParams({ lat: String(c.lat), lng: String(c.lng) })}`, { signal: ctrl.signal })).json() as { serviceable: boolean };
+        if (seq === lookupSeq.current) setServiceable(Boolean(s.serviceable));
+      } catch { if (seq === lookupSeq.current && !ctrl.signal.aborted) setServiceable(null); }
+    })();
+    const text = (async () => {
+      try {
+        const d = await (await fetch(`/api/maps/geocode?lat=${c.lat.toFixed(6)}&lng=${c.lng.toFixed(6)}`, { signal: ctrl.signal })).json() as { ok: boolean; formatted?: string; area?: string; pincode?: string; street?: string; city?: string };
+        if (seq === lookupSeq.current && d.ok) setPlace({ ...c, area: d.area, pincode: d.pincode, street: d.street, city: d.city, formatted: d.formatted });
+      } catch { /* address text is optional */ }
+      if (seq === lookupSeq.current) setLooking(false);
+    })();
+    await Promise.all([zone, text]);
   }, []);
 
   React.useEffect(() => {
@@ -87,7 +94,7 @@ export function MapPicker({ initial, onConfirm, confirmLabel = "Confirm & Contin
       map.attributionControl?.setPrefix('<a href="https://leafletjs.com" target="_blank" rel="noreferrer">Leaflet</a>');
       map.on("dragstart", () => setChosen(true));
       map.on("movestart", () => { setMoving(true); clearTimeout(timer); });
-      map.on("moveend", () => { setMoving(false); clearTimeout(timer); timer = setTimeout(() => lookup(map.getCenter()), 600); });
+      map.on("moveend", () => { setMoving(false); clearTimeout(timer); timer = setTimeout(() => lookup(map.getCenter()), 450); });
       mapRef.current = map; setReady(true);
       setTimeout(() => map.invalidateSize(), 60);
       lookup(map.getCenter());
@@ -113,19 +120,22 @@ export function MapPicker({ initial, onConfirm, confirmLabel = "Confirm & Contin
   // Suggestions while typing (debounced); the newest request wins.
   const timer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   React.useEffect(() => () => clearTimeout(timer.current), []);
+  const searchCtrl = React.useRef<AbortController | null>(null);
   const onQuery = (value: string) => {
     setQuery(value);
     clearTimeout(timer.current);
+    searchCtrl.current?.abort();
     const term = value.trim();
     const seq = ++searchSeq.current;
     if (term.length < 2) { setResults(null); setSearching(false); return; }
     session.current ||= crypto.randomUUID();
     setSearching(true);
     timer.current = setTimeout(async () => {
+      const ctrl = new AbortController(); searchCtrl.current = ctrl;
       try {
-        const d = await (await fetch(`/api/maps/search?q=${encodeURIComponent(term)}&session=${session.current}`)).json() as { results: Found[] };
+        const d = await (await fetch(`/api/maps/search?q=${encodeURIComponent(term)}&session=${session.current}`, { signal: ctrl.signal })).json() as { results: Found[] };
         if (seq === searchSeq.current) setResults(d.results);
-      } catch { if (seq === searchSeq.current) setResults([]); }
+      } catch { if (seq === searchSeq.current && !ctrl.signal.aborted) setResults([]); }
       if (seq === searchSeq.current) setSearching(false);
     }, 300);
   };
@@ -226,9 +236,9 @@ export function MapPicker({ initial, onConfirm, confirmLabel = "Confirm & Contin
             {onManual ? <button type="button" onClick={onManual} className="tap mb-2 flex min-h-9 w-full items-center justify-center text-sm font-semibold text-brand-700 underline-offset-2 hover:underline">Can&rsquo;t find it? Enter address manually</button> : null}
             {chosen || failed ? (
               <>
-                <p className="font-display text-lg font-bold leading-tight text-ink">{looking && !place ? "Finding address…" : title}</p>
-                <p className="mt-0.5 min-h-5 text-sm text-ink-3">{looking ? "Finding address…" : subtitle}</p>
-                <Button size="lg" fullWidth className="mt-3 h-12 rounded-xl text-base" disabled={!failed && (!place || moving || looking || (requireServiceable && serviceable === false))} onClick={() => onConfirm(place ?? { ...(initial ?? site.center) })}>{confirmLabel}</Button>
+                <p className="font-display text-lg font-bold leading-tight text-ink">{looking && !place?.formatted ? (serviceable === null ? "Checking this spot…" : "Finding the address…") : title}</p>
+                <p className="mt-0.5 min-h-5 text-sm text-ink-3">{looking && !place?.formatted ? (serviceable === null ? "" : "You can continue; the address text is only a suggestion.") : subtitle}</p>
+                <Button size="lg" fullWidth className="mt-3 h-12 rounded-xl text-base" disabled={!failed && (!place || moving || (requireServiceable && serviceable !== true))} onClick={() => onConfirm(place ?? { ...(initial ?? site.center) })}>{confirmLabel}</Button>
               </>
             ) : (
               <>

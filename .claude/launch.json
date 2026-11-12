@@ -12,6 +12,16 @@
       "port": 3000
     },
     {
+      "name": "merta-deal-dev-node",
+      "runtimeExecutable": "node_modules/.bin/next",
+      "runtimeArgs": [
+        "dev",
+        "--port",
+        "3000"
+      ],
+      "port": 3000
+    },
+    {
       "name": "merta-deal-prod",
       "runtimeExecutable": "sh",
       "runtimeArgs": [
@@ -28,6 +38,15 @@
         "UI_FIXTURES=1 NEXT_PUBLIC_SUPABASE_URL=https://qvpfnwdnnqxjrrjwpevj.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2cGZud2RubnF4anJyandwZXZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwODcwNDksImV4cCI6MjEwNjY2MzA0OX0.LHoJazNMCrOPp8s9bOkixgPLTWHMJAFijhfh7zoGnfo NEXT_PUBLIC_SITE_URL=http://localhost:3100 NEXT_PUBLIC_ANONYMOUS_AUTH_ENABLED=true exec node_modules/.bin/next start --port 3102"
       ],
       "port": 3102
+    },
+    {
+      "name": "merta-deal-dev-live",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "NEXT_PUBLIC_SUPABASE_URL=https://qvpfnwdnnqxjrrjwpevj.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2cGZud2RubnF4anJyandwZXZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwODcwNDksImV4cCI6MjEwNjY2MzA0OX0.LHoJazNMCrOPp8s9bOkixgPLTWHMJAFijhfh7zoGnfo NEXT_PUBLIC_SITE_URL=http://localhost:3001 NEXT_PUBLIC_ANONYMOUS_AUTH_ENABLED=true exec node_modules/.bin/next dev --port 3001"
+      ],
+      "port": 3001
     }
   ]
 }

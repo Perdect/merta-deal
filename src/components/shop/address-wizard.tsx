@@ -1,26 +1,50 @@
 "use client";
 import * as React from "react";
-import { ChevronLeft } from "lucide-react";
+import dynamic from "next/dynamic";
+import { ChevronLeft, Loader2 } from "lucide-react";
 import type { Address } from "@/types/app";
-import { AddressForm } from "./address-form";
-import { MapPicker, type PickedLocation } from "./map-picker";
+import { AddressForm, type AddressDraft } from "./address-form";
+import type { PickedLocation } from "./map-picker";
+
+/* The map (Leaflet + tiles + geocoder) is only fetched when the customer asks for it. */
+const MapPicker = dynamic(() => import("./map-picker").then((m) => m.MapPicker), {
+  ssr: false,
+  loading: () => <div className="flex min-h-[520px] items-center justify-center text-sm text-ink-3" role="status"><Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />Opening the map…</div>,
+});
 
 /**
- * New address in two steps: drop the pin on the map, then add house / area / receiver details.
- * The pin's coordinates (and the looked-up area and pincode) prefill the form. "Enter address
- * manually" skips the map (no location permission, no GPS fix): the form then checks the pincode
- * against the delivery zones before saving.
+ * New address: the details form comes first and can be saved on its own (the server checks the
+ * delivery zone by pin or pincode). "Choose on map" is an optional step that opens the map picker and
+ * returns a precise pin plus the looked-up area and pincode into the same, still-filled form. GPS is
+ * a shortcut inside the form, never a requirement.
  */
 export function AddressWizard({ onSaved, onCancel, defaultName, defaultPhone }: { onSaved: (a: Address) => void; onCancel?: () => void; defaultName?: string | null; defaultPhone?: string | null }) {
+  const [draft, setDraft] = React.useState<AddressDraft | null>(null);
+  const [mapOpen, setMapOpen] = React.useState(false);
   const [picked, setPicked] = React.useState<PickedLocation | null>(null);
-  const [manual, setManual] = React.useState(false);
-  if (!picked && !manual) return <MapPicker onConfirm={setPicked} onManual={() => setManual(true)} />;
+
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+  if (mapOpen) {
+    const dl = num(draft?.lat), dg = num(draft?.lng);
+    const start = dl != null && dg != null ? { lat: dl, lng: dg } : picked ? { lat: picked.lat, lng: picked.lng } : null;
+    return (
+      <div className="flex h-full flex-col">
+        <button type="button" onClick={() => setMapOpen(false)} className="tap mb-1 inline-flex min-h-11 items-center gap-1 self-start px-4 text-sm font-semibold text-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 sm:px-0"><ChevronLeft className="h-4 w-4" aria-hidden /> Back to address details</button>
+        <MapPicker initial={start} confirmLabel="Use this location" onConfirm={(p) => { setPicked(p); setMapOpen(false); }} onManual={() => setMapOpen(false)} />
+      </div>
+    );
+  }
+
   return (
     <div className="max-sm:px-4 max-sm:py-4">
-      <button type="button" onClick={() => { setPicked(null); setManual(false); }} className="tap mb-2 inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"><ChevronLeft className="h-4 w-4" aria-hidden /> {picked ? "Change location on map" : "Pick the location on the map instead"}</button>
       <AddressForm
-        initial={picked ? { lat: picked.lat, lng: picked.lng, area: picked.area ?? "", pincode: picked.pincode ?? undefined, street: picked.street ?? "" } : undefined}
-        defaultName={defaultName} defaultPhone={defaultPhone} onSaved={onSaved} onCancel={onCancel} />
+        key={picked ? `${picked.lat},${picked.lng}` : "form"}
+        initial={{
+          ...(draft ? { type: draft.type, label: draft.label ?? null, full_name: draft.full_name, phone: draft.phone, house: draft.house, street: draft.street ?? "", area: draft.area, landmark: draft.landmark ?? null, city: draft.city, pincode: draft.pincode, lat: num(draft.lat), lng: num(draft.lng), is_default: Boolean(draft.is_default) } : {}),
+          ...(picked ? { lat: picked.lat, lng: picked.lng, area: draft?.area || picked.area || "", street: draft?.street || picked.street || "" } : {}),
+        } as Partial<Address>}
+        defaultName={defaultName} defaultPhone={defaultPhone} onSaved={onSaved} onCancel={onCancel}
+        onChooseMap={(d) => { setDraft(d); setMapOpen(true); }} />
     </div>
   );
 }

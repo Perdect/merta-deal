@@ -160,7 +160,8 @@ ok("another rider cannot accept it", /FORBIDDEN/.test((await err(`select public.
 await as(RIDER1);
 const acc = await fnv(`public.rider_respond_assignment($1::uuid, true)`, [offer.id]);
 ok("the offered rider accepts atomically", acc.status === "accepted" && (await orderOf(o5)).status === "rider_assigned");
-ok("a repeated accept (retry, double tap) is refused, not double-assigned", /INVALID_STATE/.test((await err(`select public.rider_respond_assignment($1::uuid, true)`, [offer.id])) ?? ""));
+const acc2 = await fnv(`public.rider_respond_assignment($1::uuid, true)`, [offer.id]);
+ok("a repeated accept (retry, double tap) confirms the job once, never double-assigns (0050)", acc2.ok === true && acc2.already === true && (await one(`select count(*)::int n from delivery_assignments where order_id = $1 and status = 'accepted'`, [o5])).n === 1);
 ok("the admin is told a rider is assigned", (await notifs("rider_assigned", o5)).length === adminCount);
 ok("the order is not delivered by any of this", (await orderOf(o5)).status === "rider_assigned");
 
@@ -215,7 +216,8 @@ ok("the first rider to accept gets it", win.status === "accepted" && (await orde
 ok("the other offer is withdrawn", (await one(`select status from delivery_assignments where id = $1`, [mine9.id])).status === "expired");
 await as(RIDER1);
 ok("the slower rider's request is gone from the list", !(await fnv(`public.rider_assignments(array['offered'])`)).some((x) => x.order.id === o9));
-ok("a late accept of the withdrawn offer is refused", /INVALID_STATE/.test((await err(`select public.rider_respond_assignment($1::uuid, true)`, [mine9.id])) ?? ""));
+const late9 = await fnv(`public.rider_respond_assignment($1::uuid, true)`, [mine9.id]);
+ok("a late accept of the withdrawn offer learns it was taken (0050)", late9.ok === false && late9.error === "OFFER_TAKEN" && (await one(`select count(*)::int n from delivery_assignments where order_id = $1 and status = 'accepted'`, [o9])).n === 1);
 await as(ADMIN);
 await q(`update delivery_assignments set status = 'offered', responded_at = null, expires_at = now() + interval '3 minutes' where id = $1`, [mine9.id]);
 await as(RIDER1);

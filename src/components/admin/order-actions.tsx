@@ -1,22 +1,23 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Bike, RefreshCw, XCircle, RotateCcw, Wifi, WifiOff, MapPinOff } from "lucide-react";
+import { Bike, RefreshCw, XCircle, RotateCcw, Wifi, WifiOff, MapPinOff, UserMinus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
-import { Modal } from "@/components/ui/overlay";
+import { Modal, ConfirmDialog } from "@/components/ui/overlay";
 import { Alert } from "@/components/ui/states";
 import { Avatar, StarRating } from "@/components/ui/misc";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/toast";
 import { useOrderRealtime } from "@/hooks/use-order-realtime";
-import { assignRiderAction, redispatchAction, adminCancelOrderAction, issueRefundAction, markRefundManualAction } from "@/lib/actions/admin";
+import { assignRiderAction, unassignRiderAction, redispatchAction, adminCancelOrderAction, issueRefundAction, markRefundManualAction } from "@/lib/actions/admin";
 import type { OrderTracking } from "@/types/app";
 import type { LiveRider } from "@/lib/data/admin";
 import { FulfilActions } from "./fulfil-actions";
 import { cn, formatINR, haversineKm, timeAgo } from "@/lib/utils";
 
-const ASSIGNABLE = ["confirmed", "preparing", "ready_for_pickup"];
+// A rider is only sent for a packed bag (0050): assigning earlier left orders stuck with nothing to collect.
+const ASSIGNABLE = ["ready_for_pickup"];
 const CANCELLABLE = ["placed", "confirmed", "preparing", "ready_for_pickup", "rider_assigned", "out_for_delivery"];
 
 /** Admin controls for one order: packing, dispatch, cancellation and refunds. Subscribes to realtime so the page refreshes when a rider acts. */
@@ -26,6 +27,7 @@ export function OrderAdminActions({ tracking: t, riders, razorpayConfigured, com
   const [busy, setBusy] = React.useState<string | null>(null);
   const [assignOpen, setAssignOpen] = React.useState(false);
   const [cancelOpen, setCancelOpen] = React.useState(false);
+  const [unassignOpen, setUnassignOpen] = React.useState(false);
   const [reason, setReason] = React.useState("");
   const [refundOpen, setRefundOpen] = React.useState(false);
   const [manualOpen, setManualOpen] = React.useState(false);
@@ -61,6 +63,7 @@ export function OrderAdminActions({ tracking: t, riders, razorpayConfigured, com
       <div className={cn(compact ? "flex flex-wrap gap-2 [&>button]:h-9 [&>button]:px-3 [&>button]:text-sm" : "grid gap-2")}>
         {canAssign ? <Button variant="primary" disabled={busy !== null} onClick={() => setAssignOpen(true)}><Bike className="h-4 w-4" /> Assign rider</Button> : null}
         {o.status === "ready_for_pickup" ? <Button variant="outline" loading={busy === "dispatch"} disabled={busy !== null} onClick={() => run("dispatch", async () => { const r = await redispatchAction(o.id); if (r.ok && !r.data.assignmentId) return { ok: false, error: "Still no eligible rider within the dispatch radius (online, active, free, not previously declined)." }; return r; }, "Dispatch offer sent to nearest rider")}><RefreshCw className="h-4 w-4" /> Re-run auto-dispatch</Button> : null}
+        {t.assignment?.status === "accepted" && o.status === "rider_assigned" ? <Button variant="outline" disabled={busy !== null} onClick={() => setUnassignOpen(true)}><UserMinus className="h-4 w-4" /> Unassign rider</Button> : null}
         {canCancel ? <Button variant="outline" className="text-danger" disabled={busy !== null} onClick={() => setCancelOpen(true)}><XCircle className="h-4 w-4" /> Cancel order</Button> : null}
         {refundable ? <Button variant={refundPending ? "danger" : "outline"} disabled={busy !== null} onClick={() => setRefundOpen(true)}><RotateCcw className="h-4 w-4" /> Issue refund</Button> : null}
         {refundPending ? <Button variant="ghost" size="sm" disabled={busy !== null} onClick={() => setManualOpen(true)}>Mark refunded manually</Button> : null}
@@ -89,6 +92,10 @@ export function OrderAdminActions({ tracking: t, riders, razorpayConfigured, com
         <p className="mb-3 text-sm text-ink-2">Stock is restored, any live rider assignment is cancelled and online payments are flagged for refund.</p>
         <Textarea label="Reason (visible to the customer)" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Items unavailable today" />
       </Modal>
+
+      <ConfirmDialog open={unassignOpen} onClose={() => (busy ? undefined : setUnassignOpen(false))} title="Unassign this rider?" confirmLabel="Unassign and re-offer" tone="danger" loading={busy === "unassign"}
+        description={`${t.assignment?.rider?.name ?? "The rider"} accepted but has not collected the bag. The order goes back to “packed” and is offered to the other online riders at once. The rider is told.`}
+        onConfirm={() => run("unassign", () => unassignRiderAction(o.id), "Rider unassigned · the order is offered again").then((ok) => ok && setUnassignOpen(false))} />
 
       <Modal open={refundOpen} onClose={() => (busy ? undefined : setRefundOpen(false))} title="Issue Razorpay refund" size="sm" footer={<div className="flex gap-2"><Button variant="outline" fullWidth disabled={busy !== null} onClick={() => setRefundOpen(false)}>Cancel</Button><Button fullWidth disabled={!razorpayConfigured} loading={busy === "refund"} onClick={() => run("refund", () => issueRefundAction(o.id, Number(refundAmount)), "Refund issued").then((ok) => ok && setRefundOpen(false))}>Refund {formatINR(Number(refundAmount) || 0)}</Button></div>}>
         {!razorpayConfigured ? <Alert tone="warning" title="Razorpay is not configured" className="mb-3">Set RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET and SUPABASE_SERVICE_ROLE_KEY to refund from here. Until then, refund from the Razorpay dashboard and use “Mark refunded manually”.</Alert> : null}

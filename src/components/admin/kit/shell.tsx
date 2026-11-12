@@ -11,6 +11,7 @@ import { useBackToClose } from "@/hooks/use-back-to-close";
 import { ADMIN_NAV, ADMIN_NAV_DAILY, ADMIN_NAV_FOOTER, ADMIN_NAV_MOBILE, activeNavHref, breadcrumbs, navSectionFor, type AdminNavItem, type NavBadgeKey } from "./nav";
 import { AdminTrail } from "./client";
 import { OrderAlerts } from "@/components/admin/alerts/order-alerts";
+import { LiveCounts } from "./live-list";
 import { AlertBanner, type PushConfig } from "@/components/alerts/alert-setup";
 
 /* Collapsed state lives in localStorage (a per-admin convenience). useSyncExternalStore keeps the
@@ -117,6 +118,7 @@ export function AdminShell({ user, userId, unread, counts, push, children }: { u
         <MobileBar active={active} counts={counts ?? null} onMenu={() => setDrawer(true)} />
       </div>
       <OrderAlerts userId={userId} push={push} />
+      <LiveCounts />
     </div>
   );
 }

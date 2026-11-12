@@ -5,6 +5,7 @@ import { site } from "@/config/site";
 
 export const dynamic = "force-dynamic";
 
+const UPSTREAM_MS = 3500;
 export type PlaceSuggestion = { title: string; subtitle: string; lat?: number; lng?: number; placeId?: string; source: "place" | "area" | "google" | "osm" };
 
 /**
@@ -46,7 +47,7 @@ async function google(q: string, session: string): Promise<PlaceSuggestion[]> {
         input: q, includedRegionCodes: ["in"], languageCode: "en", ...(session ? { sessionToken: session } : {}),
         locationBias: { circle: { center: { latitude: site.center.lat, longitude: site.center.lng }, radius: 30000 } },
       }),
-      cache: "no-store",
+      cache: "no-store", signal: AbortSignal.timeout(UPSTREAM_MS),
     });
     if (!r.ok) { console.warn("maps/search: Google Places returned", r.status, (await r.text()).slice(0, 200)); return []; }
     const d = await r.json() as { suggestions?: { placePrediction?: { placeId: string; structuredFormat?: { mainText?: { text: string }; secondaryText?: { text: string } }; text?: { text: string } } }[] };
@@ -60,7 +61,7 @@ async function google(q: string, session: string): Promise<PlaceSuggestion[]> {
 async function photon(q: string): Promise<PlaceSuggestion[]> {
   try {
     const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lat=${site.center.lat}&lon=${site.center.lng}&limit=12&lang=en`;
-    const r = await fetch(url, { headers: { "User-Agent": `MertaDeal/1.0 (${site.url}; ${site.supportEmail})` }, next: { revalidate: 60 * 60 * 24 } });
+    const r = await fetch(url, { headers: { "User-Agent": `MertaDeal/1.0 (${site.url}; ${site.supportEmail})` }, next: { revalidate: 60 * 60 * 24 }, signal: AbortSignal.timeout(UPSTREAM_MS) });
     if (!r.ok) return [];
     const d = await r.json() as { features?: { geometry: { coordinates: [number, number] }; properties: Record<string, string | undefined> }[] };
     return (d.features ?? [])

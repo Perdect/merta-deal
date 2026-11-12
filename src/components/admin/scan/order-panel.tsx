@@ -136,7 +136,7 @@ export function OrderPanel({ order: o, onOrder, packing, setPacking, lastScan, p
           </div>
         </section>
       ) : null}
-      {["cancelled", "rejected"].includes(o.status) ? <Alert tone="danger" title={`This order is ${o.status}`}>Nothing can be packed or dispatched. Any stock it held has already been restored.</Alert> : null}
+      {["cancelled", "rejected"].includes(o.status) ? <Alert tone="danger" title={`This order is ${o.status}`}>Nothing can be packed or dispatched. The stock it reserved has been released back to the shelf.</Alert> : null}
 
       <ConfirmDialog open={confirmPack} onClose={() => (busy ? undefined : setConfirmPack(false))} onConfirm={finish} loading={busy === "complete"} confirmLabel={complete ? "Mark packed · call rider" : "Check again"}
         title={complete ? "Everything scanned. Mark this order packed?" : "Items are still missing"}

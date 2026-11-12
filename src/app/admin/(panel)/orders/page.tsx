@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ShoppingBag, SearchX } from "lucide-react";
 import { listOrders, countOrdersByTab, getOrderAdmin, getLiveRiders, spGet, spPage, type SP, type OrderFilters } from "@/lib/data/admin";
 import { serverEnv } from "@/lib/env";
-import { AdminPageHeader, DataTable, CellStack, RowLink, EmptyBlock, ListToolbar, StatusTabs, ListPagination, QuickView, OrderStatusPill, PaymentStatusPill, paymentMethodLabel, StatusPill, rupees } from "@/components/admin/kit";
+import { AdminPageHeader, DataTable, CellStack, RowLink, EmptyBlock, ListToolbar, StatusTabs, ListPagination, QuickView, OrderStatusPill, PaymentStatusPill, paymentMethodLabel, StatusPill, rupees, LiveList } from "@/components/admin/kit";
 import { OrderFacts } from "@/components/admin/order-summary";
 import { OrderAdminActions } from "@/components/admin/order-actions";
 import { PAYMENT_STATUS_OPTIONS, PAYMENT_METHOD_OPTIONS } from "@/components/admin/constants";
@@ -41,7 +41,8 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
 
   return (
     <>
-      <AdminPageHeader title="Orders" description="Search, filter and act on every order. Click View for a quick look without leaving the list." />
+      <AdminPageHeader title="Orders" description="Search, filter and act on every order. Click View for a quick look without leaving the list. New orders and status changes appear on their own."
+        actions={<LiveList topic="admin-orders" tables={[{ table: "orders" }, { table: "delivery_assignments" }]} />} />
 
       <StatusTabs items={TABS.map((t) => ({ ...t, count: counts[t.value] ?? null }))} />
       {!tabIsKnown ? <p className="-mt-1 mb-3 text-xs text-ink-3">Showing status: <span className="font-medium text-ink">{filters.status!.replace(/_/g, " ")}</span></p> : null}

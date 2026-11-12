@@ -257,12 +257,13 @@ console.log("Packing an order before dispatch rules");
 await as(ADMIN);
 const early = await placeOrder([[beans.inv, 1]]);
 await as(ADMIN);
-await q(`select public.scan_assign_rider($1::uuid, $2::uuid)`, [early, OTHER.id]);
-const ea = (await one(`select id from delivery_assignments where order_id = $1 and status = 'offered'`, [early])).id;
-await as(OTHER.user_id); await q(`select public.rider_respond_assignment($1::uuid, true)`, [ea]);
-ok("rider cannot take an unpacked order by scan", /ORDER_NOT_PACKED/.test(await err(`select public.rider_scan_pickup($1::uuid)`, [early]) ?? ""));
+// 0050: a rider is only ever sent for a packed bag, so the old "assign first, pack later" path is refused outright.
+ok("a rider cannot be assigned to an unpacked order", /INVALID_STATE/.test(await err(`select public.scan_assign_rider($1::uuid, $2::uuid)`, [early, OTHER.id]) ?? ""));
+ok("no offer exists for the unpacked order", (await one(`select count(*)::int n from delivery_assignments where order_id = $1`, [early])).n === 0);
+await as(OTHER.user_id);
+ok("rider cannot take an unpacked order by scan", /./.test(await err(`select public.rider_scan_pickup($1::uuid)`, [early]) ?? ""));
 await as(ADMIN);
-ok("staff cannot dispatch an unpacked order by scan", /ORDER_NOT_PACKED/.test(await err(`select public.scan_confirm_dispatch($1::uuid)`, [early]) ?? ""));
+ok("staff cannot dispatch an unpacked order by scan", /ORDER_NOT_PACKED|NO_RIDER_ACCEPTED/.test(await err(`select public.scan_confirm_dispatch($1::uuid)`, [early]) ?? ""));
 
 console.log("Unauthorised access");
 const guest = (await one(`insert into auth.users (id, phone, raw_user_meta_data, is_anonymous) values (gen_random_uuid(), null, '{}'::jsonb, true) returning id`)).id;

@@ -112,6 +112,8 @@ export type OrderTracking = {
 export type RiderAssignment = {
   id: string; status: Enums<"assignment_status">; offered_at: string; expires_at: string; responded_at: string | null; picked_up_at: string | null; delivered_at: string | null;
   distance_km: number | null; earning: number; cod_amount: number; pickup_lat: number; pickup_lng: number; drop_lat: number | null; drop_lng: number | null;
+  /** 0051: set by rider_mark_arrived; absent until that migration is applied. */
+  arrived_pickup_at?: string | null; arrived_customer_at?: string | null; handover_method?: string | null;
   order: { id: string; order_number: string; status: OrderStatus; total: number; item_count: number; payment_method: PaymentMethod; delivery_instructions: string | null; address: Address; promised_at: string | null; created_at: string };
   pickup: PickupPoint & { lat: number; lng: number };
   items: { name: string; quantity: number; pack_label: string | null; eggless?: boolean; cake_message?: string | null }[];

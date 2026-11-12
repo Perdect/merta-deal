@@ -84,15 +84,29 @@ export async function setOnlineAction(online: boolean, coords?: { lat: number; l
   return { ok: true, data: { is_online: Boolean((data as { is_online?: boolean })?.is_online) } };
 }
 
-export async function respondAssignmentAction(assignmentId: string, accept: boolean): Promise<ActionResult<{ status: string; reassigned_to: string | null }>> {
+export type RespondOutcome = "taken" | "expired" | "moved_on";
+export type RespondResult = ActionResult<{ status: string; reassigned_to: string | null; already: boolean }> | { ok: false; error: string; outcome: RespondOutcome };
+
+/**
+ * Accept or decline an offer. The database decides: a repeat of an answer that already went through comes back
+ * `already: true`, an offer another rider won is `outcome: "taken"`, one that ran out is `outcome: "expired"`
+ * (the server records the expiry and re-offers), and an offer withdrawn or cancelled meanwhile is `"moved_on"`.
+ * Nothing is reported as accepted until the server has said so.
+ */
+export async function respondAssignmentAction(assignmentId: string, accept: boolean): Promise<RespondResult> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("rider_respond_assignment", { p_assignment_id: assignmentId, p_accept: accept });
-  if (error) return { ok: false, error: friendlyError(error) };
-  const res = data as { ok?: boolean; status?: string; error?: string; reassigned_to?: string | null };
+  if (error) {
+    if (/^INVALID_STATE/.test(error.message)) return { ok: false, error: "This request is no longer open. It was withdrawn, cancelled or already answered.", outcome: "moved_on" };
+    return { ok: false, error: friendlyError(error) };
+  }
+  const res = data as { ok?: boolean; status?: string; error?: string; reassigned_to?: string | null; already?: boolean };
   revalidatePath("/rider");
-  // An expired offer is recorded as such (and re-offered) rather than raised, so the expiry is never rolled back.
-  if (res.ok === false) return { ok: false, error: friendlyError({ message: res.error ?? "OFFER_EXPIRED" }) };
-  return { ok: true, data: { status: res.status ?? (accept ? "accepted" : "rejected"), reassigned_to: res.reassigned_to ?? null } };
+  if (res.ok === false) {
+    const code = res.error ?? "OFFER_EXPIRED";
+    return { ok: false, error: friendlyError({ message: code }), outcome: code === "OFFER_TAKEN" ? "taken" : "expired" };
+  }
+  return { ok: true, data: { status: res.status ?? (accept ? "accepted" : "rejected"), reassigned_to: res.reassigned_to ?? null, already: Boolean(res.already) } };
 }
 
 /** Records "I've reached the pickup point / the customer" on the assignment (idempotent; admins are told once for the store). */

@@ -7,8 +7,8 @@ import { LogoMark } from "@/components/ui/misc";
 type BIPEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: "accepted" | "dismissed" }> };
 const DISMISS_KEY = "md_install_dismissed";
 
-/** Registers the service worker (production) and shows a restrained "Add to Home Screen" sheet. */
-export function PwaClient() {
+/** Registers the service worker (production) and shows a restrained "Add to Home Screen" sheet. `appName` is what the sheet calls the app (the rider app installs as "MD Rider" from its own manifest). */
+export function PwaClient({ appName = "Merta Deal" }: { appName?: string } = {}) {
   const [bip, setBip] = React.useState<BIPEvent | null>(null);
   const [show, setShow] = React.useState(false);
   const [ios] = React.useState(() => typeof navigator !== "undefined" && /iphone|ipad|ipod/i.test(navigator.userAgent) && !/crios|fxios/i.test(navigator.userAgent));
@@ -32,11 +32,11 @@ export function PwaClient() {
   const install = async () => { if (!bip) return; await bip.prompt(); const { outcome } = await bip.userChoice; if (outcome === "accepted") setShow(false); else dismiss(); };
   if (!show) return null;
   return (
-    <div className="fixed inset-x-3 z-50 md:left-auto md:right-6 md:w-96" style={{ bottom: "calc(var(--bottom-nav-h) + var(--safe-bottom) + 12px)" }} role="dialog" aria-label="Install Merta Deal">
+    <div className="fixed inset-x-3 z-50 md:left-auto md:right-6 md:w-96" style={{ bottom: "calc(var(--bottom-nav-h) + var(--safe-bottom) + 12px)" }} role="dialog" aria-label={`Install ${appName}`}>
       <div className="flex items-start gap-3 rounded-xl border border-line bg-card/95 p-3.5 shadow-float backdrop-blur animate-slide-up">
         <LogoMark size={40} />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold text-ink">Add Merta Deal to your home screen</p>
+          <p className="text-sm font-bold text-ink">Add {appName} to your home screen</p>
           {ios ? <p className="mt-0.5 text-xs text-ink-3">Tap <Share className="inline h-3.5 w-3.5" /> Share, then “Add to Home Screen”. No app store needed.</p> : <p className="mt-0.5 text-xs text-ink-3">One tap. Opens like an app, no install from the store.</p>}
           {!ios ? <Button size="xs" className="mt-2" onClick={install}><Download className="h-3.5 w-3.5" /> Install</Button> : null}
         </div>

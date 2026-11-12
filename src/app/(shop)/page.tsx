@@ -6,7 +6,8 @@ import { getCategoryTabs } from "@/lib/data/catalog";
 import { EmptyState } from "@/components/ui/states";
 import { Button } from "@/components/ui/button";
 import { CategoryGrid, ProductSection, ServiceStrip } from "@/components/home/home-sections";
-import { CakeRequest, LocalIntro, UrgentHighlight } from "@/components/home/local-intro";
+import { CakeRequest, LocalIntro } from "@/components/home/local-intro";
+import { DiwaliBanner } from "@/components/home/diwali-banner";
 import { site } from "@/config/site";
 import { paymentPhrase } from "@/lib/seo-copy";
 import type { Metadata } from "next";
@@ -67,7 +68,7 @@ export default async function HomePage() {
         <p className="mt-0.5 line-clamp-1 text-[13px] text-ink-2 sm:line-clamp-none sm:text-sm">{capitalise(listNames(home.categories.map((c) => c.name.toLowerCase())))} delivered to your home in {site.city}, Rajasthan, with a {etaLabel} delivery target.</p>
       </header>
       <CategoryGrid tabs={tabs} fallback={home.categories} />
-      <UrgentHighlight etaLabel={etaLabel} />
+      <DiwaliBanner />
       {home.sections.length ? (
         home.sections.map((s, i) => <ProductSection key={s.key} section={s} signedIn={signedIn} first={i === 0} />)
       ) : (

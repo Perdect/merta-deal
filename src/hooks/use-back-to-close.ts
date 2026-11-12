@@ -2,6 +2,16 @@
 import * as React from "react";
 
 let depth = 0;
+/* history.back() calls made by closing panels whose popstate has not landed yet. A panel that opens
+   meanwhile must not push its entry before that pop lands, or the pop would land on its entry and
+   close it at once (the location picker opening the address sheet was undone exactly like this). */
+let pendingPops = 0;
+let popWatcher = false;
+function watchPops() {
+  if (popWatcher || typeof window === "undefined") return;
+  popWatcher = true;
+  window.addEventListener("popstate", () => { if (pendingPops > 0) pendingPops -= 1; });
+}
 
 /**
  * Browser/phone Back closes the top-most open panel (cart, sheet, dialog) instead of leaving the page.
@@ -15,20 +25,33 @@ export function useBackToClose(open: boolean, onClose: () => void) {
   React.useEffect(() => { closeRef.current = onClose; });
   React.useEffect(() => {
     if (!open) return;
+    watchPops();
     skipRef.current = false;
-    const my = ++depth;
-    const href = location.href;
-    history.pushState({ ...(history.state ?? {}), mdOverlay: my }, "");
-    let poppedHere = false;
+    let my = 0; let href = ""; let pushed = false; let poppedHere = false; let cancelled = false;
+    let waitTimer: ReturnType<typeof setTimeout> | null = null;
     const onPop = () => {
       const cur = (history.state as { mdOverlay?: number } | null)?.mdOverlay ?? 0;
       if (cur < my) { poppedHere = true; closeRef.current(); }
     };
-    window.addEventListener("popstate", onPop);
+    const arm = () => {
+      if (cancelled || pushed) return;
+      my = ++depth; href = location.href; pushed = true;
+      history.pushState({ ...(history.state ?? {}), mdOverlay: my }, "");
+      window.addEventListener("popstate", onPop);
+    };
+    const waitForPop = () => { window.removeEventListener("popstate", waitForPop); if (waitTimer) clearTimeout(waitTimer); setTimeout(arm, 0); };
+    if (pendingPops > 0) {
+      // The watcher above runs first and settles the counter; then this panel takes its entry.
+      window.addEventListener("popstate", waitForPop);
+      waitTimer = setTimeout(waitForPop, 600);
+    } else arm();
     return () => {
-      window.removeEventListener("popstate", onPop);
+      cancelled = true;
+      window.removeEventListener("popstate", waitForPop); window.removeEventListener("popstate", onPop);
+      if (waitTimer) clearTimeout(waitTimer);
+      if (!pushed) return;
       depth = Math.max(0, my - 1);
-      if (!poppedHere && !skipRef.current && location.href === href && (history.state as { mdOverlay?: number } | null)?.mdOverlay === my) history.back();
+      if (!poppedHere && !skipRef.current && location.href === href && (history.state as { mdOverlay?: number } | null)?.mdOverlay === my) { pendingPops += 1; history.back(); }
     };
   }, [open]);
   /** Call right before closing the panel to navigate elsewhere (e.g. after placing an order). */
