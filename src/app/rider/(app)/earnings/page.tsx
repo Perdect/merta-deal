@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getMyRiderProfile, getRiderAssignments } from "@/lib/data/rider";
 import { EarningsView } from "@/components/rider/earnings-view";
+import { RiderText } from "@/components/rider/rider-text";
 import { ErrorState } from "@/components/ui/states";
 import { PayoutStatus, type EarningRow, type RiderPayoutRow } from "@/components/rider/payout-status";
 import { createClient } from "@/lib/supabase/server";
@@ -18,7 +19,7 @@ export default async function RiderEarningsPage() {
   if (!rider) return <ErrorState title="Rider profile not found" retryHref="/rider" />;
   return (
     <div>
-      <h1 className="mb-3 font-display text-xl font-extrabold text-ink">Earnings</h1>
+      <RiderText k="nav.earnings" as="h1" />
       <EarningsView delivered={delivered} rider={rider} />
       <div className="mt-4"><PayoutStatus earnings={(earn.data ?? []) as unknown as EarningRow[]} payouts={(pay.data ?? []) as unknown as RiderPayoutRow[]} /></div>
     </div>

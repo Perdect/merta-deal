@@ -7,12 +7,14 @@ import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { useRiderStore } from "./rider-store";
 import { getCurrentFix } from "./use-rider-gps";
+import { useT } from "@/lib/rider-i18n";
 
 /**
  * Big one-thumb online switch. Going online needs a real GPS fix first (`rider_set_online(true, lat, lng)`);
  * if the browser denies location we show the error and stay offline — nothing is faked.
  */
 export function OnlineToggle() {
+  const { t } = useT();
   const rider = useRiderStore((s) => s.rider);
   const isOnline = useRiderStore((s) => s.isOnline);
   const activeDelivery = useRiderStore((s) => s.activeDelivery);
@@ -34,15 +36,15 @@ export function OnlineToggle() {
         if (!r.ok) { setError(r.error); return; }
         setGps({ fix, status: "starting", error: null });
         setOnline(true);
-        toast.success("You're online", "New delivery requests will show up here.");
+        toast.success(t("online.nowOnline"), t("online.nowOnlineBody"));
       } else {
         const r = await setOnlineAction(false);
         if (!r.ok) { setError(r.error); return; }
         setOnline(false);
-        toast.info("You're offline", activeDelivery ? "Your current delivery continues and GPS stays on until it's done." : "You won't receive new requests.");
+        toast.info(t("online.nowOffline"), activeDelivery ? t("online.nowOfflineActive") : t("online.nowOfflineBody"));
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not update your status.");
+      setError(e instanceof Error ? e.message : t("online.updateFailed"));
     } finally {
       setBusy(false);
     }
@@ -51,13 +53,13 @@ export function OnlineToggle() {
   return (
     <section className="space-y-2">
       <button type="button" role="switch" aria-checked={isOnline} aria-busy={busy} disabled={!enabled} onClick={toggle}
-        className={cn("flex min-h-[72px] w-full items-center gap-3 rounded-lg border p-4 text-left shadow-card transition-colors active:scale-[0.99] disabled:opacity-60",
-          isOnline ? "border-success/30 bg-success-50" : "border-line bg-card")}>
-        <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-full", isOnline ? "bg-success text-white" : "bg-surface-2 text-ink-3")}><Power className="h-5 w-5" /></span>
+        className={cn("flex min-h-[80px] w-full items-center gap-3.5 rounded-2xl p-4 text-left shadow-card transition-colors active:scale-[0.99] disabled:opacity-60",
+          isOnline ? "bg-success-50 ring-1 ring-success/25" : "bg-card")}>
+        <span className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-full", isOnline ? "bg-success text-white" : "bg-surface-2 text-ink-3")}><Power className="h-6 w-6" strokeWidth={2.4} /></span>
         <span className="min-w-0 flex-1">
-          <span className="block text-base font-bold text-ink">{busy ? (isOnline ? "Going offline…" : "Getting your location…") : isOnline ? "You're online" : "You're offline"}</span>
-          <span className="block text-xs text-ink-3">
-            {status !== "active" ? "You can go online once an admin activates your account." : isOnline ? "Accepting delivery requests near you." : "Tap to go online and start receiving requests."}
+          <span className="block font-display text-[17px] font-extrabold text-ink">{busy ? (isOnline ? t("online.goingOffline") : t("online.gettingLocation")) : isOnline ? t("online.youAreOnline") : t("online.youAreOffline")}</span>
+          <span className="block text-[13px] text-ink-3">
+            {status !== "active" ? t("online.needsActivation") : isOnline ? t("online.acceptingNearby") : t("online.tapToGoOnline")}
           </span>
         </span>
         <span aria-hidden className={cn("relative inline-flex h-8 w-14 shrink-0 items-center rounded-full transition-colors", isOnline ? "bg-success" : "bg-line-2")}>
@@ -66,7 +68,7 @@ export function OnlineToggle() {
       </button>
       {error ? <Alert tone="danger" icon={<MapPinOff className="h-4 w-4" />}>{error}</Alert> : null}
       {!error && isOnline && (gps.status === "denied" || gps.status === "unavailable") ? (
-        <Alert tone="danger" icon={<MapPinOff className="h-4 w-4" />} title="GPS is off">{gps.error} Customers and Merta Deal can&apos;t see where you are until it&apos;s back.</Alert>
+        <Alert tone="danger" icon={<MapPinOff className="h-4 w-4" />} title={t("online.gpsOffTitle")}>{gps.error} {t("online.gpsOffBody")}</Alert>
       ) : null}
     </section>
   );

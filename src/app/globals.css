@@ -213,6 +213,11 @@
 }
 
 @utility tabular { font-variant-numeric: tabular-nums; }
+/* Rider app in Hindi: Devanagari glyphs from Noto, Latin and digits still from the brand faces. */
+@utility font-hindi {
+  font-family: var(--font-inter), var(--font-hindi), ui-sans-serif, system-ui, sans-serif;
+  & h1, & h2, & h3, & h4, & .font-display { font-family: var(--font-jakarta), var(--font-hindi), ui-sans-serif, system-ui, sans-serif; }
+}
 
 @utility skeleton {
   background: var(--color-surface-2);

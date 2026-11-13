@@ -130,8 +130,10 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
   const items = s?.items ?? [];
   const open = Boolean(step);
   const account = signedIn && !isGuest;
-  // The payment step needs an account: a guest who lands here (e.g. Back after signing out) goes to the cart.
-  React.useEffect(() => { if (step === "pay" && !account) openDrawer("cart"); }, [step, account, openDrawer]);
+  // The payment step needs a session: someone who lands here signed out (e.g. Back after signing out) goes to
+  // the cart. A guest with a session stays: since the no-OTP checkout, the name and mobile given with the
+  // address are enough to pay, and `proceed()` saves them before opening this step.
+  React.useEffect(() => { if (step === "pay" && !signedIn) openDrawer("cart"); }, [step, signedIn, openDrawer]);
   React.useEffect(() => {
     if (!open) return;
     document.body.style.overflow = "hidden";

@@ -1,12 +1,19 @@
 import type { Enums } from "@/types/database";
 import type { RiderAssignment } from "@/types/app";
 import type { BadgeTone } from "@/components/ui/badge";
+import type { TKey } from "@/lib/rider-i18n-dict";
 
 const IST = "Asia/Kolkata";
 const dayKeyFmt = new Intl.DateTimeFormat("en-CA", { timeZone: IST, year: "numeric", month: "2-digit", day: "2-digit" });
 const weekdayFmt = new Intl.DateTimeFormat("en-US", { timeZone: IST, weekday: "short" });
-const dayLabelFmt = new Intl.DateTimeFormat("en-IN", { timeZone: IST, weekday: "short", day: "numeric", month: "short" });
-const shortDayFmt = new Intl.DateTimeFormat("en-IN", { timeZone: IST, weekday: "short" });
+const dayLabelFmt: Record<string, Intl.DateTimeFormat> = {
+  en: new Intl.DateTimeFormat("en-IN", { timeZone: IST, weekday: "short", day: "numeric", month: "short" }),
+  hi: new Intl.DateTimeFormat("hi-IN", { timeZone: IST, weekday: "short", day: "numeric", month: "short" }),
+};
+const shortDayFmt: Record<string, Intl.DateTimeFormat> = {
+  en: new Intl.DateTimeFormat("en-IN", { timeZone: IST, weekday: "short" }),
+  hi: new Intl.DateTimeFormat("hi-IN", { timeZone: IST, weekday: "short" }),
+};
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const DAY_MS = 86_400_000;
 
@@ -31,15 +38,13 @@ export function istMonthKey(): string {
   return istDayKey(Date.now()).slice(0, 7);
 }
 
-/** "Today", "Yesterday" or "Mon, 21 Sep" for a day key. */
-export function dayKeyLabel(key: string): string {
-  if (key === istDayKeyAgo(0)) return "Today";
-  if (key === istDayKeyAgo(1)) return "Yesterday";
-  return dayLabelFmt.format(new Date(`${key}T12:00:00+05:30`));
+/** "Mon, 21 Sep" (or the Hindi form) for a day key; callers put "Today" / "Yesterday" in front where they want it. */
+export function dayKeyLabel(key: string, lang: "en" | "hi" = "en"): string {
+  return (dayLabelFmt[lang] ?? dayLabelFmt.en).format(new Date(`${key}T12:00:00+05:30`));
 }
 
-export function dayKeyWeekday(key: string): string {
-  return shortDayFmt.format(new Date(`${key}T12:00:00+05:30`));
+export function dayKeyWeekday(key: string, lang: "en" | "hi" = "en"): string {
+  return (shortDayFmt[lang] ?? shortDayFmt.en).format(new Date(`${key}T12:00:00+05:30`));
 }
 
 /** The timestamp that best represents when an assignment "happened" for grouping. */
@@ -47,14 +52,15 @@ export function assignmentWhen(a: RiderAssignment): string {
   return a.delivered_at ?? a.picked_up_at ?? a.responded_at ?? a.offered_at;
 }
 
-export const ASSIGNMENT_META: Record<Enums<"assignment_status">, { label: string; tone: BadgeTone }> = {
-  offered: { label: "New request", tone: "saffron" },
-  accepted: { label: "Accepted", tone: "info" },
-  picked_up: { label: "On the way", tone: "info" },
-  delivered: { label: "Delivered", tone: "success" },
-  rejected: { label: "Declined", tone: "neutral" },
-  expired: { label: "Missed", tone: "warning" },
-  cancelled: { label: "Cancelled", tone: "danger" },
+/** Status label keys (translated with `useT`) and badge tones. */
+export const ASSIGNMENT_META: Record<Enums<"assignment_status">, { label: TKey; tone: BadgeTone }> = {
+  offered: { label: "assignment.offered", tone: "saffron" },
+  accepted: { label: "assignment.accepted", tone: "info" },
+  picked_up: { label: "assignment.pickedUp", tone: "info" },
+  delivered: { label: "assignment.delivered", tone: "success" },
+  rejected: { label: "assignment.rejected", tone: "neutral" },
+  expired: { label: "assignment.expired", tone: "warning" },
+  cancelled: { label: "assignment.cancelled", tone: "danger" },
 };
 
 export const VEHICLE_OPTIONS: { value: Enums<"vehicle_type">; label: string }[] = [

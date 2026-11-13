@@ -183,6 +183,19 @@ export async function markRiderNotificationsReadAction(ids?: string[]): Promise<
   return { ok: true, data: Number(data ?? 0) };
 }
 
+/** Saves the rider's app language on their profile (`preferences.language`), so Account → Settings shows the same choice. */
+export async function setRiderLanguageAction(lang: "en" | "hi"): Promise<ActionResult> {
+  if (lang !== "en" && lang !== "hi") return { ok: false, error: "Unknown language" };
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Please sign in to continue." };
+  const { data: profile } = await supabase.from("profiles").select("preferences").eq("id", user.id).maybeSingle();
+  const existing = (profile?.preferences && typeof profile.preferences === "object" && !Array.isArray(profile.preferences) ? profile.preferences : {}) as Record<string, unknown>;
+  const { error } = await supabase.from("profiles").update({ preferences: { ...existing, language: lang } }).eq("id", user.id);
+  if (error) return { ok: false, error: friendlyError(error) };
+  return { ok: true, data: undefined };
+}
+
 export type FailedDeliveryReason = "customer_unreachable" | "address_problem" | "customer_refused" | "other";
 /** The handover couldn't happen: the order goes back for re-dispatch and admin re-dispatches or cancels it. */
 export async function reportFailedDeliveryAction(assignmentId: string, reason: FailedDeliveryReason, note?: string): Promise<ActionResult<{ order_status: string }>> {
