@@ -100,7 +100,7 @@ export function RiderShell({ user, rider, initialActive, push, initialLang, chil
   return (
     <div lang={lang === "hi" ? "hi" : "en-IN"} className={cn("flex min-h-dvh flex-col bg-surface", lang === "hi" && "font-hindi")}>
       <RiderTopBar name={user.name} rider={current} isOnline={isOnline} gpsOn={gpsOn} />
-      <main className="mx-auto w-full max-w-lg flex-1 px-4 pt-2" style={{ paddingBottom: "calc(var(--bottom-nav-h) + var(--safe-bottom) + 28px)" }}>
+      <main className="mx-auto w-full max-w-lg flex-1 px-4 pt-4" style={{ paddingBottom: "calc(var(--bottom-nav-h) + var(--safe-bottom) + 28px)" }}>
         <OfflineBanner />
         <RiderStatusBanner status={current.status} />
         {current.status === "active" ? <AlertBanner portal="rider" push={push} href="/rider/profile#alerts" /> : null}
@@ -113,24 +113,31 @@ export function RiderShell({ user, rider, initialActive, push, initialLang, chil
   );
 }
 
-/** "Hello Kayyum" in brand green, the online switch, and the state line underneath. */
+/** Solid green app header: the date, "Hello Kayyum", the online switch, and the state line in a pill. */
 function RiderTopBar({ name, rider, isOnline, gpsOn }: { name: string | null; rider: DeliveryPartner; isOnline: boolean; gpsOn: boolean }) {
   const { t } = useT();
+  const lang = useRiderLang((s) => s.lang);
+  const now = useNow();
   const first = (name ?? "").trim().split(/\s+/)[0] || t("rider.partner");
+  const date = now ? new Intl.DateTimeFormat(lang === "hi" ? "hi-IN" : "en-IN", { weekday: "long", day: "numeric", month: "short", timeZone: "Asia/Kolkata" }).format(now) : "";
+  const statusLabel = rider.status !== "active" ? (rider.status === "pending" ? t("status.pending") : t("status.suspended")) : isOnline ? t("status.online") : t("status.offline");
   return (
-    <header className="sticky top-0 z-30 bg-surface/95 backdrop-blur" style={{ paddingTop: "var(--safe-top)" }}>
-      <div className="mx-auto w-full max-w-lg px-4 pb-2 pt-4">
-        <div className="flex items-center justify-between gap-3">
-          <h1 className="min-w-0 truncate font-display text-[24px] font-extrabold leading-tight text-brand-700">{t("home.hello", { name: first })}</h1>
-          {rider.status === "active" ? <OnlineSwitch /> : null}
+    <header className="sticky top-0 z-30 rounded-b-[24px] bg-brand-700 text-white shadow-[0_6px_20px_rgb(21_128_61/0.25)]" style={{ paddingTop: "var(--safe-top)" }}>
+      <div className="mx-auto w-full max-w-lg px-5 pb-4 pt-3">
+        <div className="flex items-end justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[12px] font-semibold text-white/70">{date}</p>
+            <h1 className="truncate font-display text-[26px] font-extrabold leading-tight">{t("home.hello", { name: first })}</h1>
+          </div>
+          {rider.status === "active" ? <OnlineSwitch tone="light" className="mb-1" /> : null}
         </div>
-        <div className="mt-1 flex items-center gap-2">
-          <span className={cn("inline-flex items-center gap-1.5 text-[12px] font-bold", rider.status !== "active" ? "text-ink-3" : isOnline ? "text-success" : "text-ink-3")}>
-            <span className={cn("h-2 w-2 rounded-full", rider.status !== "active" ? "bg-ink-4" : isOnline ? "bg-success animate-pulse-soft" : "bg-ink-4")} />
-            {rider.status !== "active" ? (rider.status === "pending" ? t("status.pending") : t("status.suspended")) : isOnline ? t("status.online") : t("status.offline")}
+        <div className="mt-3 inline-flex max-w-full items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-bold">
+          <span className="inline-flex shrink-0 items-center gap-1.5">
+            <span className={cn("h-2 w-2 rounded-full", rider.status !== "active" ? "bg-white/50" : isOnline ? "bg-[#86efac] animate-pulse-soft" : "bg-white/50")} />
+            {statusLabel}
           </span>
-          <span className="text-ink-4" aria-hidden>·</span>
-          <StateLine gpsOn={gpsOn} />
+          <span className="text-white/40" aria-hidden>·</span>
+          <StateLine gpsOn={gpsOn} dark />
         </div>
       </div>
     </header>
@@ -153,28 +160,34 @@ export function LangToggle({ className }: { className?: string }) {
 }
 
 /** Where the connection and the GPS really stand, in one short line. */
-function StateLine({ gpsOn }: { gpsOn: boolean }) {
+function StateLine({ gpsOn, dark }: { gpsOn: boolean; dark?: boolean }) {
   const { t } = useT();
   const realtime = useRiderStore((s) => s.realtime);
   const network = useNetworkOnline();
-  const conn = !network ? { label: t("conn.noInternet"), tone: "text-danger", Icon: WifiOff } : realtime === "live" ? { label: t("conn.live"), tone: "text-success", Icon: Wifi } : realtime === "connecting" ? { label: t("conn.connecting"), tone: "text-ink-3", Icon: WifiOff } : { label: t("conn.reconnecting"), tone: "text-[#8a6300]", Icon: WifiOff };
+  const tones = dark ? DARK_TONES : LIGHT_TONES;
+  const conn = !network ? { label: t("conn.noInternet"), tone: tones.danger, Icon: WifiOff } : realtime === "live" ? { label: t("conn.live"), tone: tones.ok, Icon: Wifi } : realtime === "connecting" ? { label: t("conn.connecting"), tone: tones.muted, Icon: WifiOff } : { label: t("conn.reconnecting"), tone: tones.warn, Icon: WifiOff };
   return (
     <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] font-semibold leading-tight" role="status">
       <span className={cn("inline-flex shrink-0 items-center gap-1", conn.tone)}><conn.Icon className="h-3 w-3" aria-hidden />{conn.label}</span>
-      {gpsOn ? <GpsIndicator /> : null}
+      {gpsOn ? <GpsIndicator dark={dark} /> : null}
     </p>
   );
 }
 
+/** Text tones for the state line on a white card and on the green header. */
+const LIGHT_TONES = { ok: "text-success", warn: "text-[#8a6300]", danger: "text-danger", muted: "text-ink-3" };
+const DARK_TONES = { ok: "text-white", warn: "text-amber-200", danger: "text-red-200", muted: "text-white/70" };
+
 /** "GPS 3 s ago · ±12 m": only real fixes and their real age; an old fix reads stale, never live. */
-export function GpsIndicator({ className }: { className?: string }) {
+export function GpsIndicator({ className, dark }: { className?: string; dark?: boolean }) {
   const { t } = useT();
   const gps = useRiderStore((s) => s.gps);
   const now = useNow();
   const fixAge = gps.fix && now ? Math.max(0, now - gps.fix.at) : null;
   const stale = fixAge != null && fixAge > GPS_STALE_MS;
   const blocked = gps.status === "denied" || gps.status === "unavailable";
-  const tone = blocked ? "text-danger" : stale || gps.sendError || (gps.status === "error" && !gps.fix) ? "text-[#8a6300]" : gps.status === "watching" && gps.fix ? "text-success" : "text-ink-3";
+  const tones = dark ? DARK_TONES : LIGHT_TONES;
+  const tone = blocked ? tones.danger : stale || gps.sendError || (gps.status === "error" && !gps.fix) ? tones.warn : gps.status === "watching" && gps.fix ? tones.ok : tones.muted;
   const label = blocked ? (gps.status === "denied" ? t("gps.blocked") : t("gps.none"))
     : !gps.fix ? (gps.status === "error" ? t("gps.noSignal") : t("gps.finding"))
     : stale ? t("gps.stale", { ago: agoLabel(fixAge!, t) })

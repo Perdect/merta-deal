@@ -49,13 +49,14 @@ export function useOnlineToggle() {
 }
 
 /** The header's online switch: one tap, green when accepting requests. */
-export function OnlineSwitch({ className }: { className?: string }) {
+export function OnlineSwitch({ className, tone = "default" }: { className?: string; tone?: "default" | "light" }) {
   const { t } = useT();
   const { isOnline, busy, enabled, toggle } = useOnlineToggle();
+  const light = tone === "light";
   return (
     <button type="button" role="switch" aria-checked={isOnline} aria-busy={busy} disabled={!enabled} onClick={toggle} aria-label={isOnline ? t("online.youAreOnline") : t("online.youAreOffline")}
-      className={cn("relative inline-flex h-8 w-14 shrink-0 items-center rounded-full transition-colors disabled:opacity-50", isOnline ? "bg-brand-600" : "bg-line-2", className)}>
-      <span className={cn("inline-block h-6 w-6 rounded-full bg-white shadow transition-transform", isOnline ? "translate-x-7" : "translate-x-1", busy && "animate-pulse-soft")} />
+      className={cn("relative inline-flex h-8 w-14 shrink-0 items-center rounded-full transition-colors disabled:opacity-50", light ? (isOnline ? "bg-white" : "bg-white/25") : (isOnline ? "bg-brand-600" : "bg-line-2"), className)}>
+      <span className={cn("inline-block h-6 w-6 rounded-full shadow transition-transform", light && isOnline ? "bg-brand-700" : "bg-white", isOnline ? "translate-x-7" : "translate-x-1", busy && "animate-pulse-soft")} />
     </button>
   );
 }
