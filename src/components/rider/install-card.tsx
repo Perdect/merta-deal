@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { Download, Share, Smartphone, CheckCircle2 } from "lucide-react";
+import { Download, Share, Smartphone, CheckCircle2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/lib/rider-i18n";
 
@@ -42,7 +42,7 @@ export function InstallCard() {
 
   const installed = standalone || done;
   return (
-    <section className="rounded-[20px] bg-card p-4 shadow-card" aria-labelledby="install-head">
+    <section className="rounded-[20px] border border-white/70 bg-white/80 p-4 shadow-card backdrop-blur-md" aria-labelledby="install-head">
       <h2 id="install-head" className="flex items-center gap-2 font-display text-[16px] font-extrabold text-ink"><Smartphone className="h-4 w-4 text-brand-700" aria-hidden />{t("install.title")}</h2>
       {installed ? (
         <p className="mt-2 flex items-start gap-2 text-sm text-ink-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden />{t("install.installed")}</p>
@@ -59,7 +59,10 @@ export function InstallCard() {
       ) : (
         <p className="mt-2 text-sm text-ink-2">{t("install.noPrompt")}</p>
       )}
-      <p className="mt-3 text-xs text-ink-3">{t("install.note")}</p>
+      <details className="group mt-3">
+        <summary className="flex min-h-8 cursor-pointer list-none items-center gap-1 text-xs font-semibold text-brand-700 focus-visible:outline-2 focus-visible:outline-brand-600">{t("install.learnMore")}<ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" aria-hidden /></summary>
+        <p className="mt-1.5 text-xs text-ink-3">{t("install.note")}</p>
+      </details>
     </section>
   );
 }

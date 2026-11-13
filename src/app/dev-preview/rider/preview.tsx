@@ -6,6 +6,7 @@ import { RiderHome } from "@/components/rider/rider-home";
 import { OfferAlertView } from "@/components/rider/offer-alert";
 import { DeliveryHistory } from "@/components/rider/delivery-history";
 import { StaffLogin } from "@/components/auth/staff-login";
+import { RiderProfile } from "@/components/rider/rider-profile";
 import { useRiderStore } from "@/components/rider/rider-store";
 import { useNow } from "@/components/rider/use-now";
 import { useRiderLang } from "@/lib/rider-i18n";
@@ -35,7 +36,7 @@ const ringer = { sound: "ready" as const, leader: true, muted: false, unlock: as
 
 /** Toggle between "waiting", "active delivery" and "request popup" states; nothing here talks to the server on its own. */
 export function RiderPreview() {
-  const [state, setState] = React.useState<"waiting" | "active" | "offer" | "history" | "login">("active");
+  const [state, setState] = React.useState<"waiting" | "active" | "offer" | "history" | "login" | "profile">("active");
   const [collapsed, setCollapsed] = React.useState(false);
   const now = useNow();
   const lang = useRiderLang((s) => s.lang);
@@ -51,12 +52,12 @@ export function RiderPreview() {
     <div className="theme-rider contents">
       <PortalTheme portal="rider" />
       <div className="fixed left-2 top-2 z-[80] flex gap-1 rounded-md bg-ink/80 p-1 text-[11px] text-white">
-        {(["waiting", "active", "offer", "history", "login"] as const).map((s) => <button key={s} type="button" onClick={() => setState(s)} className={`rounded px-2 py-1 ${state === s ? "bg-white text-ink" : ""}`}>{s}</button>)}
+        {(["waiting", "active", "offer", "history", "login", "profile"] as const).map((s) => <button key={s} type="button" onClick={() => setState(s)} className={`rounded px-2 py-1 ${state === s ? "bg-white text-ink" : ""}`}>{s}</button>)}
         <button type="button" onClick={() => setLang(lang === "hi" ? "en" : "hi", true)} className="rounded bg-brand-600 px-2 py-1">{lang === "hi" ? "EN" : "हिं"}</button>
       </div>
       {state === "login" ? <StaffLogin portal="rider" /> : (
       <RiderShell user={{ id: rider.user_id, name: "Kayyum Khan" }} rider={rider} initialActive={state === "active"} initialLang="en" push={{ configured: false, vapidPublicKey: "" }}>
-        {state === "history" ? <DeliveryHistory items={history} /> : <RiderHome key={state} initial={initial} />}
+        {state === "history" ? <DeliveryHistory items={history} /> : state === "profile" ? <RiderProfile user={{ id: rider.user_id, name: "Kayyum Khan", phone: "8875020202", email: "rider@example.com", avatarUrl: null }} rider={rider} notifications={[]} push={{ configured: false, vapidPublicKey: "" }} /> : <RiderHome key={state} initial={initial} />}
       </RiderShell>)}
       {state === "offer" ? <OfferAlertView collapsed={collapsed} setCollapsed={setCollapsed} live={[{ ...base, status: "offered" } as RiderAssignment]} o={{ ...base, status: "offered" } as RiderAssignment} now={now} msLeft={125_000} urgent={false} customerArea="Sadar Bazaar" cod earns km muted={false} ringing ringer={ringer} busy={null} respond={async () => {}} confirmReject={false} setConfirmReject={() => {}} snooze={() => {}} /> : null}
     </div>

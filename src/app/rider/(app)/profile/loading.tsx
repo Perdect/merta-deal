@@ -1,12 +1,14 @@
 import { Skeleton } from "@/components/ui";
 
-export default function ProfileLoading() {
+/** Shapes of the profile sections while the rider row and notifications load. */
+export default function RiderProfileLoading() {
   return (
-    <div className="space-y-4" aria-busy>
-      <Skeleton className="h-7 w-28" />
-      <Skeleton className="h-24 w-full rounded-lg" />
-      <Skeleton className="h-80 w-full rounded-lg" />
-      <Skeleton className="h-40 w-full rounded-lg" />
+    <div className="space-y-3" aria-busy>
+      <Skeleton className="h-[128px] w-full rounded-[20px]" />
+      <Skeleton className="h-[200px] w-full rounded-[20px]" />
+      <Skeleton className="h-[220px] w-full rounded-[20px]" />
+      <Skeleton className="h-[96px] w-full rounded-[20px]" />
+      <Skeleton className="h-[72px] w-full rounded-[20px]" />
     </div>
   );
 }

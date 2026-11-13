@@ -6,7 +6,7 @@ customers see comes from the website, so login, cart, Razorpay/UPI, location, li
 push notifications work exactly as on the web, and **every website deploy updates the app
 instantly** — no Play Store release needed for content or design changes.
 
-Package: `com.mertadeal.app` · min Android 7.0 (API 24) · target API 36 · version 1.0.1 (code 2)
+Package: `com.mertadeal.app` · min Android 7.0 (API 24) · target API 36 · version 1.0.2 (code 3)
 
 ## What the native shell adds
 - Launcher icon (adaptive + themed/monochrome), green splash screen, white status/navigation bars
@@ -17,8 +17,8 @@ Package: `com.mertadeal.app` · min Android 7.0 (API 24) · target API 36 · ver
 - UPI apps open from Razorpay checkout; WebView fallback on phones without Chrome
 
 ## Files
-- `release/MertaDeal-1.0.1.apk` — install directly on a phone to test
-- `release/MertaDeal-1.0.1.aab` — upload this to Google Play
+- `release/MertaDeal-1.0.2.apk` — install directly on a phone to test
+- `release/MertaDeal-1.0.2.aab` — upload this to Google Play
 - `store-listing/` — Play icon, feature graphic, listing text, data-safety notes
 - `merta-deal-upload.jks` + `keystore.properties` — **upload signing key (secret, not in git)**
 
@@ -35,7 +35,7 @@ upload key:
 
 ## Publish on Google Play
 1. Create the app in Play Console (developer account, one-time US$25), name "Merta Deal".
-2. Upload `release/MertaDeal-1.0.1.aab` to Internal testing first; keep **Play App Signing** on.
+2. Upload `release/MertaDeal-1.0.2.aab` to Internal testing first; keep **Play App Signing** on.
 3. In Play Console → Setup → App signing, copy the **App signing key certificate SHA-256** and add it
    to Vercel: `ANDROID_CERT_SHA256 = <upload key>,<Play app signing key>`, then redeploy. (Without
    this, phones that install from Play show an address bar.)
@@ -45,7 +45,7 @@ upload key:
    in Vercel and redeploy — the website's "Get it on Android" buttons then open the Play listing.
 
 ## Test on a phone
-Enable "Install unknown apps" for your file manager, copy `MertaDeal-1.0.1.apk` to the phone and
+Enable "Install unknown apps" for your file manager, copy `MertaDeal-1.0.2.apk` to the phone and
 open it. Chrome must be installed and up to date.
 
 ## Rebuild / release an update

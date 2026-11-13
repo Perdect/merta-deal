@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { BellRing, Volume2, VolumeX, Smartphone, Play, X } from "lucide-react";
+import { BellRing, Volume2, VolumeX, Smartphone, Play, X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, Switch } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -60,9 +60,10 @@ const pill: Record<"green" | "amber" | "neutral" | "red", string> = {
 };
 
 /** Full settings block: status rows, the enable button, test, mute and ringtone. */
-export function AlertSetup({ portal, push, className }: { portal: Portal; push: PushConfig; className?: string }) {
+export function AlertSetup({ portal, push, className, compact, moreLabel = "Ringtone, mute and details" }: { portal: Portal; push: PushConfig; className?: string; /** Rider profile: status + Enable up front, the ringtone, mute and explanation behind one "more" toggle. */ compact?: boolean; moreLabel?: string }) {
   const s = useAlertSetup(push);
   const who = portal === "admin" ? "a new order" : "a delivery request";
+  const Wrap = compact ? "details" : "div";
   return (
     <div className={cn("space-y-4", className)}>
       <dl className="grid gap-2 sm:grid-cols-2">
@@ -70,11 +71,13 @@ export function AlertSetup({ portal, push, className }: { portal: Portal; push: 
         <StatusRow icon={<Smartphone className="h-4 w-4" aria-hidden />} label="Push notifications" value={s.pushLabel} tone={s.pushTone} />
       </dl>
       <div className="flex flex-wrap gap-2">
-        <Button size="lg" onClick={s.enable} loading={s.busy} disabled={s.ringer.sound === "unsupported" && !s.sub.available} className="flex-1 sm:flex-none">
+        <Button size="lg" onClick={s.enable} loading={s.busy} disabled={s.ringer.sound === "unsupported" && !s.sub.available} className={cn("flex-1 sm:flex-none", compact && "h-12 rounded-xl")}>
           <BellRing className="h-4 w-4" /> {s.needsSetup ? "Enable order alerts" : "Re-check alerts"}
         </Button>
-        <Button size="lg" variant="outline" onClick={() => s.test()} disabled={s.ringer.sound === "unsupported"}><Play className="h-4 w-4" /> Test ringtone</Button>
+        <Button size="lg" variant="outline" onClick={() => s.test()} disabled={s.ringer.sound === "unsupported"} className={cn(compact && "h-12 rounded-xl")}><Play className="h-4 w-4" /> Test ringtone</Button>
       </div>
+      <Wrap className={cn(compact && "group space-y-4 rounded-xl bg-surface-2 px-3.5 py-2.5")}>
+      {compact ? <summary className="flex min-h-8 cursor-pointer list-none items-center justify-between text-sm font-semibold text-brand-700 focus-visible:outline-2 focus-visible:outline-brand-600"><span>{moreLabel}</span><ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden /></summary> : null}
       <div className="grid gap-3 sm:grid-cols-2">
         <Select label="Ringtone" value={s.ringer.ringtone} onChange={(e) => { s.ringer.setRingtone(e.target.value as RingtoneKey); void s.test(e.target.value as RingtoneKey); }}
           options={(Object.keys(RINGTONES) as RingtoneKey[]).map((k) => ({ value: k, label: `${RINGTONES[k].label} · ${RINGTONES[k].description}` }))} hint="Plays when the ringtone changes" />
@@ -82,7 +85,7 @@ export function AlertSetup({ portal, push, className }: { portal: Portal; push: 
           <Switch checked={s.ringer.muted} onChange={(v) => s.ringer.setMuted(v)} label={s.ringer.muted ? "Muted on this device" : "Mute this device"} description="Alerts still show on screen; only the sound stops." />
         </div>
       </div>
-      <div className="rounded-lg bg-surface px-3 py-2.5 text-xs text-ink-2">
+      <div className={cn("rounded-lg px-3 py-2.5 text-xs text-ink-2", compact ? "bg-card" : "bg-surface")}>
         <p className="font-semibold text-ink">What rings, and when</p>
         <ul className="mt-1 list-disc space-y-0.5 pl-4">
           <li>While this page is open (even in a background tab) the device rings for {who} until it is handled or the ring time runs out.</li>
@@ -92,6 +95,7 @@ export function AlertSetup({ portal, push, className }: { portal: Portal; push: 
           {s.sub.permission === "denied" ? <li>Notifications are blocked for this site. Allow them in the browser&rsquo;s site settings, then tap Enable again.</li> : null}
         </ul>
       </div>
+      </Wrap>
     </div>
   );
 }
