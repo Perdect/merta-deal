@@ -7,7 +7,8 @@ import { AdminPageHeader, Panel, EmptyBlock, ErrorBlock, StatusText, StatusTabs 
 import { BuyerControls } from "@/components/admin/wholesale/shop-controls";
 import { OrderControls } from "@/components/admin/wholesale/order-controls";
 import { ProductEditor } from "@/components/admin/wholesale/product-editor";
-import { BUYER_STATUS_LABEL, WHOLESALE_ORDER_LABEL_ADMIN, buyerLabel, restockDateLabel } from "@/lib/wholesale";
+import { QuoteEditor, QuoteSummary } from "@/components/admin/wholesale/quote-editor";
+import { BUYER_STATUS_LABEL, WHOLESALE_ORDER_LABEL_ADMIN, buyerLabel, restockDateLabel, isQuoteStage } from "@/lib/wholesale";
 import { formatINR, formatDateTime, timeAgo } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Wholesale" };
@@ -26,12 +27,12 @@ export default async function AdminWholesalePage({ searchParams }: { searchParam
       {!installed ? <EmptyBlock icon={Warehouse} title="Wholesale isn't switched on yet" description="Apply migration 0045 to this database first." /> : error || !overview ? <ErrorBlock title="Couldn't load wholesale" description={error ?? undefined} retryHref="/admin/wholesale" /> : (
         <>
           <StatusTabs defaultValue="orders" items={[
-            { value: "orders", label: "Orders", count: overview.counts.approved_orders || null },
+            { value: "orders", label: "Orders", count: (overview.counts.open_requests ?? 0) + (overview.counts.approved_orders ?? 0) || null },
             { value: "buyers", label: "Buyers", count: overview.counts.buyers || null },
             { value: "products", label: "Products & prices", count: overview.products.length || null },
           ]} />
           {tab === "orders" ? (
-            <Panel title="Wholesale orders" description="Approved orders are waiting for you to confirm stock and place them. Proposed ones are with the buyer for review." flush>
+            <Panel title="Wholesale orders" description={`Bulk orders marked "needs a quote" are waiting for you to price them. Approved ones are waiting for you to confirm stock and place them.${overview.counts.awaiting_customer ? ` ${overview.counts.awaiting_customer} quote(s) are with customers.` : ""}`} flush>
               {overview.orders.length === 0 ? <EmptyBlock icon={Warehouse} title="No wholesale orders yet" description="Orders appear here when a customer orders full cases from the Wholesale page or approves a monthly order." /> : (
                 <ul className="divide-y divide-line">
                   {overview.orders.map((o) => (
@@ -45,9 +46,11 @@ export default async function AdminWholesalePage({ searchParams }: { searchParam
                         <p className="mt-1 text-sm font-semibold text-ink">Items {formatINR(o.subtotal)}{o.has_unpriced ? " + items on quote" : ""}</p>
                         {o.shop_note ? <p className="text-xs text-ink-2">Buyer: “{o.shop_note}”</p> : null}
                         {o.admin_note ? <p className="text-xs text-ink-3">Note: {o.admin_note}</p> : null}
-                        <p className="text-[11px] text-ink-3">{o.approved_at ? `${o.list_id ? "Approved" : "Ordered"} ${formatDateTime(o.approved_at)}` : `Proposed ${timeAgo(o.created_at)}`}</p>
+                        {o.quote_note ? <p className="text-xs text-ink-2">Quote note: {o.quote_note}</p> : null}
+                        <QuoteSummary order={o} />
+                        <p className="text-[11px] text-ink-3">{o.approved_at ? `${o.list_id ? "Approved" : "Ordered"} ${formatDateTime(o.approved_at)}` : `Received ${timeAgo(o.created_at)}`}{o.quoted_at ? ` · quoted ${formatDateTime(o.quoted_at)}` : ""}</p>
                       </div>
-                      <div className="sm:w-72"><OrderControls order={o} /></div>
+                      <div className="sm:w-96">{isQuoteStage(o.status) ? <QuoteEditor key={`${o.id}-${o.status}`} order={o} products={overview.products} /> : <OrderControls order={o} />}</div>
                     </li>
                   ))}
                 </ul>

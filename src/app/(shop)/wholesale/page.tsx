@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ShoppingBasket, ClipboardList, CalendarCheck, Truck, ShieldCheck } from "lucide-react";
 import { AppBar } from "@/components/shop/app-bar";
 import { CatalogueGrid } from "@/components/wholesale/catalogue-grid";
+import { BulkOrderCta } from "@/components/wholesale/bulk-order-builder";
 import { Button } from "@/components/ui/button";
 import { getWholesaleCatalogue, getMyWholesale } from "@/lib/data/wholesale";
 import { getSessionUser } from "@/lib/supabase/server";
@@ -24,8 +25,10 @@ export default async function WholesalePage() {
   const fee = Number(settings.wholesale_delivery_fee ?? 0) || 0;
   const eta = etaText(Number(settings.delivery_eta_min_minutes), Number(settings.delivery_eta_max_minutes)) ?? "minutes";
   const hasOrders = Boolean(mine?.shop && ((mine.orders?.length ?? 0) > 0 || mine.list));
+  // Bulk orders with quotes arrive with migration 0053; until then only the catalogue flow is offered.
+  const bulkOrders = mine?.settings?.max_request_lines != null;
   const steps = [
-    { icon: ShoppingBasket, t: "Pick full cases", s: "Every product shows the case size, the minimum and the wholesale price per case. Add what you need." },
+    { icon: ShoppingBasket, t: bulkOrders ? "Pick full cases, or write it in" : "Pick full cases", s: `Every product shows the case size, the minimum and the wholesale price per case.${bulkOrders ? " Anything we don't list, write in and we price it." : " Add what you need."}` },
     { icon: CalendarCheck, t: "Order now, or every month", s: `Order today with your mobile number and OTP, or save a monthly list and we ask you to review it ${Number(settings.wholesale_review_lead_days ?? 2) || 2} days before each restock day.` },
     { icon: ClipboardList, t: "We confirm, you approve", s: "We check the stock and place the order. Nothing is placed or charged without your approval." },
     { icon: Truck, t: "Delivered, pay on delivery", s: "Our rider brings it to your home or shop on the day you chose. Pay cash or UPI at the door, with the OTP as proof." },
@@ -40,11 +43,14 @@ export default async function WholesalePage() {
         <p lang="hi" className="mt-1.5 text-sm text-ink-3">पूरे कार्टन, थोक भाव में। घर हो या दुकान, कोई भी ऑर्डर कर सकता है। पैसा डिलीवरी पर।</p>
         <div className="mt-4 flex flex-wrap gap-2">
           {!enabled ? <p className="text-sm font-semibold text-ink-2">Wholesale ordering is closed right now.</p>
+            : bulkOrders ? <><Button href="/wholesale/order" size="lg" className="rounded-xl">Create a bulk order</Button><Button href="#range" variant="outline" size="lg" className="rounded-xl">Browse the range</Button></>
             : <Button href="#range" size="lg" className="rounded-xl">Shop wholesale</Button>}
           {hasOrders ? <Button href="/account/wholesale" variant="outline" size="lg" className="rounded-xl">My wholesale orders</Button> : null}
           <Button href={`tel:${site.supportPhone.replace(/\s/g, "")}`} variant="outline" size="lg" className="rounded-xl">Call {site.supportPhone}</Button>
         </div>
       </section>
+
+      {enabled && bulkOrders ? <BulkOrderCta className="mt-4" /> : null}
 
       <section className="mt-6" aria-labelledby="how">
         <h2 id="how" className="font-display text-lg font-bold text-ink">How it works</h2>
@@ -63,7 +69,7 @@ export default async function WholesalePage() {
           <h2 id="range-h" className="font-display text-lg font-bold text-ink">Wholesale range</h2>
           {user ? <Link href="/account/wholesale" className="text-sm font-semibold text-brand-700">Monthly list &amp; orders</Link> : null}
         </div>
-        <p className="mt-1 text-sm text-ink-3">Prices are per full case. A product on quote has no wholesale price yet; call us and we confirm it before you order. We add products as suppliers confirm.</p>
+        <p className="mt-1 text-sm text-ink-3">Prices are per full case. A product on quote has no wholesale price yet; add it to a bulk order and we send you the price before anything is packed. We add products as suppliers confirm.</p>
         <div className="mt-3">{enabled ? <CatalogueGrid items={cat.items} signedIn={Boolean(user)} eta={eta} minOrder={minOrder} deliveryFee={fee} /> : null}</div>
       </section>
 

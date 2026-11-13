@@ -1,11 +1,11 @@
 "use client";
 import { createClient } from "@/lib/supabase/client";
 
-export type Bucket = "product-images" | "avatars" | "banners";
+export type Bucket = "product-images" | "avatars" | "banners" | "wholesale-photos";
 
 /**
  * Uploads a file to Supabase Storage from the browser (RLS on storage.objects: product images and
- * banners are admin-only, avatars live under <userId>/...). Returns the public URL.
+ * banners are admin-only, avatars and wholesale request photos live under <userId>/...). Returns the public URL.
  */
 export async function uploadFile(bucket: Bucket, folder: string, file: File, opts: { maxMb?: number } = {}) {
   const maxMb = opts.maxMb ?? 5;

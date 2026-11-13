@@ -188,5 +188,119 @@ await q(`update profiles set is_guest = true where id = '30000000-0000-4000-8000
 await as("30000000-0000-4000-8000-000000000003");
 ok("a guest session cannot order wholesale", /sign in with your mobile number/.test((await err(`select public.order_wholesale_now($1::jsonb)`, [JSON.stringify([{ product_id: prodB.id, cases: 2 }])])) ?? "no error"));
 
+
+// ---------------------------------------------------------------------------
+// 0053 — bulk orders: off-catalogue requests, staff quote, customer approval
+// ---------------------------------------------------------------------------
+console.log("Bulk orders and quotes (0053)");
+await q(`update profiles set is_guest = false where id = '30000000-0000-4000-8000-000000000003'`);
+await as(ADMIN);
+await q(`select public.admin_set_wholesale_product($1::uuid, 12, 1, 10, null, true)`, [prodA.id]);   // on quote
+await q(`select public.admin_set_wholesale_product($1::uuid, 6, 2, null, 540, true)`, [prodB.id]);   // priced
+const addr2 = (await one(`insert into addresses (user_id, label, full_name, phone, house, street, area, city, pincode, lat, lng, is_default)
+  select $1, 'other', 'Pooja Sharma', '9876500002', 'Shop 4', 'Station Road', 'Merta City', city, pincode, lat, lng, false from addresses where id = $2 returning id`, [CUST, addr])).id;
+
+await as(null);
+ok("anonymous visitors cannot send a bulk order", /AUTH_REQUIRED|permission/i.test((await err(`select public.submit_wholesale_order('[]'::jsonb)`)) ?? ""));
+await as(CUST);
+ok("an empty bulk order is refused", /at least one product/.test((await err(`select public.submit_wholesale_order('[]'::jsonb, '[]'::jsonb)`)) ?? ""));
+ok("someone else's address is refused", /saved addresses/.test((await err(`select public.submit_wholesale_order($1::jsonb, '[]'::jsonb, (select id from addresses where user_id = $2 limit 1))`, [JSON.stringify([{ product_id: prodB.id, cases: 2 }]), OTHER])) ?? ""));
+ok("a requested item with no quantity is refused", /how much/.test((await err(`select public.submit_wholesale_order('[]'::jsonb, $1::jsonb)`, [JSON.stringify([{ name: "Tata Salt", unit: "cases" }])])) ?? ""));
+ok("a requested item with no unit is refused", /unit/.test((await err(`select public.submit_wholesale_order('[]'::jsonb, $1::jsonb)`, [JSON.stringify([{ name: "Tata Salt", quantity: "10" }])])) ?? ""));
+ok("a photo that is not a link is refused", /photo/.test((await err(`select public.submit_wholesale_order('[]'::jsonb, $1::jsonb)`, [JSON.stringify([{ name: "Tata Salt", quantity: "10", unit: "cases", photo_url: "javascript:1" }])])) ?? ""));
+await q(`update settings set value = '2'::jsonb where key = 'wholesale_max_request_lines'`);
+ok("more requested items than the setting allows is refused", /up to 2 items/.test((await err(`select public.submit_wholesale_order('[]'::jsonb, $1::jsonb)`, [JSON.stringify([1, 2, 3].map((n) => ({ name: `Item ${n}`, quantity: "1", unit: "cases" })))])) ?? ""));
+await q(`update settings set value = '20'::jsonb where key = 'wholesale_max_request_lines'`);
+
+// Fully priced, nothing requested → straight to approved, exactly like "order now".
+const fast = await fnv(`public.submit_wholesale_order($1::jsonb, '[]'::jsonb, $2::uuid, null, 'Pooja', '9876500002', 'Ring the bell')`, [JSON.stringify([{ product_id: prodB.id, cases: 2 }]), addr2]);
+ok("a fully priced bulk order needs no quote", fast.status === "approved" && Number(fast.subtotal) === 1080 && fast.address_id === addr2 && fast.contact_name === "Pooja" && fast.delivery_notes === "Ring the bell", JSON.stringify([fast.status, fast.subtotal]));
+ok("it carries no requested lines", Array.isArray(fast.requested_items) && fast.requested_items.length === 0);
+
+// A quote-required product plus two written items → submitted, waiting for a person.
+const bulk = await fnv(`public.submit_wholesale_order($1::jsonb, $2::jsonb, $3::uuid, (current_date + 3)::date, 'Rakesh', '9876500001', 'Back gate')`, [
+  JSON.stringify([{ product_id: prodB.id, cases: 2 }, { product_id: prodA.id, cases: 1 }]),
+  JSON.stringify([
+    { name: "Tata Salt 1 kg", brand: "Tata", quantity: "10", unit: "cases", notes: "iodised only", photo_url: "https://example.com/salt.webp" },
+    { name: "Besan loose", quantity: "25", unit: "kg" },
+  ]), addr2]);
+ok("an order with items to price waits as submitted", bulk.status === "submitted" && bulk.has_unpriced === true && bulk.approved_at === null, JSON.stringify([bulk.status, bulk.has_unpriced]));
+ok("what the customer wrote is kept line by line, unpriced", bulk.requested_items.length === 2 && bulk.requested_items[0].name === "Tata Salt 1 kg" && bulk.requested_items[0].brand === "Tata"
+  && Number(bulk.requested_items[0].quantity) === 10 && bulk.requested_items[0].unit === "cases" && bulk.requested_items[0].status === "pending" && bulk.requested_items[0].price_per_case === undefined
+  && bulk.requested_items[1].brand === null, JSON.stringify(bulk.requested_items[0]));
+ok("the admins are told a quote is needed", (await one(`select count(*)::int c from notifications where type = 'wholesale_request' and user_id = $1`, [ADMIN])).c === 1);
+const reviewBase = (await one(`select count(*)::int c from notifications where user_id = $1 and type = 'wholesale_review'`, [CUST])).c;
+ok("the customer is told nothing yet", (await one(`select count(*)::int c from notifications where user_id = $1 and type = 'wholesale_review' and title like '%quote%'`, [CUST])).c === 0);
+await as(ADMIN);
+ok("a submitted order cannot be placed", /approved can be placed/.test((await err(`select public.admin_confirm_wholesale_order($1::uuid)`, [bulk.id])) ?? ""));
+await as(CUST);
+ok("the customer cannot answer a quote that was never sent", /cannot be answered/.test((await err(`select public.shop_respond_wholesale_quote($1::uuid, 'approve')`, [bulk.id])) ?? ""));
+ok("the customer cannot quote their own order", /FORBIDDEN/.test((await err(`select public.admin_quote_wholesale_order($1::uuid, '[]'::jsonb)`, [bulk.id])) ?? ""));
+
+await as(ADMIN);
+ok("sending a quote with an unpriced line is refused", /price for every line/.test((await err(`select public.admin_quote_wholesale_order($1::uuid, $2::jsonb, '[]'::jsonb, null, null, 'send')`, [bulk.id, JSON.stringify([{ product_id: prodB.id, cases: 2 }, { product_id: prodA.id, cases: 1 }])])) ?? ""));
+ok("marking a written item as added without putting it in the order is refused", /before marking/.test((await err(`select public.admin_quote_wholesale_order($1::uuid, $2::jsonb, $3::jsonb)`, [bulk.id, JSON.stringify([{ product_id: prodB.id, cases: 2 }]), JSON.stringify([{ id: "r1", status: "fulfilled", product_id: prodA.id }])])) ?? ""));
+const saved = await fnv(`public.admin_quote_wholesale_order($1::uuid, $2::jsonb, '[]'::jsonb, null, null, 'save')`, [bulk.id, JSON.stringify([{ product_id: prodB.id, cases: 2 }])]);
+ok("staff can keep working privately", saved.status === "reviewing" && saved.quoted_at === null);
+ok("nothing reaches the customer while it is being reviewed", (await one(`select count(*)::int c from notifications where user_id = $1 and type = 'wholesale_review'`, [CUST])).c === reviewBase);
+ok("sending with an open written item is refused", /still open/.test((await err(`select public.admin_quote_wholesale_order($1::uuid, $2::jsonb, '[]'::jsonb, null, null, 'send')`, [bulk.id, JSON.stringify([{ product_id: prodB.id, cases: 2 }])])) ?? ""));
+
+// Price the quote-required product, map the first written item to it, decline the second.
+await q(`select public.admin_set_wholesale_product($1::uuid, 12, 1, 10, 960, true)`, [prodA.id]);
+const quoted = await fnv(`public.admin_quote_wholesale_order($1::uuid, $2::jsonb, $3::jsonb, 50, 'Besan is out this week', 'send')`, [bulk.id,
+  JSON.stringify([{ product_id: prodB.id, cases: 2 }, { product_id: prodA.id, cases: 3 }]),
+  JSON.stringify([{ id: "r1", status: "fulfilled", product_id: prodA.id, admin_note: "Sold as a 12-pack case" }, { id: "r2", status: "unavailable", admin_note: "No supplier this week" }])]);
+ok("the quote is sent with every line resolved", quoted.status === "quoted" && quoted.has_unpriced === false && Number(quoted.subtotal) === 1080 + 2880 && Number(quoted.delivery_fee) === 50, JSON.stringify([quoted.status, quoted.subtotal]));
+ok("a written item becomes a real catalogue line, never an invented one", quoted.requested_items[0].status === "fulfilled" && quoted.requested_items[0].product_id === prodA.id && quoted.requested_items[0].cases === 3
+  && quoted.requested_items[1].status === "unavailable" && quoted.requested_items[1].admin_note === "No supplier this week", JSON.stringify(quoted.requested_items));
+ok("the customer's own words are not rewritten", quoted.requested_items[0].name === "Tata Salt 1 kg" && Number(quoted.requested_items[0].quantity) === 10);
+ok("the customer is told the quote is ready", (await one(`select count(*)::int c from notifications where user_id = $1 and type = 'wholesale_review' and title like '%quote is ready%'`, [CUST])).c === 1);
+
+await as(CUST);
+ok("only approve or decline are accepted", /approve or decline/.test((await err(`select public.shop_respond_wholesale_quote($1::uuid, 'maybe')`, [bulk.id])) ?? ""));
+await as(OTHER);
+ok("another customer cannot answer this quote", /not found|mobile number|paused/i.test((await err(`select public.shop_respond_wholesale_quote($1::uuid, 'approve')`, [bulk.id])) ?? ""));
+await as(CUST);
+const approved = await fnv(`public.shop_respond_wholesale_quote($1::uuid, 'approve', 'Please deliver before noon')`, [bulk.id]);
+ok("approving moves it to approved", approved.status === "approved" && approved.approved_at !== null && approved.shop_note === "Please deliver before noon");
+ok("the admins are told the quote was approved", (await one(`select count(*)::int c from notifications where type = 'wholesale_approved' and user_id = $1 and title like '%quote approved%'`, [ADMIN])).c === 1);
+ok("answering twice is refused", /cannot be answered/.test((await err(`select public.shop_respond_wholesale_quote($1::uuid, 'approve')`, [bulk.id])) ?? ""));
+
+await as(ADMIN);
+ok("a quoted order can no longer be re-quoted once approved", /cannot be quoted/.test((await err(`select public.admin_quote_wholesale_order($1::uuid, '[]'::jsonb)`, [bulk.id])) ?? ""));
+const placedQ = await fnv(`public.admin_confirm_wholesale_order($1::uuid, 'Placed after the quote')`, [bulk.id]);
+const oq = await one(`select * from orders where id = $1`, [placedQ.order_id]);
+ok("the approved quote becomes a real order", oq.channel === "wholesale" && Number(oq.subtotal) === 3960 && Number(oq.delivery_fee) === 50, JSON.stringify([oq.channel, oq.subtotal, oq.delivery_fee]));
+ok("the quoted fee is what the customer approved", Number(oq.delivery_fee) === 50 && Number(oq.total) === 3960 + 50 + 9, JSON.stringify([oq.delivery_fee, oq.total]));
+ok("the order goes to the address chosen for it, not the saved default", oq.address_snapshot.house === "Shop 4");
+ok("the contact and instructions ride along to the rider", /Rakesh/.test(oq.delivery_instructions) && /Back gate/.test(oq.delivery_instructions), oq.delivery_instructions);
+ok("the item the customer wrote about is on the order as the real product", (await one(`select count(*)::int c from order_items where order_id = $1 and product_id = $2`, [placedQ.order_id, prodA.id])).c === 1);
+ok("the unavailable item was never added", (await one(`select count(*)::int c from order_items where order_id = $1`, [placedQ.order_id])).c === 2);
+
+// A quote the customer turns down.
+await as(CUST);
+const bulk2 = await fnv(`public.submit_wholesale_order('[]'::jsonb, $1::jsonb, $2::uuid)`, [JSON.stringify([{ name: "Mustard oil tin", quantity: "4", unit: "tins" }]), addr2]);
+ok("an order with only written items is accepted and waits", bulk2.status === "submitted" && bulk2.requested_items.length === 1 && Number(bulk2.subtotal) === 0);
+await as(ADMIN);
+await q(`select public.admin_quote_wholesale_order($1::uuid, $2::jsonb, $3::jsonb, 0, null, 'send')`, [bulk2.id, JSON.stringify([{ product_id: prodB.id, cases: 2 }]), JSON.stringify([{ id: "r1", status: "fulfilled", product_id: prodB.id }])]);
+await as(CUST);
+const declined = await fnv(`public.shop_respond_wholesale_quote($1::uuid, 'decline', 'Too expensive')`, [bulk2.id]);
+ok("the customer can decline a quote", declined.status === "declined" && declined.shop_note === "Too expensive");
+await as(ADMIN);
+ok("the admins are told it was declined", (await one(`select count(*)::int c from notifications where type = 'wholesale_request' and user_id = $1 and title like '%declined%'`, [ADMIN])).c === 1);
+ok("a declined quote cannot be placed", /approved can be placed/.test((await err(`select public.admin_confirm_wholesale_order($1::uuid)`, [bulk2.id])) ?? ""));
+await as(CUST);
+const bulk3 = await fnv(`public.submit_wholesale_order('[]'::jsonb, $1::jsonb, $2::uuid)`, [JSON.stringify([{ name: "Poha 25 kg", quantity: "2", unit: "bags" }]), addr2]);
+await as(ADMIN);
+ok("an admin can cancel an order that is still being quoted", (await fnv(`public.admin_cancel_wholesale_order($1::uuid, 'Buyer called it off')`, [bulk3.id])).status === "cancelled");
+ok("the buyer is told it was cancelled", (await one(`select count(*)::int c from notifications where user_id = $1 and title like '%cancelled%'`, [CUST])).c >= 1);
+
+console.log("Access (0053)");
+ok("the new entry points are closed to anonymous visitors", (await one(`select has_function_privilege('anon', 'public.submit_wholesale_order(jsonb,jsonb,uuid,date,text,text,text)', 'execute') a,
+  has_function_privilege('anon', 'public.shop_respond_wholesale_quote(uuid,text,text)', 'execute') b,
+  has_function_privilege('authenticated', 'public._wholesale_requested(jsonb)', 'execute') c`)).a === false);
+ok("the request normaliser is internal", (await one(`select has_function_privilege('authenticated', 'public._wholesale_requested(jsonb)', 'execute') c`)).c === false);
+ok("the buyer's own order rows stay readable only to them and admins", (await one(`select count(*)::int c from pg_policies where tablename = 'wholesale_orders'`)).c === 1);
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

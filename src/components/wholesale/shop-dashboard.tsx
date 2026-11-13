@@ -11,7 +11,8 @@ import { ProductImage } from "@/components/shop/product-image";
 import { toast } from "@/components/ui/toast";
 import { pauseWholesaleListAction, proposeWholesaleOrderAction, reviewWholesaleOrderAction, saveWholesaleListAction } from "@/lib/actions/wholesale";
 import { formatINR, formatDateTime, cn } from "@/lib/utils";
-import { buyerLabel, ordinal, restockDateLabel, BUYER_STATUS_LABEL, WHOLESALE_ORDER_LABEL, type MyWholesale, type WholesaleCatalogueItem, type WholesaleOrder } from "@/lib/wholesale";
+import { QuoteReview, PendingRequestCard } from "./quote-review";
+import { buyerLabel, ordinal, restockDateLabel, isQuoteStage, wholesaleStage, BUYER_STATUS_LABEL, type MyWholesale, type WholesaleCatalogueItem, type WholesaleOrder } from "@/lib/wholesale";
 
 type Line = { product_id: string; cases: number };
 const byId = (items: WholesaleCatalogueItem[]) => Object.fromEntries(items.map((i) => [i.product_id, i]));
@@ -21,6 +22,8 @@ export function ShopDashboard({ data, catalogue }: { data: MyWholesale; catalogu
   const buyer = data.shop;
   const paused = buyer?.status === "suspended";
   const proposed = (data.orders ?? []).find((o) => o.status === "proposed") ?? null;
+  const quoted = (data.orders ?? []).filter((o) => o.status === "quoted");
+  const waiting = (data.orders ?? []).filter((o) => o.status === "submitted" || o.status === "reviewing");
   return (
     <div className="space-y-5">
       <section className={cn("rounded-2xl border p-4", paused ? "border-line bg-card" : "border-brand-100 bg-brand-50")}>
@@ -30,7 +33,7 @@ export function ShopDashboard({ data, catalogue }: { data: MyWholesale; catalogu
             <h2 className="mt-0.5 font-display text-xl font-bold text-ink">{buyer ? buyerLabel(buyer) : "Full cases at wholesale prices"}</h2>
             {buyer ? <p className="text-sm text-ink-2">{buyer.shop_name ? `${buyer.owner_name} · ` : ""}+91 {buyer.phone}{buyer.gstin ? ` · GSTIN ${buyer.gstin}` : ""}</p> : <p className="text-sm text-ink-2">Order now from the wholesale range, or keep a monthly list below.</p>}
           </div>
-          <Button href="/wholesale#range" size="sm" className="shrink-0 rounded-lg"><ShoppingBasket className="h-4 w-4" /> Order now</Button>
+          <Button href="/wholesale/order" size="sm" className="shrink-0 rounded-lg"><ShoppingBasket className="h-4 w-4" /> New bulk order</Button>
         </div>
         {buyer ? (buyer.address ? <p className="mt-2 text-sm text-ink-2">Delivers to {[buyer.address.house, buyer.address.street, buyer.address.area, `${buyer.address.city} – ${buyer.address.pincode}`].filter(Boolean).join(", ")}</p>
           : <p className="mt-2 text-sm text-danger">No delivery address on file. <Link href="/wholesale/register" className="font-semibold underline">Add one</Link>.</p>) : null}
@@ -38,9 +41,11 @@ export function ShopDashboard({ data, catalogue }: { data: MyWholesale; catalogu
         <p className="mt-2 text-xs text-ink-3"><Link href="/wholesale/register" className="font-semibold text-brand-700">{buyer?.shop_name || buyer?.gstin ? "Edit shop details" : "Run a shop? Add its name and GSTIN for your bills"}</Link></p>
       </section>
 
+      {!paused ? quoted.map((o) => <QuoteReview key={o.id} order={o} settings={data.settings} />) : null}
+      {!paused ? waiting.map((o) => <PendingRequestCard key={o.id} order={o} quoteHours={data.settings?.quote_lead_hours ?? 24} />) : null}
       {!paused && proposed ? <ProposalReview order={proposed} catalogue={catalogue} settings={data.settings} /> : null}
       {!paused ? <ListEditor list={data.list ?? null} catalogue={catalogue} hasProposal={Boolean(proposed)} leadDays={data.settings?.lead_days ?? 2} /> : null}
-      <OrderHistory orders={(data.orders ?? []).filter((o) => o.status !== "proposed")} />
+      <OrderHistory orders={(data.orders ?? []).filter((o) => o.status !== "proposed" && !isQuoteStage(o.status))} />
     </div>
   );
 }
@@ -206,7 +211,7 @@ function OrderHistory({ orders }: { orders: WholesaleOrder[] }) {
           <li key={o.id} className="flex items-center gap-3 px-4 py-3 text-sm">
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-ink">{o.list_id ? "Restock" : "Delivery"} {restockDateLabel(o.restock_date)}{o.order_number ? ` · ${o.order_number}` : ""}</p>
-              <p className="text-xs text-ink-3">{WHOLESALE_ORDER_LABEL[o.status]}{o.order_status ? ` · ${o.order_status.replace(/_/g, " ")}` : ""} · {o.items.length} product{o.items.length === 1 ? "" : "s"} · {formatINR(o.subtotal)}{o.placed_at ? ` · ${formatDateTime(o.placed_at)}` : ""}</p>
+              <p className="text-xs text-ink-3">{wholesaleStage(o).label} · {o.items.length} product{o.items.length === 1 ? "" : "s"} · {formatINR(o.subtotal)}{o.placed_at ? ` · ${formatDateTime(o.placed_at)}` : ""}</p>
               {o.admin_note ? <p className="text-xs text-ink-2">{o.admin_note}</p> : null}
             </div>
             {o.order_id ? <Link href={`/orders/${o.order_id}`} className="text-sm font-semibold text-brand-700">Track</Link> : null}
