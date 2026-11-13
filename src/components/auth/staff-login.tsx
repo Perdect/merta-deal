@@ -1,6 +1,7 @@
 "use client";
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { AtSign, Bike, Eye, EyeOff, KeyRound, Lock, LogIn, ShieldCheck, ChevronRight } from "lucide-react";
 import { staffSignInAction, requestEmailResetAction, type AuthResult, type StaffPortal } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
@@ -86,26 +87,55 @@ function LoginForm({ portal, next, denied, signedOut, signedInAs, buttonClassNam
   );
 }
 
+/** Cards fanned out on the colour panel: our own category collages, no invented ratings or prices. */
+const PANEL_CARDS = [
+  { src: "/categories/sweets-collage.webp", title: "Sweets", sub: "Mithai, fresh daily", cls: "-rotate-[9deg] translate-y-6 -translate-x-4 z-0" },
+  { src: "/categories/fruits-collage.webp", title: "Fresh fruits", sub: "Picked for Merta City", cls: "z-10 -translate-y-2" },
+  { src: "/categories/vegetables-collage.webp", title: "Vegetables", sub: "Sabzi mandi to door", cls: "rotate-[9deg] translate-y-6 translate-x-4 z-0" },
+];
+const CONFETTI = [
+  "left-[8%] top-[18%] h-3 w-3 rounded-full bg-[#ffd166]", "right-[14%] top-[22%] h-2.5 w-2.5 rounded-sm bg-[#06d6a0] rotate-12",
+  "left-[16%] bottom-[30%] h-2.5 w-2.5 rounded-full bg-[#b5179e]", "right-[10%] bottom-[34%] h-3 w-3 rounded-sm bg-[#4cc9f0] -rotate-12",
+  "left-[46%] top-[12%] h-2 w-2 rounded-full bg-white/80", "right-[30%] top-[10%] h-2.5 w-2.5 rounded-full bg-[#ff6b6b]",
+];
+
+/**
+ * Admin sign-in as a split screen: a colour panel with fanned category cards and the promise on the
+ * left (desktop only), and on the right the logo tile, "Hey! Welcome", the form and a dark Login
+ * button. No social sign-in or register link: staff accounts are created by an admin.
+ */
 function AdminLogin(props: Props) {
-  const c = COPY.admin;
   return (
-    <div className={cn("theme-admin", "flex min-h-dvh flex-col bg-surface")}>
+    <div className={cn("theme-admin", "flex min-h-dvh bg-surface")}>
       <PortalTheme portal="admin" />
-      <header className="border-b border-line bg-card" style={{ paddingTop: "var(--safe-top)" }}>
-        <div className="mx-auto flex h-14 max-w-md items-center gap-2 px-4">
-          <LogoMark size={30} />
-          <span className="font-display text-base font-extrabold text-ink">Merta<span className="text-[#329537]">Deal</span></span>
-          <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-2.5 py-1 text-xs font-bold text-brand-700 ring-1 ring-inset ring-brand-200">
-            <c.Icon className="h-3.5 w-3.5" aria-hidden />{c.badge}
-          </span>
+      <aside className="relative hidden w-1/2 flex-col items-center justify-center overflow-hidden bg-brand-600 px-10 text-white md:flex" aria-hidden>
+        <span className="pointer-events-none absolute left-1/2 top-1/2 h-[560px] w-[560px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/10" />
+        <span className="pointer-events-none absolute left-1/2 top-1/2 h-[760px] w-[760px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/10" />
+        {CONFETTI.map((c) => <span key={c} className={cn("pointer-events-none absolute", c)} />)}
+        <div className="relative flex items-end justify-center">
+          {PANEL_CARDS.map((c) => (
+            <div key={c.src} className={cn("w-[150px] shrink-0 rounded-2xl bg-white p-2 pb-3 text-ink shadow-[0_20px_40px_rgba(0,0,0,0.22)] lg:w-[170px]", c.cls)}>
+              <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-surface-2"><Image src={c.src} alt="" fill sizes="170px" className="object-cover" /></div>
+              <p className="mt-2 px-1 text-[14px] font-bold leading-tight">{c.title}</p>
+              <p className="px-1 text-[11px] text-ink-3">{c.sub}</p>
+            </div>
+          ))}
         </div>
-      </header>
-      <main className="mx-auto w-full max-w-md flex-1 px-4 py-8 safe-bottom">
-        <div className="rounded-lg border border-line bg-card p-5 shadow-card sm:p-6">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-700"><c.Icon className="h-6 w-6" aria-hidden /></span>
-          <h1 className="mt-3 font-display text-2xl font-extrabold text-ink">{c.title}</h1>
-          <p className="mt-1 text-sm text-ink-3">{c.intro}</p>
-          <LoginForm {...props} />
+        <div className="mt-12 flex gap-1.5">
+          <span className="h-1.5 w-7 rounded-full bg-white" /><span className="h-1.5 w-1.5 rounded-full bg-white/50" /><span className="h-1.5 w-1.5 rounded-full bg-white/50" />
+        </div>
+        <h2 className="mt-5 text-center font-display text-[30px] font-extrabold leading-tight lg:text-[34px]">Run Merta Deal from one place</h2>
+        <p className="mt-2 max-w-sm text-center text-[15px] text-white/85">Orders, packing, riders, payments and the catalogue, all in one admin.</p>
+      </aside>
+
+      <main className="flex w-full flex-col items-center justify-center bg-card px-5 py-10 safe-bottom md:w-1/2 md:px-10" style={{ paddingTop: "calc(var(--safe-top) + 2.5rem)" }}>
+        <div className="w-full max-w-sm">
+          <div className="flex flex-col items-center text-center">
+            <span className="flex h-[76px] w-[76px] items-center justify-center rounded-[22px] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.12)] ring-1 ring-line"><LogoMark size={56} /></span>
+            <h1 className="mt-5 font-display text-[22px] font-bold text-ink">Hey! Welcome to Merta Deal</h1>
+            <p className="mt-1 inline-flex items-center gap-1.5 text-[13px] text-ink-3"><ShieldCheck className="h-3.5 w-3.5 text-brand-700" aria-hidden />Admin sign-in</p>
+          </div>
+          <LoginForm {...props} buttonClassName="h-12 rounded-lg bg-ink text-white hover:bg-ink/90" />
         </div>
       </main>
     </div>
