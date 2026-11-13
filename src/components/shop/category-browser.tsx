@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
  */
 const RETURN_KEY = "categories-return";
 
-export function CategoryBrowser({ tabs, initial, products, signedIn }: { tabs: CategoryTab[]; initial: string; products: Record<string, { items: ProductCardType[]; total: number }>; signedIn: boolean }) {
+export function CategoryBrowser({ tabs, initial, products, signedIn }: { tabs: CategoryTab[]; initial: string; products: Record<string, { items: ProductCardType[]; total: number }>; signedIn?: boolean }) {
   const valid = (slug: string | null | undefined) => (slug && tabs.some((t) => t.slug === slug) ? slug : null);
   // Back/forward restores this page from the router cache with its first render's props; the address
   // (kept current with replaceState) is the source of truth for which tab was open.

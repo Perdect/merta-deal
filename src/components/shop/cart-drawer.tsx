@@ -1,4 +1,5 @@
 "use client";
+import { notifySessionChanged } from "@/stores/me-store";
 import * as React from "react";
 import Link from "next/link";
 import Script from "next/script";
@@ -241,7 +242,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
           onConfirm={(c) => { if (c.type === "scheduled") { setSlotKey(c.key); setDeliveryType("scheduled"); } else if (deliveryType === "scheduled") setDeliveryType("standard"); closeSheet(); }} />
       ) : null}
       <AddressSheet open={sheet === "address"} onClose={closeSheet} addresses={addresses} selectedId={addressId} defaultName={user.name} defaultPhone={user.phone}
-        onPick={(a, isNew) => { if (isNew) { addAddress(a); router.refresh(); } setAddressId(a.id); void adoptAddress(a); closeSheet(); }} />
+        onPick={(a, isNew) => { if (isNew) { addAddress(a); notifySessionChanged(); router.refresh(); } setAddressId(a.id); void adoptAddress(a); closeSheet(); }} />
       <LoginModal key={selectedAddress?.phone ?? ""} defaultMobile={selectedAddress?.phone} open={sheet === "login" && !account} onClose={() => { closeSheet(); setResume(null); }} eta={`${eta.min}–${eta.max} minutes`} guest={isGuest} title={resume === "pay" ? "Login to place your order" : undefined} />
     </>
   );

@@ -42,3 +42,23 @@ ratios between calls hold.
 - Home HTML size: no measured user-facing stall; trimming the RSC payload is a separate job.
 - No new dependency: Leaflet stays self-hosted; Google Maps React stays for tracking.
 - Vercel Hobby cron cadence (see `docs/CRONS.md`).
+
+## 13 November: catalogue pages from the CDN
+
+Measured again on the live site before this change: TTFB 0.4–0.6 s from outside India (functions in bom1, database in
+ap-south-1, so the server itself takes ~250 ms), home HTML 35 KB gzipped, scripts 238 KB gzipped (react-dom 72, Next
+router 44, app code ~120), CSS 22 KB, 21 images. Every catalogue page was rendered per request because the shop layout
+read the session cookie for the header (name, addresses, unread count), the cart and the drawer props.
+
+Change: the shop layout and the catalogue pages read nothing about the visitor while rendering. `MeProvider` calls
+`/api/me` once the page is on screen (and again on focus, network return, cart changes in another tab and after
+sign-in / a new guest session / an address save via `notifySessionChanged`) and fills `me-store` + the cart store.
+The header's account link, the location picker's saved addresses, the bottom bar's unread dot, the cart drawer's
+personal props and Add-to-cart's guest handling all read that store. `getProductDetail` moved to the public client
+behind the data cache (its `in_wishlist` field was unused). Result in the build: `/` is static (revalidate 1 m) and
+`/p/[slug]` is static on first visit; both are served by the CDN and purged by the catalogue tag on admin changes.
+`/c/[slug]`, `/categories` and `/search` still render on demand because they read the URL's filters, but no longer
+touch the session.
+
+What the customer sees: the page appears straight from the edge; "Sign in" / cart badge / saved addresses fill in
+a moment later. Nothing personal is ever in a cached page.

@@ -1,4 +1,3 @@
-import { getSessionUser } from "@/lib/supabase/server";
 import { getPublicSettings, getCategories } from "@/lib/data/catalog";
 import { businessNode, jsonLdHtml } from "@/lib/seo-schema";
 import { getHomeData, DEFAULT_ESSENTIALS } from "@/lib/data/home";
@@ -53,11 +52,10 @@ export default async function HomePage() {
   const settings = await getPublicSettings();
   const essentials = Array.isArray(settings.home_essentials) ? (settings.home_essentials as string[]) : DEFAULT_ESSENTIALS;
   const welcomeCode = typeof settings.welcome_coupon_code === "string" && settings.welcome_coupon_code ? settings.welcome_coupon_code : "WELCOME50";
-  const [user, home, tabs] = await Promise.all([getSessionUser(), getHomeData(essentials, welcomeCode), getCategoryTabs().catch(() => [])]);
+  const [home, tabs] = await Promise.all([getHomeData(essentials, welcomeCode), getCategoryTabs().catch(() => [])]);
   const num = (k: string, d: number) => { const v = Number(settings[k]); return Number.isFinite(v) && v > 0 ? v : d; };
   // Headline promise: the quick-commerce single figure (the settings minimum); the window stays in the order promise.
   const etaLabel = `${num("delivery_eta_min_minutes", 20)} min`;
-  const signedIn = Boolean(user);
 
   return (
     <div className="space-y-4 pt-2.5 sm:space-y-7 sm:pt-4">
@@ -70,7 +68,7 @@ export default async function HomePage() {
       <CategoryGrid tabs={tabs} fallback={home.categories} />
       <DiwaliBanner />
       {home.sections.length ? (
-        home.sections.map((s, i) => <ProductSection key={s.key} section={s} signedIn={signedIn} first={i === 0} />)
+        home.sections.map((s, i) => <ProductSection key={s.key} section={s} first={i === 0} />)
       ) : (
         <EmptyState title="Stocking up" description="Products will appear here as soon as they are in stock." action={<Button href="/categories" variant="outline">Browse categories</Button>} compact />
       )}

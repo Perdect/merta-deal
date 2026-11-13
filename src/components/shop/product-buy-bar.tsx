@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import type { ProductDetail } from "@/types/app";
 import { ensureGuestSessionAction } from "@/lib/actions/guest";
 import { useCartStore } from "@/stores/cart-store";
+import { useSignedIn, notifySessionChanged } from "@/stores/me-store";
 import { packLimit, setLineQuantity } from "@/lib/cart-sync";
 import { toast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,9 @@ import { formatINR } from "@/lib/utils";
  * desktop. After adding it becomes a stepper + "Go to cart", both backed by the server cart.
  * Quantity is in packs (pack size shown under the stepper); the + stops at the product's limit.
  */
-export function ProductBuyBar({ product, signedIn }: { product: ProductDetail; signedIn: boolean }) {
+export function ProductBuyBar({ product, signedIn: signedInProp }: { product: ProductDetail; signedIn?: boolean }) {
+  const signedInStore = useSignedIn();
+  const signedIn = signedInProp ?? signedInStore;
   const router = useRouter();
   const openSheet = useCartStore((s) => s.openSheet);
   const offer = React.useMemo(() => resolveOffer(product), [product]);
@@ -36,7 +39,7 @@ export function ProductBuyBar({ product, signedIn }: { product: ProductDetail; s
     if (!signedIn) {
       const g = await ensureGuestSessionAction();
       if (!g.ok) { setBusy(false); toast.info("Sign in to add items", g.error); openSheet("login"); return; }
-      if (g.created) router.refresh();
+      if (g.created) { notifySessionChanged(); router.refresh(); }
     }
     await setLineQuantity(offer.inventory_id, Math.min(qty + 1, Math.max(limit.max, 1)));
     setBusy(false);

@@ -3,6 +3,7 @@ import * as React from "react";
 import { MapPin, ChevronDown, ChevronRight, Zap, LocateFixed, Home, Briefcase, Map as MapIcon, CheckCircle2, AlertCircle, Plus, Loader2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useLocationStore, adoptAddress, addressLine, addressTitle } from "@/stores/location-store";
+import { useAddresses } from "@/stores/me-store";
 import { useCheckoutStore } from "@/stores/checkout-store";
 import { useCartStore } from "@/stores/cart-store";
 import { Modal } from "@/components/ui/overlay";
@@ -34,7 +35,8 @@ async function locality(lat: number, lng: number): Promise<{ label: string; deta
  * position (permission is asked only on that tap), saved addresses, and the address sheet (search, map pin, manual entry). Every choice is checked against the delivery zones
  * (by coordinates when there are any) and the chosen address is the one the cart and checkout use.
  */
-export function LocationPicker({ addresses = [], className, light, variant = "inline", fallbackEta }: {
+export function LocationPicker({ addresses: addressesProp, className, light, variant = "inline", fallbackEta }: {
+  /** Saved addresses; by default the ones `/api/me` returned for this customer. */
   addresses?: Address[];
   /** Kept for callers; the selector no longer leaves the page to add an address. */
   signedIn?: boolean;
@@ -46,6 +48,8 @@ export function LocationPicker({ addresses = [], className, light, variant = "in
   fallbackEta?: { min: number; max: number };
 }) {
   const { location, fromServiceability, setLocation } = useLocationStore();
+  const storeAddresses = useAddresses();
+  const addresses = addressesProp ?? storeAddresses;
   const setAddressId = useCheckoutStore((s) => s.setAddressId);
   const openSheet = useCartStore((s) => s.openSheet);
   const sp = useSearchParams();

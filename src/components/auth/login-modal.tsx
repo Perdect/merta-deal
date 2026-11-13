@@ -1,4 +1,5 @@
 "use client";
+import { notifySessionChanged } from "@/stores/me-store";
 import * as React from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
@@ -55,7 +56,8 @@ export function LoginModal({ open, onClose, eta, guest, onGuestContinue, title =
     setBusy(true);
     const r = await verifyPhoneOtpAction(mobile, code, guestId || undefined);
     if (!r.ok) { setBusy(false); toast.error(r.error); return; }
-    // Signed in: the page re-renders for the account; the sheet closes with it.
+    // Signed in: the chrome reloads its personal data and the page re-renders for the account; the sheet closes with it.
+    notifySessionChanged();
     router.refresh();
     onClose();
     setBusy(false);

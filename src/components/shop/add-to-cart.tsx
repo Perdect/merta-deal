@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { ensureGuestSessionAction } from "@/lib/actions/guest";
 import { packLimit, setLineQuantity } from "@/lib/cart-sync";
 import { useCartStore } from "@/stores/cart-store";
+import { useSignedIn, notifySessionChanged } from "@/stores/me-store";
 import { toast } from "@/components/ui/toast";
 import { QuantityStepper } from "@/components/ui/misc";
 import { cn } from "@/lib/utils";
@@ -18,8 +19,10 @@ type Props = { inventoryId: string | null; maxQty?: number | null; stockQty?: nu
  * lower; the server enforces them too. Taps are queued, never dropped.
  */
 /** `className` styles the ADD button; `stepperClassName` styles the quantity control that replaces it. */
-export function AddToCart({ inventoryId, maxQty, stockQty, size = "md", className, stepperClassName, label = "ADD", signedIn = true, fullWidth }: Props) {
+export function AddToCart({ inventoryId, maxQty, stockQty, size = "md", className, stepperClassName, label = "ADD", signedIn: signedInProp, fullWidth }: Props) {
   const router = useRouter();
+  const signedInStore = useSignedIn();
+  const signedIn = signedInProp ?? signedInStore;
   const openSheet = useCartStore((s) => s.openSheet);
   const qty = useCartStore((s) => (inventoryId ? s.qtyFor(inventoryId) : 0));
   const syncing = useCartStore((s) => (inventoryId ? inventoryId in s.pending : false));
@@ -35,7 +38,7 @@ export function AddToCart({ inventoryId, maxQty, stockQty, size = "md", classNam
       setStarting(false);
       // Guest sessions are the norm (Supabase anonymous sign-in); only when that is switched off is a sign-in asked for here.
       if (!g.ok) { toast.info("Sign in to add items", g.error); openSheet("login"); return; }
-      if (g.created) router.refresh();
+      if (g.created) { notifySessionChanged(); router.refresh(); }
     }
     const first = qty === 0 && next > 0;
     if (next === limit.max && next > qty) toast.info(limit.message, "That's the most you can add of this item.");

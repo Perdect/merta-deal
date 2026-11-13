@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { Home, LayoutGrid, Search, User, type LucideIcon } from "lucide-react";
 import { customerNav } from "@/config/site";
 import { useKeyboardOpen } from "@/hooks/use-keyboard-open";
+import { useMeStore } from "@/stores/me-store";
 import { cn } from "@/lib/utils";
 
 const ICONS: Record<string, LucideIcon> = { home: Home, grid: LayoutGrid, search: Search, user: User };
@@ -14,7 +15,8 @@ const ICONS: Record<string, LucideIcon> = { home: Home, grid: LayoutGrid, search
  * while the on-screen keyboard is open so it never sits on a form.
  * Unread notifications show as a dot on Account (the header has no account icon on phones).
  */
-export function BottomNav({ unread = 0 }: { unread?: number }) {
+export function BottomNav() {
+  const unread = useMeStore((s) => s.me?.unread ?? 0);
   const pathname = usePathname();
   const keyboard = useKeyboardOpen();
   const matches = (m: string) => (m === "/" ? pathname === "/" : pathname === m || pathname.startsWith(m.endsWith("/") ? m : `${m}/`));

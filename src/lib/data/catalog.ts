@@ -72,16 +72,17 @@ const cachedSearch = unstable_cache(async (p: SearchParams): Promise<SearchResul
 /** Listing results are public and identical for every visitor, so they come from the data cache. */
 export const searchProducts = (p: SearchParams) => cachedSearch(p);
 
-export const getProductDetail = cache(async (slug: string): Promise<ProductDetail | null> => {
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("product_detail", { p_slug: slug });
+/** Public and identical for every visitor (the RPC's `in_wishlist` is not used), so it comes from the data cache. */
+const cachedProductDetail = unstable_cache(async (slug: string): Promise<ProductDetail | null> => {
+  const { data, error } = await createPublicClient().rpc("product_detail", { p_slug: slug });
   // A database error must not look like "product removed" (a 404 tells search engines to drop the page);
   // throwing renders the error screen with a retry instead. Only a missing/inactive product is null.
   if (error) throw new Error(`product_detail failed: ${error.message}`);
   if (!data) return null;
   // One round trip: the RPC also carries seller details, shelf life and "more from this brand".
   return data as unknown as ProductDetail;
-});
+}, ["product-detail"], { tags: [CATALOGUE_TAG], revalidate: PUBLIC_TTL });
+export const getProductDetail = cache((slug: string) => cachedProductDetail(slug));
 
 const cachedBrands = unstable_cache(async () => {
   const { data } = await createPublicClient().from("brands").select("id, name, slug").eq("is_active", true).order("name");

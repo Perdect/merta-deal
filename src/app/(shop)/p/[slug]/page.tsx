@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
+
+/** Static per product (rendered on first visit, then cached), refreshed every minute and on catalogue changes; nothing personal is rendered here. */
+export const revalidate = 60;
+export const dynamicParams = true;
+export function generateStaticParams() { return []; }
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronRight, Star, Mail, Phone } from "lucide-react";
-import { getSessionUser } from "@/lib/supabase/server";
 import { getProductDetail, getPublicSettings } from "@/lib/data/catalog";
 import { paymentPhrase } from "@/lib/seo-copy";
 import { ProductHero, ShareButton } from "@/components/shop/product-hero";
@@ -52,7 +56,7 @@ function Card({ title, children, className }: { title?: string; children: React.
 
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
-  const [user, product, settings] = await Promise.all([getSessionUser(), getProductDetail(slug), getPublicSettings()]);
+  const [product, settings] = await Promise.all([getProductDetail(slug), getPublicSettings()]);
   if (!product) notFound();
   // "More from <brand>" comes with the product (same round trip), filtered live by the database.
   const moreFromBrand = product.more_from_brand ?? [];
@@ -123,7 +127,7 @@ export default async function ProductPage({ params }: Props) {
         <div>
           <ProductHero images={images} name={product.name} brand={product.brand_name} packSize={product.pack_label} price={price} mrp={mrp} backHref={`/c/${product.category_slug}`} />
           {/* Floats above the dock on mobile; a wide button under the gallery on desktop. */}
-          <div className="md:mt-4"><ProductBuyBar product={product} signedIn={Boolean(user)} /></div>
+          <div className="md:mt-4"><ProductBuyBar product={product} /></div>
         </div>
 
         <div className="relative -mt-6 rounded-t-[28px] bg-card px-4 pb-5 pt-5 shadow-[0_-10px_24px_-18px_rgb(0_0_0/0.35)] md:mt-0 md:rounded-2xl md:border md:border-line md:p-6 md:shadow-none">
@@ -184,9 +188,9 @@ export default async function ProductPage({ params }: Props) {
         </div>
       </div>
 
-      {moreFromBrand.length ? <section className="mt-8"><SectionHeader title={`More from ${product.brand_name}`} href={brandHref ?? undefined} /><ProductRail products={moreFromBrand} signedIn={Boolean(user)} /></section> : null}
-      {product.frequently_bought.length ? <section className="mt-8"><SectionHeader title="Frequently bought together" /><ProductRail products={product.frequently_bought} signedIn={Boolean(user)} /></section> : null}
-      {product.related.length ? <section className="mt-8"><SectionHeader title="Similar products" href={`/c/${product.category_slug}`} /><ProductRail products={product.related} signedIn={Boolean(user)} /></section> : null}
+      {moreFromBrand.length ? <section className="mt-8"><SectionHeader title={`More from ${product.brand_name}`} href={brandHref ?? undefined} /><ProductRail products={moreFromBrand} /></section> : null}
+      {product.frequently_bought.length ? <section className="mt-8"><SectionHeader title="Frequently bought together" /><ProductRail products={product.frequently_bought} /></section> : null}
+      {product.related.length ? <section className="mt-8"><SectionHeader title="Similar products" href={`/c/${product.category_slug}`} /><ProductRail products={product.related} /></section> : null}
     </div>
   );
 }

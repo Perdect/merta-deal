@@ -46,7 +46,7 @@ function usableSnapshot(key: string, result: SearchResult) {
  * `scope` holds the params that define this page's result set but are not in the query string (e.g. the
  * category of /c/grocery). They are always sent with "Load more", so page 2 comes from the same set.
  */
-export function ProductListing({ result, filters, signedIn, loadMoreHref, scope, hideCategoryChips, emptyTitle = "No products found", emptyHint }: { result: SearchResult; filters: ListingFilters; signedIn: boolean; loadMoreHref?: string; scope?: Record<string, string>; hideCategoryChips?: boolean; emptyTitle?: string; emptyHint?: string }) {
+export function ProductListing({ result, filters, signedIn, loadMoreHref, scope, hideCategoryChips, emptyTitle = "No products found", emptyHint }: { result: SearchResult; filters: ListingFilters; signedIn?: boolean; loadMoreHref?: string; scope?: Record<string, string>; hideCategoryChips?: boolean; emptyTitle?: string; emptyHint?: string }) {
   const router = useRouter(); const pathname = usePathname(); const sp = useSearchParams();
   const key = `${pathname}?${sp.toString()}#${JSON.stringify(scope ?? {})}`;
   const [filterOpen, setFilterOpen] = React.useState(false);

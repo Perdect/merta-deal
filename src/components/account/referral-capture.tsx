@@ -3,12 +3,14 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { trackReferralAction } from "@/lib/actions/referrals";
 import { toast } from "@/components/ui/toast";
+import { useSignedIn } from "@/stores/me-store";
 
 const REFERRAL_KEY = "md-referral-code";
 
 /** Keeps an invite link through sign-in, then records it against the new customer's account. */
-export function ReferralCapture({ signedIn }: { signedIn: boolean }) {
+export function ReferralCapture() {
   const router = useRouter();
+  const signedIn = useSignedIn();
   React.useEffect(() => {
     let code: string | null = null;
     try {

@@ -111,7 +111,7 @@ export function CategoryTiles({ categories }: { categories: HomeCategory[] }) {
 }
 
 /** One titled product section; "See all" only where there is a category listing behind it. */
-export function ProductSection({ section, signedIn, first }: { section: HomeSection; signedIn: boolean; first?: boolean }) {
+export function ProductSection({ section, first }: { section: HomeSection; first?: boolean }) {
   return (
     <section id={section.key} aria-labelledby={`${section.key}-title`} className="scroll-mt-32">
       <div className="mb-2.5 flex items-end justify-between px-4 sm:px-0">
@@ -122,7 +122,7 @@ export function ProductSection({ section, signedIn, first }: { section: HomeSect
           </Link>
         ) : null}
       </div>
-      <ProductGrid products={section.products} signedIn={signedIn} priorityCount={first ? 2 : 0} className="px-4 sm:px-0" />
+      <ProductGrid products={section.products} priorityCount={first ? 2 : 0} className="px-4 sm:px-0" />
     </section>
   );
 }

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getSessionUser } from "@/lib/supabase/server";
 import { getBrands, getCategoryBySlug, getPublicSettings, searchProducts } from "@/lib/data/catalog";
 import { paymentPhrase } from "@/lib/seo-copy";
 import { parseListingParams } from "@/lib/listing-params";
@@ -53,7 +52,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const listingParams = parseListingParams(sp, { category: scopeCategory });
   // A brand-new category with nothing listed yet and no filters applied reads as "coming soon", not "no products found".
   const fresh = !LISTING_FILTER_KEYS.some((k) => sp[k] != null && sp[k] !== "");
-  const [user, result, brands] = await Promise.all([getSessionUser(), searchProducts(listingParams), getBrands()]);
+  const [result, brands] = await Promise.all([searchProducts(listingParams), getBrands()]);
   const seo = CATEGORY_SEO[slug];
   const crumbs = [{ name: "Home", url: `${site.url}/` }, ...(parent ? [{ name: parent.name, url: `${site.url}/c/${parent.slug}` }] : []), { name: category.name, url: `${site.url}/c/${slug}` }];
   const jsonLd = {
@@ -81,7 +80,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           {children.map((c) => <Link key={c.id} href={`/c/${c.slug}`} className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-line-2 bg-card px-3.5 text-sm font-medium text-ink-2 hover:border-brand-500 hover:text-brand-700">{c.name}</Link>)}
         </div>
       ) : null}
-      <ProductListing result={result} filters={{ brands, categories: children.map((c) => ({ name: c.name, slug: c.slug })) }} signedIn={Boolean(user)} scope={{ category: scopeCategory }} hideCategoryChips
+      <ProductListing result={result} filters={{ brands, categories: children.map((c) => ({ name: c.name, slug: c.slug })) }} scope={{ category: scopeCategory }} hideCategoryChips
         emptyTitle={fresh ? `${category.name} coming soon` : `No ${barTitle.toLowerCase()} products right now`} emptyHint={fresh ? "We're adding products to this category. Grocery and kirana essentials are on sale now." : "Check back soon, or remove a filter if you added one."} />
     </div>
   );

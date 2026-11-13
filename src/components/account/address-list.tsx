@@ -1,4 +1,5 @@
 "use client";
+import { notifySessionChanged } from "@/stores/me-store";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Home, Briefcase, MapPin, Plus, Pencil, Trash2, ChevronRight } from "lucide-react";
@@ -47,7 +48,7 @@ export function AddressList({ initial, defaultName, defaultPhone, openNew = fals
       const base = a.is_default ? cur.map((x) => ({ ...x, is_default: false })) : cur;
       return base.some((x) => x.id === a.id) ? base.map((x) => (x.id === a.id ? a : x)) : [a, ...base];
     });
-    setEditing(null); router.refresh();
+    setEditing(null); notifySessionChanged(); router.refresh();
   };
 
   const remove = async () => {
@@ -57,7 +58,7 @@ export function AddressList({ initial, defaultName, defaultPhone, openNew = fals
       const r = await deleteAddressAction(deleting.id);
       if (!r.ok) { toast.error(r.error); return; }
       setItems((cur) => cur.filter((x) => x.id !== deleting.id));
-      setDeleting(null); toast.success("Address removed"); router.refresh();
+      setDeleting(null); toast.success("Address removed"); notifySessionChanged(); router.refresh();
     } catch {
       toast.error("Could not remove the address", "Check your connection and try again.");
     } finally {
