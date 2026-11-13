@@ -36,7 +36,7 @@ export function RiderProfile({ user, rider: initialRider, notifications }: { use
 
   return (
     <div className="space-y-4">
-      <section className="flex items-center gap-3 rounded-2xl bg-card p-4 shadow-card">
+      <section className="flex items-center gap-3 rounded-[20px] border border-line bg-card p-4 shadow-card">
         <Avatar name={user.name} src={user.avatarUrl} size={56} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2"><h1 className="truncate font-display text-lg font-extrabold text-ink">{user.name ?? t("rider.partner")}</h1><Badge tone={STATUS_TONE[rider.status]} size="xs">{t(STATUS_KEY[rider.status])}</Badge></div>
@@ -48,14 +48,14 @@ export function RiderProfile({ user, rider: initialRider, notifications }: { use
         </div>
       </section>
 
-      <section className="flex items-center justify-between gap-3 rounded-2xl bg-card p-4 shadow-card">
+      <section className="flex items-center justify-between gap-3 rounded-[20px] border border-line bg-card p-4 shadow-card">
         <div className="min-w-0"><p className="flex items-center gap-2 font-display text-[16px] font-extrabold text-ink"><Languages className="h-4 w-4 text-brand-700" aria-hidden />{t("lang.title")}</p><p className="text-xs text-ink-3">{t("lang.body")}</p></div>
         <LangToggle />
       </section>
 
       <InstallCard />
 
-      <form action={action} className="space-y-4 rounded-2xl bg-card p-4 shadow-card" aria-labelledby="vehicle-head">
+      <form action={action} className="space-y-4 rounded-[20px] border border-line bg-card p-4 shadow-card" aria-labelledby="vehicle-head">
         <h2 id="vehicle-head" className="font-display text-[16px] font-extrabold text-ink">{t("profile.vehicleDocs")}</h2>
         <Select name="vehicle_type" label={t("profile.vehicleType")} options={VEHICLES.map((v) => ({ value: v.value, label: t(v.label) }))} defaultValue={rider.vehicle_type} required error={fe.vehicle_type} />
         <Input name="vehicle_number" label={t("profile.vehicleNumber")} defaultValue={rider.vehicle_number ?? ""} placeholder="RJ 21 AB 1234" autoCapitalize="characters" error={fe.vehicle_number} />
@@ -73,7 +73,7 @@ export function RiderProfile({ user, rider: initialRider, notifications }: { use
 
       <NotificationsSection userId={user.id} initial={notifications} />
 
-      <section className="rounded-2xl bg-card p-4 shadow-card">
+      <section className="rounded-[20px] border border-line bg-card p-4 shadow-card">
         <h2 className="flex items-center gap-2 font-display text-[16px] font-extrabold text-ink"><Info className="h-4 w-4 text-info" /> {t("profile.gpsTitle")}</h2>
         <p className="mt-2 text-sm text-ink-2">{t("profile.gpsBody")}</p>
         <p className="mt-2 text-xs text-ink-3">{t("profile.gpsTip")}</p>
@@ -128,7 +128,7 @@ function NotificationsSection({ userId, initial }: { userId: string; initial: No
     setItems((cur) => cur.map((n) => ({ ...n, is_read: true })));
   };
   return (
-    <section className="rounded-2xl bg-card shadow-card" aria-labelledby="notif-head">
+    <section className="rounded-[20px] border border-line bg-card shadow-card" aria-labelledby="notif-head">
       <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-2">
         <h2 id="notif-head" className="flex items-center gap-2 font-display text-[16px] font-extrabold text-ink"><Bell className="h-4 w-4" /> {t("notif.title")}{unread ? <Badge tone="saffron" size="xs">{t("notif.newCount", { n: unread })}</Badge> : null}</h2>
         {unread ? <Button variant="ghost" size="xs" onClick={markAll} loading={busy}><CheckCheck className="h-4 w-4" /> {t("notif.markAllRead")}</Button> : null}

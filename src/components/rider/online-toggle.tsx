@@ -53,8 +53,8 @@ export function OnlineToggle() {
   return (
     <section className="space-y-2">
       <button type="button" role="switch" aria-checked={isOnline} aria-busy={busy} disabled={!enabled} onClick={toggle}
-        className={cn("flex min-h-[80px] w-full items-center gap-3.5 rounded-2xl p-4 text-left shadow-card transition-colors active:scale-[0.99] disabled:opacity-60",
-          isOnline ? "bg-success-50 ring-1 ring-success/25" : "bg-card")}>
+        className={cn("flex min-h-[80px] w-full items-center gap-3.5 rounded-[20px] border p-4 text-left shadow-card transition-colors active:scale-[0.99] disabled:opacity-60",
+          isOnline ? "border-success/30 bg-success-50" : "border-line bg-card")}>
         <span className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-full", isOnline ? "bg-success text-white" : "bg-surface-2 text-ink-3")}><Power className="h-6 w-6" strokeWidth={2.4} /></span>
         <span className="min-w-0 flex-1">
           <span className="block font-display text-[17px] font-extrabold text-ink">{busy ? (isOnline ? t("online.goingOffline") : t("online.gettingLocation")) : isOnline ? t("online.youAreOnline") : t("online.youAreOffline")}</span>

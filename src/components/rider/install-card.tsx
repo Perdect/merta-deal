@@ -42,7 +42,7 @@ export function InstallCard() {
 
   const installed = standalone || done;
   return (
-    <section className="rounded-2xl bg-card p-4 shadow-card" aria-labelledby="install-head">
+    <section className="rounded-[20px] border border-line bg-card p-4 shadow-card" aria-labelledby="install-head">
       <h2 id="install-head" className="flex items-center gap-2 font-display text-[16px] font-extrabold text-ink"><Smartphone className="h-4 w-4 text-brand-700" aria-hidden />{t("install.title")}</h2>
       {installed ? (
         <p className="mt-2 flex items-start gap-2 text-sm text-ink-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" aria-hidden />{t("install.installed")}</p>

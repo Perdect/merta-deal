@@ -143,7 +143,7 @@ export function OfferAlertView(p: OfferAlertViewProps) {
 
   return (
     <div role="alertdialog" aria-labelledby="offer-alert-title" className="fixed inset-0 z-[65] flex items-end justify-center bg-ink/55 sm:items-center sm:p-4" style={{ paddingTop: "calc(var(--safe-top) + 12px)" }}>
-      <div className={cn("w-full max-w-md overflow-hidden rounded-t-3xl bg-card shadow-float animate-slide-up sm:rounded-3xl", urgent ? "ring-2 ring-danger" : "ring-2 ring-brand-500")} style={{ paddingBottom: "var(--safe-bottom)" }}>
+      <div className={cn("w-full max-w-md overflow-hidden rounded-t-[24px] bg-card shadow-float animate-slide-up sm:rounded-[24px]", urgent ? "ring-2 ring-danger" : "ring-2 ring-brand-500")} style={{ paddingBottom: "var(--safe-bottom)" }}>
         <div className="flex items-center gap-2.5 px-4 pt-4 pb-2">
           <span className="relative flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-brand-700">
             {ringing && !muted ? <span className="absolute inset-0 rounded-full bg-brand-200 animate-ping" aria-hidden /> : null}

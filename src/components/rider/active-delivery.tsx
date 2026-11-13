@@ -77,7 +77,7 @@ export function ActiveDelivery({ assignment: a, onChanged, onCompleted }: { assi
   const notYet = () => { writeReached(a.id, null); setLocal(null); setUndone(`${a.id}:${leg}`); };
 
   return (
-    <section className="overflow-hidden rounded-2xl bg-card shadow-card ring-1 ring-brand-200" aria-label={t("active.label")}>
+    <section className="overflow-hidden rounded-[20px] border border-line bg-card shadow-card ring-1 ring-brand-200" aria-label={t("active.label")}>
       <header className="bg-brand-50 px-4 pt-3.5 pb-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -350,7 +350,7 @@ export function DeliveryComplete({ completed, onDone }: { completed: CompletedDe
   const { assignment: a } = completed;
   const cod = a.order.payment_method === "cod" && Number(a.cod_amount) > 0;
   return (
-    <section className="rounded-2xl bg-card p-6 text-center shadow-card ring-1 ring-success/30 animate-pop" role="status">
+    <section className="rounded-[20px] border border-line bg-card p-6 text-center shadow-card ring-1 ring-success/30 animate-pop" role="status">
       <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success text-white"><Check className="h-8 w-8" strokeWidth={3} /></span>
       <h2 className="mt-3 font-display text-xl font-extrabold text-ink">{t("done.title")}</h2>
       <p className="text-sm text-ink-3">{a.order.order_number}</p>

@@ -11,7 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 import { env, isPushConfigured } from "@/lib/env";
 
 /** Orange address bar / title bar for the rider app (the shop keeps its green); the rest mirrors the root viewport. */
-export const viewport: Viewport = { themeColor: "#ea580c", width: "device-width", initialScale: 1, viewportFit: "cover", interactiveWidget: "resizes-content" };
+export const viewport: Viewport = { themeColor: "#e8671f", width: "device-width", initialScale: 1, viewportFit: "cover", interactiveWidget: "resizes-content" };
 
 export const metadata: Metadata = {
   title: { default: "Delivery partner", template: "%s · Delivery partner | Merta Deal" },

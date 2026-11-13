@@ -68,7 +68,7 @@ export function RiderHome({ initial }: { initial: RiderHomeData }) {
         </div>
         {stats ? (
           <>
-            <dl className="grid grid-cols-3 divide-x divide-line overflow-hidden rounded-2xl bg-card shadow-card">
+            <dl className="grid grid-cols-3 divide-x divide-line overflow-hidden rounded-[20px] border border-line bg-card shadow-card">
               <Tile label={t("home.active")} value={stats.active} icon={<Bike className="h-4 w-4" />} hot={stats.active > 0} />
               <Tile label={t("home.delivered")} value={stats.today_deliveries} icon={<PackageCheck className="h-4 w-4" />} />
               <Tile label={t("home.earned")} value={formatINR(stats.today_earnings)} icon={<IndianRupee className="h-4 w-4" />} hot />
@@ -107,7 +107,7 @@ function WaitingCard() {
   if (status !== "active") return null;
   if (isOnline && offers.live > 0 && offers.collapsed) {
     return (
-      <section className="rounded-2xl bg-card p-4 shadow-card ring-1 ring-saffron-300 animate-slide-up" aria-live="polite">
+      <section className="rounded-[20px] border border-line bg-card p-4 shadow-card ring-1 ring-saffron-300 animate-slide-up" aria-live="polite">
         <div className="flex items-center gap-3">
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-saffron-100 text-saffron-700"><BellRing className="h-6 w-6" aria-hidden /></span>
           <div className="min-w-0 flex-1">
@@ -120,7 +120,7 @@ function WaitingCard() {
     );
   }
   return (
-    <section className="rounded-2xl bg-card px-5 py-8 text-center shadow-card" aria-live="polite">
+    <section className="rounded-[20px] border border-line bg-card px-5 py-8 text-center shadow-card" aria-live="polite">
       <span className={cn("mx-auto flex h-16 w-16 items-center justify-center rounded-full", isOnline ? "bg-brand-50 text-brand-700" : "bg-surface-2 text-ink-3")}>
         {isOnline ? <BellRing className={cn("h-7 w-7", realtime === "live" && "animate-pulse-soft")} aria-hidden /> : <Inbox className="h-7 w-7" aria-hidden />}
       </span>

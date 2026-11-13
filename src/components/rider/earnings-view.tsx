@@ -48,7 +48,7 @@ export function EarningsView({ delivered, rider }: { delivered: RiderAssignment[
         <Tile label={t("earn.lifetime")} value={formatINR(rider.total_earnings)} hint={trips(rider.total_deliveries)} icon={<PackageCheck className="h-4 w-4" />} />
       </div>
 
-      <section className="rounded-2xl bg-card p-4 shadow-card" aria-labelledby="earn-chart">
+      <section className="rounded-[20px] border border-line bg-card p-4 shadow-card" aria-labelledby="earn-chart">
         <div className="mb-3 flex items-baseline justify-between">
           <h2 id="earn-chart" className="font-display text-[15px] font-extrabold text-ink">{t("earn.last7")}</h2>
           <p className="text-xs text-ink-3">{t("common.total")} <span className="font-semibold tabular text-ink">{formatINR(last7.reduce((s, d) => s + d.earned, 0))}</span></p>
@@ -74,7 +74,7 @@ export function EarningsView({ delivered, rider }: { delivered: RiderAssignment[
         )}
       </section>
 
-      <section className="rounded-2xl bg-card p-4 shadow-card" aria-labelledby="cod-head">
+      <section className="rounded-[20px] border border-line bg-card p-4 shadow-card" aria-labelledby="cod-head">
         <h2 id="cod-head" className="flex items-center gap-2 font-display text-[15px] font-extrabold text-ink"><Banknote className="h-4 w-4 text-saffron-700" /> {t("earn.cashCollected")}</h2>
         <KeyValue className="mt-3" items={[
           { label: t("time.today"), value: formatINR(today.cod) },
@@ -87,9 +87,9 @@ export function EarningsView({ delivered, rider }: { delivered: RiderAssignment[
       <section aria-labelledby="per-day">
         <h2 id="per-day" className="mb-2 px-1 font-display text-[15px] font-extrabold text-ink">{t("earn.dayByDay")}</h2>
         {recent.length === 0 ? (
-          <div className="rounded-2xl bg-card shadow-card"><EmptyState compact icon={<PackageCheck className="h-7 w-7" />} title={t("earn.noneYet")} description={t("earn.noneYetBody")} /></div>
+          <div className="rounded-[20px] border border-line bg-card shadow-card"><EmptyState compact icon={<PackageCheck className="h-7 w-7" />} title={t("earn.noneYet")} description={t("earn.noneYetBody")} /></div>
         ) : (
-          <div className="overflow-x-auto rounded-2xl bg-card shadow-card">
+          <div className="overflow-x-auto rounded-[20px] border border-line bg-card shadow-card">
           <table className="w-full min-w-[320px] text-sm">
             <caption className="sr-only">{t("earn.dayByDay")}</caption>
             <thead className="bg-surface text-left text-[11px] uppercase tracking-wide text-ink-3">
