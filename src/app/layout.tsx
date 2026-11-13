@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(site.url),
   // Every page sets its own title, description and canonical; nothing here may imply one (a
   // site-wide canonical would point every page at the homepage).
-  title: { default: `${site.seoName} | Grocery, Fruits & Vegetable Delivery in ${site.city}`, template: `%s | ${site.seoName}` },
+  title: { default: `${site.seoName} | Online Grocery Delivery in ${site.city}`, template: `%s | ${site.seoName}` },
   description: site.description,
   applicationName: site.seoName,
   manifest: "/manifest.webmanifest",

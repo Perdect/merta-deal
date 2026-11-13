@@ -111,14 +111,14 @@ const cachedCollections = unstable_cache(async (): Promise<{ id: string; title: 
     const cat = (p.categories as unknown as { slug: string } | null)?.slug;
     return { id: p.id, title: p.title, description: p.description, kind: p.promo_type === "flash_sale" ? "Flash sale" : "Collection", href: cat ? `/c/${cat}` : "/search?sort=popular" };
   });
-  // Launch scope is Grocery, Fruits and Vegetables: every quick pick must land on
+  // Every quick pick must land on
   // products a customer can actually buy, never an empty search.
   const quick = [
     { id: "monthly", title: "Monthly ration", description: "Atta, dal, rice, oil, sugar, salt", kind: "Quick pick", href: "/c/grocery?sort=popular" },
-    { id: "fresh-sabzi", title: "Fresh sabzi", description: "Onion, potato, tomato, hari mirch from the mandi", kind: "Quick pick", href: "/c/vegetables" },
-    { id: "fruit-basket", title: "Fruit basket", description: "Banana, apple, anar, papaya", kind: "Quick pick", href: "/c/fruits" },
+    { id: "mithai", title: "Mithai box", description: "Kaju katli, rasgulla and more", kind: "Quick pick", href: "/c/sweets" },
+    { id: "cakes", title: "Cakes to order", description: "Chocolate, butterscotch, red velvet", kind: "Quick pick", href: "/c/bakery-cakes" },
   ];
-  // A quick pick for a switched-off category (fresh produce paused) would land on a notice, not products.
+  // A quick pick for a switched-off category would land on a notice, not products.
   const active = new Set((await cachedCategories()).map((c) => c.slug));
   return liveShopLinks([...promos, ...quick], active).slice(0, 8);
 }, ["collections"], { tags: [CATALOGUE_TAG], revalidate: PUBLIC_TTL });

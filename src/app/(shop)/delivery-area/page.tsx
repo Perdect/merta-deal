@@ -66,7 +66,7 @@ export default async function DeliveryAreaPage() {
 
       <h1 className="mt-1 font-display lg:mt-3 text-2xl font-bold leading-tight text-ink">Delivery area, charges & timings in {site.city}</h1>
       <p className="mt-2 max-w-3xl text-sm leading-relaxed text-ink-2">
-        {site.seoName} delivers groceries, fruits and vegetables to homes in {site.city}, Rajasthan{pincodes.length ? ` (pincode${pincodes.length > 1 ? "s" : ""} ${pincodes.join(", ")})` : ""}. Enter your address or pincode at checkout and we confirm the exact charge before you pay.
+        {site.seoName} delivers groceries, sweets, cakes and dry fruits to homes in {site.city}, Rajasthan{pincodes.length ? ` (pincode${pincodes.length > 1 ? "s" : ""} ${pincodes.join(", ")})` : ""}. Enter your address or pincode at checkout and we confirm the exact charge before you pay.
       </p>
       <p lang="hi" className="mt-1 text-sm text-ink-3">मेड़ता सिटी में किराना डिलीवरी — आपका पता या पिनकोड डालें, भुगतान से पहले डिलीवरी शुल्क दिख जाएगा।</p>
 

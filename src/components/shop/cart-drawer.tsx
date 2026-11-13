@@ -280,7 +280,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
             <div className="flex flex-col items-center px-6 py-16 text-center">
               <span className="flex h-16 w-16 items-center justify-center rounded-full bg-surface-2 text-ink-3"><ShoppingBag className="h-7 w-7" /></span>
               <p className="mt-4 font-display text-lg font-bold text-ink">Your cart is empty</p>
-              <p className="mt-1 text-sm text-ink-3">Add groceries, fruits and vegetables — delivered in minutes.</p>
+              <p className="mt-1 text-sm text-ink-3">Add groceries, sweets and cakes — delivered in minutes.</p>
               <Button className="mt-5 rounded-xl" href="/categories" onClick={closeDrawer}>Start shopping</Button>
             </div>
           ) : step === "cart" && s ? (

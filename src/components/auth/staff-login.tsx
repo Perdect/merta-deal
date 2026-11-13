@@ -90,8 +90,8 @@ function LoginForm({ portal, next, denied, signedOut, signedInAs, buttonClassNam
 /** Cards fanned out on the colour panel: our own category collages, no invented ratings or prices. */
 const PANEL_CARDS = [
   { src: "/categories/sweets-collage.webp", title: "Sweets", sub: "Mithai, fresh daily", cls: "-rotate-[9deg] translate-y-6 -translate-x-4 z-0" },
-  { src: "/categories/fruits-collage.webp", title: "Fresh fruits", sub: "Picked for Merta City", cls: "z-10 -translate-y-2" },
-  { src: "/categories/vegetables-collage.webp", title: "Vegetables", sub: "Sabzi mandi to door", cls: "rotate-[9deg] translate-y-6 translate-x-4 z-0" },
+  { src: "/categories/bakery-cakes-collage.webp", title: "Cakes & bakery", sub: "Made to order", cls: "z-10 -translate-y-2" },
+  { src: "/categories/grocery.2da44f38.webp", title: "Grocery", sub: "Kirana staples", cls: "rotate-[9deg] translate-y-6 translate-x-4 z-0" },
 ];
 const CONFETTI = [
   "left-[8%] top-[18%] h-3 w-3 rounded-full bg-[#ffd166]", "right-[14%] top-[22%] h-2.5 w-2.5 rounded-sm bg-[#06d6a0] rotate-12",

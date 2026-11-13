@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import { Apple, Carrot, Wheat, ShoppingBasket, Zap, Banknote, ShieldCheck } from "lucide-react";
+import { Cake, Candy, Wheat, ShoppingBasket, Zap, Banknote, ShieldCheck } from "lucide-react";
 import { Logo } from "@/components/ui/misc";
 import { site } from "@/config/site";
 import { AuthClose } from "@/components/auth/auth-close";
 
-/** Produce icons drifting in the hero; purely decorative, still when reduced motion is preferred. */
+/** Sweet-shop icons drifting in the hero; purely decorative, still when reduced motion is preferred. */
 const FLOATERS = [
-  { Icon: Apple, cls: "right-1 top-1 h-11 w-11 text-saffron-300", delay: "0s", tilt: "-8deg" },
-  { Icon: Carrot, cls: "right-16 top-9 h-7 w-7 text-saffron-400/70", delay: "1.2s", tilt: "18deg" },
+  { Icon: Cake, cls: "right-1 top-1 h-11 w-11 text-saffron-300", delay: "0s", tilt: "-8deg" },
+  { Icon: Candy, cls: "right-16 top-9 h-7 w-7 text-saffron-400/70", delay: "1.2s", tilt: "18deg" },
   { Icon: Wheat, cls: "right-28 -top-1 h-8 w-8 text-white/30", delay: "0.6s", tilt: "-14deg" },
   { Icon: ShoppingBasket, cls: "right-40 top-7 hidden h-7 w-7 text-white/20 sm:block", delay: "2s", tilt: "6deg" },
 ];
@@ -35,7 +35,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="relative mx-auto max-w-md motion-safe:animate-rise">
           <Logo light size="lg" />
           <p className="mt-3 font-display text-2xl font-extrabold leading-tight">{site.tagline}</p>
-          <p className="mt-1 max-w-[18rem] text-sm text-white/80">Groceries, fruits and vegetables from Merta Deal, with a {site.deliveryWindow} delivery target.</p>
+          <p className="mt-1 max-w-[18rem] text-sm text-white/80">Groceries, sweets, cakes and dry fruits from Merta Deal, with a {site.deliveryWindow} delivery target.</p>
           <ul className="mt-5 flex gap-2">
             {PERKS.map(({ Icon, t, s }, i) => (
               <li key={t} className="flex items-center gap-2 rounded-full bg-white/12 px-3 py-1.5 text-xs backdrop-blur motion-safe:animate-rise" style={{ animationDelay: `${150 + i * 90}ms` }}>

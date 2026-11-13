@@ -4,7 +4,7 @@ import { ShopPageHeader } from "@/components/shop/shop-page-header";
 import { SearchLink } from "@/components/shop/search-link";
 import { CategoryBrowser } from "@/components/shop/category-browser";
 
-export const metadata: Metadata = { title: "Shop by Category – Grocery, Fruits & Vegetables in Merta City", description: "Browse every MertaDeal category — grocery and kirana staples, fresh vegetables and fruits — with home delivery across Merta City, Rajasthan.", alternates: { canonical: "/categories" } };
+export const metadata: Metadata = { title: "Shop by Category – Grocery, Sweets, Cakes & Dry Fruits in Merta City", description: "Browse every MertaDeal category — grocery and kirana staples, sweets, cakes, bakery items and dry fruits — with home delivery in Merta City.", alternates: { canonical: "/categories" } };
 export const dynamic = "force-dynamic";
 
 /** Compact quick-commerce style category screen: tabs → sub-category tiles, or products for leaf categories. */

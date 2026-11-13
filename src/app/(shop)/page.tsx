@@ -46,7 +46,7 @@ const homeJsonLd = (settings: Record<string, unknown>) => ({
 
 /**
  * Launch homepage, shopping first: offer strip → category tiles → everyday essentials → fresh
- * vegetables → fresh fruits → grocery essentials → service strip. One concurrent batch of queries;
+ * the product sections → service strip. One concurrent batch of queries;
  * each product appears once.
  */
 export default async function HomePage() {

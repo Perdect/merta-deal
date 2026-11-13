@@ -10,7 +10,7 @@ export function ReferralCard({ code, stats }: { code: string | null; stats: { pe
   const [copied, setCopied] = React.useState(false);
   if (!code) return null;
   const link = `${site.url}/?ref=${encodeURIComponent(code)}`;
-  const message = `Merta ki shopping, ab online! Order groceries, fruits and vegetables on Merta Deal. Open my invite link before your first order to get free standard delivery: ${link}. When your order is delivered, I earn a free delivery credit too.`;
+  const message = `Merta ki shopping, ab online! Order groceries, sweets, cakes and dry fruits on Merta Deal. Open my invite link before your first order to get free standard delivery: ${link}. When your order is delivered, I earn a free delivery credit too.`;
 
   const copy = async () => {
     try { await navigator.clipboard.writeText(link); setCopied(true); toast.success("Invite link copied"); setTimeout(() => setCopied(false), 2000); }

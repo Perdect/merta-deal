@@ -5,14 +5,14 @@ import type { WelcomeOffer } from "@/lib/data/home";
 import { formatINR } from "@/lib/utils";
 import { site } from "@/config/site";
 
-/** Real product cutouts arranged like a full shopping bag; positions are percentages of the visual box. */
+/** Real product cutouts (cake, mithai, dry fruits, tea, ghee) arranged like a full shopping bag; positions are percentages of the visual box. */
 const CLUSTER = [
-  { src: "/products/aashirvaad-shudh-chakki-atta-5-kg.ab289af7.webp", cls: "left-[6%] top-[16%] w-[40%] rotate-[-6deg]" },
-  { src: "/products/saras-taaza-toned-milk-1-l.7a1b4929.webp", cls: "left-[58%] top-[10%] w-[30%] rotate-[8deg]" },
-  { src: "/products/capsicum-shimla-mirch-250-g.553e6f05.webp", cls: "left-[36%] top-[30%] w-[36%]" },
-  { src: "/products/tomato-tamatar-1-kg.0d3028ab.webp", cls: "left-[8%] top-[52%] w-[38%] rotate-[-10deg]" },
-  { src: "/products/banana-kela-1-dozen.e22b678a.webp", cls: "left-[50%] top-[48%] w-[44%] rotate-[12deg]" },
-  { src: "/products/apple-shimla-1-kg.80530dc9.webp", cls: "left-[30%] top-[64%] w-[32%] rotate-[4deg]" },
+  { src: "/products/chocolate-cake-sample-500-g.1f73fc08.webp", cls: "left-[4%] top-[14%] w-[46%] rotate-[-6deg]" },
+  { src: "/products/tata-tea-gold-500-g.6efe127b.webp", cls: "left-[60%] top-[6%] w-[30%] rotate-[8deg]" },
+  { src: "/products/motichoor-laddoo-sample-500-g.f341e814.webp", cls: "left-[40%] top-[34%] w-[38%]" },
+  { src: "/products/merta-dairy-desi-ghee-bilona-500-g.3dc89824.webp", cls: "left-[6%] top-[54%] w-[34%] rotate-[-8deg]" },
+  { src: "/products/happilo-premium-almonds-250-g.3d72c57f.webp", cls: "left-[56%] top-[52%] w-[40%] rotate-[10deg]" },
+  { src: "/products/cashew-w320-250-g.8ef99478.webp", cls: "left-[30%] top-[66%] w-[32%] rotate-[4deg]" },
 ];
 
 /**
@@ -31,7 +31,7 @@ export function OfferBanner({ offers, etaLabel, payLine }: { offers: WelcomeOffe
   const payRaw = payLine.replace(/\.$/, "").replace(/^Pay (online )?by /i, "").replace(/ available$/i, "");
   const pay = payRaw ? payRaw.charAt(0).toUpperCase() + payRaw.slice(1) : "";
   return (
-    <section aria-label="Shop fresh grocery online in Merta City" className="mx-4 sm:mx-0">
+    <section aria-label="Shop grocery online in Merta City" className="mx-4 sm:mx-0">
       <div className="relative isolate overflow-hidden rounded-[22px] bg-[#245c3f] text-white shadow-[0_10px_30px_rgba(20,70,45,0.22)] sm:rounded-[28px]">
         <span aria-hidden className="pointer-events-none absolute -left-20 -top-24 h-72 w-72 rounded-full bg-white/[0.06]" />
         <span aria-hidden className="pointer-events-none absolute -bottom-24 right-[30%] h-64 w-64 rounded-full bg-[#9fd68a]/10 blur-2xl" />
@@ -41,7 +41,7 @@ export function OfferBanner({ offers, etaLabel, payLine }: { offers: WelcomeOffe
               <ShoppingBasket className="h-3.5 w-3.5 text-[#cdf36b]" aria-hidden />{site.tagline}
             </p>
             <h2 className="mt-4 font-display text-[32px] font-extrabold leading-[1.02] tracking-tight min-[400px]:text-[36px] sm:text-[46px] lg:text-[52px]">
-              Make life easy<br />with <span className="relative inline-block text-[#cdf36b]">fresh<Underline /></span><br />grocery
+              Make life easy<br />with <span className="relative inline-block text-[#cdf36b]">online<Underline /></span><br />grocery
             </h2>
             <p className="mt-3.5 max-w-[34ch] text-[13.5px] leading-relaxed text-white/80 sm:mt-5 sm:text-[15px]">{line}</p>
             <Link href="/categories" className="mt-5 inline-flex min-h-12 items-center rounded-xl bg-[#ff6b35] px-7 text-[15px] font-bold text-white shadow-[0_8px_20px_rgba(255,107,53,0.35)] transition hover:bg-[#f25d26] active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:mt-7 sm:min-h-[52px] sm:px-8 sm:text-base">Shop Now</Link>

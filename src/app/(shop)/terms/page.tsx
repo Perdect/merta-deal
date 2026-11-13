@@ -5,14 +5,14 @@ import { site } from "@/config/site";
 
 export const metadata: Metadata = {
   title: "Terms and Conditions",
-  description: `Terms for ordering groceries, fruits and vegetables from ${site.name} in ${site.city}: orders, payments, delivery, cancellations and refunds.`,
+  description: `Terms for ordering groceries, sweets, cakes and other products from ${site.name} in ${site.city}: orders, payments, delivery, cancellations and refunds.`,
   alternates: { canonical: "/terms" },
 };
 
 export default function TermsPage() {
   return (
     <LegalPage title="Terms and Conditions" updated="13 October 2026"
-      intro={<>These terms apply when you use mertadeal.com or the {site.name} app to order groceries, fruits, vegetables and other products for delivery in {site.city}, Rajasthan. By creating an account or placing an order you agree to them. Please also read our <Link href="/privacy">Privacy Policy</Link>.</>}>
+      intro={<>These terms apply when you use mertadeal.com or the {site.name} app to order groceries, sweets, cakes, bakery items, dry fruits and other products for delivery in {site.city}, Rajasthan. By creating an account or placing an order you agree to them. Please also read our <Link href="/privacy">Privacy Policy</Link>.</>}>
       <section>
         <h2>1. The service</h2>
         <p>{site.name} is a local online grocery service. Products are sold and packed by {site.name} and delivered by our delivery partners within our <Link href="/delivery-area">delivery areas</Link>.</p>
@@ -54,7 +54,7 @@ export default function TermsPage() {
         <ul>
           <li>For cancelled or declined orders: wallet payments are refunded to your wallet immediately; online payments are refunded to the original payment method within 5–7 working days; nothing is charged for unpaid Cash on Delivery orders.</li>
           <li>If an item is damaged, spoiled, missing or wrong, report it through <Link href="/account/support">Help &amp; support</Link> or by phone within 24 hours of delivery (photos help). We will replace it or refund it.</li>
-          <li>Fresh produce varies naturally in size and colour; this alone is not a defect.</li>
+          <li>Freshly made items such as sweets and cakes vary naturally in size and appearance; this alone is not a defect.</li>
         </ul>
       </section>
       <section>

@@ -47,7 +47,7 @@ export function CartView({ initial, coupons, addresses, signedIn, isGuest }: { i
   const remove = async () => { setCouponBusy(true); await removeCouponAction(); await refresh(); setCouponBusy(false); };
 
   if (!summary || summary.empty || !summary.items.length) {
-    return <EmptyState icon={<ShoppingBag className="h-7 w-7" />} title="Your cart is empty" description="Add groceries, fruits and vegetables — delivered in minutes." action={<Button href="/categories">Start shopping</Button>} />;
+    return <EmptyState icon={<ShoppingBag className="h-7 w-7" />} title="Your cart is empty" description="Add groceries, sweets and cakes — delivered in minutes." action={<Button href="/categories">Start shopping</Button>} />;
   }
 
   return (

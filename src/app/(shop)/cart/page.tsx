@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export default async function CartPage() {
   const user = await getSessionUser();
   // No session at all (not even a guest one): nothing has been added yet.
-  if (!user) return <EmptyState icon={<ShoppingBag className="h-7 w-7" />} title="Your cart is empty" description="Add groceries, fruits and vegetables — delivered in minutes." action={<Button href="/categories">Start shopping</Button>} />;
+  if (!user) return <EmptyState icon={<ShoppingBag className="h-7 w-7" />} title="Your cart is empty" description="Add groceries, sweets and cakes — delivered in minutes." action={<Button href="/categories">Start shopping</Button>} />;
   const [summary, coupons, addresses, profile] = await Promise.all([getCartSummary(), getAvailableCoupons(), getMyAddresses(), getMyProfile()]);
   return (
     <div className="pt-1">
