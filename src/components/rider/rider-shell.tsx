@@ -17,6 +17,7 @@ import { useRiderGps, useWakeLock } from "./use-rider-gps";
 import { useNow } from "./use-now";
 import { realtimeTopic } from "@/lib/realtime-topic";
 import { OfferAlert } from "./offer-alert";
+import { OnlineSwitch } from "./online-toggle";
 import { AlertBanner, type PushConfig } from "@/components/alerts/alert-setup";
 import { useRiderLang, useT, RIDER_LANGS, type RiderLang } from "@/lib/rider-i18n";
 
@@ -25,10 +26,11 @@ const EMPTY_NOTIFICATIONS: Notification[] = [];
 type ShellUser = { id: string; name: string | null };
 
 /**
- * Phone-app frame for the rider PWA: a white top bar with the rider's initials, name and the honest
- * connection + GPS line; the page; a solid bottom tab bar. Owns the cross-page plumbing: one Realtime
- * channel on this rider's assignments and own row (reconciled on reconnect, tab resume and network
- * return), GPS streaming while online or on a delivery, notification toasts, and the language.
+ * Phone-app frame for the rider PWA: "Hello <name>" with the online switch and the honest
+ * connection + GPS line on top; the page; an icon-only tab bar at the bottom. Owns the cross-page
+ * plumbing: one Realtime channel on this rider's assignments and own row (reconciled on reconnect,
+ * tab resume and network return), GPS streaming while online or on a delivery, notification toasts,
+ * and the language.
  */
 export function RiderShell({ user, rider, initialActive, push, initialLang, children }: { user: ShellUser; rider: DeliveryPartner; initialActive: boolean; push: PushConfig; initialLang: RiderLang; children: React.ReactNode }) {
   const hydrate = useRiderStore((s) => s.hydrate);
@@ -44,9 +46,7 @@ export function RiderShell({ user, rider, initialActive, push, initialLang, chil
   const chosen = useRiderLang((s) => s.chosen);
   const setLang = useRiderLang((s) => s.setLang);
 
-  // Server props are the truth after every refresh; the store carries them between pages.
   React.useEffect(() => { hydrate(rider, initialActive); }, [rider, initialActive, hydrate]);
-  // The profile's language applies until the rider picks one on this phone.
   React.useEffect(() => { if (!chosen && initialLang !== lang) setLang(initialLang, false); }, [chosen, initialLang, lang, setLang]);
 
   React.useEffect(() => {
@@ -76,7 +76,6 @@ export function RiderShell({ user, rider, initialActive, push, initialLang, chil
     };
   }, [rider.id, bumpAssignments, setStats, setRider, setRealtime]);
 
-  // Toasts for notifications other than delivery requests (the ringing popup is that alert); one per order per minute.
   const { items } = useNotifications(user.id, EMPTY_NOTIFICATIONS, { toastNew: false });
   const seenRef = React.useRef<Set<string> | null>(null);
   const toastedRef = React.useRef<Map<string, number>>(new Map());
@@ -101,7 +100,7 @@ export function RiderShell({ user, rider, initialActive, push, initialLang, chil
   return (
     <div lang={lang === "hi" ? "hi" : "en-IN"} className={cn("flex min-h-dvh flex-col bg-surface", lang === "hi" && "font-hindi")}>
       <RiderTopBar name={user.name} rider={current} isOnline={isOnline} gpsOn={gpsOn} />
-      <main className="mx-auto w-full max-w-lg flex-1 px-4 pt-4" style={{ paddingBottom: "calc(var(--bottom-nav-h) + var(--safe-bottom) + 28px)" }}>
+      <main className="mx-auto w-full max-w-lg flex-1 px-4 pt-2" style={{ paddingBottom: "calc(var(--bottom-nav-h) + var(--safe-bottom) + 28px)" }}>
         <OfflineBanner />
         <RiderStatusBanner status={current.status} />
         {current.status === "active" ? <AlertBanner portal="rider" push={push} href="/rider/profile#alerts" /> : null}
@@ -114,25 +113,25 @@ export function RiderShell({ user, rider, initialActive, push, initialLang, chil
   );
 }
 
-function initials(name: string | null) {
-  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
-  return parts.length ? parts.slice(0, 2).map((p) => p[0]!.toUpperCase()).join("") : "MD";
-}
-
+/** "Hello Kayyum" in brand green, the online switch, and the state line underneath. */
 function RiderTopBar({ name, rider, isOnline, gpsOn }: { name: string | null; rider: DeliveryPartner; isOnline: boolean; gpsOn: boolean }) {
   const { t } = useT();
-  const statusLabel = rider.status !== "active" ? (rider.status === "pending" ? t("status.pending") : t("status.suspended")) : isOnline ? t("status.online") : t("status.offline");
+  const first = (name ?? "").trim().split(/\s+/)[0] || t("rider.partner");
   return (
-    <header className="sticky top-0 z-30 bg-card/95 shadow-[0_1px_0_rgb(23_32_28/0.06)] backdrop-blur" style={{ paddingTop: "var(--safe-top)" }}>
-      <div className="mx-auto flex min-h-16 w-full max-w-lg items-center gap-3 px-4 py-2.5">
-        <Link href="/rider" aria-label={t("nav.home")} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-100 font-display text-[15px] font-extrabold text-brand-800">{initials(name)}</Link>
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-display text-[17px] font-extrabold leading-tight text-ink">{name ?? t("rider.partner")}</p>
+    <header className="sticky top-0 z-30 bg-surface/95 backdrop-blur" style={{ paddingTop: "var(--safe-top)" }}>
+      <div className="mx-auto w-full max-w-lg px-4 pb-2 pt-4">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="min-w-0 truncate font-display text-[24px] font-extrabold leading-tight text-brand-700">{t("home.hello", { name: first })}</h1>
+          {rider.status === "active" ? <OnlineSwitch /> : null}
+        </div>
+        <div className="mt-1 flex items-center gap-2">
+          <span className={cn("inline-flex items-center gap-1.5 text-[12px] font-bold", rider.status !== "active" ? "text-ink-3" : isOnline ? "text-success" : "text-ink-3")}>
+            <span className={cn("h-2 w-2 rounded-full", rider.status !== "active" ? "bg-ink-4" : isOnline ? "bg-success animate-pulse-soft" : "bg-ink-4")} />
+            {rider.status !== "active" ? (rider.status === "pending" ? t("status.pending") : t("status.suspended")) : isOnline ? t("status.online") : t("status.offline")}
+          </span>
+          <span className="text-ink-4" aria-hidden>·</span>
           <StateLine gpsOn={gpsOn} />
         </div>
-        <span className={cn("inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] font-bold", rider.status !== "active" ? "bg-surface-2 text-ink-3" : isOnline ? "bg-success-50 text-success" : "bg-surface-2 text-ink-2")} aria-live="polite">
-          <span className={cn("h-2 w-2 rounded-full", rider.status !== "active" ? "bg-ink-4" : isOnline ? "bg-success animate-pulse-soft" : "bg-ink-4")} />{statusLabel}
-        </span>
       </div>
     </header>
   );
@@ -153,14 +152,14 @@ export function LangToggle({ className }: { className?: string }) {
   );
 }
 
-/** Where the connection and the GPS really stand, in one short line under the rider's name. */
+/** Where the connection and the GPS really stand, in one short line. */
 function StateLine({ gpsOn }: { gpsOn: boolean }) {
   const { t } = useT();
   const realtime = useRiderStore((s) => s.realtime);
   const network = useNetworkOnline();
   const conn = !network ? { label: t("conn.noInternet"), tone: "text-danger", Icon: WifiOff } : realtime === "live" ? { label: t("conn.live"), tone: "text-success", Icon: Wifi } : realtime === "connecting" ? { label: t("conn.connecting"), tone: "text-ink-3", Icon: WifiOff } : { label: t("conn.reconnecting"), tone: "text-[#8a6300]", Icon: WifiOff };
   return (
-    <p className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[11.5px] font-semibold leading-tight" role="status">
+    <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] font-semibold leading-tight" role="status">
       <span className={cn("inline-flex shrink-0 items-center gap-1", conn.tone)}><conn.Icon className="h-3 w-3" aria-hidden />{conn.label}</span>
       {gpsOn ? <GpsIndicator /> : null}
     </p>
@@ -237,7 +236,7 @@ const NAV = [
   { href: "/rider/profile", key: "nav.profile", Icon: User },
 ] as const;
 
-/** Solid bottom tab bar above the home indicator; hidden while the on-screen keyboard is up. */
+/** Icon-only tab bar above the home indicator; the active tab is filled green. Hidden while the keyboard is up. */
 function RiderBottomNav() {
   const { t } = useT();
   const pathname = usePathname();
@@ -246,17 +245,17 @@ function RiderBottomNav() {
   const keyboard = useKeyboardOpen();
   if (keyboard) return null;
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-card" style={{ paddingBottom: "var(--safe-bottom)" }} aria-label={t("nav.label")}>
+    <nav className="fixed inset-x-0 bottom-0 z-40 bg-card shadow-[0_-4px_20px_rgb(21_128_61/0.08)]" style={{ paddingBottom: "var(--safe-bottom)" }} aria-label={t("nav.label")}>
       <ul className="mx-auto grid max-w-lg grid-cols-4" style={{ height: "var(--bottom-nav-h)" }}>
         {NAV.map((item) => {
           const isActive = item.href === "/rider" ? pathname === "/rider" : pathname.startsWith(item.href);
           const badge = item.href === "/rider" ? (active ? "•" : newRequests > 0 ? String(newRequests) : null) : null;
           return (
             <li key={item.href}>
-              <Link href={item.href} aria-current={isActive ? "page" : undefined} className={cn("relative flex h-full flex-col items-center justify-center gap-0.5 text-[11px] font-semibold transition-colors", isActive ? "text-brand-700" : "text-ink-3")}>
-                <span className={cn("flex h-7 w-14 items-center justify-center rounded-full transition-colors", isActive && "bg-brand-100")}><item.Icon className="h-5 w-5" strokeWidth={isActive ? 2.4 : 2} /></span>
-                {t(item.key)}
-                {badge ? <span className={cn("absolute right-[18%] top-1 flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1 text-[10px] font-bold animate-pop", active ? "bg-brand-600 text-white" : "bg-saffron-500 text-ink")} aria-hidden>{badge}</span> : null}
+              <Link href={item.href} aria-current={isActive ? "page" : undefined} aria-label={t(item.key)} className="relative flex h-full flex-col items-center justify-center">
+                <span className={cn("flex h-11 w-11 items-center justify-center rounded-2xl transition-colors", isActive ? "bg-brand-50 text-brand-700" : "text-ink-3")}><item.Icon className="h-6 w-6" strokeWidth={isActive ? 2.4 : 2} /></span>
+                <span className={cn("mt-0.5 h-1 w-1 rounded-full", isActive ? "bg-brand-700" : "bg-transparent")} aria-hidden />
+                {badge ? <span className={cn("absolute right-[26%] top-2 flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white animate-pop", active ? "bg-brand-600" : "bg-saffron-500 text-ink")} aria-hidden>{badge}</span> : null}
                 {badge ? <span className="sr-only">{active ? t("nav.deliveryInProgress") : t("nav.newRequests", { n: newRequests })}</span> : null}
               </Link>
             </li>

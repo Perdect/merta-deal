@@ -24,7 +24,7 @@ export function PayoutStatus({ earnings, payouts }: { earnings: EarningRow[]; pa
   const total = (s: EarningRow["status"][]) => earnings.filter((e) => s.includes(e.status)).reduce((a, e) => a + Number(e.amount), 0);
   const kind = (k: string | null | undefined) => (k && KIND_KEY[k] ? t(KIND_KEY[k]) : k ?? t("payout.kind.delivery"));
   return (
-    <section className="rounded-[20px] border border-line bg-card p-4 shadow-card" aria-labelledby="payouts-head">
+    <section className="rounded-[20px] bg-card p-4 shadow-card" aria-labelledby="payouts-head">
       <h2 id="payouts-head" className="flex items-center gap-2 font-display text-[16px] font-extrabold text-ink"><Wallet className="h-4 w-4 text-brand-700" /> {t("payout.title")}</h2>
       <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
         {[{ l: t("payout.toBePaid"), v: total(["pending", "failed"]) }, { l: t("payout.processing"), v: total(["processing"]) }, { l: t("payout.paid"), v: total(["paid"]) }].map((x) => (

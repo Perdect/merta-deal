@@ -77,20 +77,22 @@ export function ActiveDelivery({ assignment: a, onChanged, onCompleted }: { assi
   const notYet = () => { writeReached(a.id, null); setLocal(null); setUndone(`${a.id}:${leg}`); };
 
   return (
-    <section className="overflow-hidden rounded-[20px] border border-line bg-card shadow-card ring-1 ring-brand-200" aria-label={t("active.label")}>
-      <header className="bg-brand-50 px-4 pt-3.5 pb-3">
+    <section className="overflow-hidden rounded-[20px] bg-card shadow-card" aria-label={t("active.label")}>
+      <header className="bg-surface-2 px-4 pt-3.5 pb-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-brand-700">{t("active.label")} · {a.order.order_number}</p>
+            <p className="text-[11px] font-bold uppercase tracking-wide text-ink-3">{t("active.label")} · {a.order.order_number}</p>
             <h2 className="mt-0.5 font-display text-[20px] font-extrabold leading-tight text-ink">{t(STEPS[idx].label)}</h2>
           </div>
-          {Number(a.earning) > 0 ? <span className="shrink-0 rounded-full bg-card px-3 py-1.5 font-display text-sm font-extrabold tabular text-brand-800 shadow-sm">{formatINR(a.earning)}</span> : null}
+          {Number(a.earning) > 0 ? <span className="shrink-0 font-display text-[15px] font-extrabold tabular text-brand-700">{formatINR(a.earning)}</span> : null}
         </div>
+        <RouteLine a={a} leg={leg} />
         <Journey current={idx} />
         <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-ink-2">
           <span>{t("active.stepOf", { n: idx + 1, total: STEPS.length })}</span>
           {a.order.promised_at ? <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" aria-hidden />{t("active.promisedBy", { time: formatTime(a.order.promised_at) })}</span> : null}
           {a.distance_km != null && Number(a.distance_km) > 0 ? <span className="inline-flex items-center gap-1"><Route className="h-3 w-3" aria-hidden />{formatKm(a.distance_km)}</span> : null}
+          <span className="ml-auto font-semibold text-saffron-700">{t("active.ongoing")}</span>
         </p>
       </header>
       <div className="px-4 pb-4 pt-3">
@@ -113,7 +115,7 @@ function Journey({ current }: { current: number }) {
         const done = i < current; const active = i === current;
         return (
           <li key={s.key} className="min-w-0 text-center">
-            <span className={cn("mx-auto flex h-8 w-8 items-center justify-center rounded-full", done ? "bg-brand-600 text-white" : active ? "bg-brand-600 text-white ring-4 ring-brand-200" : "bg-card text-ink-4")} aria-hidden>
+            <span className={cn("mx-auto flex h-8 w-8 items-center justify-center rounded-full", done ? "bg-brand-600 text-white" : active ? "bg-brand-600 text-white ring-4 ring-brand-200" : "bg-card text-ink-4 ring-1 ring-line")} aria-hidden>
               {done ? <Check className="h-4 w-4" strokeWidth={3} /> : <s.Icon className="h-4 w-4" />}
             </span>
             <span className={cn("mt-1 block truncate text-[11px] font-semibold leading-tight", active ? "text-brand-800" : done ? "text-ink-2" : "text-ink-4")}>{t(s.short)}</span>
@@ -121,6 +123,33 @@ function Journey({ current }: { current: number }) {
           </li>
         );
       })}
+    </ol>
+  );
+}
+
+/** Pick up → Deliver at, joined by a dotted line; the leg the rider is on is in green. */
+function RouteLine({ a, leg }: { a: RiderAssignment; leg: "store" | "customer" }) {
+  const { t } = useT();
+  const pickup = [a.pickup.name, a.pickup.address_line1 ?? a.pickup.area].filter(Boolean).join(", ");
+  const drop = addressLine(a.order.address) || customerOf(a).area;
+  const rows = [
+    { key: "pickup", label: t("active.pickUp"), text: pickup, on: leg === "store", done: leg === "customer" },
+    { key: "drop", label: t("active.deliverAt"), text: drop, on: leg === "customer", done: false },
+  ];
+  return (
+    <ol className="mt-3 space-y-0">
+      {rows.map((r, i) => (
+        <li key={r.key} className="relative flex gap-3 pb-3 last:pb-0">
+          <span className="flex w-4 shrink-0 flex-col items-center" aria-hidden>
+            <span className={cn("mt-1 h-2.5 w-2.5 rounded-full ring-2", r.on ? "bg-brand-600 ring-brand-200" : r.done ? "bg-brand-600 ring-transparent" : "bg-card ring-brand-600")} />
+            {i < rows.length - 1 ? <span className="mt-1 w-0 flex-1 border-l-2 border-dotted border-brand-300" /> : null}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[10px] font-bold uppercase tracking-wide text-ink-3">{r.label}</span>
+            <span className={cn("block truncate text-[13px] font-semibold", r.on ? "text-ink" : "text-ink-2")}>{r.text || "—"}</span>
+          </span>
+        </li>
+      ))}
     </ol>
   );
 }
@@ -350,7 +379,7 @@ export function DeliveryComplete({ completed, onDone }: { completed: CompletedDe
   const { assignment: a } = completed;
   const cod = a.order.payment_method === "cod" && Number(a.cod_amount) > 0;
   return (
-    <section className="rounded-[20px] border border-line bg-card p-6 text-center shadow-card ring-1 ring-success/30 animate-pop" role="status">
+    <section className="rounded-[20px] bg-card p-6 text-center shadow-card ring-1 ring-success/30 animate-pop" role="status">
       <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success text-white"><Check className="h-8 w-8" strokeWidth={3} /></span>
       <h2 className="mt-3 font-display text-xl font-extrabold text-ink">{t("done.title")}</h2>
       <p className="text-sm text-ink-3">{a.order.order_number}</p>

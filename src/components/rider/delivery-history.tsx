@@ -41,7 +41,7 @@ export function DeliveryHistory({ items }: { items: RiderAssignment[] }) {
     <div className="space-y-4">
       <Tabs variant="pill" items={[{ value: "today", label: t("time.today"), count: counts.today }, { value: "week", label: t("time.thisWeek"), count: counts.week }, { value: "all", label: t("common.all"), count: counts.all }]} value={filter} onChange={(v) => setFilter(v as Filter)} />
       {groups.length === 0 ? (
-        <div className="rounded-[20px] border border-line bg-card shadow-card"><EmptyState compact icon={<Bike className="h-7 w-7" />} title={t("history.emptyTitle")} description={filter === "all" ? t("history.emptyAll") : t("history.emptyPeriod")} /></div>
+        <div className="rounded-[20px] bg-card shadow-card"><EmptyState compact icon={<Bike className="h-7 w-7" />} title={t("history.emptyTitle")} description={filter === "all" ? t("history.emptyAll") : t("history.emptyPeriod")} /></div>
       ) : groups.map(([day, list]) => {
         const delivered = list.filter((a) => a.status === "delivered");
         const earned = delivered.reduce((s, a) => s + Number(a.earning), 0);
@@ -51,7 +51,7 @@ export function DeliveryHistory({ items }: { items: RiderAssignment[] }) {
               <h2 id={`day-${day}`} className="font-display text-[15px] font-extrabold text-ink">{dayLabel(day)}</h2>
               <p className="text-xs text-ink-3">{t("history.deliveredCount", { n: delivered.length })} · <span className="font-semibold tabular text-ink">{formatINR(earned)}</span></p>
             </div>
-            <ul className="divide-y divide-line overflow-hidden rounded-[20px] border border-line bg-card shadow-card">
+            <ul className="divide-y divide-line overflow-hidden rounded-[20px] bg-card shadow-card">
               {list.map((a) => <HistoryRow key={a.id} a={a} />)}
             </ul>
           </section>

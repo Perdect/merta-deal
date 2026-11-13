@@ -11,7 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 import { env, isPushConfigured } from "@/lib/env";
 
 /** Orange address bar / title bar for the rider app (the shop keeps its green); the rest mirrors the root viewport. */
-export const viewport: Viewport = { themeColor: "#e8671f", width: "device-width", initialScale: 1, viewportFit: "cover", interactiveWidget: "resizes-content" };
+export const viewport: Viewport = { themeColor: "#15803d", width: "device-width", initialScale: 1, viewportFit: "cover", interactiveWidget: "resizes-content" };
 
 export const metadata: Metadata = {
   title: { default: "Delivery partner", template: "%s · Delivery partner | Merta Deal" },
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   // The rider app installs on its own (scope /rider) so the home-screen icon opens the rider screens, not the shop.
   manifest: "/rider.webmanifest",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "MD Rider" },
-  icons: { icon: [{ url: "/icons/rider-192.png", sizes: "192x192", type: "image/png" }, { url: "/icons/rider-512.png", sizes: "512x512", type: "image/png" }], apple: "/icons/rider-apple-touch-icon.png" },
+  icons: { icon: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }, { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" }], apple: "/icons/apple-touch-icon.png" },
 };
 
 /**

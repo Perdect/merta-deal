@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import Link from "next/link";
-import { RefreshCw, BellRing, Bike, IndianRupee, Banknote, PackageCheck, Inbox, ChevronRight } from "lucide-react";
+import { RefreshCw, BellRing, Inbox, ChevronRight, CircleDollarSign } from "lucide-react";
 import type { RiderAssignment } from "@/types/app";
 import { refreshRiderHomeAction, type RiderHomeData } from "@/lib/actions/rider";
 import { ErrorState } from "@/components/ui/states";
@@ -9,14 +9,14 @@ import { Button, IconButton } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import { cn, formatINR } from "@/lib/utils";
 import { useRiderStore } from "./rider-store";
-import { OnlineToggle } from "./online-toggle";
 import { ActiveDelivery, DeliveryComplete, type CompletedDelivery } from "./active-delivery";
 import { useT } from "@/lib/rider-i18n";
 
 /**
- * Rider home, top to bottom: the online switch, the one thing to do now (the active delivery, or a
- * waiting state), then three numbers for today. Requests are not listed here: the ringing popup is the
- * single request card, and a minimised request shows as a button in the waiting card.
+ * Rider home, top to bottom: today's earning card with two tiles (deliveries, cash to hand over), then
+ * "Deliveries" with the one thing to do now (the active delivery, or a waiting state). The online switch
+ * lives in the top bar. Requests are not listed here: the ringing popup is the single request card, and a
+ * minimised request shows as a button in the waiting card.
  */
 export function RiderHome({ initial }: { initial: RiderHomeData }) {
   const { t } = useT();
@@ -52,48 +52,55 @@ export function RiderHome({ initial }: { initial: RiderHomeData }) {
 
   const current = active[0] ?? null;
   const cashDue = Number(stats?.cash_due ?? stats?.cod_in_hand ?? 0);
+  const count = active.length;
 
   return (
     <div className="space-y-4">
-      <OnlineToggle />
-
-      {completed ? <DeliveryComplete completed={completed} onDone={() => { setCompleted(null); void refresh(); }} />
-        : current ? <ActiveDelivery assignment={current} onChanged={() => refresh(true)} onCompleted={(c) => { setCompleted(c); void refresh(true); }} />
-        : <WaitingCard />}
-
       <section aria-labelledby="rider-today">
-        <div className="mb-2 flex items-center justify-between px-1">
-          <h2 id="rider-today" className="font-display text-[17px] font-extrabold text-ink">{t("home.today")}</h2>
-          <IconButton label={t("common.refresh")} onClick={() => refresh()} loading={refreshing}><RefreshCw className="h-4 w-4" /></IconButton>
-        </div>
         {stats ? (
-          <>
-            <dl className="grid grid-cols-3 divide-x divide-line overflow-hidden rounded-[20px] border border-line bg-card shadow-card">
-              <Tile label={t("home.active")} value={stats.active} icon={<Bike className="h-4 w-4" />} hot={stats.active > 0} />
-              <Tile label={t("home.delivered")} value={stats.today_deliveries} icon={<PackageCheck className="h-4 w-4" />} />
-              <Tile label={t("home.earned")} value={formatINR(stats.today_earnings)} icon={<IndianRupee className="h-4 w-4" />} hot />
+          <div className="rounded-[20px] bg-card p-4 shadow-card">
+            <div className="flex items-center gap-3">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700" aria-hidden><CircleDollarSign className="h-7 w-7" strokeWidth={2.2} /></span>
+              <div className="min-w-0 flex-1">
+                <p id="rider-today" className="text-[13px] font-semibold text-ink-3">{t("home.totalEarning")}</p>
+                <p className="font-display text-[26px] font-extrabold tabular leading-tight text-ink">{formatINR(stats.today_earnings)}</p>
+              </div>
+              <span className="shrink-0 rounded-full border border-brand-600 px-3 py-1 text-[11px] font-bold tracking-wide text-brand-700">{t("home.todayChip")}</span>
+              <IconButton label={t("common.refresh")} onClick={() => refresh()} loading={refreshing} className="-mr-1"><RefreshCw className="h-4 w-4" /></IconButton>
+            </div>
+            <dl className="mt-3 grid grid-cols-2 gap-3">
+              <Tile label={t("home.deliveriesToday")} value={stats.today_deliveries} />
+              <Tile label={t("home.cashToHandOverShort")} value={formatINR(cashDue)} href={cashDue > 0 ? "/rider/earnings" : undefined} hot={cashDue > 0} />
             </dl>
-            {cashDue > 0 ? (
-              <Link href="/rider/earnings" className="mt-2 flex min-h-12 items-center gap-2.5 rounded-2xl bg-saffron-50 px-4 py-2.5 text-sm text-ink ring-1 ring-saffron-300/60 active:scale-[0.99]">
-                <Banknote className="h-5 w-5 shrink-0 text-saffron-700" aria-hidden />
-                <span className="min-w-0 flex-1">{t("home.cashToHandOver")} <strong className="tabular">{formatINR(cashDue)}</strong></span>
-                <ChevronRight className="h-4 w-4 shrink-0 text-ink-3" aria-hidden />
-              </Link>
-            ) : null}
-          </>
+          </div>
         ) : <ErrorState title={t("home.statsFailed")} description={t("home.statsFailedBody")} onRetry={() => refresh()} />}
+      </section>
+
+      <section aria-labelledby="rider-deliveries">
+        <div className="mb-2 flex items-baseline justify-between gap-3 px-1">
+          <h2 id="rider-deliveries" className="font-display text-[18px] font-extrabold text-ink">{t("home.deliveriesTitle")}</h2>
+          <p className="text-[12px] font-semibold text-brand-700">{count === 0 ? t("home.youHaveNone") : count === 1 ? t("home.youHaveOne") : t("home.youHave", { n: count })}</p>
+        </div>
+        {completed ? <DeliveryComplete completed={completed} onDone={() => { setCompleted(null); void refresh(); }} />
+          : current ? <ActiveDelivery assignment={current} onChanged={() => refresh(true)} onCompleted={(c) => { setCompleted(c); void refresh(true); }} />
+          : <WaitingCard />}
       </section>
     </div>
   );
 }
 
-function Tile({ label, value, icon, hot }: { label: string; value: React.ReactNode; icon: React.ReactNode; hot?: boolean }) {
-  return (
-    <div className="px-3 py-3.5">
-      <dt className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-ink-3"><span className={hot ? "text-brand-600" : "text-ink-4"}>{icon}</span>{label}</dt>
-      <dd className={cn("mt-1 font-display text-[22px] font-extrabold tabular leading-none", hot ? "text-brand-700" : "text-ink")}>{value}</dd>
-    </div>
+/** Mint tile: label on top, big number below; a link when there is somewhere to go. */
+function Tile({ label, value, href, hot }: { label: string; value: React.ReactNode; href?: string; hot?: boolean }) {
+  const inner = (
+    <>
+      <dt className="text-[12px] font-semibold text-ink-2">{label}</dt>
+      <dd className={cn("mt-1 flex items-center gap-1 font-display text-[22px] font-extrabold tabular leading-none", hot ? "text-brand-700" : "text-ink")}>
+        {value}{href ? <ChevronRight className="h-4 w-4 text-ink-3" aria-hidden /> : null}
+      </dd>
+    </>
   );
+  const cls = "block rounded-2xl bg-surface-2 px-4 py-3.5";
+  return href ? <Link href={href} className={cn(cls, "active:scale-[0.99]")}>{inner}</Link> : <div className={cls}>{inner}</div>;
 }
 
 /** No active delivery: says plainly whether requests can reach the rider, and brings back a minimised request. */
@@ -107,7 +114,7 @@ function WaitingCard() {
   if (status !== "active") return null;
   if (isOnline && offers.live > 0 && offers.collapsed) {
     return (
-      <section className="rounded-[20px] border border-line bg-card p-4 shadow-card ring-1 ring-saffron-300 animate-slide-up" aria-live="polite">
+      <section className="rounded-[20px] bg-card p-4 shadow-card ring-1 ring-saffron-300 animate-slide-up" aria-live="polite">
         <div className="flex items-center gap-3">
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-saffron-100 text-saffron-700"><BellRing className="h-6 w-6" aria-hidden /></span>
           <div className="min-w-0 flex-1">
@@ -120,11 +127,11 @@ function WaitingCard() {
     );
   }
   return (
-    <section className="rounded-[20px] border border-line bg-card px-5 py-8 text-center shadow-card" aria-live="polite">
+    <section className="rounded-[20px] bg-card px-5 py-8 text-center shadow-card" aria-live="polite">
       <span className={cn("mx-auto flex h-16 w-16 items-center justify-center rounded-full", isOnline ? "bg-brand-50 text-brand-700" : "bg-surface-2 text-ink-3")}>
         {isOnline ? <BellRing className={cn("h-7 w-7", realtime === "live" && "animate-pulse-soft")} aria-hidden /> : <Inbox className="h-7 w-7" aria-hidden />}
       </span>
-      <h2 className="mt-3 font-display text-[17px] font-extrabold text-ink">{isOnline ? t("waiting.title") : t("waiting.offlineTitle")}</h2>
+      <h3 className="mt-3 font-display text-[17px] font-extrabold text-ink">{isOnline ? t("waiting.title") : t("waiting.offlineTitle")}</h3>
       <p className="mx-auto mt-1 max-w-xs text-[13px] text-ink-3">
         {isOnline ? (realtime === "live" ? t("waiting.liveBody") : t("waiting.pollingBody")) : t("waiting.offlineBody")}
       </p>
