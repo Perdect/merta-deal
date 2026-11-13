@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Noto_Sans_Devanagari } from "next/font/google";
 import { getMyProfile } from "@/lib/data/account";
 import type { RiderLang } from "@/lib/rider-i18n";
 import { redirect } from "next/navigation";
@@ -10,9 +9,6 @@ import { RiderRegistration } from "@/components/rider/rider-registration";
 import { PortalTheme } from "@/components/shared/portal-theme";
 import { createClient } from "@/lib/supabase/server";
 import { env, isPushConfigured } from "@/lib/env";
-
-/** Devanagari face for the Hindi mode (the default Inter / Plus Jakarta have no Hindi glyphs). */
-const hindi = Noto_Sans_Devanagari({ variable: "--font-hindi", subsets: ["devanagari"], weight: ["400", "500", "600", "700", "800"], display: "swap" });
 
 /** Orange address bar / title bar for the rider app (the shop keeps its green); the rest mirrors the root viewport. */
 export const viewport: Viewport = { themeColor: "#ea580c", width: "device-width", initialScale: 1, viewportFit: "cover", interactiveWidget: "resizes-content" };
@@ -43,7 +39,7 @@ export default async function RiderLayout({ children }: { children: React.ReactN
   const prefs = (profile?.preferences && typeof profile.preferences === "object" && !Array.isArray(profile.preferences) ? profile.preferences : {}) as { language?: string };
   const initialLang: RiderLang = prefs.language === "hi" ? "hi" : "en";
   return (
-    <div className={`theme-rider contents ${hindi.variable}`}>
+    <div className="theme-rider contents">
       <PortalTheme portal="rider" />
       <RiderShell user={{ id: user.id, name: user.fullName }} rider={rider} initialActive={active} initialLang={initialLang} push={{ configured: isPushConfigured(), vapidPublicKey: env.vapidPublicKey }}>
         {children}
