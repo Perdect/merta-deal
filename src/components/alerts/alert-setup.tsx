@@ -44,11 +44,12 @@ export function useAlertSetup(push: PushConfig) {
     if (!ok) toast.error("Sound is blocked", "Tap Enable order alerts first.");
   }, [ringer]);
 
-  const soundLabel = ringer.sound === "ready" ? (ringer.muted ? "Muted on this device" : ringer.leader ? "On" : "On · another tab of this browser rings")
-    : ringer.sound === "unsupported" ? "Not supported in this browser" : ringer.sound === "locked" ? "Tap Enable to allow sound" : "Checking…";
+  // One short phrase per state: the details block below carries the explanation.
+  const soundLabel = ringer.sound === "ready" ? (ringer.muted ? "Muted" : ringer.leader ? "On" : "Another tab")
+    : ringer.sound === "unsupported" ? "Not supported" : ringer.sound === "locked" ? "Tap Enable" : "Checking…";
   const soundTone: "green" | "amber" | "neutral" | "red" = ringer.sound === "ready" ? (ringer.muted ? "amber" : "green") : ringer.sound === "locked" ? "amber" : ringer.sound === "unsupported" ? "red" : "neutral";
-  const pushLabel = sub.permission === "unconfigured" ? "Not set up on the server" : sub.permission === "unsupported" ? "Not supported here" : sub.permission === "denied" ? "Blocked in browser settings"
-    : sub.enabled ? "On · this device" : sub.permission === null ? "Checking…" : "Off";
+  const pushLabel = sub.permission === "unconfigured" ? "Not set up" : sub.permission === "unsupported" ? "Not supported" : sub.permission === "denied" ? "Blocked"
+    : sub.enabled ? "On" : sub.permission === null ? "Checking…" : "Off";
   const pushTone: "green" | "amber" | "neutral" | "red" = sub.enabled ? "green" : sub.permission === "denied" ? "red" : sub.permission === "unconfigured" || sub.permission === "unsupported" ? "neutral" : "amber";
   const needsSetup = ringer.sound === "locked" || (sub.available && !sub.enabled && sub.permission !== "denied");
 
@@ -68,7 +69,7 @@ export function AlertSetup({ portal, push, className, compact, moreLabel = "Ring
     <div className={cn("space-y-4", className)}>
       <dl className="grid gap-2 sm:grid-cols-2">
         <StatusRow icon={<Volume2 className="h-4 w-4" aria-hidden />} label="Sound" value={s.soundLabel} tone={s.soundTone} />
-        <StatusRow icon={<Smartphone className="h-4 w-4" aria-hidden />} label="Push notifications" value={s.pushLabel} tone={s.pushTone} />
+        <StatusRow icon={<Smartphone className="h-4 w-4" aria-hidden />} label="Push" value={s.pushLabel} tone={s.pushTone} />
       </dl>
       <div className="flex flex-wrap gap-2">
         <Button size="lg" onClick={s.enable} loading={s.busy} disabled={s.ringer.sound === "unsupported" && !s.sub.available} className={cn("flex-1 sm:flex-none", compact && "h-12 rounded-xl")}>
@@ -104,7 +105,7 @@ function StatusRow({ icon, label, value, tone }: { icon: React.ReactNode; label:
   return (
     <div className="flex items-center justify-between gap-3 rounded-lg border border-line bg-card px-3 py-2.5">
       <dt className="flex items-center gap-2 text-sm font-semibold text-ink">{icon}{label}</dt>
-      <dd><span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold", pill[tone])}>{value}</span></dd>
+      <dd><span className={cn("inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-bold", pill[tone])}>{value}</span></dd>
     </div>
   );
 }
