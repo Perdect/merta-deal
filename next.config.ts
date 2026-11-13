@@ -13,6 +13,9 @@ const nextConfig: NextConfig = {
     ],
     deviceSizes: [360, 414, 640, 768, 1024, 1280, 1536],
     imageSizes: [40, 48, 64, 72, 96, 128, 180, 256],
+    // Product photos never change under the same name (hashed files in /public, timestamped uploads in
+    // storage), so an optimised copy can be kept for a month instead of being rebuilt on every visit.
+    minimumCacheTTL: 60 * 60 * 24 * 30,
   },
   /** Retired URLs: permanent redirects so links and search results land on the page that replaced them. */
   async redirects() {
@@ -32,6 +35,10 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       { source: "/sw.js", headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }, { key: "Service-Worker-Allowed", value: "/" }] },
+      // Content-hashed product and category artwork: browsers and the image optimiser may keep it for a year.
+      { source: "/products/:file*", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] },
+      { source: "/categories/:file*", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] },
+      { source: "/banners/:file*", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] },
       { source: "/(.*)", headers: [
         { key: "X-Content-Type-Options", value: "nosniff" }, { key: "X-Frame-Options", value: "SAMEORIGIN" }, { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
         { key: "Permissions-Policy", value: "geolocation=(self), camera=(self), microphone=(self), payment=(self \"https://checkout.razorpay.com\")" },
