@@ -1,5 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { deliverOrderAlerts } from "@/lib/notifications/order-alerts";
 import { z } from "zod";
 import { getPublicSettings } from "@/lib/data/catalog";
 import { createClient } from "@/lib/supabase/server";
@@ -104,5 +106,9 @@ export async function placeOrderAction(input: PlaceOrderInput): Promise<ActionRe
   });
   if (error) return { ok: false, error: friendlyError(error) };
   revalidatePath("/cart"); revalidatePath("/orders");
-  return { ok: true, data: data as unknown as PlaceOrderResult };
+  const placed = data as unknown as PlaceOrderResult;
+  // The admin alert rows were written inside place_order's transaction; push / WhatsApp / email go out after
+  // the customer has their answer. A failure here is recorded per channel and retried by the scheduler.
+  after(() => deliverOrderAlerts({ orderId: placed.order_id }).catch(() => undefined));
+  return { ok: true, data: placed };
 }

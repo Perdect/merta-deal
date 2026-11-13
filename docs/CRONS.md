@@ -4,7 +4,7 @@ Two endpoints need to run on a timer:
 
 | Path | What it does | Wanted | On Vercel Hobby |
 | --- | --- | --- | --- |
-| `/api/cron/notifications` | Fans out queued push/SMS/WhatsApp notifications | every 5 min | daily 03:00 UTC |
+| `/api/cron/notifications` | New-order alerts to admins (push, WhatsApp, email; 0052) and any other queued push | every minute | daily 03:00 UTC, or every minute from the database once `notifications_cron_url` + `notifications_cron_secret` are set (Admin → Settings → Integrations) |
 | `/api/cron/expire-unpaid`  | Releases stock held by orders that were never paid | every 5 min | daily 03:00 UTC |
 | `/api/cron/housekeeping` | `run_order_housekeeping()` (0050): expires stale rider offers and re-offers waiting orders, sets quiet riders offline, expires item exceptions, escalates unattended orders, cancels unpaid orders after `payment_pending_minutes` | every minute | daily 03:05 UTC |
 

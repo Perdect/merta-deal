@@ -1187,6 +1187,50 @@ export type Database = {
           },
         ]
       }
+      notification_deliveries: {
+        Row: {
+          attempts: number
+          channel: Database["public"]["Enums"]["notification_channel"]
+          created_at: string
+          error: string | null
+          id: string
+          notification_id: string
+          provider_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          channel: Database["public"]["Enums"]["notification_channel"]
+          created_at?: string
+          error?: string | null
+          id?: string
+          notification_id: string
+          provider_id?: string | null
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          channel?: Database["public"]["Enums"]["notification_channel"]
+          created_at?: string
+          error?: string | null
+          id?: string
+          notification_id?: string
+          provider_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_deliveries_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           body: string
@@ -2920,6 +2964,10 @@ export type Database = {
         Args: { p_order_id: string; p_rider_id: string }
         Returns: string
       }
+      admin_alert_channel_summary: { Args: never; Returns: Json }
+      admin_recent_order_alerts: { Args: { p_limit?: number }; Returns: Json }
+      record_notification_delivery: { Args: { p_channel: Database["public"]["Enums"]["notification_channel"]; p_error?: string | null; p_notification_id: string; p_provider_id?: string | null; p_status: string }; Returns: Json }
+      run_notification_cron: { Args: never; Returns: boolean }
       admin_unassign_rider: {
         Args: { p_note?: string; p_order_id: string }
         Returns: Json

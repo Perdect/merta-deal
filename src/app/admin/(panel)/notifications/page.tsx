@@ -7,6 +7,8 @@ import { AdminNotificationList, BroadcastForm } from "@/components/admin/notific
 import { AdminPageHeader, Panel, EmptyBlock, ErrorBlock } from "@/components/admin/kit";
 import { formatDateTime, formatNumber, timeAgo } from "@/lib/utils";
 import { AlertSetup } from "@/components/alerts/alert-setup";
+import { ChannelStatus } from "@/components/admin/alerts/channel-status";
+import { getAlertChannelStatus } from "@/lib/data/alerts";
 import { env, isPushConfigured } from "@/lib/env";
 
 export const metadata: Metadata = { title: "Notifications" };
@@ -15,7 +17,7 @@ const LIMIT = 60;
 const AUDIENCE_LABEL: Record<string, string> = { customers: "All customers", riders: "All riders", all: "Everyone", user: "One user" };
 
 export default async function AdminNotificationsPage() {
-  const [user, { items }, raw] = await Promise.all([getSessionUser(), getAdminNotifications(LIMIT), getRecentBroadcasts()]);
+  const [user, { items }, raw, alerts] = await Promise.all([getSessionUser(), getAdminNotifications(LIMIT), getRecentBroadcasts(), getAlertChannelStatus()]);
   const broadcasts = raw.map(toBroadcastLog);
   return (
     <>
@@ -25,6 +27,9 @@ export default async function AdminNotificationsPage() {
         <div className="space-y-4">
           <Panel id="alerts" title="Order alerts on this device" description="New orders ring here while the dashboard is open. Enable sound and push once per device.">
             <AlertSetup portal="admin" push={{ configured: isPushConfigured(), vapidPublicKey: env.vapidPublicKey }} />
+          </Panel>
+          <Panel id="channels" title="New-order alerts off this screen" description="Push, WhatsApp and email to every admin when an order is placed. Each channel reports what its provider really answered.">
+            <ChannelStatus channels={alerts.channels} recent={alerts.recent} cronHint={alerts.cronHint} />
           </Panel>
           <BroadcastForm />
           <Panel title="Recent broadcasts" description="Last 10, from the audit log" flush>
