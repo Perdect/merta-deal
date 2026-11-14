@@ -100,7 +100,7 @@ export function OrderTrackingView({ initial, placed, paymentState, push }: { ini
 
   return (
     <div className="grid grid-cols-1 gap-5 px-4 sm:px-0 lg:grid-cols-[minmax(0,1fr)_380px]">
-      {placed && active ? <OrderPlacedSplash orderId={o.id} confirmed={paid && o.status !== "placed"} label={addr.label ?? null} addressLine={[addr.house, addr.street, addr.area, addr.city].filter(Boolean).join(", ")} codNote={o.payment_method === "cod" ? `Keep ${formatINR(o.total, { precise: true })} cash ready for the rider` : null} /> : null}
+      {placed && active ? <OrderPlacedSplash orderId={o.id} orderNumber={o.order_number} confirmed={paid && o.status !== "placed"} label={addr.label ?? null} addressLine={[addr.house, addr.street, addr.area, addr.city].filter(Boolean).join(", ")} etaLabel={o.promised_at ? formatTime(o.promised_at) : null} codNote={o.payment_method === "cod" ? `Keep ${formatINR(o.total, { precise: true })} cash ready for the rider` : null} /> : null}
       <div className="space-y-4">
         {placed && o.status !== "placed" && active ? <Alert tone="success" icon={<CheckCircle2 className="h-4 w-4" />} title={`Order ${o.order_number} confirmed`}>{t.pickup.name} is packing it now{o.promised_at ? `, arriving by ${formatTime(o.promised_at)}` : ""}.{o.payment_method === "cod" ? ` Keep ${formatINR(o.total, { precise: true })} cash ready for the rider.` : ""}</Alert> : null}
         {placed && o.status === "placed" && paid ? <Alert tone="success" icon={<CheckCircle2 className="h-4 w-4" />} title={`Order ${o.order_number} placed`}>We&apos;ve got it and will confirm it as soon as your payment is received.</Alert> : null}
