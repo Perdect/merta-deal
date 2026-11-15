@@ -64,9 +64,10 @@ export function CategoryBrowser({ tabs, initial, products, signedIn }: { tabs: C
           return (
             <button key={t.slug} ref={(el) => { refs.current[t.slug] = el; }} type="button" role="tab" id={`tab-${t.slug}`} aria-selected={on} aria-controls={`panel-${t.slug}`} tabIndex={on ? 0 : -1}
               onClick={() => select(t.slug)} onKeyDown={(e) => onKey(e, i)}
-              className={cn("flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl px-2 text-sm font-semibold transition-colors motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600",
+              className={cn("flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl px-1.5 py-1.5 text-center text-[12.5px] font-semibold transition-colors motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 sm:px-2 sm:text-sm",
                 on ? "bg-brand-600 text-white" : "text-ink-2 hover:bg-card")}>
-              <span className="truncate">{t.name}</span>
+              {/* Wraps rather than truncates: "Beauty & Personal Care" has to fit a quarter of a phone. */}
+              <span className="line-clamp-3 leading-tight">{t.name}</span>
             </button>
           );
         })}

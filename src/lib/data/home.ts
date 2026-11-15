@@ -43,8 +43,15 @@ const cachedHomeData = unstable_cache(async (essentialSlugs: string[], welcomeCo
 
   const allCats = cats.data ?? [];
   const top = allCats.filter((c) => !c.parent_id);
+  // Climb to the top-level line a product belongs to, however deep its category sits, so a product
+  // filed under a sub-sub-category still appears in its parent line's row instead of silently nowhere.
+  const parentOf = new Map(allCats.map((c) => [c.id, c.parent_id]));
   const topOf = new Map<string, string>();
-  for (const c of allCats) topOf.set(c.id, c.parent_id ?? c.id);
+  for (const c of allCats) {
+    let id = c.id;
+    for (let hop = 0; hop < 8; hop++) { const up = parentOf.get(id); if (!up) break; id = up; }
+    topOf.set(c.id, id);
+  }
   const products = (cards.data ?? []) as unknown as ProductCard[];
   const bySlug = new Map(products.map((p) => [p.slug, p]));
   const sellable = (p: ProductCard | undefined): p is ProductCard => Boolean(p && p.stock_status !== "out_of_stock");

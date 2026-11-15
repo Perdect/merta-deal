@@ -127,7 +127,7 @@ export const getCollections = cache(() => cachedCollections());
 /* Categories screen ------------------------------------------------------------------------- */
 
 export type CategoryTile = { key: string; label: string; href: string; image: string | null; count: number };
-export type CategoryTab = { id: string; slug: string; name: string; image: string | null; count: number; tiles: CategoryTile[] };
+export type CategoryTab = { id: string; slug: string; name: string; image: string | null; color: string | null; count: number; tiles: CategoryTile[] };
 
 /**
  * Tiles that cover several overlapping catalogue categories (no data change: the link filters by all of
@@ -136,13 +136,12 @@ export type CategoryTab = { id: string; slug: string; name: string; image: strin
 const TILE_GROUPS: Record<string, { slugs: string[]; label: string }[]> = {
   grocery: [{ slugs: ["dal", "pulses"], label: "Dal & Pulses" }],
 };
-/** Where a parent lists related staples together (Atta next to Flour & Besan), slugs come first in this order. */
-const TILE_ORDER: Record<string, string[]> = { grocery: ["atta", "flour", "rice", "dal", "oil", "sugar", "salt", "dry-fruits"] };
-
 /**
- * Tabs = active top-level categories (an empty one shows as "coming soon" so a new line like Sweets is
- * visible before its first product); tiles = their sub-categories with at least one listed product. Tile pictures come from the most popular
- * listed product (approved catalogue photos), falling back to the category's own image.
+ * Tabs = active top-level categories (an empty one shows as "coming soon" so a new line like Beauty &
+ * Personal Care is visible before its first product); tiles = their sub-categories with at least one
+ * listed product. Both follow the catalogue's own `sort_order`, so Admin → Categories is the only place
+ * the running order is set. Tile pictures come from the most popular listed product (approved catalogue
+ * photos), falling back to the category's own image.
  */
 const cachedCategoryTabs = unstable_cache(async (): Promise<CategoryTab[]> => {
   const supabase = createPublicClient();
@@ -164,13 +163,11 @@ const cachedCategoryTabs = unstable_cache(async (): Promise<CategoryTab[]> => {
     const stat = (id: string) => byCat.get(id) ?? { count: 0, image: null };
     const groups = TILE_GROUPS[p.slug] ?? [];
     const grouped = new Set(groups.flatMap((g) => g.slugs));
-    const order = TILE_ORDER[p.slug] ?? [];
-    const rank = (slug: string) => { const i = order.indexOf(slug); return i === -1 ? order.length + 1 : i; };
     const tiles: (CategoryTile & { sort: number })[] = [];
     for (const c of children) {
       if (grouped.has(c.slug)) continue;
       const s = stat(c.id);
-      if (s.count > 0) tiles.push({ key: c.slug, label: c.name, href: `/c/${c.slug}`, image: s.image ?? c.image_url, count: s.count, sort: rank(c.slug) * 1000 + c.sort_order });
+      if (s.count > 0) tiles.push({ key: c.slug, label: c.name, href: `/c/${c.slug}`, image: s.image ?? c.image_url, count: s.count, sort: c.sort_order });
     }
     for (const g of groups) {
       const members = children.filter((c) => g.slugs.includes(c.slug));
@@ -179,12 +176,12 @@ const cachedCategoryTabs = unstable_cache(async (): Promise<CategoryTab[]> => {
       const live = members.filter((c) => stat(c.id).count > 0);
       // A group with only one non-empty member links straight to it.
       const href = live.length === 1 ? `/c/${live[0].slug}` : `/c/${p.slug}?category=${live.map((c) => c.slug).join(",")}`;
-      tiles.push({ key: g.slugs.join("+"), label: g.label, href, image: live.map((c) => stat(c.id).image).find(Boolean) ?? null, count, sort: rank(g.slugs[0]) * 1000 + Math.min(...members.map((c) => c.sort_order)) });
+      tiles.push({ key: g.slugs.join("+"), label: g.label, href, image: live.map((c) => stat(c.id).image).find(Boolean) ?? null, count, sort: Math.min(...members.map((c) => c.sort_order)) });
     }
     tiles.sort((a, b) => a.sort - b.sort || a.label.localeCompare(b.label));
     const own = stat(p.id);
     const count = own.count + children.reduce((n, c) => n + stat(c.id).count, 0);
-    return { id: p.id, slug: p.slug, name: p.name, image: p.image_url ?? own.image, count, tiles: tiles.map((t) => ({ key: t.key, label: t.label, href: t.href, image: t.image, count: t.count })) };
+    return { id: p.id, slug: p.slug, name: p.name, image: p.image_url ?? own.image, color: p.color, count, tiles: tiles.map((t) => ({ key: t.key, label: t.label, href: t.href, image: t.image, count: t.count })) };
   });
 }, ["category-tabs"], { tags: [CATALOGUE_TAG], revalidate: PUBLIC_TTL });
 export const getCategoryTabs = cache(() => cachedCategoryTabs());
