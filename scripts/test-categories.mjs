@@ -104,6 +104,12 @@ const shelvesOn = await rows(`
   left join public.products pr on pr.category_id = c.id and pr.is_active
   where c.is_active and c.parent_id is not null group by c.slug having count(pr.id) > 0 order by c.slug`);
 ok("every shelf that holds goods is switched on", shelvesOn.length > 0, JSON.stringify(shelvesOn.map((r) => `${r.slug}:${r.n}`)));
+const emptyOn = await rows(`
+  select c.slug from public.categories c
+  join public.categories p on p.id = c.parent_id and p.is_active
+  where c.is_active and not exists (select 1 from public.products pr where pr.category_id = c.id and pr.is_active)
+    and c.slug in ('milk','curd','paneer','butter','cheese','turmeric','red-chilli','coriander','cumin','garam-masala','whole-spices','kitchen-essentials','biscuits','chips','namkeen')`);
+ok("a shelf whose goods moved away is not left switched on and empty", emptyOn.length === 0, JSON.stringify(emptyOn.map((r) => r.slug)));
 const dark = await rows(`
   select c.slug, count(pr.id)::int n from public.categories c
   join public.products pr on pr.category_id = c.id and pr.is_active

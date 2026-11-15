@@ -44,42 +44,11 @@ from public.categories s where s.slug = 'sweets'
 on conflict (slug) do update set parent_id = excluded.parent_id, sort_order = 1, is_active = true;
 
 -- ----------------------------------------------------------------------------
--- 2. Lines that used to stand on their own are filed under one of the four. A line that is missing
---    from this database is simply skipped. `on_if` switches a shelf on when it holds something.
--- ----------------------------------------------------------------------------
-with shelf(slug, parent_slug, sort) as (values
-  -- Grocery & Kitchen: the kirana staples, the spice shelves, dairy, and tea and coffee, which are
-  -- bought with the monthly ration rather than drunk from a bottle.
-  ('atta', 'grocery', 1), ('flour', 'grocery', 2), ('rice', 'grocery', 3), ('dal', 'grocery', 4),
-  ('pulses', 'grocery', 5), ('oil', 'grocery', 6), ('masala-spices', 'grocery', 7),
-  ('turmeric', 'grocery', 8), ('red-chilli', 'grocery', 9), ('coriander', 'grocery', 10),
-  ('cumin', 'grocery', 11), ('garam-masala', 'grocery', 12), ('whole-spices', 'grocery', 13),
-  ('sugar', 'grocery', 14), ('salt', 'grocery', 15), ('dry-fruits', 'grocery', 16),
-  ('tea', 'grocery', 17), ('coffee', 'grocery', 18),
-  ('milk', 'grocery', 19), ('curd', 'grocery', 20), ('paneer', 'grocery', 21),
-  ('butter', 'grocery', 22), ('cheese', 'grocery', 23), ('kitchen-essentials', 'grocery', 24),
-  -- Snacks & Drinks.
-  ('soft-drinks', 'snacks', 1), ('juice', 'snacks', 2), ('water', 'snacks', 3), ('chocolates', 'snacks', 4),
-  ('biscuits', 'snacks', 5), ('chips', 'snacks', 6), ('namkeen', 'snacks', 7),
-  -- Sweets & Bakery. Bakery keeps its slug, so /c/bakery-cakes still works.
-  ('bakery-cakes', 'sweets', 2),
-  -- Beauty & Personal Care.
-  ('bath-body', 'personal-care', 1), ('oral-care', 'personal-care', 2), ('hair-care', 'personal-care', 3)
-)
-update public.categories c set
-  parent_id = p.id,
-  sort_order = shelf.sort,
-  is_featured = false,
-  is_active = c.is_active or exists (select 1 from public.products pr where pr.category_id = c.id and pr.is_active)
-from shelf join public.categories p on p.slug = shelf.parent_slug
-where c.slug = shelf.slug;
-
-update public.categories set name = 'Bakery & Cakes' where slug = 'bakery-cakes';
-
--- ----------------------------------------------------------------------------
--- 3. Products follow the shelf they belong on. Nothing is created or deleted: every statement below
+-- 2. Products follow the shelf they belong on. Nothing is created or deleted: every statement below
 --    moves products that are already in the catalogue onto the shelf that holds their kind of goods.
 --    `order_items` keeps its own name and price snapshot, so past orders and bills do not move.
+--    This runs before the shelves are filed away below, so that step sees each shelf's final contents
+--    and does not switch on a shelf whose goods have just left it.
 -- ----------------------------------------------------------------------------
 -- Masala powders were sitting loose on the Grocery parent, where the Categories screen could not reach them.
 update public.products p set category_id = dst.id
@@ -116,12 +85,38 @@ update public.products p set category_id = dst.id
 from public.categories src, public.categories dst
 where src.slug = 'sweets' and dst.slug = 'mithai' and p.category_id = src.id;
 
--- A shelf that has just received its first product is switched on.
-update public.categories c set is_active = true
-where not c.is_active
-  and exists (select 1 from public.categories p where p.id = c.parent_id and p.is_active
-                and p.slug in ('grocery', 'snacks', 'sweets', 'personal-care'))
-  and exists (select 1 from public.products pr where pr.category_id = c.id and pr.is_active);
+-- ----------------------------------------------------------------------------
+-- 3. Lines that used to stand on their own are filed under one of the four. A line that is missing
+--    from this database is simply skipped. `on_if` switches a shelf on when it holds something.
+-- ----------------------------------------------------------------------------
+with shelf(slug, parent_slug, sort) as (values
+  -- Grocery & Kitchen: the kirana staples, the spice shelves, dairy, and tea and coffee, which are
+  -- bought with the monthly ration rather than drunk from a bottle.
+  ('atta', 'grocery', 1), ('flour', 'grocery', 2), ('rice', 'grocery', 3), ('dal', 'grocery', 4),
+  ('pulses', 'grocery', 5), ('oil', 'grocery', 6), ('masala-spices', 'grocery', 7),
+  ('turmeric', 'grocery', 8), ('red-chilli', 'grocery', 9), ('coriander', 'grocery', 10),
+  ('cumin', 'grocery', 11), ('garam-masala', 'grocery', 12), ('whole-spices', 'grocery', 13),
+  ('sugar', 'grocery', 14), ('salt', 'grocery', 15), ('dry-fruits', 'grocery', 16),
+  ('tea', 'grocery', 17), ('coffee', 'grocery', 18),
+  ('milk', 'grocery', 19), ('curd', 'grocery', 20), ('paneer', 'grocery', 21),
+  ('butter', 'grocery', 22), ('cheese', 'grocery', 23), ('kitchen-essentials', 'grocery', 24),
+  -- Snacks & Drinks.
+  ('soft-drinks', 'snacks', 1), ('juice', 'snacks', 2), ('water', 'snacks', 3), ('chocolates', 'snacks', 4),
+  ('biscuits', 'snacks', 5), ('chips', 'snacks', 6), ('namkeen', 'snacks', 7),
+  -- Sweets & Bakery. Bakery keeps its slug, so /c/bakery-cakes still works.
+  ('bakery-cakes', 'sweets', 2),
+  -- Beauty & Personal Care.
+  ('bath-body', 'personal-care', 1), ('oral-care', 'personal-care', 2), ('hair-care', 'personal-care', 3)
+)
+update public.categories c set
+  parent_id = p.id,
+  sort_order = shelf.sort,
+  is_featured = false,
+  is_active = c.is_active or exists (select 1 from public.products pr where pr.category_id = c.id and pr.is_active)
+from shelf join public.categories p on p.slug = shelf.parent_slug
+where c.slug = shelf.slug;
+
+update public.categories set name = 'Bakery & Cakes' where slug = 'bakery-cakes';
 
 -- ----------------------------------------------------------------------------
 -- 4. Everything outside the new tree is switched off. The rows stay — reports, past orders and the
