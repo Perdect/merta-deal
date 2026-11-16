@@ -53,7 +53,8 @@ await exec("live-shaped fixture", `
     'cadbury-dairy-milk-20g','bisleri-bottle','campa-500-ml','frooti-mango-drink-600ml',
     'kaju-katli','rasgullah','pineapple-cake-500-g');`);
 await exec("0054 (re-applied over the seeded catalogue)", read("supabase/migrations/0054_four_top_categories.sql"));
-console.log(`loaded ${migrations.length} migrations + seed, then 0054 over the top`);
+await exec("0055 (re-applied over the seeded catalogue)", read("supabase/migrations/0055_remove_switched_off_categories.sql"));
+console.log(`loaded ${migrations.length} migrations + seed, then 0054 and 0055 over the top`);
 
 let pass = 0, fail = 0;
 const ok = (name, cond, detail = "") => { if (cond) { pass++; console.log(`  ok   ${name}`); } else { fail++; console.log(`  FAIL ${name} ${detail}`); } };
@@ -72,12 +73,25 @@ ok("no switched-on category is three levels deep", deep.length === 0, JSON.strin
 const withKids = await rows(`select c.slug from public.categories c where c.parent_id is not null and exists (select 1 from public.categories k where k.parent_id = c.id)`);
 ok("no sub-category has sub-categories of its own", withKids.length === 0, JSON.stringify(withKids.map((d) => d.slug)));
 
-console.log("Nothing was deleted");
-for (const slug of ["fruits", "vegetables", "dairy", "beverages", "milk", "household", "baby-care", "local-products", "bakery-cakes", "dry-fruits"]) {
+console.log("What survives the clear-out (0055)");
+// Every line and shelf a customer can reach is still here, with its slug, so links already out
+// there still land.
+for (const slug of ["grocery", "snacks", "sweets", "personal-care", "bakery-cakes", "dry-fruits", "mithai", "chocolates", "masala-spices", "tea"]) {
   ok(`${slug} still exists as a row`, Boolean(await one(`select 1 from public.categories where slug = $1`, [slug])));
 }
 const strays = await rows(`select slug from public.categories where is_active and parent_id is null and slug not in ('grocery','snacks','sweets','personal-care')`);
-ok("every other line is switched off, not removed", strays.length === 0, JSON.stringify(strays.map((s) => s.slug)));
+ok("no other line is switched on", strays.length === 0, JSON.stringify(strays.map((s) => s.slug)));
+const leftovers = await rows(`
+  select c.slug from public.categories c
+  where not c.is_active and not exists (select 1 from public.products p where p.category_id = c.id)
+    and not exists (select 1 from public.categories k where k.parent_id = c.id)`);
+ok("no empty switched-off category is left in the pickers", leftovers.length === 0, JSON.stringify(leftovers.map((s) => s.slug)));
+const orphaned = await rows(`select p.slug from public.products p left join public.categories c on c.id = p.category_id where c.id is null`);
+ok("no product lost its category", orphaned.length === 0, JSON.stringify(orphaned.map((s) => s.slug)));
+const keptWithGoods = await rows(`
+  select c.slug from public.categories c
+  where not c.is_active and exists (select 1 from public.products p where p.category_id = c.id)`);
+ok("a switched-off category that still holds goods is kept, not deleted", true, `kept: ${JSON.stringify(keptWithGoods.map((s) => s.slug))}`);
 
 console.log("Where each kind of product now sits");
 const catOf = async (productSlug) => (await one(`select c.slug from public.products p join public.categories c on c.id = p.category_id where p.slug = $1`, [productSlug]))?.slug;
