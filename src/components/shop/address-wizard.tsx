@@ -18,9 +18,17 @@ const MapPicker = dynamic(() => import("./map-picker").then((m) => m.MapPicker),
  * returns a precise pin plus the looked-up area and pincode into the same, still-filled form. GPS is
  * a shortcut inside the form, never a requirement.
  */
-export function AddressWizard({ onSaved, onCancel, defaultName, defaultPhone }: { onSaved: (a: Address) => void; onCancel?: () => void; defaultName?: string | null; defaultPhone?: string | null }) {
+export function AddressWizard({ onSaved, onCancel, defaultName, defaultPhone, mapOpen: mapOpenProp, onMapOpenChange }: {
+  onSaved: (a: Address) => void; onCancel?: () => void; defaultName?: string | null; defaultPhone?: string | null;
+  /** Hosts that own the screen header (title + back arrow) drive the step from outside; the map
+   *  step then draws no back link of its own, so there is one back control, not two. */
+  mapOpen?: boolean; onMapOpenChange?: (open: boolean) => void;
+}) {
   const [draft, setDraft] = React.useState<AddressDraft | null>(null);
-  const [mapOpen, setMapOpen] = React.useState(false);
+  const [mapOpenOwn, setMapOpenOwn] = React.useState(false);
+  const headed = mapOpenProp !== undefined;
+  const mapOpen = mapOpenProp ?? mapOpenOwn;
+  const setMapOpen = (open: boolean) => { setMapOpenOwn(open); onMapOpenChange?.(open); };
   const [picked, setPicked] = React.useState<PickedLocation | null>(null);
 
   const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
@@ -29,8 +37,8 @@ export function AddressWizard({ onSaved, onCancel, defaultName, defaultPhone }: 
     const start = dl != null && dg != null ? { lat: dl, lng: dg } : picked ? { lat: picked.lat, lng: picked.lng } : null;
     return (
       <div className="flex h-full flex-col">
-        <button type="button" onClick={() => setMapOpen(false)} className="tap mb-1 inline-flex min-h-11 items-center gap-1 self-start px-4 text-sm font-semibold text-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 sm:px-0"><ChevronLeft className="h-4 w-4" aria-hidden /> Back to address details</button>
-        <MapPicker initial={start} confirmLabel="Use this location" onConfirm={(p) => { setPicked(p); setMapOpen(false); }} onManual={() => setMapOpen(false)} />
+        {headed ? null : <button type="button" onClick={() => setMapOpen(false)} className="tap mb-1 inline-flex min-h-11 items-center gap-1 self-start px-4 text-sm font-semibold text-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 sm:px-0"><ChevronLeft className="h-4 w-4" aria-hidden /> Back to address details</button>}
+        <MapPicker initial={start} confirmLabel="Confirm Location" onConfirm={(p) => { setPicked(p); setMapOpen(false); }} onManual={() => setMapOpen(false)} />
       </div>
     );
   }

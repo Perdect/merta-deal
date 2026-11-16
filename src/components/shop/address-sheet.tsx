@@ -22,10 +22,13 @@ export function AddressSheet({ open, onClose, addresses, selectedId, onPick, def
   defaultName?: string | null; defaultPhone?: string | null;
 }) {
   const [adding, setAdding] = React.useState(false);
+  // The map step owns the screen header: the title becomes "Select Your Location" and the header's
+  // back arrow returns to the address details rather than closing the whole thing.
+  const [mapStep, setMapStep] = React.useState(false);
   const wizard = open && (adding || addresses.length === 0);
   // Reset the inner step whenever the sheet closes so it reopens on the list.
   const [wasOpen, setWasOpen] = React.useState(open);
-  if (wasOpen !== open) { setWasOpen(open); if (!open) setAdding(false); }
+  if (wasOpen !== open) { setWasOpen(open); if (!open) { setAdding(false); setMapStep(false); } }
 
   return (
     <>
@@ -48,8 +51,8 @@ export function AddressSheet({ open, onClose, addresses, selectedId, onPick, def
         </ul>
       </BottomSheet>
 
-      <Modal open={wizard} onClose={addresses.length ? () => setAdding(false) : onClose} title="Location information" size="screen">
-        <AddressWizard defaultName={defaultName} defaultPhone={defaultPhone} onCancel={addresses.length ? () => setAdding(false) : onClose} onSaved={(a) => { setAdding(false); onPick(a, true); }} />
+      <Modal open={wizard} onClose={mapStep ? () => setMapStep(false) : addresses.length ? () => setAdding(false) : onClose} title={mapStep ? "Select Your Location" : "Location information"} size="screen">
+        <AddressWizard mapOpen={mapStep} onMapOpenChange={setMapStep} defaultName={defaultName} defaultPhone={defaultPhone} onCancel={addresses.length ? () => setAdding(false) : onClose} onSaved={(a) => { setAdding(false); onPick(a, true); }} />
       </Modal>
     </>
   );

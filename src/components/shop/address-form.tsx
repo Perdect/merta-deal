@@ -133,7 +133,7 @@ export function AddressForm({ initial, onSaved, onCancel, defaultName, defaultPh
       <div className="rounded-lg border border-line bg-surface px-3 py-3">
         <p className="flex items-center gap-2 text-sm font-semibold text-ink"><MapPin className={cn("h-4 w-4", pinned ? "text-brand-700" : "text-ink-4")} aria-hidden />{pinned ? "Location pinned for the rider" : "Exact spot for the rider (optional)"}</p>
         <p className="mt-0.5 text-xs text-ink-3">{pinned ? "The rider navigates to this pin. The address above is what they read." : "Without a pin the rider goes by the address. A pin helps in lanes and new colonies."}</p>
-        <div className="mt-2.5 grid grid-cols-2 gap-2">
+        <div className="mt-2.5 grid grid-cols-1 gap-2 sm:grid-cols-2">
           <Button type="button" variant="secondary" loading={locating === "gps"} disabled={locating !== null} onClick={locate}><LocateFixed className="h-4 w-4" /> {locating === "address" ? "Finding address…" : pinned ? "Update from GPS" : "Use current location"}</Button>
           {onChooseMap ? <Button type="button" variant="outline" onClick={() => onChooseMap(draft())}><MapIcon className="h-4 w-4" /> {pinned ? "Change on map" : "Choose on map"}</Button> : null}
         </div>

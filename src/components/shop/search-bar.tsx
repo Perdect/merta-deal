@@ -73,9 +73,9 @@ export function SearchBar({ className, autoFocus, initial = "", compact, scope }
         <Search className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-3" />
         <input ref={inputRef} value={q} onChange={(e) => { setQ(e.target.value); setOpen(true); }} onFocus={() => setOpen(true)} autoFocus={autoFocus} type="search" enterKeyHint="search" autoComplete="off"
           placeholder="" aria-label={scope ? `Search in ${scope.name}` : "Search groceries, sweets and cakes"}
-          className={cn("w-full pl-11 pr-20 text-[15px] text-ink placeholder:text-ink-3 focus:outline-none focus:ring-2 focus:ring-brand-100 [&::-webkit-search-cancel-button]:hidden", compact ? "h-12 rounded-2xl border border-transparent bg-surface-2 focus:border-brand-300 focus:bg-card" : "h-12 rounded-md border border-line-2 bg-card shadow-card focus:border-brand-500")} />
+          className={cn("w-full pl-11 pr-20 text-base text-ink placeholder:text-ink-3 sm:text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-100 [&::-webkit-search-cancel-button]:hidden", compact ? "h-12 rounded-2xl border border-transparent bg-surface-2 focus:border-brand-300 focus:bg-card" : "h-12 rounded-md border border-line-2 bg-card shadow-card focus:border-brand-500")} />
         {!q ? (
-          <span aria-hidden className={cn("pointer-events-none absolute left-11 right-20 top-1/2 flex -translate-y-1/2 items-center overflow-hidden whitespace-nowrap text-[15px] leading-6 text-ink-3", compact ? "h-6" : "h-6")}>
+          <span aria-hidden className={cn("pointer-events-none absolute left-11 right-20 top-1/2 flex -translate-y-1/2 items-center overflow-hidden whitespace-nowrap text-base leading-6 text-ink-3 sm:text-[15px]", compact ? "h-6" : "h-6")}>
             {scope ? <span className="truncate">Search in {scope.name}</span> : <>Search&nbsp;
             <span className="relative inline-block h-6 overflow-hidden align-top">
               <span className="flex flex-col motion-safe:animate-[search-hint_7.5s_cubic-bezier(0.65,0,0.35,1)_infinite]">

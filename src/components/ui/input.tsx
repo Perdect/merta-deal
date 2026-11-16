@@ -1,7 +1,9 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-const fieldBase = "w-full rounded-sm border border-line-2 bg-card px-3.5 text-[15px] text-ink placeholder:text-ink-4 transition-shadow focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 disabled:bg-surface-2 disabled:text-ink-3 aria-[invalid=true]:border-danger aria-[invalid=true]:ring-danger-50";
+/* text-base below sm on purpose: iOS Safari zooms the page when a focused field is under 16px,
+   which leaves the layout shifted and clipped until the customer pinches back out. */
+const fieldBase = "w-full rounded-sm border border-line-2 bg-card px-3.5 text-base sm:text-[15px] text-ink placeholder:text-ink-4 transition-shadow focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 disabled:bg-surface-2 disabled:text-ink-3 aria-[invalid=true]:border-danger aria-[invalid=true]:ring-danger-50";
 
 /** Hint or error under a field, linked to it with aria-describedby; errors carry an icon, not just red text. */
 function FieldNote({ id, error, hint }: { id: string; error?: string; hint?: string }) {

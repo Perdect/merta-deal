@@ -48,6 +48,10 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
   // Express can only stay selected while the delivery zone offers it.
   if (deliveryType === "express" && summary && !summary.zone?.express_supported) setDeliveryType("standard");
   const [addOpen, setAddOpen] = React.useState(initialAddresses.length === 0);
+  // Which step of the new-address wizard the screen header is showing (see AddressWizard).
+  const [mapStep, setMapStep] = React.useState(false);
+  const [wasAddOpen, setWasAddOpen] = React.useState(addOpen);
+  if (wasAddOpen !== addOpen) { setWasAddOpen(addOpen); if (!addOpen) setMapStep(false); }
   const [placing, setPlacing] = React.useState(false);
   const [confirming, setConfirming] = React.useState(false);
   const [refreshing, startRefresh] = React.useTransition();
@@ -172,8 +176,8 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
           onConfirm={(c) => { if (c.type === "scheduled") { setSlotKey(c.key); setDeliveryType("scheduled"); } else if (deliveryType === "scheduled") setDeliveryType("standard"); setScheduleOpen(false); }} />
       ) : null}
       <PlaceOrderSheet open={confirming} onClose={() => setConfirming(false)} onPlace={() => void place()} address={addresses.find((a) => a.id === addressId) ?? null} total={summary.total} payment={payment} upi={Boolean(upi)} upiNow={Boolean(upi?.payNow) && !razorpayEnabled} />
-      <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Location information" size="screen">
-        <AddressWizard defaultName={user.name} defaultPhone={user.phone} onCancel={addresses.length ? () => setAddOpen(false) : undefined} onSaved={(a) => { setAddresses((cur) => [a, ...cur.filter((x) => x.id !== a.id)]); setAddressId(a.id); setAddOpen(false); }} />
+      <Modal open={addOpen} onClose={() => (mapStep ? setMapStep(false) : setAddOpen(false))} title={mapStep ? "Select Your Location" : "Location information"} size="screen">
+        <AddressWizard mapOpen={mapStep} onMapOpenChange={setMapStep} defaultName={user.name} defaultPhone={user.phone} onCancel={addresses.length ? () => setAddOpen(false) : undefined} onSaved={(a) => { setAddresses((cur) => [a, ...cur.filter((x) => x.id !== a.id)]); setAddressId(a.id); setAddOpen(false); }} />
       </Modal>
     </div>
   );

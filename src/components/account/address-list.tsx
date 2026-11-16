@@ -27,6 +27,10 @@ export function AddressList({ initial, defaultName, defaultPhone, openNew = fals
   const setLocation = useLocationStore((s) => s.setLocation);
   const [items, setItems] = React.useState<Address[]>(initial);
   const [editing, setEditing] = React.useState<Address | "new" | null>(openNew ? "new" : null);
+  // Which step of the new-address wizard the screen header is showing (see AddressWizard).
+  const [mapStep, setMapStep] = React.useState(false);
+  const [wasEditing, setWasEditing] = React.useState(editing !== null);
+  if (wasEditing !== (editing !== null)) { setWasEditing(editing !== null); if (editing === null) setMapStep(false); }
   const [deleting, setDeleting] = React.useState<Address | null>(null);
   const [busyId, setBusyId] = React.useState<string | null>(null);
   // Resync when the server sends fresh props (after router.refresh()).
@@ -123,8 +127,8 @@ export function AddressList({ initial, defaultName, defaultPhone, openNew = fals
         </ul>
       )}
 
-      <Modal open={editing !== null} onClose={() => setEditing(null)} title={editing === "new" ? "Location information" : "Edit address"} size="screen">
-        {editing === "new" ? <AddressWizard onSaved={onSaved} onCancel={() => setEditing(null)} defaultName={defaultName} defaultPhone={defaultPhone} />
+      <Modal open={editing !== null} onClose={() => (mapStep ? setMapStep(false) : setEditing(null))} title={editing === "new" ? (mapStep ? "Select Your Location" : "Location information") : "Edit address"} size="screen">
+        {editing === "new" ? <AddressWizard mapOpen={mapStep} onMapOpenChange={setMapStep} onSaved={onSaved} onCancel={() => setEditing(null)} defaultName={defaultName} defaultPhone={defaultPhone} />
           : editing !== null ? <div className="max-sm:p-4"><AddressForm initial={editing} onSaved={onSaved} onCancel={() => setEditing(null)} defaultName={defaultName} defaultPhone={defaultPhone} /></div> : null}
       </Modal>
       <ConfirmDialog open={deleting !== null} onClose={() => setDeleting(null)} onConfirm={remove} title="Delete this address?" description={deleting ? formatAddressLine(deleting) : undefined} confirmLabel="Delete" tone="danger" loading={Boolean(deleting && busyId === deleting.id)} />
