@@ -5,6 +5,14 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/* ---- Select options. A list may be flat, or carry labelled groups that render as <optgroup>. ---- */
+export type Option = { value: string; label: string };
+export type OptionGroup = { label: string; options: Option[] };
+export type GroupedOptions = (Option | OptionGroup)[];
+export const isOptionGroup = (o: Option | OptionGroup): o is OptionGroup => "options" in o;
+/** Flattens groups back to plain options, for code that looks a value up by its label. */
+export const flattenOptions = (options: GroupedOptions): Option[] => options.flatMap((o) => (isOptionGroup(o) ? o.options : [o]));
+
 const inr = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
 const inrPrecise = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 

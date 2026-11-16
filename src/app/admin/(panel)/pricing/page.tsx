@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { categoryOptions } from "@/lib/categories";
 import { AdminPageHeader } from "@/components/admin/kit";
 import { PriceEditor, type ScheduledRow, type HistoryRow } from "@/components/admin/finance/price-editor";
 
@@ -12,7 +13,7 @@ export default async function PricingPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const any = supabase as any;
   const [cats, brands, canSee, sched, hist] = await Promise.all([
-    supabase.from("categories").select("id, name, parent_id").eq("is_active", true).order("name"),
+    supabase.from("categories").select("id, name, parent_id, sort_order, is_active").eq("is_active", true).order("sort_order"),
     supabase.from("brands").select("id, name").eq("is_active", true).order("name"),
     supabase.rpc("can_see_costs"),
     any.from("scheduled_price_changes").select("id, new_price, new_mrp, effective_at, status, reason, created_by_name, error, product:products(name, pack_label)").order("effective_at", { ascending: false }).limit(40),
@@ -21,7 +22,8 @@ export default async function PricingPage() {
   type P = { product: { name: string; pack_label: string | null } | null };
   const scheduled: ScheduledRow[] = ((sched.data ?? []) as (Omit<ScheduledRow, "product_name" | "pack_label"> & P)[]).map((r) => ({ ...r, product_name: r.product?.name ?? "Product", pack_label: r.product?.pack_label ?? null }));
   const history: HistoryRow[] = ((hist.data ?? []) as (Omit<HistoryRow, "product_name" | "pack_label"> & P)[]).map((r) => ({ ...r, product_name: r.product?.name ?? "Product", pack_label: r.product?.pack_label ?? null }));
-  const categories = (cats.data ?? []).map((c) => ({ value: c.id, label: c.parent_id ? `  ${c.name}` : c.name }));
+  // Only the live shelves are priced here, grouped under their top-level line like everywhere else.
+  const categories = categoryOptions(cats.data ?? [], { topLabel: (name) => `${name} (incl. subcategories)` });
   return (
     <>
       <AdminPageHeader title="Selling prices" description="Each pack size has its own price: a 500 g bag is priced on its own, never assumed to be half the 1 kg price. Every change is recorded with who and why; a price under cost needs an explicit confirmation." />

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Box, Camera, Plus, Printer, SearchX } from "lucide-react";
 import { getAllCategories, getAllBrands, spGet, spPage, type SP } from "@/lib/data/admin";
+import { categoryOptions } from "@/lib/categories";
 import { listCatalogueProducts, countProductTabs, withSubcategories, PRODUCT_TABS, PRODUCT_SORTS, type ProductFilters } from "@/lib/data/admin-catalogue";
 import { AdminPageHeader, DataTable, CellStack, RowLink, EmptyBlock, ErrorBlock, ListToolbar, StatusTabs, ListPagination, rupees } from "@/components/admin/kit";
 import { ProductThumb, ProductStatusPill, StockPill, btn } from "@/components/admin/catalogue/bits";
@@ -24,7 +25,6 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
   const { items, total, page, pageSize, error } = list;
   const qs = new URLSearchParams(Object.entries(sp).flatMap(([k, v]) => (typeof v === "string" ? [[k, v]] : []))).toString();
   const filtered = Boolean(filters.q || category || filters.brand || filters.photo || filters.stock || filters.status);
-  const parentName = (id: string | null) => categories.find((c) => c.id === id)?.name;
 
   return (
     <>
@@ -39,7 +39,7 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
       <StatusTabs items={PRODUCT_TABS.map((t) => ({ ...t, count: counts[t.value] ?? null }))} />
 
       <ListToolbar searchPlaceholder="Product name, slug or pack size" filters={[
-        { key: "category", label: "Category", anyLabel: "All categories", options: categories.map((c) => ({ value: c.id, label: c.parent_id ? `${parentName(c.parent_id) ?? ""} › ${c.name}` : `${c.name} (incl. subcategories)` })) },
+        { key: "category", label: "Category", anyLabel: "All categories", options: categoryOptions(categories, { topLabel: (name) => `${name} (incl. subcategories)` }) },
         { key: "brand", label: "Brand", anyLabel: "All brands", options: [{ value: "none", label: "Unbranded" }, ...brands.map((b) => ({ value: b.id, label: b.name }))] },
         { key: "stock", label: "Stock", anyLabel: "Any stock", options: [{ value: "in_stock", label: "In stock" }, { value: "low_stock", label: "Low stock" }, { value: "out_of_stock", label: "Out of stock" }, { value: "paused", label: "Paused" }, { value: "unlisted", label: "No price yet" }] },
         { key: "photo", label: "Photo", anyLabel: "With or without", options: [{ value: "0", label: "Needs a photo" }, { value: "1", label: "Has a photo" }] },

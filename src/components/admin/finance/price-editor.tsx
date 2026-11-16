@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/toast";
 import { pricePreviewAction, priceApplyAction, cancelScheduledPriceAction, type PricePreviewRow, type PriceMode, type PriceFilter } from "@/lib/actions/finance";
-import { cn, formatINR, formatDateTime } from "@/lib/utils";
+import { cn, formatINR, formatDateTime, type GroupedOptions } from "@/lib/utils";
 
 type Opt = { value: string; label: string };
 export type ScheduledRow = { id: string; product_name: string; pack_label: string | null; new_price: number; new_mrp: number | null; effective_at: string; status: string; reason: string | null; created_by_name: string | null; error: string | null };
@@ -26,7 +26,7 @@ const MODES: { value: PriceMode; label: string; hint: string }[] = [
  * Bulk price changes with a preview first. Nothing changes until "Apply"; a below-cost result needs
  * an explicit tick. A future date schedules the change instead of applying it.
  */
-export function PriceEditor({ categories, brands, canSeeCosts, scheduled, history }: { categories: Opt[]; brands: Opt[]; canSeeCosts: boolean; scheduled: ScheduledRow[]; history: HistoryRow[] }) {
+export function PriceEditor({ categories, brands, canSeeCosts, scheduled, history }: { categories: GroupedOptions; brands: Opt[]; canSeeCosts: boolean; scheduled: ScheduledRow[]; history: HistoryRow[] }) {
   const router = useRouter();
   const [filter, setFilter] = React.useState<PriceFilter>({});
   const [mode, setMode] = React.useState<PriceMode>("percent");

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Camera, CheckCircle2, ImageOff, Package, SearchX } from "lucide-react";
 import { getAllCategories, getAllBrands, spGet, spPage, type SP } from "@/lib/data/admin";
+import { categoryOptions } from "@/lib/categories";
 import { listPhotoStudio, withSubcategories } from "@/lib/data/admin-catalogue";
 import { AdminPageHeader, MetricCard, EmptyBlock, ErrorBlock, ListToolbar, StatusTabs, ListPagination } from "@/components/admin/kit";
 import { PhotoStudio, BulkImport } from "@/components/admin/photo-studio";
@@ -29,7 +30,6 @@ export default async function PhotoStudioPage({ searchParams }: { searchParams: 
   const { items, total, page, pageSize, error, counts, withPhoto, totalProducts } = await listPhotoStudio({ ...filters, have, page: spPage(sp) });
   const pct = totalProducts ? Math.round((withPhoto / totalProducts) * 100) : 0;
   const qs = new URLSearchParams(Object.entries(sp).flatMap(([k, v]) => (typeof v === "string" ? [[k, v]] : []))).toString();
-  const parentName = (id: string | null) => categories.find((c) => c.id === id)?.name;
 
   return (
     <>
@@ -46,7 +46,7 @@ export default async function PhotoStudioPage({ searchParams }: { searchParams: 
 
       <StatusTabs param="have" defaultValue="0" items={TABS.map((t) => ({ ...t, count: counts[t.value] ?? null }))} />
       <ListToolbar searchPlaceholder="Product name or slug" filters={[
-        { key: "category", label: "Category", anyLabel: "All categories", options: categories.map((c) => ({ value: c.id, label: c.parent_id ? `${parentName(c.parent_id) ?? ""} › ${c.name}` : `${c.name} (incl. subcategories)` })) },
+        { key: "category", label: "Category", anyLabel: "All categories", options: categoryOptions(categories, { topLabel: (name) => `${name} (incl. subcategories)` }) },
         { key: "brand", label: "Brand", anyLabel: "All brands", options: brands.map((b) => ({ value: b.id, label: b.name })) },
       ]} />
 

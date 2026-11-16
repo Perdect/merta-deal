@@ -12,6 +12,7 @@ import { saveCouponAction, deleteCouponAction } from "@/lib/actions/admin";
 import type { Coupon } from "@/types/app";
 import type { CouponStats } from "@/lib/data/admin";
 import { formatDate, formatDateTime, formatNumber } from "@/lib/utils";
+import { categoryOptions, type CategoryLike } from "@/lib/categories";
 
 type Opt = { id: string; name: string };
 
@@ -56,7 +57,7 @@ function validate(f: Form): Errors<Key> {
 }
 
 export function CouponWorkspace({ coupons, stats, categories, counts, total, page, pageSize, nowIso, filtered, error, retryHref }: {
-  coupons: Coupon[]; stats: CouponStats; categories: Opt[]; counts: Record<string, number>; total: number; page: number; pageSize: number;
+  coupons: Coupon[]; stats: CouponStats; categories: CategoryLike[]; counts: Record<string, number>; total: number; page: number; pageSize: number;
   nowIso: string; filtered: boolean; error: boolean; retryHref: string;
 }) {
   const router = useRouter();
@@ -150,7 +151,10 @@ export function CouponWorkspace({ coupons, stats, categories, counts, total, pag
               <div className="grid gap-3 sm:grid-cols-2">
                 <Input label="Total uses" type="number" inputMode="numeric" min={1} step={1} placeholder="Unlimited" value={f.usage_limit} error={errors.usage_limit} onChange={(e) => set("usage_limit", e.target.value)} />
                 <Input label="Uses per customer" required type="number" inputMode="numeric" min={1} step={1} value={f.per_user_limit} error={errors.per_user_limit} onChange={(e) => set("per_user_limit", e.target.value)} />
-                <Select label="Category" placeholder="All categories" options={categories.map((c) => ({ value: c.id, label: c.name }))} value={f.category_id} onChange={(e) => set("category_id", e.target.value)} />
+                {/* A coupon matches a product's own category, so a top-level line only matches
+                    products filed directly in it — the shelf is almost always the right pick. */}
+                <Select label="Category" placeholder="All categories" options={categoryOptions(categories, { topLabel: (name) => `${name} (this line only)` })}
+                  hint="Matched against the product's own shelf, not the whole branch." value={f.category_id} onChange={(e) => set("category_id", e.target.value)} />
               </div>
               <Switch checked={f.first_order_only} onChange={(v) => set("first_order_only", v)} label="Only on a customer's first order" />
             </FieldGroup>

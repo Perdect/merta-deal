@@ -13,6 +13,6 @@ export default async function AdminPromotionsPage() {
   const productNames = Object.fromEntries(products.map((p) => [p.id, `${p.name}${p.pack_label ? ` ${p.pack_label}` : ""}`]));
   return (
     <PromotionsWorkspace banners={banners} promotions={promotions} cities={cities} productNames={productNames} nowIso={nowIso()}
-      categories={categories.filter((c) => !c.parent_id).map((c) => ({ id: c.id, name: c.name }))} />
+      categories={categories} />
   );
 }

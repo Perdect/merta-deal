@@ -7,7 +7,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Search, SlidersHori
 import { useDebouncedValue } from "@/hooks/use-debounce";
 import { useBackToClose, afterOverlayClose } from "@/hooks/use-back-to-close";
 import { useKeyboardOpen } from "@/hooks/use-keyboard-open";
-import { cn } from "@/lib/utils";
+import { cn, flattenOptions, isOptionGroup, type GroupedOptions, type Option } from "@/lib/utils";
 
 /* ------------------------------------------------------------------------------------------------
  * URL state: every list keeps search, filters, tab and page in the query string, so the server
@@ -140,8 +140,9 @@ export function QuickView({ param = "view", title, description, fullHref, fullLa
  * List toolbar: debounced search + a Filters panel + removable chips for what is applied.
  * ---------------------------------------------------------------------------------------------- */
 
-export type FilterOption = { value: string; label: string };
-export type FilterDef = { key: string; label: string; options: FilterOption[]; anyLabel?: string };
+export type FilterOption = Option;
+/** `options` may carry labelled groups (see GroupedOptions); they render as <optgroup>. */
+export type FilterDef = { key: string; label: string; options: GroupedOptions; anyLabel?: string };
 
 export function ListToolbar({ searchKey = "q", searchPlaceholder = "Search", filters = [], dateRange, actions, className }: {
   searchKey?: string | null; searchPlaceholder?: string; filters?: FilterDef[]; dateRange?: { label?: string } | boolean; actions?: React.ReactNode; className?: string;
@@ -168,7 +169,7 @@ export function ListToolbar({ searchKey = "q", searchPlaceholder = "Search", fil
     if (k === "from") return `From ${v}`;
     if (k === "to") return `To ${v}`;
     const f = filters.find((x) => x.key === k);
-    return `${f?.label ?? k}: ${f?.options.find((o) => o.value === v)?.label ?? v}`;
+    return `${f?.label ?? k}: ${(f ? flattenOptions(f.options) : []).find((o) => o.value === v)?.label ?? v}`;
   };
 
   const clearAll = () => { setDraft(Object.fromEntries(panelKeys.map((k) => [k, ""]))); setOpen(false); afterOverlayClose(() => set(Object.fromEntries(panelKeys.map((k) => [k, null])))); };
@@ -211,7 +212,9 @@ export function ListToolbar({ searchKey = "q", searchPlaceholder = "Search", fil
               <span className="mb-1.5 block text-sm font-medium text-ink">{f.label}</span>
               <select value={draft[f.key] ?? ""} onChange={(e) => setDraft((d) => ({ ...d, [f.key]: e.target.value }))} className="h-11 w-full rounded-lg border border-line-2 bg-card px-3 text-sm text-ink focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100">
                 <option value="">{f.anyLabel ?? "Any"}</option>
-                {f.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                {f.options.map((o) => isOptionGroup(o)
+                  ? <optgroup key={o.label} label={o.label}>{o.options.map((x) => <option key={x.value} value={x.value}>{x.label}</option>)}</optgroup>
+                  : <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </label>
           ))}

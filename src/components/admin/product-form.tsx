@@ -15,6 +15,7 @@ import { setBarcodeAction } from "@/lib/actions/scan";
 import { Scanner } from "@/components/admin/scan/scanner";
 import type { Product } from "@/types/app";
 import { slugify } from "@/lib/utils";
+import { categoryOptions, isCategoryHidden, type CategoryLike } from "@/lib/categories";
 
 type Opt = { id: string; name: string; parent_id?: string | null };
 
@@ -69,7 +70,7 @@ function parseNutrition(text: string): { ok: true; value: Record<string, string 
  * validation and audit) plus the seller-of-record / shelf-life columns.
  * The selling price and stock are NOT edited here; they live on the product's listing (see the product page).
  */
-export function ProductForm({ product, categories, brands, barcode }: { product: Product | null; categories: Opt[]; brands: Opt[]; /** Scanned packet barcode to attach once the product exists (from Scan › unknown code). */ barcode?: string }) {
+export function ProductForm({ product, categories, brands, barcode }: { product: Product | null; categories: CategoryLike[]; brands: Opt[]; /** Scanned packet barcode to attach once the product exists (from Scan › unknown code). */ barcode?: string }) {
   const router = useRouter();
   const [state, setState] = React.useState<Snapshot>(() => initial(product));
   const [base, setBase] = React.useState<Snapshot>(() => initial(product));
@@ -97,8 +98,10 @@ export function ProductForm({ product, categories, brands, barcode }: { product:
   const confirmDiscard = useUnsavedChanges(dirty && busy === null);
   const set = <K extends keyof ProductInput>(k: K, v: ProductInput[K]) => setState((s) => ({ ...s, f: { ...s.f, [k]: v } }));
   const setSeller = (k: keyof Seller, v: string) => setState((s) => ({ ...s, seller: { ...s.seller, [k]: v } }));
-  const parentName = (id: string | null | undefined) => categories.find((c) => c.id === id)?.name;
-  const catOptions = categories.map((c) => ({ value: c.id, label: c.parent_id ? `${parentName(c.parent_id) ?? ""} › ${c.name}` : c.name }));
+  // Grouped under the four top-level lines, in the shop's own order; the switched-off shelves sit
+  // in one group at the end, still selectable because a product may already be filed in one.
+  const catOptions = React.useMemo(() => categoryOptions(categories, { topLabel: (name) => `${name} (top level)` }), [categories]);
+  const catHidden = isCategoryHidden(categories, f.category_id);
 
   // Client-side checks that mirror the server schema, shown next to the fields.
   const nutrition = parseNutrition(nutritionText);
@@ -168,7 +171,8 @@ export function ProductForm({ product, categories, brands, barcode }: { product:
                 onChange={(e) => { set("name", e.target.value); if (!slugTouched) set("slug", slugify(`${e.target.value} ${f.pack_label ?? ""}`)); }} />
               <Input id="pf-slug" label="Slug" value={f.slug ?? ""} onChange={(e) => { setSlugTouched(true); set("slug", e.target.value); }} hint="Web address: /p/<slug>. Generated from the name and pack until you edit it." />
               <div className="grid gap-3 sm:grid-cols-2">
-                <Select id="pf-category_id" label="Category" required placeholder="Choose a category" options={catOptions} value={f.category_id} error={err("category_id")} onChange={(e) => set("category_id", e.target.value)} />
+                <Select id="pf-category_id" label="Category" required placeholder="Choose a category" options={catOptions} value={f.category_id} error={err("category_id")}
+                  hint={catHidden ? "This shelf is switched off, so the product won't appear on the site." : undefined} onChange={(e) => set("category_id", e.target.value)} />
                 <Select id="pf-brand" label="Brand" placeholder="No brand / unbranded" options={brands.map((b) => ({ value: b.id, label: b.name }))} value={f.brand_id ?? ""} onChange={(e) => set("brand_id", e.target.value || null)} />
               </div>
               <Textarea id="pf-description" label="Description" value={f.description ?? ""} onChange={(e) => set("description", e.target.value)} hint="Shown on the product page." />

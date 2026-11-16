@@ -14,6 +14,7 @@ import { BANNER_PLACEMENT_OPTIONS, PROMO_TYPE_OPTIONS } from "@/components/admin
 import { saveBannerAction, deleteBannerAction, savePromotionAction, deletePromotionAction, type BannerInput, type PromotionInput } from "@/lib/actions/admin";
 import type { BannerRow, PromotionRow, CityRow } from "@/lib/data/admin";
 import { formatDate } from "@/lib/utils";
+import { categoryOptions, type CategoryLike } from "@/lib/categories";
 
 type Opt = { id: string; name: string };
 type Scheduled = { is_active: boolean; starts_at: string; ends_at: string | null };
@@ -74,7 +75,7 @@ function validatePromo(f: PromoForm): Errors<PKey> {
  * Page
  * ---------------------------------------------------------------------------------------------- */
 
-export function PromotionsWorkspace({ banners, promotions, cities, categories, productNames, nowIso }: { banners: BannerRow[]; promotions: PromotionRow[]; cities: CityRow[]; categories: Opt[]; productNames: Record<string, string>; nowIso: string }) {
+export function PromotionsWorkspace({ banners, promotions, cities, categories, productNames, nowIso }: { banners: BannerRow[]; promotions: PromotionRow[]; cities: CityRow[]; categories: CategoryLike[]; productNames: Record<string, string>; nowIso: string }) {
   const router = useRouter();
   const now = Date.parse(nowIso);
   const [saving, setSaving] = React.useState(false);
@@ -228,7 +229,7 @@ export function PromotionsWorkspace({ banners, promotions, cities, categories, p
             <FieldGroup title="Products">
               <ProductIdsInput id="promo-products" value={pf.product_ids} names={productNames} error={pErrors.product_ids} onChange={(v) => setP("product_ids", v)} />
               <div className="grid gap-3 sm:grid-cols-2">
-                <Select label="Category" placeholder="None" options={categories.map((c) => ({ value: c.id, label: c.name }))} value={pf.category_id} onChange={(e) => setP("category_id", e.target.value)} />
+                <Select label="Category" placeholder="None" options={categoryOptions(categories)} hint="Where the collection's tile sends customers." value={pf.category_id} onChange={(e) => setP("category_id", e.target.value)} />
                 <Input label="Discount shown (%)" type="number" inputMode="decimal" min={0} max={100} placeholder="None" value={pf.discount_percent} error={pErrors.discount_percent} onChange={(e) => setP("discount_percent", e.target.value)} hint="Display only; prices come from each store" />
               </div>
             </FieldGroup>

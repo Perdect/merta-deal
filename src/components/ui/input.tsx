@@ -1,5 +1,5 @@
 import * as React from "react";
-import { cn } from "@/lib/utils";
+import { cn, isOptionGroup, type GroupedOptions } from "@/lib/utils";
 
 /* text-base below sm on purpose: iOS Safari zooms the page when a focused field is under 16px,
    which leaves the layout shifted and clipped until the customer pinches back out. */
@@ -59,7 +59,8 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(fun
   );
 });
 
-export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> { label?: string; hint?: string; error?: string; options: { value: string; label: string }[]; placeholder?: string }
+/** Options may be grouped: an entry carrying its own `options` renders as an <optgroup>. */
+export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> { label?: string; hint?: string; error?: string; options: GroupedOptions; placeholder?: string }
 export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(function Select({ className, label, hint, error, id, options, placeholder, ...props }, ref) {
   const generatedId = React.useId();
   const inputId = id ?? generatedId;
@@ -68,7 +69,9 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(function 
       {label ? <label htmlFor={inputId} className="block text-sm font-medium text-ink-2">{label}<Req on={props.required} /></label> : null}
       <select ref={ref} id={inputId} aria-invalid={Boolean(error)} aria-describedby={describedBy(inputId, error, hint, props["aria-describedby"])} className={cn(fieldBase, "h-11 appearance-none bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2216%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%237a837e%22 stroke-width=%222%22><path d=%22m6 9 6 6 6-6%22/></svg>')] bg-[length:16px] bg-[right_12px_center] bg-no-repeat pr-9", className)} {...props}>
         {placeholder ? <option value="">{placeholder}</option> : null}
-        {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        {options.map((o) => isOptionGroup(o)
+          ? <optgroup key={o.label} label={o.label}>{o.options.map((x) => <option key={x.value} value={x.value}>{x.label}</option>)}</optgroup>
+          : <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
       <FieldNote id={inputId} error={error} hint={hint} />
     </div>

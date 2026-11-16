@@ -18,7 +18,7 @@ export default async function AdminCouponsPage({ searchParams }: { searchParams:
   ]);
   return (
     <CouponWorkspace coupons={list.items} stats={stats} total={list.total} page={list.page} pageSize={list.pageSize} counts={counts} nowIso={now}
-      categories={categories.filter((c) => !c.parent_id).map((c) => ({ id: c.id, name: c.name }))}
+      categories={categories}
       filtered={Boolean(q || status)} error={list.error} retryHref={hrefWith("/admin/coupons", sp)} />
   );
 }

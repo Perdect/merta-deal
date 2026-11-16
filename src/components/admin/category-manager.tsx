@@ -168,7 +168,7 @@ function CategoryEditor({ editing, parents, childCount, onClose }: { editing: { 
         <Field label="Parent" htmlFor="cat-parent" error={err("parent_id")} hint="Leave as top-level, or file it under another category.">
           <select id="cat-parent" value={form.parent_id ?? ""} className={inputCls} onChange={(e) => set("parent_id", e.target.value || null)}>
             <option value="">Top-level category</option>
-            {parents.filter((p) => p.id !== editing.id).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            {parents.filter((p) => p.id !== editing.id).map((p) => <option key={p.id} value={p.id}>{p.is_active ? p.name : `${p.name} (switched off)`}</option>)}
           </select>
         </Field>
         <div className="grid gap-3 sm:grid-cols-2">

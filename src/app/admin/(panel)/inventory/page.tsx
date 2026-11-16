@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AlertTriangle, Boxes, Lock, PackageCheck, PackageX } from "lucide-react";
 import { getAllCategories, spGet, spPage, type SP } from "@/lib/data/admin";
+import { categoryOptions } from "@/lib/categories";
 import { getInventoryOverview, getInventoryPassbook } from "@/lib/data/inventory";
 import { AdminPageHeader, MetricCard, EmptyBlock, ErrorBlock, ListToolbar, StatusTabs, ListPagination } from "@/components/admin/kit";
 import { StockTable } from "@/components/admin/inventory/stock-table";
@@ -30,7 +31,6 @@ export default async function AdminInventoryPage({ searchParams }: { searchParam
     categoriesP,
   ]);
   const qs = new URLSearchParams(Object.entries(sp).flatMap(([k, v]) => (typeof v === "string" ? [[k, v]] : []))).toString();
-  const parentName = (id: string | null) => categories.find((c) => c.id === id)?.name;
   const focus = inventoryId ? overview.rows.find((r) => r.id === inventoryId) : null;
 
   return (
@@ -55,7 +55,7 @@ export default async function AdminInventoryPage({ searchParams }: { searchParam
             <>
               <StatusTabs param="filter" items={INVENTORY_TABS.map((t) => ({ ...t, count: t.value === "" ? overview.counts.all : overview.counts[t.value as keyof typeof overview.counts] ?? null }))} />
               <ListToolbar searchPlaceholder="Product, brand or SKU" filters={[
-                { key: "category", label: "Category", anyLabel: "All categories", options: categories.map((c) => ({ value: c.id, label: c.parent_id ? `${parentName(c.parent_id) ?? ""} › ${c.name}` : `${c.name} (incl. subcategories)` })) },
+                { key: "category", label: "Category", anyLabel: "All categories", options: categoryOptions(categories, { topLabel: (name) => `${name} (incl. subcategories)` }) },
               ]} />
               <StockTable rows={overview.rows} filtered={Boolean(q || category || filter)} />
               <ListPagination page={page} pageSize={25} total={overview.total} className="mt-3" />
