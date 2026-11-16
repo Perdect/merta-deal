@@ -32,5 +32,22 @@
   "confidence": 1,
   "notes": "category tile; background removed (ISNet), transparent cutout",
   "updated_at": "2026-11-09T03:42:02.014363Z"
+ },
+ "personal-care": {
+  "file": "/categories/personal-care.60cec436.webp",
+  "variant": "cutout",
+  "kind": "commodity",
+  "source": "Wikimedia Commons",
+  "source_url": "https://commons.wikimedia.org/wiki/File:Savonnette_d%27h%C3%B4tel_-_1.jpg",
+  "license": "CC BY-SA 3.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+  "attribution": "Lionel Allorge",
+  "barcode": null,
+  "matched_name": "Savonnette d'hôtel - 1.jpg",
+  "matched_quantity": null,
+  "size_match": null,
+  "confidence": 1,
+  "notes": "category tile; background removed (ISNet), transparent cutout. Replaces the 'Pile of Handmade White Soap Bars at a Market' photo, whose subject reads as grey stones once cut out.",
+  "updated_at": "2026-11-16T10:50:21.052161Z"
  }
 }
