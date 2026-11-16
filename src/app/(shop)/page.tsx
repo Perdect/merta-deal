@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { CategoryGrid, ProductSection, ServiceStrip } from "@/components/home/home-sections";
 import { CakeRequest, LocalIntro } from "@/components/home/local-intro";
 import { DiwaliBanner } from "@/components/home/diwali-banner";
-import { OfferBanner } from "@/components/home/offer-banner";
 import { site } from "@/config/site";
 import { paymentPhrase } from "@/lib/seo-copy";
 import type { Metadata } from "next";
@@ -66,7 +65,6 @@ export default async function HomePage() {
         <h1 className="font-display text-[17px] font-bold leading-tight text-ink sm:text-2xl">{homeH1}</h1>
         <p className="mt-0.5 line-clamp-1 text-[13px] text-ink-2 sm:line-clamp-none sm:text-sm">{capitalise(listNames(home.categories.map((c) => c.name.toLowerCase())))} delivered to your home in {site.city}, Rajasthan, with a {etaLabel} delivery target.</p>
       </header>
-      <OfferBanner offers={home.offers} etaLabel={etaLabel} payLine={paymentPhrase(settings)} />
       <CategoryGrid tabs={tabs} fallback={home.categories} />
       <DiwaliBanner />
       {home.sections.length ? (

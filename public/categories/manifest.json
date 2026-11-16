@@ -1,6 +1,6 @@
 {
  "sweets": {
-  "file": "/categories/sweets-collage.fabdcdf4.webp",
+  "file": "/categories/sweets-collage.5a72d4ac.webp",
   "variant": "cutout",
   "kind": "packaging",
   "source": "Supplied by Merta Deal",
@@ -9,12 +9,12 @@
   "license_url": null,
   "attribution": "",
   "barcode": null,
-  "matched_name": "Ghewar, mawa kachori and a Cadbury Dairy Milk bar",
+  "matched_name": "Ghewar, mawa kachori, besan laddoo, cupcake, cookies and a Cadbury Dairy Milk bar",
   "matched_quantity": null,
   "size_match": null,
   "confidence": 1,
-  "notes": "category tile supplied by the shop owner; background removed (ISNet), trimmed, transparent. Replaces the Motichoor Laddu photo from Commons. Brand names and packaging artwork remain the property of their owners.",
-  "updated_at": "2026-11-16T10:55:20.120347Z"
+  "notes": "category tile supplied by the shop owner; background removed (ISNet) with the mask repaired against the flat white backdrop — the model dropped the Cadbury wrapper, so a pixel is kept when the model is confident or when it is plainly not the backdrop. Replaces the Motichoor Laddu photo from Commons. Brand names and packaging artwork remain the property of their owners.",
+  "updated_at": "2026-11-16T11:03:17.973033Z"
  },
  "personal-care": {
   "file": "/categories/personal-care-collage.06ceb512.webp",
