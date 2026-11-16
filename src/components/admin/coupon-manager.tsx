@@ -14,7 +14,6 @@ import type { CouponStats } from "@/lib/data/admin";
 import { formatDate, formatDateTime, formatNumber } from "@/lib/utils";
 import { categoryOptions, type CategoryLike } from "@/lib/categories";
 
-type Opt = { id: string; name: string };
 
 /** Status in words: expiry wins, then the on/off switch, then usage and schedule. */
 export function couponState(c: Pick<Coupon, "is_active" | "starts_at" | "expires_at" | "usage_limit" | "used_count">, now: number): { label: string; tone: Tone; detail?: string } {

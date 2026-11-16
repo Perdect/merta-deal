@@ -40,7 +40,8 @@ export function Footer({ social = [], categories }: { social?: SocialLink[]; /**
               <li><Link href="/c/grocery" className={link}>Grocery &amp; kirana</Link></li>
               {on("vegetables") ? <li><Link href="/c/vegetables" className={link}>Vegetables</Link></li> : null}
               {on("fruits") ? <li><Link href="/c/fruits" className={link}>Fruits</Link></li> : null}
-              <li><Link href="/c/dry-fruits" className={link}>Dry fruits</Link></li>
+              <li><Link href="/c/sweets" className={link}>Sweets &amp; bakery</Link></li>
+              <li><Link href="/c/snacks" className={link}>Snacks &amp; drinks</Link></li>
               <li><Link href="/categories" className={link}>All categories</Link></li>
               <li><Link href="/delivery-area" className={link}>Delivery area &amp; charges</Link></li>
               <li><Link href="/restaurants-merta-city" className={link}>Restaurants</Link></li>

@@ -2,6 +2,14 @@ import type { NextConfig } from "next";
 
 const supabaseHost = (() => { try { return process.env.NEXT_PUBLIC_SUPABASE_URL ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname : undefined; } catch { return undefined; } })();
 
+/** Sub-category slug -> the top-level line it was merged into by migration 0056. */
+const RETIRED_CATEGORIES: Record<string, string> = {
+  atta: "grocery", flour: "grocery", rice: "grocery", dal: "grocery", pulses: "grocery", oil: "grocery",
+  "masala-spices": "grocery", sugar: "grocery", salt: "grocery", "dry-fruits": "grocery", tea: "grocery", coffee: "grocery",
+  "soft-drinks": "snacks", juice: "snacks", water: "snacks", chocolates: "snacks",
+  mithai: "sweets", "bakery-cakes": "sweets",
+};
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   images: {
@@ -20,6 +28,10 @@ const nextConfig: NextConfig = {
   /** Retired URLs: permanent redirects so links and search results land on the page that replaced them. */
   async redirects() {
     return [
+      // The sub-categories removed in 0056: their pages are gone, so a shared link or a search result
+      // lands on the line that now holds the goods. Bringing a shelf back under the same slug means
+      // deleting its line here first, or this redirect will shadow the real page.
+      ...Object.entries(RETIRED_CATEGORIES).map(([slug, line]) => ({ source: `/c/${slug}`, destination: `/c/${line}`, permanent: true })),
       { source: "/grocery-merta-city", destination: "/c/grocery", permanent: true },
       { source: "/fresh-grocery-merta", destination: "/c/vegetables", permanent: true },
       { source: "/masala-merta", destination: "/c/grocery", permanent: true },

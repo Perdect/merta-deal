@@ -16,8 +16,6 @@ const TILE_PRODUCTS: Record<string, string[]> = {
   vegetables: ["onion-pyaz-1-kg", "potato-aloo-1-kg"],
 };
 const SECTION_SIZE = 6;
-/** The dry fruits section carries the festival name until this date, then reads plainly. */
-const DIWALI_ENDS = "2026-11-10T00:00:00+05:30";
 
 /** `cover` = the category's own image (set in admin), shown alone; otherwise two product cut-outs. */
 export type HomeCategory = { id: string; name: string; slug: string; color: string | null; images: string[]; cover: boolean };
@@ -75,16 +73,13 @@ const cachedHomeData = unstable_cache(async (essentialSlugs: string[], welcomeCo
     }
     return out;
   };
-  // Taken first so these items stay in their own section rather than filling the others.
-  const dryFruits = take(products.filter((p) => sellable(p) && allCats.find((c) => c.id === p.category_id)?.slug === "dry-fruits"));
   const essentials = take([...essentialSlugs.map((s) => bySlug.get(s)).filter(sellable), ...products.filter((p) => sellable(p) && p.image_url)]);
   const inTop = (slug: string) => products.filter((p) => sellable(p) && topSlugOf(p) === slug).sort((a, b) => Number(Boolean(b.image_url)) - Number(Boolean(a.image_url)));
   const sections: HomeSection[] = [
     { key: "essentials", title: "Everyday essentials", href: null, products: essentials },
-    { key: "dry-fruits", title: nowIso < new Date(DIWALI_ENDS).toISOString() ? "Dry fruits for Diwali" : "Dry fruits", href: "/c/dry-fruits", products: dryFruits },
-    // Every other live top-level category gets its own row in catalogue order (Sweets, Bakery, and
-    // Fruits / Vegetables when they are back), so a new line shows up here without a code change.
-    ...top.filter((c) => !["grocery", "dry-fruits"].includes(c.slug)).map((c) => ({
+    // Every other live top-level category gets its own row in catalogue order (Snacks, Sweets, and
+    // Fruits / Vegetables if they are brought back), so a new line shows up here without a code change.
+    ...top.filter((c) => c.slug !== "grocery").map((c) => ({
       key: c.slug, title: c.slug === "vegetables" ? "Fresh vegetables" : c.slug === "fruits" ? "Fresh fruits" : c.name, href: `/c/${c.slug}`, products: take(inTop(c.slug)),
     })),
     { key: "grocery", title: "Grocery essentials", href: "/c/grocery", products: take(inTop("grocery")) },

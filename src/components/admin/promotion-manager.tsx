@@ -16,7 +16,6 @@ import type { BannerRow, PromotionRow, CityRow } from "@/lib/data/admin";
 import { formatDate } from "@/lib/utils";
 import { categoryOptions, type CategoryLike } from "@/lib/categories";
 
-type Opt = { id: string; name: string };
 type Scheduled = { is_active: boolean; starts_at: string; ends_at: string | null };
 
 function liveState(r: Scheduled, now: number): { label: string; tone: Tone; detail: string } {

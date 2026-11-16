@@ -1,4 +1,5 @@
-// Four top-level categories (0054): the tree, where every product landed, and that nothing was lost.
+// Four categories and nothing under them (0054 -> 0055 -> 0056): the tree, where every product landed,
+// and that nothing was lost on the way.
 // Loads every migration + seed into PGlite. Run from the project folder:
 //   node scripts/test-categories.mjs "$PWD"
 import { PGlite } from "@electric-sql/pglite";
@@ -54,7 +55,23 @@ await exec("live-shaped fixture", `
     'kaju-katli','rasgullah','pineapple-cake-500-g');`);
 await exec("0054 (re-applied over the seeded catalogue)", read("supabase/migrations/0054_four_top_categories.sql"));
 await exec("0055 (re-applied over the seeded catalogue)", read("supabase/migrations/0055_remove_switched_off_categories.sql"));
-console.log(`loaded ${migrations.length} migrations + seed, then 0054 and 0055 over the top`);
+
+// Counted while the shelves are still standing, so 0056 can be checked against what it inherited
+// rather than against a number typed into this file.
+const climb = `
+  with recursive up(id, top) as (
+    select id, id from public.categories where parent_id is null
+    union all select c.id, u.top from public.categories c join up u on c.parent_id = u.id
+  )
+  select t.slug, count(p.id)::int n from up u
+  join public.categories t on t.id = u.top
+  join public.products p on p.category_id = u.id
+  group by t.slug order by t.slug`;
+const before = Object.fromEntries((await db.query(climb)).rows.map((r) => [r.slug, r.n]));
+const beforeTotal = Object.values(before).reduce((a, b) => a + b, 0);
+
+await exec("0056 (re-applied over the seeded catalogue)", read("supabase/migrations/0056_four_categories_only.sql"));
+console.log(`loaded ${migrations.length} migrations + seed, then 0054, 0055 and 0056 over the top`);
 
 let pass = 0, fail = 0;
 const ok = (name, cond, detail = "") => { if (cond) { pass++; console.log(`  ok   ${name}`); } else { fail++; console.log(`  FAIL ${name} ${detail}`); } };
@@ -67,88 +84,59 @@ ok("exactly four top-level categories are switched on", tops.length === 4, JSON.
 ok("they read in the right order", tops.map((t) => t.name).join(" | ") === "Grocery & Kitchen | Snacks & Drinks | Sweets & Bakery | Beauty & Personal Care", JSON.stringify(tops.map((t) => t.name)));
 ok("their slugs are unchanged, so old links still land", tops.map((t) => t.slug).join(",") === "grocery,snacks,sweets,personal-care");
 
-console.log("Shape the admin panel can edit");
-const deep = await rows(`select c.slug from public.categories c join public.categories p on p.id = c.parent_id where c.is_active and p.parent_id is not null`);
-ok("no switched-on category is three levels deep", deep.length === 0, JSON.stringify(deep.map((d) => d.slug)));
-const withKids = await rows(`select c.slug from public.categories c where c.parent_id is not null and exists (select 1 from public.categories k where k.parent_id = c.id)`);
-ok("no sub-category has sub-categories of its own", withKids.length === 0, JSON.stringify(withKids.map((d) => d.slug)));
-
-console.log("What survives the clear-out (0055)");
-// Every line and shelf a customer can reach is still here, with its slug, so links already out
-// there still land.
-for (const slug of ["grocery", "snacks", "sweets", "personal-care", "bakery-cakes", "dry-fruits", "mithai", "chocolates", "masala-spices", "tea"]) {
-  ok(`${slug} still exists as a row`, Boolean(await one(`select 1 from public.categories where slug = $1`, [slug])));
+console.log("Nothing underneath them (0056)");
+const all = await rows(`select slug, parent_id, is_active from public.categories order by slug`);
+ok("not one sub-category is left anywhere", all.every((c) => c.parent_id === null), JSON.stringify(all.filter((c) => c.parent_id).map((c) => c.slug)));
+ok("the shop a customer sees is four categories and no more", all.filter((c) => c.is_active).length === 4, JSON.stringify(all.filter((c) => c.is_active).map((c) => c.slug)));
+// The dev seed keeps a few switched-off lines that still hold goods (Household, Baby Care …); 0055
+// would not delete those and neither does this, so they are listed rather than asserted away.
+// Production has none of them: there, these four rows are the whole table.
+console.log(`  note switched off but still holding goods: ${all.filter((c) => !c.is_active).map((c) => c.slug).join(", ") || "nothing"}`);
+for (const slug of ["bakery-cakes", "dry-fruits", "mithai", "chocolates", "masala-spices", "tea", "atta", "dal"]) {
+  ok(`${slug} is gone`, !(await one(`select 1 from public.categories where slug = $1`, [slug])));
 }
-const strays = await rows(`select slug from public.categories where is_active and parent_id is null and slug not in ('grocery','snacks','sweets','personal-care')`);
-ok("no other line is switched on", strays.length === 0, JSON.stringify(strays.map((s) => s.slug)));
-const leftovers = await rows(`
-  select c.slug from public.categories c
-  where not c.is_active and not exists (select 1 from public.products p where p.category_id = c.id)
-    and not exists (select 1 from public.categories k where k.parent_id = c.id)`);
-ok("no empty switched-off category is left in the pickers", leftovers.length === 0, JSON.stringify(leftovers.map((s) => s.slug)));
-const orphaned = await rows(`select p.slug from public.products p left join public.categories c on c.id = p.category_id where c.id is null`);
-ok("no product lost its category", orphaned.length === 0, JSON.stringify(orphaned.map((s) => s.slug)));
-const keptWithGoods = await rows(`
-  select c.slug from public.categories c
-  where not c.is_active and exists (select 1 from public.products p where p.category_id = c.id)`);
-ok("a switched-off category that still holds goods is kept, not deleted", true, `kept: ${JSON.stringify(keptWithGoods.map((s) => s.slug))}`);
+
+console.log("The goods came up with them");
+const orphaned = await rows(`select p.slug from public.products p left join public.categories c on c.id = p.category_id where p.category_id is not null and c.id is null`);
+ok("no product points at a category that was deleted", orphaned.length === 0, JSON.stringify(orphaned.map((s) => s.slug)));
+const uncategorised = await rows(`select slug from public.products where category_id is null`);
+ok("no product was left without a category", uncategorised.length === 0, JSON.stringify(uncategorised.map((s) => s.slug)));
+const after = Object.fromEntries((await rows(`
+  select c.slug, count(p.id)::int n from public.categories c
+  join public.products p on p.category_id = c.id group by c.slug order by c.slug`)).map((r) => [r.slug, r.n]));
+const afterTotal = Object.values(after).reduce((a, b) => a + b, 0);
+ok("every line holds exactly what its whole branch held before", JSON.stringify(before) === JSON.stringify(after), `${JSON.stringify(before)} -> ${JSON.stringify(after)}`);
+ok("not one product was gained or lost", beforeTotal === afterTotal, `${beforeTotal} -> ${afterTotal}`);
 
 console.log("Where each kind of product now sits");
 const catOf = async (productSlug) => (await one(`select c.slug from public.products p join public.categories c on c.id = p.category_id where p.slug = $1`, [productSlug]))?.slug;
-const parentOf = async (catSlug) => (await one(`select p.slug from public.categories c join public.categories p on p.id = c.parent_id where c.slug = $1`, [catSlug]))?.slug;
-ok("masala powders left the Grocery parent for Masala & Spices", (await catOf("dhaniya-powder-500-g")) === "masala-spices");
-ok("chai leaves are a kitchen staple, not a cold drink", (await catOf("mateshwari-gold-chai-1")) === "tea");
-ok("Masala & Spices hangs off Grocery & Kitchen", (await parentOf("masala-spices")) === "grocery");
-ok("Tea hangs off Grocery & Kitchen", (await parentOf("tea")) === "grocery");
-ok("Dry Fruits hangs off Grocery & Kitchen", (await parentOf("dry-fruits")) === "grocery");
-ok("chocolate bars left Dairy for Chocolates", (await catOf("cadbury-dairy-milk-20g")) === "chocolates");
-ok("Chocolates hangs off Snacks & Drinks", (await parentOf("chocolates")) === "snacks");
-ok("bottled water sits under Water", (await catOf("bisleri-bottle")) === "water");
-ok("colas sit under Soft Drinks", (await catOf("campa-500-ml")) === "soft-drinks");
-ok("the mango drink stays under Juice", (await catOf("frooti-mango-drink-600ml")) === "juice");
-ok("halwai sweets moved onto the Mithai shelf", (await catOf("kaju-katli")) === "mithai");
-ok("Mithai and Bakery & Cakes both hang off Sweets & Bakery", (await parentOf("mithai")) === "sweets" && (await parentOf("bakery-cakes")) === "sweets");
-ok("cakes stayed where they were", (await catOf("pineapple-cake-500-g")) === "bakery-cakes");
-
-console.log("What the four lines leave out");
-const hidden = await rows(`select v.slug from public.v_product_cards v join public.categories c on c.id = v.category_id where not c.is_active`);
-ok("no product is listed out of a switched-off category", hidden.length === 0, JSON.stringify(hidden.map((h) => h.slug)));
-const shelvesOn = await rows(`
-  select c.slug, count(pr.id)::int n from public.categories c
-  left join public.products pr on pr.category_id = c.id and pr.is_active
-  where c.is_active and c.parent_id is not null group by c.slug having count(pr.id) > 0 order by c.slug`);
-ok("every shelf that holds goods is switched on", shelvesOn.length > 0, JSON.stringify(shelvesOn.map((r) => `${r.slug}:${r.n}`)));
-const emptyOn = await rows(`
-  select c.slug from public.categories c
-  join public.categories p on p.id = c.parent_id and p.is_active
-  where c.is_active and not exists (select 1 from public.products pr where pr.category_id = c.id and pr.is_active)
-    and c.slug in ('milk','curd','paneer','butter','cheese','turmeric','red-chilli','coriander','cumin','garam-masala','whole-spices','kitchen-essentials','biscuits','chips','namkeen')`);
-ok("a shelf whose goods moved away is not left switched on and empty", emptyOn.length === 0, JSON.stringify(emptyOn.map((r) => r.slug)));
-const dark = await rows(`
-  select c.slug, count(pr.id)::int n from public.categories c
-  join public.products pr on pr.category_id = c.id and pr.is_active
-  where not c.is_active group by c.slug order by c.slug`);
-// Not a failure: a shop that sells only these four lines puts the rest away. Printed so the owner can
-// see exactly which goods stop being listed before this is applied anywhere.
-console.log(`  note put away by this change: ${dark.length ? dark.map((d) => `${d.slug} (${d.n})`).join(", ") : "nothing"}`);
+ok("masala powders came up to Grocery & Kitchen", (await catOf("dhaniya-powder-500-g")) === "grocery");
+ok("chai is still a kitchen staple, not a cold drink", (await catOf("mateshwari-gold-chai-1")) === "grocery");
+ok("chocolate bars sit with Snacks & Drinks", (await catOf("cadbury-dairy-milk-20g")) === "snacks");
+ok("bottled water sits with Snacks & Drinks", (await catOf("bisleri-bottle")) === "snacks");
+ok("colas sit with Snacks & Drinks", (await catOf("campa-500-ml")) === "snacks");
+ok("the mango drink sits with Snacks & Drinks", (await catOf("frooti-mango-drink-600ml")) === "snacks");
+ok("halwai sweets sit with Sweets & Bakery", (await catOf("kaju-katli")) === "sweets");
+ok("cakes sit with Sweets & Bakery", (await catOf("pineapple-cake-500-g")) === "sweets");
 
 console.log("Browsing and search still reach them");
 // Named argument: the signature has grown over the years and only the category slug matters here.
 const found = async (slug) => ((await one(`select public.search_products(p_category_slug => $1::text, p_page_size => 60) r`, [slug]))?.r?.items ?? []).map((i) => i.slug);
+// Searched by name, not read off page one: Grocery & Kitchen now holds the whole kirana aisle.
+const findIn = async (slug, q) => ((await one(`select public.search_products(p_category_slug => $1::text, p_query => $2::text, p_page_size => 60) r`, [slug, q]))?.r?.items ?? []).map((i) => i.slug);
 const inGrocery = await found("grocery");
-ok("the masala shelf lists the powders that moved onto it", (await found("masala-spices")).includes("dhaniya-powder-500-g"));
-ok("the tea shelf lists the chai that moved onto it", (await found("tea")).includes("mateshwari-gold-chai-1"));
-// A page holds 60 at most, so count rather than read the page: the parent must cover its whole tree.
-const total = async (slug) => (await one(`select (public.search_products(p_category_slug => $1::text)->>'total')::int t`, [slug]))?.t ?? 0;
-const [gTotal, masala, tea, dryFruits] = await Promise.all([total("grocery"), total("masala-spices"), total("tea"), total("dry-fruits")]);
-ok("Grocery & Kitchen counts every shelf below it", gTotal >= masala + tea + dryFruits && masala > 0 && tea > 0, `${gTotal} vs ${masala}+${tea}+${dryFruits}`);
+ok("Grocery & Kitchen lists the powders that came up to it", (await findIn("grocery", "Dhaniya")).includes("dhaniya-powder-500-g"));
+ok("Grocery & Kitchen lists the chai that came up to it", (await findIn("grocery", "Mateshwari")).includes("mateshwari-gold-chai-1"));
 const inSweets = await found("sweets");
 ok("Sweets & Bakery lists both mithai and cakes", inSweets.includes("kaju-katli") && inSweets.includes("pineapple-cake-500-g"), JSON.stringify(inSweets));
 const inSnacks = await found("snacks");
 ok("Snacks & Drinks lists the drinks and chocolates", inSnacks.includes("bisleri-bottle") && inSnacks.includes("campa-500-ml") && inSnacks.includes("cadbury-dairy-milk-20g"), JSON.stringify(inSnacks));
-ok("an old link to /c/bakery-cakes still lists cakes", (await found("bakery-cakes")).includes("pineapple-cake-500-g"));
 ok("a line lists only its own goods", !inGrocery.includes("pineapple-cake-500-g") && !inGrocery.includes("campa-500-ml") && !inSweets.includes("bisleri-bottle"));
-ok("a switched-off line lists nothing rather than everything", (await found("dairy")).length === 0);
+// The shelf pages are gone from the database; next.config.ts redirects /c/<shelf> to its line, so the
+// customer never reaches this empty answer.
+ok("a retired shelf slug matches nothing rather than everything", (await found("bakery-cakes")).length === 0);
+const inCare = await found("personal-care");
+ok("Beauty & Personal Care lists only what is filed in it", inCare.every((x) => !["kaju-katli", "campa-500-ml", "dhaniya-powder-500-g"].includes(x)), JSON.stringify(inCare));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

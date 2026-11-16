@@ -62,7 +62,7 @@ export default async function AboutPage() {
 
       <h1 className="mt-1 font-display text-2xl font-bold leading-tight text-ink lg:mt-3">About {site.seoName}</h1>
       <p className="mt-2 max-w-3xl text-[15px] leading-relaxed text-ink-2">
-        {site.seoName} (also written Merta Deal) is an online <Link href="/c/grocery" className={link}>grocery</Link>, <Link href="/c/sweets" className={link}>sweets</Link>, <Link href="/c/bakery-cakes" className={link}>cakes and bakery items</Link>, and <Link href="/c/dry-fruits" className={link}>dry fruits</Link> home delivery service operating in {site.city}, Rajasthan. You order on this website or the installed app, and our own delivery partners bring it to your door.
+        {site.seoName} (also written Merta Deal) is an online <Link href="/c/grocery" className={link}>grocery</Link>, <Link href="/c/sweets" className={link}>sweets</Link>, <Link href="/c/sweets" className={link}>cakes and bakery items</Link>, and <Link href="/c/grocery" className={link}>dry fruits</Link> home delivery service operating in {site.city}, Rajasthan. You order on this website or the installed app, and our own delivery partners bring it to your door.
       </p>
       <p lang="hi" className="mt-2 max-w-3xl text-sm leading-relaxed text-ink-3">{site.cityHindi} ({site.cityHindiAlt}) में किराना, मिठाई, केक, बेकरी और ड्राई फ्रूट्स की ऑनलाइन होम डिलीवरी — ऑर्डर वेबसाइट या ऐप से करें, डिलीवरी हमारे अपने डिलीवरी पार्टनर करते हैं।</p>
 

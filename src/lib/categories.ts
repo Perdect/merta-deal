@@ -12,7 +12,7 @@
  * select must be able to show it.
  */
 
-import type { GroupedOptions, Option, OptionGroup } from "@/lib/utils";
+import type { GroupedOptions, Option } from "@/lib/utils";
 
 export type CategoryLike = { id: string; name: string; parent_id?: string | null; sort_order?: number | null; is_active?: boolean };
 
@@ -29,7 +29,7 @@ export function categoryOptions(categories: CategoryLike[], { topLabel = (name: 
   const tops = categories.filter((c) => !c.parent_id).sort(byOrder);
   const childrenOf = (id: string) => categories.filter((c) => c.parent_id === id).sort(byOrder);
 
-  const groups: OptionGroup[] = [];
+  const groups: GroupedOptions = [];
   const off: Option[] = [];
 
   for (const top of tops) {
@@ -39,7 +39,11 @@ export function categoryOptions(categories: CategoryLike[], { topLabel = (name: 
       off.push({ value: top.id, label: top.name }, ...kids.map((c) => ({ value: c.id, label: `${top.name} › ${c.name}` })));
       continue;
     }
-    groups.push({ label: top.name, options: [{ value: top.id, label: topLabel(top.name) }, ...kids.filter(live).map((c) => ({ value: c.id, label: c.name }))] });
+    // A line with no shelf under it is one choice, not a heading over a list of one: 0056 left the
+    // catalogue at four lines, and four headings each wrapping their own name reads as a stutter.
+    const liveKids = kids.filter(live);
+    if (liveKids.length) groups.push({ label: top.name, options: [{ value: top.id, label: topLabel(top.name) }, ...liveKids.map((c) => ({ value: c.id, label: c.name }))] });
+    else groups.push({ value: top.id, label: top.name });
     off.push(...kids.filter((c) => !live(c)).map((c) => ({ value: c.id, label: `${top.name} › ${c.name}` })));
   }
 

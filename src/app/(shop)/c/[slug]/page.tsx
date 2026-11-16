@@ -7,7 +7,6 @@ import { parseListingParams } from "@/lib/listing-params";
 import { ProductListing } from "@/components/shop/product-listing";
 import { ShopPageHeader } from "@/components/shop/shop-page-header";
 import { SearchLink } from "@/components/shop/search-link";
-import { DryFruitsBanner } from "@/components/shop/dry-fruits-banner";
 import { site } from "@/config/site";
 import { CATEGORY_SEO, LISTING_FILTER_KEYS } from "@/config/seo";
 
@@ -68,7 +67,6 @@ export default async function CategoryPage({ params, searchParams }: Props) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <nav aria-label="Breadcrumb" className="mt-2 text-xs text-ink-3 max-lg:hidden"><Link href="/" className="tap hover:text-brand-700">Home</Link> / {parent ? <><Link href={`/c/${parent.slug}`} className="tap hover:text-brand-700">{parent.name}</Link> / </> : null}<span className="text-ink">{category.name}</span></nav>
       <ShopPageHeader title={seo?.h1 ?? category.name} barTitle={barTitle} keepTitle={Boolean(seo)} barClassName="-mt-1" fallback={parent ? `/c/${parent.slug}` : "/categories"} cart actions={<SearchLink scope={{ slug: scopeCategory, name: barTitle }} />} subtitle={seo ? undefined : category.description ?? `${result.total} products at Merta Deal`} className="px-0" />
-      {slug === "dry-fruits" ? <DryFruitsBanner /> : null}
       {seo ? (
         <div className="-mt-1 mb-4 max-w-3xl text-sm leading-relaxed text-ink-2">
           <p>{seo.intro}</p>

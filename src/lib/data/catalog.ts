@@ -115,8 +115,9 @@ const cachedCollections = unstable_cache(async (): Promise<{ id: string; title: 
   // products a customer can actually buy, never an empty search.
   const quick = [
     { id: "monthly", title: "Monthly ration", description: "Atta, dal, rice, oil, sugar, salt", kind: "Quick pick", href: "/c/grocery?sort=popular" },
-    { id: "mithai", title: "Mithai box", description: "Kaju katli, rasgulla and more", kind: "Quick pick", href: "/c/sweets" },
-    { id: "cakes", title: "Cakes to order", description: "Chocolate, butterscotch, red velvet", kind: "Quick pick", href: "/c/bakery-cakes" },
+    // Mithai and cakes share the Sweets & Bakery line since 0056, so they are one pick, not two tiles
+    // landing on the same page.
+    { id: "sweets", title: "Mithai & cakes", description: "Kaju katli, rasgulla, chocolate and butterscotch cakes", kind: "Quick pick", href: "/c/sweets" },
   ];
   // A quick pick for a switched-off category would land on a notice, not products.
   const active = new Set((await cachedCategories()).map((c) => c.slug));
@@ -132,10 +133,10 @@ export type CategoryTab = { id: string; slug: string; name: string; image: strin
 /**
  * Tiles that cover several overlapping catalogue categories (no data change: the link filters by all of
  * them via search_products' comma list). Grouped categories also take the first member's position.
+ * Empty since 0056 merged every sub-category into its line; add an entry here if shelves come back and
+ * two of them read as one tile to a customer.
  */
-const TILE_GROUPS: Record<string, { slugs: string[]; label: string }[]> = {
-  grocery: [{ slugs: ["dal", "pulses"], label: "Dal & Pulses" }],
-};
+const TILE_GROUPS: Record<string, { slugs: string[]; label: string }[]> = {};
 /**
  * Tabs = active top-level categories (an empty one shows as "coming soon" so a new line like Beauty &
  * Personal Care is visible before its first product); tiles = their sub-categories with at least one

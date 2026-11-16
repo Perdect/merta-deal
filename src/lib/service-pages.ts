@@ -259,7 +259,7 @@ export function serviceCopy(slug: ServiceSlug, c: ServiceContext): ServiceCopy {
           { q: "Can you collect something from a shop or a house urgently?", a: "Yes, if a rider is free. Send a pickup and drop request and mark it as soon as possible." },
         ],
         form: { kind: "delivery_order", title: "Request fast delivery", hindi: "क्या और कहाँ चाहिए, यहाँ भरें। समय और शुल्क हम पहले बताएंगे।", submit: "Request fast delivery" },
-        shopLinks: [{ href: "/c/grocery", label: "Grocery & kirana" }, { href: "/c/sweets", label: "Sweets" }, { href: "/c/bakery-cakes", label: "Cakes & bakery" }, ...directoryLinks],
+        shopLinks: [{ href: "/c/grocery", label: "Grocery & kirana" }, { href: "/c/sweets", label: "Sweets" }, { href: "/c/sweets", label: "Cakes & bakery" }, ...directoryLinks],
         related: ["delivery-boy-merta-city", "food-delivery-merta-city", "cake-delivery-merta-city", "hotel-delivery-merta-city"],
       };
     case "food-delivery-merta-city":
@@ -415,7 +415,7 @@ export function serviceCopy(slug: ServiceSlug, c: ServiceContext): ServiceCopy {
           { q: "How do I pay?", a: c.pay || "Payment options are shown at checkout." },
         ],
         form: { kind: "delivery_order", title: "Need something the shop doesn't list?", hindi: "जो दुकान में नहीं दिखता, उसके लिए यहाँ लिखें।", submit: "Send request", destination: "home" },
-        shopLinks: [{ href: "/c/grocery", label: "Grocery & kirana" }, { href: "/c/sweets", label: "Sweets" }, { href: "/c/bakery-cakes", label: "Cakes & bakery" }],
+        shopLinks: [{ href: "/c/grocery", label: "Grocery & kirana" }, { href: "/c/sweets", label: "Sweets" }, { href: "/c/sweets", label: "Cakes & bakery" }],
         related: ["urgent-delivery-merta-city", "office-delivery-merta-city", "hotel-delivery-merta-city"],
       };
     case "hotel-delivery-merta-city":

@@ -113,7 +113,7 @@ export default async function DeliveryAreaPage() {
         <Link href="/c/grocery" className="rounded-xl border border-line bg-card p-4 text-sm font-semibold text-ink hover:border-brand-300">Grocery & kirana →</Link>
         {active.has("vegetables") ? <Link href="/c/vegetables" className="rounded-xl border border-line bg-card p-4 text-sm font-semibold text-ink hover:border-brand-300">Fresh vegetables →</Link> : null}
         {active.has("fruits") ? <Link href="/c/fruits" className="rounded-xl border border-line bg-card p-4 text-sm font-semibold text-ink hover:border-brand-300">Fresh fruits →</Link> : null}
-        {!active.has("vegetables") || !active.has("fruits") ? <Link href="/c/dry-fruits" className="rounded-xl border border-line bg-card p-4 text-sm font-semibold text-ink hover:border-brand-300">Dry fruits →</Link> : null}
+        {!active.has("vegetables") || !active.has("fruits") ? <Link href="/c/sweets" className="rounded-xl border border-line bg-card p-4 text-sm font-semibold text-ink hover:border-brand-300">Sweets &amp; bakery →</Link> : null}
       </section>
 
       <p className="mt-6 text-sm text-ink-2">
