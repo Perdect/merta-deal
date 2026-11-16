@@ -43,4 +43,5 @@ export function Field({ label, htmlFor, hint, error, children, className }: { la
   );
 }
 
-export const inputCls = "h-10 w-full rounded-lg border border-line-2 bg-card px-3 text-sm text-ink placeholder:text-ink-4 transition-shadow focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 aria-[invalid=true]:border-danger";
+/* text-base below sm: iOS Safari zooms the page when a focused field is under 16px. */
+export const inputCls = "h-10 w-full rounded-lg border border-line-2 bg-card px-3 text-base sm:text-sm text-ink placeholder:text-ink-4 transition-shadow focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 aria-[invalid=true]:border-danger";

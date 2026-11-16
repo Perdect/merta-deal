@@ -13,8 +13,12 @@ import { setBarcodeAction, setStockModeAction } from "@/lib/actions/scan";
 import type { ScanProduct } from "@/lib/scan/types";
 import { formatGrams, formatPacks, productQrValue } from "@/lib/scan/format";
 
-/** Product page panel: the codes on its label, the packet barcode, and whether its stock is shared grams or packs. */
-export function ProductIdentity({ product: initial, siteUrl }: { product: ScanProduct; siteUrl: string }) {
+/**
+ * Product page panel: the codes on its label, the packet barcode, and whether its stock is shared
+ * grams or packs. `showBarcode = false` leaves the barcode out for a host that edits it itself
+ * (the product editor), so one screen never offers the same field twice.
+ */
+export function ProductIdentity({ product: initial, siteUrl, showBarcode = true }: { product: ScanProduct; siteUrl: string; showBarcode?: boolean }) {
   const [p, setP] = React.useState(initial);
   const [barcode, setBarcode] = React.useState(initial.barcode ?? "");
   const [busy, setBusy] = React.useState(false);
@@ -55,10 +59,12 @@ export function ProductIdentity({ product: initial, siteUrl }: { product: ScanPr
           { label: "Stock type", value: <span className="flex flex-wrap items-center gap-2">{p.stock_mode === "loose" ? "Loose produce · shared grams across sizes" : "Prepacked · counted in packs"}{p.can_be_loose && p.listed ? <button type="button" onClick={() => setModeOpen(true)} className="text-xs font-semibold text-brand-700 underline">Change</button> : null}</span> },
           ...(p.stock_mode === "loose" && p.pool ? [{ label: "Shared balance", value: <span className="tabular">{formatGrams(p.pool.balance_g)} · reserved {formatGrams(p.pool.reserved_g)} · this size fills {formatPacks(p.available_packs)}</span> }] : []),
         ]} />
-        <div className="flex flex-wrap items-end gap-2">
-          <Input label="Packet barcode (EAN / UPC)" hint="8 to 14 digits printed on the packet. Scanning it then finds this product, and the label's QR carries it." value={barcode} onChange={(e) => setBarcode(e.target.value.replace(/\D/g, "").slice(0, 14))} inputMode="numeric" placeholder="8901234567890" className="font-mono" />
-          <Button variant="outline" loading={busy} disabled={!dirty} onClick={saveBarcode}>{barcode ? "Save barcode" : "Remove barcode"}</Button>
-        </div>
+        {showBarcode ? (
+          <div className="flex flex-wrap items-end gap-2">
+            <Input label="Packet barcode (EAN / UPC)" hint="8 to 14 digits printed on the packet. Scanning it then finds this product, and the label's QR carries it." value={barcode} onChange={(e) => setBarcode(e.target.value.replace(/\D/g, "").slice(0, 14))} inputMode="numeric" placeholder="8901234567890" className="font-mono" />
+            <Button variant="outline" loading={busy} disabled={!dirty} onClick={saveBarcode}>{barcode ? "Save barcode" : "Remove barcode"}</Button>
+          </div>
+        ) : null}
         <Link href={`/admin/scan?product=${p.id}`} className={btn.outline}><ScanLine className="h-4 w-4" aria-hidden />Open in Scan (receive, wastage, adjust)</Link>
       </div>
       <ConfirmDialog open={modeOpen} onClose={() => setModeOpen(false)} onConfirm={switchMode} loading={busy}

@@ -3,7 +3,7 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Search, SlidersHorizontal, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Search, SlidersHorizontal, X, type LucideIcon } from "lucide-react";
 import { useDebouncedValue } from "@/hooks/use-debounce";
 import { useBackToClose, afterOverlayClose } from "@/hooks/use-back-to-close";
 import { useKeyboardOpen } from "@/hooks/use-keyboard-open";
@@ -305,6 +305,39 @@ export function useUnsavedChanges(dirty: boolean) {
     return () => { window.removeEventListener("beforeunload", onBeforeUnload); document.removeEventListener("click", onClick, true); };
   }, [dirty]);
   return React.useCallback(() => !dirty || window.confirm(DISCARD), [dirty]);
+}
+
+/**
+ * A form section that can start collapsed, so a long form shows only what is used every day.
+ *
+ * The body stays mounted while collapsed (only `hidden`), so every field is still part of the form
+ * and a save that fails validation can open the right section and focus the field. `summary` is the
+ * one-line answer to "what is in here?" while it is shut, and `alert` marks a section holding an error.
+ */
+export function CollapsibleSection({ id, title, description, summary, icon: Icon, open, onOpenChange, alert, children, className }: {
+  id: string; title: string; description?: string; summary?: React.ReactNode; icon?: LucideIcon;
+  open: boolean; onOpenChange: (open: boolean) => void; alert?: boolean; children: React.ReactNode; className?: string;
+}) {
+  return (
+    <section className={cn("rounded-[14px] border bg-card shadow-[0_1px_2px_rgb(23_32_28/0.04)]", alert ? "border-danger/40" : "border-line", className)}>
+      <h2>
+        <button type="button" id={`${id}-button`} aria-expanded={open} aria-controls={id} onClick={() => onOpenChange(!open)}
+          className="flex w-full items-center gap-3 rounded-[14px] px-4 py-3.5 text-left transition-colors duration-150 hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600 sm:px-5">
+          {Icon ? <Icon className={cn("h-4 w-4 shrink-0", alert ? "text-danger" : "text-ink-3")} strokeWidth={1.9} aria-hidden /> : null}
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-semibold text-ink">{title}</span>
+            {!open && (summary || description) ? <span className="mt-0.5 block truncate text-xs text-ink-3">{summary ?? description}</span> : null}
+          </span>
+          {alert ? <span className="shrink-0 text-xs font-semibold text-danger">Needs attention</span> : null}
+          <ChevronDown className={cn("h-4 w-4 shrink-0 text-ink-4 transition-transform duration-150", open && "rotate-180")} aria-hidden />
+        </button>
+      </h2>
+      <div id={id} hidden={!open} className="border-t border-line px-4 pb-4 pt-4 sm:px-5">
+        {description && open ? <p className="-mt-1 mb-3 text-xs text-ink-3">{description}</p> : null}
+        {children}
+      </div>
+    </section>
+  );
 }
 
 /**
