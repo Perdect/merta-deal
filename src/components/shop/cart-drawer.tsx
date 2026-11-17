@@ -127,6 +127,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
   const slotParsed = parseSlotKey(slotKey);
   const chosenSlot = deliveryType === "scheduled" && slotParsed && slotWindow(slotParsed.date, slotParsed.range).start.getTime() > now ? slotKey : null;
   const instantOk = s?.business_open !== false;
+  const canSchedule = slots.length > 0;
   const items = s?.items ?? [];
   const open = Boolean(step);
   const account = signedIn && !isGuest;
@@ -187,7 +188,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
     : !s.serviceable ? (s.service_message ?? "We don't deliver to this address yet.")
     : gate.cartBlocker ? gate.cartBlocker
     : deliveryType === "scheduled" && !chosenSlot ? "Pick a delivery slot to continue."
-    : deliveryType !== "scheduled" && !instantOk ? "We're closed right now. Schedule your order for a slot instead."
+    : deliveryType !== "scheduled" && !instantOk ? (canSchedule ? "We're closed right now. Schedule your order for a slot instead." : "We're closed right now. Please place your order once we reopen.")
     : payment === "wallet" && !walletOk ? "Your wallet balance doesn't cover this order. Choose another payment method."
     : ONLINE.includes(payment) && !razorpayEnabled && !(payment === "upi" && upi?.payNow) ? "Online payment isn't available yet. Choose Cash on Delivery."
     : null;
@@ -333,7 +334,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
               <Card>
                 <div className="flex items-center gap-3 border-b border-line px-4 py-3.5">
                   <span className="flex h-11 w-11 items-center justify-center rounded-md border border-line bg-card text-ink"><Clock className="h-5 w-5" /></span>
-                  <div className="min-w-0 flex-1"><p className="font-display text-base font-bold text-ink">{chosenSlot ? `Delivering ${slotSummary(chosenSlot)}` : etaLabel && instantOk ? `Delivering in ${etaLabel}` : !instantOk ? "Closed now · schedule for later" : selectedAddress ? "Delivery time unavailable here" : "Add an address to see delivery time"}</p><p className="text-xs text-ink-3">{s.item_count} item{s.item_count === 1 ? "" : "s"}{selectedAddress ? ` · to ${addressTitle(selectedAddress)}` : ""}</p></div>
+                  <div className="min-w-0 flex-1"><p className="font-display text-base font-bold text-ink">{chosenSlot ? `Delivering ${slotSummary(chosenSlot)}` : etaLabel && instantOk ? `Delivering in ${etaLabel}` : !instantOk ? (canSchedule ? "Closed now · schedule for later" : "Closed right now") : selectedAddress ? "Delivery time unavailable here" : "Add an address to see delivery time"}</p><p className="text-xs text-ink-3">{s.item_count} item{s.item_count === 1 ? "" : "s"}{selectedAddress ? ` · to ${addressTitle(selectedAddress)}` : ""}</p></div>
                 </div>
                 <ul className="divide-y divide-line px-4">
                   {items.map((line) => {

@@ -40,6 +40,9 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
   const slotParsed = parseSlotKey(slotKey);
   const chosenSlot = slotParsed && slotWindow(slotParsed.date, slotParsed.range).start.getTime() > now ? slotKey : null;
   const instantOk = initial.business_open !== false;
+  // Scheduling is switched on by the `scheduled_slots` setting. With no slots there is nothing to
+  // offer and nothing to tell a closed-shop customer to do, so neither the tile nor the advice shows.
+  const canSchedule = slots.length > 0;
   const [payment, setPayment] = React.useState<PaymentMethod>(codEnabled ? "cod" : razorpayEnabled ? "upi" : "wallet");
   const [instructions, setInstructions] = React.useState("");
   const [gift, setGift] = React.useState("");
@@ -71,7 +74,7 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
     : !summary.meets_min_order ? `Minimum order is ${formatINR(summary.min_order_amount)} for your area. Add ${formatINR(summary.min_order_amount - summary.subtotal)} more to place this order.`
     : summary.issues.length ? "Some items are no longer available in the quantity you chose. Update your cart to continue."
     : deliveryType === "scheduled" && !chosenSlot ? "Pick a delivery slot to continue."
-    : deliveryType !== "scheduled" && !instantOk ? "We're closed right now. Schedule your order for a slot instead."
+    : deliveryType !== "scheduled" && !instantOk ? (canSchedule ? "We're closed right now. Schedule your order for a slot instead." : "We're closed right now. Please place your order once we reopen.")
     : payment === "wallet" && !walletOk ? "Your wallet balance doesn't cover this order. Choose another payment method."
     : online.includes(payment) && !razorpayEnabled && !(payment === "upi" && upi?.payNow) ? "Online payment isn't available yet. Choose Cash on Delivery."
     : null;
@@ -133,10 +136,10 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
         </Section>
 
         <Section step={2} title="Delivery option">
-          <div className={cn("grid gap-2", summary.zone?.express_supported ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
+          <div className={cn("grid gap-2", [summary.zone?.express_supported, canSchedule].filter(Boolean).length === 2 ? "sm:grid-cols-3" : summary.zone?.express_supported || canSchedule ? "sm:grid-cols-2" : "sm:grid-cols-1")}>
             {summary.zone?.express_supported ? <Option active={deliveryType === "express"} disabled={!summary.zone?.express_supported} onClick={() => setDeliveryType("express")} icon={<Zap className="h-5 w-5 text-saffron-600" />} title="Express" subtitle={summary.zone?.express_supported ? `20–35 min · +${formatINR(summary.express_fee || 20)}` : "Not in your zone yet"} /> : null}
             <Option active={deliveryType === "standard"} disabled={!instantOk} onClick={() => setDeliveryType("standard")} icon={<Clock className="h-5 w-5 text-brand-600" />} title="Instant Delivery" subtitle={instantOk ? `${summary.eta_min_minutes}–${summary.eta_max_minutes} min` : "Unavailable now"} />
-            <Option active={deliveryType === "scheduled"} onClick={() => setScheduleOpen(true)} icon={<CalendarClock className="h-5 w-5 text-info" />} title="Scheduled" subtitle={chosenSlot && deliveryType === "scheduled" ? slotSummary(chosenSlot)! : "Pick a slot"} />
+            {canSchedule ? <Option active={deliveryType === "scheduled"} onClick={() => setScheduleOpen(true)} icon={<CalendarClock className="h-5 w-5 text-info" />} title="Scheduled" subtitle={chosenSlot && deliveryType === "scheduled" ? slotSummary(chosenSlot)! : "Pick a slot"} /> : null}
           </div>
           {deliveryType === "scheduled" ? <div className="mt-3 flex items-center justify-between rounded-md bg-surface-2 px-3 py-2.5 text-sm"><span className="font-medium text-ink">{chosenSlot ? slotSummary(chosenSlot) : "No slot picked yet"}</span><button type="button" onClick={() => setScheduleOpen(true)} className="font-bold text-brand-700">{chosenSlot ? "Change" : "Pick a slot"}</button></div> : null}
           <p className="mt-2 text-xs text-ink-3">ETA is based on packing time and your zone. We show real estimates, never guarantees.</p>
