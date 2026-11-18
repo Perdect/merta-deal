@@ -62,6 +62,9 @@ export function HomeBrowse({ tabs, items, banner, seeAllHref = "/categories" }: 
 
   return (
     <>
+      {/* The banner leads; the tabs sit directly above the products they filter. */}
+      {banner}
+
       <section aria-labelledby="cats-title" className="px-4 sm:px-0">
         <div className="mb-2 flex items-baseline justify-between">
           <h2 id="cats-title" className="font-display text-[15px] font-bold text-ink sm:text-lg">Shop by category</h2>
@@ -105,8 +108,6 @@ export function HomeBrowse({ tabs, items, banner, seeAllHref = "/categories" }: 
           })}
         </div>
       </section>
-
-      {banner}
 
       {/* Every section stays mounted; the ones outside the chosen line are hidden rather than dropped,
           so switching back is instant and a crawler still sees the whole home. */}
