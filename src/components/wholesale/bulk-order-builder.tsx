@@ -14,12 +14,11 @@ import { BottomSheet } from "@/components/ui/overlay";
 import { toast } from "@/components/ui/toast";
 import { AddressWizard } from "@/components/shop/address-wizard";
 import { submitWholesaleOrderAction } from "@/lib/actions/wholesale";
-import { WHOLESALE_UNITS, type WholesaleCatalogueItem, type WholesaleOrder, type WholesaleSettings } from "@/lib/wholesale";
+import { WHOLESALE_UNITS, clearWholesaleDraft, readWholesaleDraft, saveWholesaleDraft, type WholesaleCatalogueItem, type WholesaleOrder, type WholesaleSettings } from "@/lib/wholesale";
 import { cn, formatINR } from "@/lib/utils";
 
 type Line = { product_id: string; cases: number };
 type Requested = { key: string; name: string; brand: string; quantity: string; unit: string; notes: string; photoUrl: string | null };
-const DRAFT_KEY = "md-wholesale-draft";
 const newRequested = (): Requested => ({ key: Math.random().toString(36).slice(2, 9), name: "", brand: "", quantity: "", unit: "cases", notes: "", photoUrl: null });
 const addressLine = (a: Address) => [a.house, a.street, a.area, `${a.city} – ${a.pincode}`].filter(Boolean).join(", ");
 
@@ -61,23 +60,18 @@ export function BulkOrderBuilder({ catalogue, addresses, settings, userId, today
   // Restored a tick after mount so the server and the first client render stay identical.
   React.useEffect(() => {
     const t = setTimeout(() => {
-      try {
-        const raw = localStorage.getItem(DRAFT_KEY);
-        if (!raw) return;
-        const d = JSON.parse(raw) as { lines?: Line[]; requested?: Requested[]; notes?: string };
-        if (Array.isArray(d.lines)) setLines(d.lines.filter((l) => byId[l.product_id]));
-        if (Array.isArray(d.requested)) setRequested(d.requested);
-        if (typeof d.notes === "string") setNotes(d.notes);
-      } catch { /* private mode */ }
+      const d = readWholesaleDraft();
+      if (!d) return;
+      // Cases picked on the wholesale range arrive here; a product that has since left the range is dropped.
+      setLines(d.lines.filter((l) => byId[l.product_id]));
+      if (Array.isArray(d.requested)) setRequested(d.requested as Requested[]);
+      if (d.notes) setNotes(d.notes);
+      // Arriving from "Request a product" opens the write-in step with one blank item ready.
+      if (window.location.hash === "#request") setRequested((rs) => (rs.length ? rs : [newRequested()]));
     }, 0);
     return () => clearTimeout(t);
   }, [byId]);
-  React.useEffect(() => {
-    try {
-      if (lines.length || requested.length) localStorage.setItem(DRAFT_KEY, JSON.stringify({ lines, requested, notes }));
-      else localStorage.removeItem(DRAFT_KEY);
-    } catch { /* private mode */ }
-  }, [lines, requested, notes]);
+  React.useEffect(() => { saveWholesaleDraft({ lines, requested, notes }); }, [lines, requested, notes]);
 
   const setCases = (p: WholesaleCatalogueItem, v: number) => {
     const cur = lines.find((l) => l.product_id === p.product_id)?.cases ?? 0;
@@ -102,7 +96,7 @@ export function BulkOrderBuilder({ catalogue, addresses, settings, userId, today
     });
     setBusy(false);
     if (!r.ok) { setError(r.error); return; }
-    try { localStorage.removeItem(DRAFT_KEY); } catch { /* private mode */ }
+    clearWholesaleDraft();
     setSent(r.data);
     router.refresh();
   };
@@ -147,7 +141,7 @@ export function BulkOrderBuilder({ catalogue, addresses, settings, userId, today
         <Button variant="outline" size="sm" className="mt-3 rounded-lg" onClick={() => setPicker(true)}><Plus className="h-4 w-4" aria-hidden /> {lines.length ? "Add more products" : "Browse the range"}</Button>
       </Step>
 
-      <Step n={2} title="Can't find what you need?" hint={`Write it in and we will price it. Up to ${maxRequests} items.`}>
+      <Step n={2} id="request" title="Can't find what you need?" hint={`Write it in and we will price it. Up to ${maxRequests} items.`}>
         <ul className="space-y-3">
           {requested.map((r, i) => (
             <li key={r.key} className="rounded-xl border border-line bg-surface p-3">
@@ -271,9 +265,9 @@ export function BulkOrderBuilder({ catalogue, addresses, settings, userId, today
   );
 }
 
-function Step({ n, title, hint, children }: { n: number; title: string; hint: string; children: React.ReactNode }) {
+function Step({ n, id, title, hint, children }: { n: number; id?: string; title: string; hint: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl border border-line bg-card p-4 shadow-card sm:p-5" aria-labelledby={`step-${n}`}>
+    <section id={id} className="scroll-mt-20 rounded-2xl border border-line bg-card p-4 shadow-card sm:p-5" aria-labelledby={`step-${n}`}>
       <div className="flex items-start gap-3">
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">{n}</span>
         <div className="min-w-0">

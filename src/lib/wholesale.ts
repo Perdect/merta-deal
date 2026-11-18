@@ -76,3 +76,37 @@ export const restockDateLabel = (d: string) => new Date(`${d}T00:00:00`).toLocal
 export const ordinal = (n: number) => `${n}${n % 10 === 1 && n !== 11 ? "st" : n % 10 === 2 && n !== 12 ? "nd" : n % 10 === 3 && n !== 13 ? "rd" : "th"}`;
 /** Local calendar date as YYYY-MM-DD (the RPCs take a date, not a timestamp). */
 export const dateKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+/* ---------- the bulk-order draft, shared between the range and the builder ---------- */
+
+/** One draft bulk order, kept on this device only. Nothing reaches the server until it is sent. */
+export type WholesaleDraft = {
+  lines: { product_id: string; cases: number }[];
+  /** Off-catalogue lines, in the shape the builder's form holds them. */
+  requested?: unknown[];
+  notes?: string;
+};
+export const WHOLESALE_DRAFT_KEY = "md-wholesale-draft";
+
+/**
+ * The wholesale range (on `/wholesale`) and the builder (on `/wholesale/order`) are the same order in
+ * two screens: picking cases on the range writes this draft and the builder picks it up, so a customer
+ * never re-enters what they already chose — and a signed-out visitor keeps their picks through login.
+ */
+export function readWholesaleDraft(): WholesaleDraft | null {
+  try {
+    const raw = localStorage.getItem(WHOLESALE_DRAFT_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw) as WholesaleDraft;
+    return { lines: Array.isArray(d.lines) ? d.lines : [], requested: Array.isArray(d.requested) ? d.requested : [], notes: typeof d.notes === "string" ? d.notes : "" };
+  } catch { return null; } // private mode, or a draft from an older shape
+}
+export function saveWholesaleDraft(d: WholesaleDraft): void {
+  try {
+    if (d.lines.length || (d.requested?.length ?? 0) > 0 || d.notes) localStorage.setItem(WHOLESALE_DRAFT_KEY, JSON.stringify(d));
+    else localStorage.removeItem(WHOLESALE_DRAFT_KEY);
+  } catch { /* private mode */ }
+}
+export function clearWholesaleDraft(): void {
+  try { localStorage.removeItem(WHOLESALE_DRAFT_KEY); } catch { /* private mode */ }
+}

@@ -22,7 +22,7 @@ export default function OpenGraphImage() {
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           <div style={{ fontSize: 76, fontWeight: 800, lineHeight: 1.05, letterSpacing: -2 }}>{site.tagline}</div>
-          <div style={{ fontSize: 30, opacity: 0.92, maxWidth: 980, lineHeight: 1.3 }}>Groceries, sweets, cakes and dry fruits from Merta Deal, Merta City&apos;s own online grocery — delivered in 20–25 minutes.</div>
+          <div style={{ fontSize: 30, opacity: 0.92, maxWidth: 980, lineHeight: 1.3 }}>{`Groceries, sweets, cakes and more from ${site.name}, ${site.city}'s own online grocery — delivered with a ${site.deliveryWindow} target.`}</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 24, opacity: 0.9 }}>
           <div style={{ display: "flex", gap: 28 }}>

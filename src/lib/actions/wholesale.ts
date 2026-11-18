@@ -39,14 +39,6 @@ export async function saveWholesaleProfileAction(input: WholesaleProfileInput): 
   return run<WholesaleBuyer>("save_wholesale_profile", { p_shop_name: d.shopName || null, p_owner_name: d.ownerName, p_phone: d.phone, p_gstin: d.gstin || null, p_address_id: d.addressId, p_monthly_needs: d.monthlyNeeds || null }, [MINE, "/wholesale/register", "/admin/wholesale"]);
 }
 
-/** Order full cases now. The order is created already approved and waits for an admin to confirm and place it. */
-export async function orderWholesaleNowAction(items: { product_id: string; cases: number }[], note: string, deliveryDate: string | null): Promise<ActionResult<WholesaleOrder>> {
-  const ls = lines(items);
-  if (ls.length === 0) return { ok: false, error: "Add at least one product." };
-  if (deliveryDate && !/^\d{4}-\d{2}-\d{2}$/.test(deliveryDate)) return { ok: false, error: "Pick a valid delivery date." };
-  return run<WholesaleOrder>("order_wholesale_now", { p_items: ls, p_note: note.trim().slice(0, 300) || null, p_delivery_date: deliveryDate }, [MINE, "/wholesale", "/admin/wholesale"]);
-}
-
 const requestedSchema = z.array(z.object({
   name: z.string().trim().min(2, "Write the product name").max(120),
   brand: z.string().trim().max(80).optional().or(z.literal("")),
