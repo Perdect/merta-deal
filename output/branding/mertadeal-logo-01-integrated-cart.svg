@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360">
+ <rect width="1200" height="360" rx="28" fill="#24652b"/>
+ <g fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="190" font-weight="600" letter-spacing="-8">
+  <text x="78" y="244">Merta</text><text x="735" y="244">Deal</text>
+ </g>
+ <g transform="translate(555 57)" fill="none" stroke="#fff" stroke-width="21" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M7 30h33l31 124h83l27-91H54"/>
+  <circle cx="91" cy="196" r="14" fill="#fff" stroke="none"/><circle cx="157" cy="196" r="14" fill="#fff" stroke="none"/>
+ </g>
+</svg>

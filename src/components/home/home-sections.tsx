@@ -1,78 +1,7 @@
 import Link from "next/link";
-import Image from "next/image";
 import { ChevronRight } from "lucide-react";
-import type { HomeCategory, HomeSection } from "@/lib/data/home";
-import type { CategoryTab, CategoryTile } from "@/lib/data/catalog";
+import type { HomeSection } from "@/lib/data/home";
 import { ProductGrid } from "@/components/shop/product-card";
-import { ProductImage } from "@/components/shop/product-image";
-import { cn } from "@/lib/utils";
-
-/** Tile tint: the category's own colour from Admin → Categories, else the neutral surface. */
-const tint = (color: string | null | undefined) => (color ? { backgroundColor: color } : undefined);
-
-/**
- * Compact category row (quick-commerce style): one tile per top-level category with a product photo,
- * each linking to its listing. Running order, picture and tint are the category's own data, so adding
- * or reordering a line is an Admin → Categories change, never a code change. A category with nothing
- * listed yet says "coming soon" rather than looking shoppable.
- */
-export function CategoryGrid({ tabs, fallback }: { tabs: CategoryTab[]; fallback: HomeCategory[] }) {
-  // `tabs` already arrives in the catalogue's own sort_order.
-  const tiles: (CategoryTile & { color: string | null })[] = tabs.map((t) => ({ key: t.slug, label: t.name, href: `/c/${t.slug}`, image: t.image, count: t.count, color: t.color }));
-  if (!tiles.length) return fallback.length ? <CategoryTiles categories={fallback} /> : null;
-  const cols = Math.min(4, Math.max(tiles.length, 3));
-  return (
-    <section aria-labelledby="cats-title" className="px-4 sm:px-0">
-      <div className="mb-2 flex items-baseline justify-between">
-        <h2 id="cats-title" className="font-display text-[15px] font-bold text-ink sm:text-lg">Shop by category</h2>
-        <Link href="/categories" className="tap inline-flex items-center gap-0.5 text-sm font-semibold text-brand-700 hover:underline focus-visible:outline-2 focus-visible:outline-brand-600">See all<ChevronRight className="h-4 w-4" aria-hidden /></Link>
-      </div>
-      <ul className="grid gap-x-2.5 gap-y-3 sm:flex sm:gap-4" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
-        {tiles.map((t) => (
-          <li key={t.key} className="min-w-0 sm:w-[140px]">
-            <Link href={t.href} className="group block rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600" aria-label={t.count ? `${t.label}, ${t.count} product${t.count === 1 ? "" : "s"}` : `${t.label}, coming soon`}>
-              <span aria-hidden style={tint(t.color)} className={cn("block aspect-square overflow-hidden rounded-2xl p-2 transition-transform duration-200 group-hover:-translate-y-0.5 group-active:scale-[0.97] motion-reduce:transform-none", !t.color && "bg-surface-2")}>
-                <ProductImage image={t.image} productName={t.label} className="h-full w-full" rounded="rounded-xl" sizes="(max-width: 640px) 30vw, 140px" />
-              </span>
-              {/* Wraps rather than truncates: a name like "Beauty & Personal Care" has to fit a quarter of a phone. */}
-              <span className="mt-1.5 line-clamp-3 block text-center text-[12.5px] font-semibold leading-tight text-ink sm:text-sm">{t.label}</span>
-              {t.count === 0 ? <span className="mt-0.5 block text-center text-[11px] font-medium text-saffron-700">Coming soon</span> : null}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-/** Image-led top-level tiles: used only when the category data for the grid is unavailable. */
-export function CategoryTiles({ categories }: { categories: HomeCategory[] }) {
-  return (
-    <section aria-labelledby="cats-title" className="px-4 sm:px-0">
-      <h2 id="cats-title" className="sr-only">Shop by category</h2>
-      <ul className="grid grid-cols-3 gap-2.5 sm:flex sm:gap-4">
-        {categories.map((c) => (
-          <li key={c.id} className="sm:w-[156px]">
-            <Link href={`/c/${c.slug}`} className="group block rounded-[14px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
-              <span aria-hidden style={tint(c.color)} className={cn("relative flex h-[92px] items-end justify-center overflow-hidden rounded-[14px] px-1 pb-1 transition-transform duration-200 group-hover:-translate-y-0.5 group-active:scale-[0.97] sm:h-[120px]", !c.color && "bg-surface-2")}>
-                {c.cover ? (
-                  <span className="relative block h-[86%] w-[92%]">
-                    <Image src={c.images[0]} alt="" fill sizes="(max-width: 640px) 30vw, 150px" className="object-contain object-bottom" priority />
-                  </span>
-                ) : c.images.map((src, i) => (
-                  <span key={src} className={cn("relative block", i === 0 ? "z-10 h-[80%] w-[58%]" : "-ml-[18%] h-[64%] w-[46%]")}>
-                    <Image src={src} alt="" fill sizes="(max-width: 640px) 28vw, 100px" className="object-contain object-bottom" priority />
-                  </span>
-                ))}
-              </span>
-              <span className="mt-1.5 block text-center text-[13px] font-semibold text-ink sm:text-sm">{c.name}</span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
 
 /** One titled product section; "See all" only where there is a category listing behind it. */
 export function ProductSection({ section, first }: { section: HomeSection; first?: boolean }) {

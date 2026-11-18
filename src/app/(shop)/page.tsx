@@ -1,13 +1,14 @@
 import { getPublicSettings, getCategories } from "@/lib/data/catalog";
 import { businessNode, jsonLdHtml } from "@/lib/seo-schema";
 import { getHomeData, DEFAULT_ESSENTIALS } from "@/lib/data/home";
-import { getCategoryTabs } from "@/lib/data/catalog";
+import { getCategoryTabs, getHomeBanners } from "@/lib/data/catalog";
 import { EmptyState } from "@/components/ui/states";
 import { Button } from "@/components/ui/button";
 import { WelcomeOfferLine } from "@/components/home/welcome-offer";
-import { CategoryGrid, ProductSection, ServiceStrip } from "@/components/home/home-sections";
+import { ProductSection, ServiceStrip } from "@/components/home/home-sections";
 import { CakeRequest, LocalIntro } from "@/components/home/local-intro";
-import { DiwaliBanner } from "@/components/home/diwali-banner";
+import { HomeBrowse } from "@/components/home/home-browse";
+import { BannerCarousel } from "@/components/shop/banner-carousel";
 import { site } from "@/config/site";
 import { paymentPhrase } from "@/lib/seo-copy";
 import type { Metadata } from "next";
@@ -53,7 +54,9 @@ export default async function HomePage() {
   const settings = await getPublicSettings();
   const essentials = Array.isArray(settings.home_essentials) ? (settings.home_essentials as string[]) : DEFAULT_ESSENTIALS;
   const welcomeCode = typeof settings.welcome_coupon_code === "string" && settings.welcome_coupon_code ? settings.welcome_coupon_code : "WELCOME50";
-  const [home, tabs] = await Promise.all([getHomeData(essentials, welcomeCode), getCategoryTabs().catch(() => [])]);
+  const [home, tabs, banners] = await Promise.all([getHomeData(essentials, welcomeCode), getCategoryTabs().catch(() => []), getHomeBanners().catch(() => [])]);
+  // If the tile query fails the rail still lists the lines, from the home feed's own category list.
+  const railTabs = tabs.length ? tabs : home.categories.map((c) => ({ id: c.id, slug: c.slug, name: c.name, image: c.images[0] ?? null, color: c.color, count: 0, tiles: [] }));
   const num = (k: string, d: number) => { const v = Number(settings[k]); return Number.isFinite(v) && v > 0 ? v : d; };
   // Headline promise: the quick-commerce single figure (the settings minimum); the window stays in the order promise.
   const etaLabel = `${num("delivery_eta_min_minutes", 20)} min`;
@@ -67,12 +70,17 @@ export default async function HomePage() {
         <p className="mt-0.5 line-clamp-1 text-[13px] text-ink-2 sm:line-clamp-none sm:text-sm">{capitalise(listNames(home.categories.map((c) => c.name.toLowerCase())))} delivered to your home in {site.city}, Rajasthan, with a {etaLabel} delivery target.</p>
       </header>
       <WelcomeOfferLine offers={home.offers} />
-      <CategoryGrid tabs={tabs} fallback={home.categories} />
-      <DiwaliBanner />
       {home.sections.length ? (
-        home.sections.map((s, i) => <ProductSection key={s.key} section={s} first={i === 0} />)
+        <HomeBrowse
+          tabs={railTabs}
+          banner={<BannerCarousel banners={banners} />}
+          items={home.sections.map((s, i) => ({ key: s.key, node: <ProductSection section={s} first={i === 0} /> }))}
+        />
       ) : (
-        <EmptyState title="Stocking up" description="Products will appear here as soon as they are in stock." action={<Button href="/categories" variant="outline">Browse categories</Button>} compact />
+        <>
+          <BannerCarousel banners={banners} />
+          <EmptyState title="Stocking up" description="Products will appear here as soon as they are in stock." action={<Button href="/categories" variant="outline">Browse categories</Button>} compact />
+        </>
       )}
       <CakeRequest />
       <ServiceStrip etaLabel={etaLabel} />

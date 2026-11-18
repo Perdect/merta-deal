@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createPublicClient } from "@/lib/supabase/public";
 import { unstable_cache } from "next/cache";
-import type { Category, HomeFeed, ProductCard, ProductDetail, SearchResult } from "@/types/app";
+import type { Banner, Category, HomeFeed, ProductCard, ProductDetail, SearchResult } from "@/types/app";
 
 export const getHomeFeed = cache(async (lat?: number | null, lng?: number | null): Promise<HomeFeed | null> => {
   const supabase = await createClient();
@@ -124,6 +124,19 @@ const cachedCollections = unstable_cache(async (): Promise<{ id: string; title: 
   return liveShopLinks([...promos, ...quick], active).slice(0, 8);
 }, ["collections"], { tags: [CATALOGUE_TAG], revalidate: PUBLIC_TTL });
 export const getCollections = cache(() => cachedCollections());
+
+/**
+ * Home banners, exactly as Admin → Promotions → Banners configured them. RLS already hides anything
+ * switched off or outside its start/end window, so this adds no date logic of its own — what the owner
+ * sees in the admin list as live is what a customer sees. Nothing here invents an offer: a banner with
+ * no artwork falls back to its own brand colour rather than borrowing an unrelated picture.
+ */
+const cachedBanners = unstable_cache(async (): Promise<Banner[]> => {
+  const supabase = createPublicClient();
+  const { data } = await supabase.from("banners").select("*").eq("placement", "home_hero").order("sort_order");
+  return (data ?? []) as Banner[];
+}, ["home-banners"], { tags: [CATALOGUE_TAG], revalidate: PUBLIC_TTL });
+export const getHomeBanners = cache(() => cachedBanners());
 
 /* Categories screen ------------------------------------------------------------------------- */
 

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1000" viewBox="0 0 1440 1000">
+ <rect width="1440" height="1000" fill="#e9eee5"/>
+ <text x="90" y="75" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="700" fill="#17231d">MERTA DEAL · LOGO DIRECTIONS</text>
+ <text x="90" y="115" font-family="Arial, Helvetica, sans-serif" font-size="19" fill="#66736a">Four editable concepts based on the supplied cart-wordmark reference</text>
+ <rect x="70" y="155" width="1300" height="350" rx="28" fill="#fff"/><image href="mertadeal-logo-01-integrated-cart.svg" x="105" y="188" width="1230" height="284"/>
+ <rect x="70" y="550" width="1300" height="350" rx="28" fill="#fff"/><image href="mertadeal-logo-02-icon-wordmark.svg" x="105" y="582" width="600" height="180"/><image href="mertadeal-logo-03-roundel.svg" x="735" y="582" width="600" height="180"/>
+ <image href="mertadeal-logo-04-compact.svg" x="235" y="760" width="970" height="120"/>
+</svg>

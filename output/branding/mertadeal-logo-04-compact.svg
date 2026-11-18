@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360">
+ <rect width="1200" height="360" rx="28" fill="#fff"/>
+ <text x="80" y="236" font-family="Arial, Helvetica, sans-serif" font-size="166" font-weight="700" letter-spacing="-7" fill="#176b39">Merta</text>
+ <g transform="translate(604 74)" fill="none" stroke="#f2a93b" stroke-width="15" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M0 18h24l25 91h78l20-64H37"/><circle cx="69" cy="131" r="9" fill="#f2a93b" stroke="none"/><circle cx="126" cy="131" r="9" fill="#f2a93b" stroke="none"/>
+ </g>
+ <text x="780" y="236" font-family="Arial, Helvetica, sans-serif" font-size="166" font-weight="700" letter-spacing="-7" fill="#17231d">Deal</text>
+ <rect x="83" y="275" width="890" height="8" rx="4" fill="#e5eddf"/>
+ <text x="85" y="323" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="700" letter-spacing="5" fill="#707b72">LOCAL GROCERY · QUICK DELIVERY</text>
+</svg>

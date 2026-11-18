@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350" role="img" aria-labelledby="title desc">
+  <title id="title">Merta Deal social media poster</title>
+  <desc id="desc">Merta Deal brings everyday grocery shopping online in Merta City.</desc>
+  <defs>
+    <linearGradient id="paper" x2="0" y2="1"><stop stop-color="#fbfbee"/><stop offset="1" stop-color="#f3f6df"/></linearGradient>
+    <linearGradient id="green" x2="1" y2="1"><stop stop-color="#16723b"/><stop offset="1" stop-color="#0b572e"/></linearGradient>
+    <linearGradient id="bag" x2="0" y2="1"><stop stop-color="#269447"/><stop offset="1" stop-color="#116b37"/></linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#103d27" flood-opacity=".18"/></filter>
+    <filter id="soft"><feGaussianBlur stdDeviation="24"/></filter>
+  </defs>
+  <rect width="1080" height="1350" fill="url(#paper)"/>
+  <circle cx="65" cy="450" r="180" fill="#e5efd0" opacity=".52" filter="url(#soft)"/>
+  <circle cx="1000" cy="490" r="180" fill="#e9efce" opacity=".55" filter="url(#soft)"/>
+  <!-- subtle grocery-line motifs -->
+  <g fill="none" stroke="#a8c99e" stroke-width="4" opacity=".48" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M76 296h30l20 86h85l20-58h-111"/><circle cx="148" cy="400" r="8"/><circle cx="202" cy="400" r="8"/>
+    <path d="M920 283h29l20 83h75l18-55h-100"/><circle cx="975" cy="383" r="8"/><circle cx="1023" cy="383" r="8"/>
+    <path d="M80 786h54l-10-45h-55zM134 741l22-20 18 20v45h-40zM75 786h112v12H75z"/>
+    <path d="M919 785h59l-8-45h-59zM978 740l24-20 19 20v45h-43zM915 785h112v12H915z"/>
+  </g>
+  <!-- top brand lockup -->
+  <g transform="translate(348 42)">
+    <rect width="384" height="98" rx="27" fill="#fff" stroke="#e2e8d7" stroke-width="2"/>
+    <g transform="translate(20 17) scale(1)"><rect width="64" height="64" rx="16" fill="#329537"/><g transform="translate(0 -2.5)"><path d="M12 18h6l5 22h22l5-16H21" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="26" cy="48" r="3.5" fill="#fff"/><circle cx="42" cy="48" r="3.5" fill="#fff"/><path d="M37 25l-6.5 9h5.5l-3 7.5 7.5-9.5h-5.5z" fill="#F2A93B"/></g></g>
+    <text x="99" y="61" font-family="Inter, Arial, sans-serif" font-size="43" font-weight="800" letter-spacing="-1.5" fill="#17231d">Merta<tspan fill="#20853e">Deal</tspan></text>
+  </g>
+  <text x="540" y="190" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="800" letter-spacing="5" fill="#a45b16">MERTA CITY · RAJASTHAN</text>
+  <text x="540" y="275" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="68" font-weight="800" letter-spacing="-2.2" fill="#145c34">Your neighbourhood</text>
+  <text x="540" y="350" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="68" font-weight="800" letter-spacing="-2.2" fill="#145c34">store, now online.</text>
+  <text x="540" y="405" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="29" font-weight="500" fill="#57645c">Merta ki shopping, ab online.</text>
+  <!-- lower sweeping brand shape -->
+  <path d="M0 930 C260 825 480 875 690 960 C835 1018 955 990 1080 922 V1350 H0Z" fill="url(#green)"/>
+  <path d="M0 930 C260 825 480 875 690 960 C835 1018 955 990 1080 922" fill="none" stroke="#5aa05b" stroke-width="5" opacity=".55"/>
+  <!-- phone frame -->
+  <g filter="url(#shadow)">
+    <rect x="299" y="440" width="482" height="659" rx="62" fill="#10251c"/>
+    <rect x="311" y="452" width="458" height="635" rx="52" fill="#fcfff6"/>
+    <rect x="455" y="466" width="170" height="24" rx="12" fill="#10251c"/>
+    <rect x="331" y="508" width="418" height="546" rx="34" fill="#e9f3de"/>
+    <circle cx="540" cy="671" r="151" fill="#d4e8c5"/>
+    <!-- soft sky / Merta rooftops -->
+    <path d="M358 695h364v119H358z" fill="#c2dfb8"/>
+    <path d="M358 729l72-52 62 52v85H358zM481 713l68-59 70 59v101H481zM605 732l57-45 60 45v88H605z" fill="#9bc890"/>
+    <path d="M361 816c80-24 117-17 179 0 63 17 122 14 207-4v124H361z" fill="#c99a5e" opacity=".5"/>
+    <!-- rider: helmet/hair, face, shirt -->
+    <path d="M433 656c-1-77 40-126 108-126 69 0 109 50 108 129l-16 36H448z" fill="#172a22"/>
+    <ellipse cx="540" cy="661" rx="83" ry="96" fill="#bd7650"/>
+    <path d="M457 642c7-72 38-111 85-111 46 0 79 39 83 111-28-21-53-30-81-30-33 0-59 10-87 30z" fill="#16251f"/>
+    <path d="M496 660q12-9 24 0M561 660q12-9 24 0" fill="none" stroke="#3d251d" stroke-width="6" stroke-linecap="round"/>
+    <path d="M520 706q21 18 43 0" fill="none" stroke="#7b3b31" stroke-width="6" stroke-linecap="round"/>
+    <path d="M422 838c18-77 60-107 118-107 60 0 101 31 119 107l20 125H402z" fill="#178047"/>
+    <path d="M513 739l27 38 27-38-13 91h-28z" fill="#f4f5e8"/>
+    <!-- arms -->
+    <path d="M423 814c-24 20-38 69-42 129l42 22 45-110zM657 814c24 20 38 69 42 129l-42 22-45-110z" fill="#bd7650"/>
+    <!-- grocery tote with groceries -->
+    <path d="M405 851h270l-19 151q-3 22-27 22H451q-24 0-27-22z" fill="url(#bag)" stroke="#0e5b31" stroke-width="5"/>
+    <path d="M470 860v-30q0-31 29-31h82q29 0 29 31v30" fill="none" stroke="#17452d" stroke-width="11" stroke-linecap="round"/>
+    <rect x="431" y="808" width="53" height="70" rx="8" fill="#f0c34d"/>
+    <rect x="492" y="795" width="57" height="84" rx="9" fill="#df5b37"/>
+    <rect x="557" y="812" width="48" height="67" rx="8" fill="#f6eee0"/>
+    <rect x="614" y="802" width="42" height="76" rx="8" fill="#eeb94b"/>
+    <path d="M431 837h53M492 826h57M557 839h48M614 829h42" stroke="#fff" stroke-width="7" opacity=".7"/>
+    <text x="540" y="947" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="31" font-weight="800" fill="#fff">MertaDeal</text>
+    <text x="540" y="979" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" letter-spacing="2" fill="#d8f0db">LOCAL · FRESH · EASY</text>
+    <circle cx="540" cy="1070" r="5" fill="#526057"/>
+  </g>
+  <!-- feature pills over green field -->
+  <g font-family="Inter, Arial, sans-serif" font-weight="700" text-anchor="middle">
+    <rect x="116" y="1111" width="244" height="58" rx="29" fill="#fff" opacity=".12" stroke="#fff" stroke-opacity=".28"/>
+    <text x="238" y="1149" font-size="22" fill="#fff">Everyday essentials</text>
+    <rect x="418" y="1111" width="244" height="58" rx="29" fill="#fff" opacity=".12" stroke="#fff" stroke-opacity=".28"/>
+    <text x="540" y="1149" font-size="22" fill="#fff">Sweet treats</text>
+    <rect x="720" y="1111" width="244" height="58" rx="29" fill="#fff" opacity=".12" stroke="#fff" stroke-opacity=".28"/>
+    <text x="842" y="1149" font-size="22" fill="#fff">Drinks &amp; more</text>
+  </g>
+  <text x="540" y="1238" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="800" fill="#fff">Shop local. We’ll bring it home.</text>
+  <rect x="303" y="1271" width="474" height="58" rx="29" fill="#f4aa33"/>
+  <text x="540" y="1310" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="25" font-weight="800" fill="#17231d">SHOP AT MERTADEAL.COM</text>
+</svg>

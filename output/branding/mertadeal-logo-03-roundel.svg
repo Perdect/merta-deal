@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360">
+ <rect width="1200" height="360" rx="28" fill="#f5f6e9"/>
+ <circle cx="208" cy="180" r="126" fill="#176b39"/>
+ <path d="M140 124h27l25 100h104l23-72H177" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+ <circle cx="213" cy="245" r="12" fill="#fff"/><circle cx="277" cy="245" r="12" fill="#fff"/>
+ <path d="M235 145l-23 36h22l-11 34 37-44h-23l17-26z" fill="#f3ad3d"/>
+ <text x="390" y="214" font-family="Arial, Helvetica, sans-serif" font-size="139" font-weight="750" letter-spacing="-5" fill="#17231d">Merta<tspan fill="#176b39">Deal</tspan></text>
+ <text x="398" y="273" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="700" letter-spacing="6" fill="#6b756d">MERTA KI SHOPPING, AB ONLINE</text>
+</svg>
