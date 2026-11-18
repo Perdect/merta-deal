@@ -32,7 +32,7 @@ export function TrackByCode() {
         <div className="mt-4 space-y-3">
           <div className="rounded-lg border border-line bg-card p-4">
             <div className="flex items-start justify-between gap-2"><div><p className="text-xs text-ink-3">{res.order.order_number} · {formatDateTime(res.order.created_at)}</p><p className="text-base font-bold text-ink">{res.pickup.name}</p>{res.pickup.area ? <p className="text-xs text-ink-3">{res.pickup.area}</p> : null}</div><OrderStatusBadge status={res.order.status} /></div>
-            {res.order.status === "out_for_delivery" ? <DeliveryOtpStrip otp={res.delivery_otp} /> : null}
+            {res.order.status === "out_for_delivery" ? <DeliveryOtpStrip otp={res.delivery_otp} className="mt-4" /> : null}
             {res.rider ? <p className="mt-2 text-xs text-ink-2">Rider: {res.rider.name}{res.rider.vehicle_number ? ` · ${res.rider.vehicle_number}` : ""}</p> : null}
             <ul className="mt-3 divide-y divide-line text-sm">{res.items.map((i, k) => <li key={k} className="flex justify-between py-1.5"><span className="text-ink-2">{i.quantity} × {i.name}</span><span className="tabular">{formatINR(i.line_total)}</span></li>)}</ul>
             <p className="mt-2 text-right text-sm font-bold">Total {formatINR(res.order.total, { precise: true })}</p>

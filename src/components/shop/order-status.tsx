@@ -45,7 +45,7 @@ export function OrderTimeline({ status, history, promisedAt, className }: { stat
 }
 
 /** Quick-commerce steps shown to shoppers: placed → packing → on the way → delivered (admin keeps the full timeline). */
-const CUSTOMER_STEPS: { key: string; label: string; icon: string; statuses: OrderStatusType[] }[] = [
+export const CUSTOMER_STEPS: { key: string; label: string; icon: string; statuses: OrderStatusType[] }[] = [
   { key: "placed", label: "Order placed", icon: "receipt", statuses: ["placed"] },
   { key: "packing", label: "Packing", icon: "package", statuses: ["confirmed", "preparing", "ready_for_pickup"] },
   { key: "on_the_way", label: "On the way", icon: "bike", statuses: ["rider_assigned", "out_for_delivery"] },

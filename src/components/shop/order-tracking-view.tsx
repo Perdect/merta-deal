@@ -3,24 +3,22 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { lineOptionsText } from "@/lib/cake";
-import { Phone, Store as StoreIcon, MapPin, Star, HelpCircle, XCircle, CheckCircle2, Wifi, WifiOff, CreditCard, Clock } from "lucide-react";
+import { Phone, Store as StoreIcon, MapPin, Star, HelpCircle, XCircle, CheckCircle2, CreditCard, Clock } from "lucide-react";
 import type { OrderTracking, TrackingLocation } from "@/types/app";
 import { getOrderTrackingAction } from "@/lib/actions/tracking";
 import { cancelOrderAction, completeOrderAction } from "@/lib/actions/account";
 import { useOrderRealtime } from "@/hooks/use-order-realtime";
 import { ORDER_STATUS_META, PAYMENT_METHOD_LABEL, PAYMENT_STATUS_LABEL, canCustomerCancel } from "@/lib/order-status";
-import { CustomerOrderSteps, OrderStatusBadge } from "./order-status";
-import { OrderStatusArt } from "./order-status-art";
-import { LiveMap } from "./live-map";
+import { CustomerOrderSteps } from "./order-status";
 import { ProductImage } from "./product-image";
 import { ReviewSheet } from "./review-sheet";
 import { ReorderButton } from "./reorder-button";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/overlay";
 import { Alert } from "@/components/ui/states";
-import { KeyValue, Avatar, StarRating } from "@/components/ui/misc";
+import { KeyValue } from "@/components/ui/misc";
 import { toast } from "@/components/ui/toast";
-import { formatINR, formatDateTime, formatTime, cn } from "@/lib/utils";
+import { formatINR, formatDateTime, formatTime } from "@/lib/utils";
 import type { OrderStatus } from "@/lib/order-status";
 import { DeliveryOtpStrip } from "./delivery-otp-strip";
 import { UpiQr } from "@/components/shared/upi-qr";
@@ -28,8 +26,11 @@ import { UpiPayCard } from "./upi-pay-card";
 import { useUpiDetails } from "@/hooks/use-upi-details";
 import { PushOptInCard } from "@/components/pwa/push-opt-in-card";
 import { OrderPlacedSplash } from "./order-placed-splash";
+import { StatusHero, RiderCard } from "./tracking/status-hero";
+import { TrackingMap } from "./tracking/tracking-map";
 
 const TERMINAL: OrderStatus[] = ["delivered", "completed", "cancelled", "rejected"];
+const CARD = "rounded-2xl border border-line bg-card p-4 shadow-card";
 
 /** Shopper-facing headline for each status (quick-commerce wording; admin keeps the detailed labels). */
 function headline(status: OrderStatus, paid: boolean) {
@@ -43,7 +44,15 @@ function headline(status: OrderStatus, paid: boolean) {
   }
 }
 
-export function OrderTrackingView({ initial, placed, paymentState, push }: { initial: OrderTracking; placed?: boolean; paymentState?: string; /** Web-push availability (server-side check); the opt-in card shows after a fresh order. */ push?: { configured: boolean; vapidPublicKey: string } }) {
+type Push = { configured: boolean; vapidPublicKey: string };
+
+/**
+ * The live half of the tracking screen: it holds the order, listens for changes and the rider's GPS
+ * points, and hands everything to `TrackingScreen`, which only draws. Nothing here invents a value —
+ * the rider's position is the last fix received, "live" is the Realtime channel's own state, and the
+ * time of the last update is when a fetch last succeeded.
+ */
+export function OrderTrackingView({ initial, placed, paymentState, push }: { initial: OrderTracking; placed?: boolean; paymentState?: string; /** Web-push availability (server-side check); the opt-in card shows after a fresh order. */ push?: Push }) {
   const router = useRouter();
   const [t, setT] = React.useState(initial);
   const [trail, setTrail] = React.useState<{ lat: number; lng: number }[]>(initial.assignment?.last_location ? [{ lat: initial.assignment.last_location.lat, lng: initial.assignment.last_location.lng }] : []);
@@ -53,28 +62,34 @@ export function OrderTrackingView({ initial, placed, paymentState, push }: { ini
   const [busy, setBusy] = React.useState(false);
   const [seen, setSeen] = React.useState(initial);
   if (seen !== initial) { setSeen(initial); setT(initial); }
-  const refresh = React.useCallback(async () => { const n = await getOrderTrackingAction(t.order.id); if (n) { setT(n); if (n.assignment?.last_location) setRider(n.assignment.last_location); } }, [t.order.id]);
+  // When a fetch last succeeded. The first render's data is the server's, so it starts at mount.
+  const [syncedAt, setSyncedAt] = React.useState<number | null>(null);
+  const [offline, setOffline] = React.useState(false);
+  const refresh = React.useCallback(async () => {
+    // A server action rejects outright when the phone is offline; the last good state stays on screen.
+    try {
+      const n = await getOrderTrackingAction(t.order.id);
+      if (n) { setT(n); setSyncedAt(Date.now()); if (n.assignment?.last_location) setRider(n.assignment.last_location); }
+    } catch { /* offline or a dropped request: the hero says the screen is not live */ }
+  }, [t.order.id]);
   // Coming back to the tab (phones pause background pages): fetch the latest state at once.
   React.useEffect(() => {
     const onVisible = () => { if (document.visibilityState === "visible") void refresh(); };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [refresh]);
-  // Minute clock for the countdown and the late notice.
+  React.useEffect(() => {
+    const sync = () => setOffline(!navigator.onLine);
+    const t0 = setTimeout(() => { setSyncedAt(Date.now()); sync(); }, 0);
+    window.addEventListener("online", sync); window.addEventListener("offline", sync);
+    return () => { clearTimeout(t0); window.removeEventListener("online", sync); window.removeEventListener("offline", sync); };
+  }, []);
+  // The page's clock: the countdown, the late notice and "updated … ago" on the map all read it.
   const [now, setNow] = React.useState(() => Date.now());
-  React.useEffect(() => { const id = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(id); }, []);
-  const connected = useOrderRealtime(t.order.id, t.assignment?.id ?? null, refresh, (loc) => { setRider(loc); setTrail((tr) => [...tr.slice(-200), { lat: loc.lat, lng: loc.lng }]); });
-
-  const o = t.order; const meta = ORDER_STATUS_META[o.status];
-  const live = ["rider_assigned", "out_for_delivery"].includes(o.status) && t.assignment && ["accepted", "picked_up"].includes(t.assignment.status);
-  const paid = o.payment_method === "cod" || ["paid", "authorized"].includes(o.payment_status);
-  const active = !TERMINAL.includes(o.status);
+  React.useEffect(() => { const id = setInterval(() => setNow(Date.now()), 15_000); return () => clearInterval(id); }, []);
+  const connected = useOrderRealtime(t.order.id, t.assignment?.id ?? null, refresh, (loc) => { setRider(loc); setNow(Date.now()); setTrail((tr) => [...tr.slice(-200), { lat: loc.lat, lng: loc.lng }]); });
   const upi = useUpiDetails();
-  // A direct UPI payment the customer still has to make; the admin confirms it, which confirms the order.
-  const upiNow = t.payment?.provider === "upi" && o.payment_status === "pending" && o.status === "placed";
-  const eta = o.promised_at ? Math.round((new Date(o.promised_at).getTime() - now) / 60000) : null;
-  const late = active && paid && eta != null && eta < 0;
-  const addr = o.address_snapshot as unknown as { full_name: string; phone: string; house: string; street: string; area: string; landmark?: string; city: string; pincode: string; lat?: number; lng?: number; label?: string | null };
+  const o = t.order;
 
   // Server actions reject outright when the device is offline; the catch keeps the buttons usable
   // and tells the customer what happened instead of leaving a spinner.
@@ -99,9 +114,43 @@ export function OrderTrackingView({ initial, placed, paymentState, push }: { ini
   };
 
   return (
-    <div className="grid grid-cols-1 gap-5 px-4 sm:px-0 lg:grid-cols-[minmax(0,1fr)_380px]">
+    <>
+      <TrackingScreen t={t} rider={rider} trail={trail} now={now} connected={connected} offline={offline} syncedAt={syncedAt} placed={placed} paymentState={paymentState} push={push} upi={upi} busy={busy}
+        onChanged={refresh} onCancel={() => setCancelOpen(true)} onReview={() => setReviewOpen(true)} onComplete={complete} />
+      <ConfirmDialog open={cancelOpen} onClose={() => setCancelOpen(false)} tone="danger" title="Cancel this order?" description="You can cancel until your order is packed. Any payment made will be refunded to the original method." confirmLabel="Yes, cancel" loading={busy} onConfirm={() => cancel("Cancelled by customer")} />
+      <ReviewSheet open={reviewOpen} onClose={() => setReviewOpen(false)} tracking={t} onDone={() => { refresh(); router.refresh(); }} />
+    </>
+  );
+}
+
+/**
+ * The tracking screen itself, drawn from what it is given. On a phone it reads top to bottom in the
+ * order a waiting customer asks: what is happening, the code the rider will ask for, who is coming,
+ * where they are, where it is going — then the timeline, the items and the bill.
+ */
+export function TrackingScreen({ t, rider, trail, now, connected, offline, syncedAt, placed, paymentState, push, upi, busy, onChanged, onCancel, onReview, onComplete }: {
+  t: OrderTracking; rider: TrackingLocation | null; trail: { lat: number; lng: number }[]; now: number;
+  connected: boolean; offline: boolean; syncedAt: number | null;
+  placed?: boolean; paymentState?: string; push?: Push; upi: ReturnType<typeof useUpiDetails>; busy: boolean;
+  onChanged: () => void; onCancel: () => void; onReview: () => void; onComplete: () => void;
+}) {
+  const o = t.order; const meta = ORDER_STATUS_META[o.status];
+  const live = Boolean(["rider_assigned", "out_for_delivery"].includes(o.status) && t.assignment && ["accepted", "picked_up"].includes(t.assignment.status));
+  const paid = o.payment_method === "cod" || ["paid", "authorized"].includes(o.payment_status);
+  const active = !TERMINAL.includes(o.status);
+  // A direct UPI payment the customer still has to make; the admin confirms it, which confirms the order.
+  const upiNow = t.payment?.provider === "upi" && o.payment_status === "pending" && o.status === "placed";
+  const eta = o.promised_at ? Math.round((new Date(o.promised_at).getTime() - now) / 60000) : null;
+  const late = active && paid && eta != null && eta < 0;
+  const addr = o.address_snapshot as unknown as { full_name: string; phone: string; house: string; street: string; area: string; landmark?: string; city: string; pincode: string; lat?: number; lng?: number; label?: string | null };
+  // Two unbreakable halves, so a narrow phone wraps at the dot and never strands "pm" on a line of its own.
+  const detail = active && paid && eta != null && eta > 0 ? <><span className="whitespace-nowrap">Arriving in about {eta} min</span> <span className="whitespace-nowrap">· by {formatTime(o.promised_at!)}</span></> : meta.description;
+  const showMap = live || o.status === "ready_for_pickup";
+
+  return (
+    <div className="grid grid-cols-1 gap-4 px-4 pb-4 sm:px-0 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-5">
       {placed && active ? <OrderPlacedSplash orderId={o.id} orderNumber={o.order_number} confirmed={paid && o.status !== "placed"} label={addr.label ?? null} addressLine={[addr.house, addr.street, addr.area, addr.city].filter(Boolean).join(", ")} etaLabel={o.promised_at ? formatTime(o.promised_at) : null} codNote={o.payment_method === "cod" ? `Keep ${formatINR(o.total, { precise: true })} cash ready for the rider` : null} /> : null}
-      <div className="space-y-4">
+      <div className="space-y-3.5">
         {placed && o.status !== "placed" && active ? <Alert tone="success" icon={<CheckCircle2 className="h-4 w-4" />} title={`Order ${o.order_number} confirmed`}>{t.pickup.name} is packing it now{o.promised_at ? `, arriving by ${formatTime(o.promised_at)}` : ""}.{o.payment_method === "cod" ? ` Keep ${formatINR(o.total, { precise: true })} cash ready for the rider.` : ""}</Alert> : null}
         {placed && o.status === "placed" && paid ? <Alert tone="success" icon={<CheckCircle2 className="h-4 w-4" />} title={`Order ${o.order_number} placed`}>We&apos;ve got it and will confirm it as soon as your payment is received.</Alert> : null}
         {late ? (
@@ -109,62 +158,59 @@ export function OrderTrackingView({ initial, placed, paymentState, push }: { ini
             {o.status === "ready_for_pickup" ? "Your order is packed and we're still finding a delivery partner." : o.status === "placed" ? "Your order hasn't been confirmed yet." : o.status === "out_for_delivery" || o.status === "rider_assigned" ? "Your delivery partner is taking longer than expected." : "The store is taking longer than usual to pack."} Sorry for the wait.
           </Alert>
         ) : null}
-        {upiNow && upi ? <UpiPayCard upi={upi} orderId={o.id} orderNumber={o.order_number} amount={Number(o.total)} claim={t.upi_claim ?? null} onChanged={refresh} /> : null}
+        {upiNow && upi ? <UpiPayCard upi={upi} orderId={o.id} orderNumber={o.order_number} amount={Number(o.total)} claim={t.upi_claim ?? null} onChanged={onChanged} /> : null}
         {!upiNow && (paymentState === "pending" || (o.payment_status === "pending" && o.payment_method !== "cod")) ? <Alert tone="warning" icon={<CreditCard className="h-4 w-4" />} title="Payment pending">Your order is saved but payment was not completed. Packing starts once payment is received. <Link href={`/checkout`} className="font-semibold underline">Retry from checkout</Link> or contact support.</Alert> : null}
+        {paymentState === "setup" ? <Alert tone="warning" title="Online payment unavailable">Razorpay is not configured on this deployment yet. Your order is saved with payment pending; please contact support or choose Cash on Delivery next time.</Alert> : null}
+        {paymentState === "failed" ? <Alert tone="danger" title="Payment failed">We could not verify the payment. If money was deducted it will be refunded automatically within 5–7 days.</Alert> : null}
+
+        <StatusHero status={o.status} title={headline(o.status, paid)} detail={detail} orderNumber={o.order_number} active={active} connected={connected} offline={offline} syncedAt={syncedAt} />
+
+        {o.status === "out_for_delivery" ? <DeliveryOtpStrip otp={t.delivery_otp} locked={t.otp_locked} /> : null}
+
+        {t.assignment && t.assignment.status !== "offered" ? <RiderCard rider={t.assignment.rider} callable={live} pickedUp={t.assignment.status === "picked_up"} /> : null}
+
+        {showMap ? (
+          <TrackingMap
+            store={t.pickup.lat != null && t.pickup.lng != null ? { lat: t.pickup.lat, lng: t.pickup.lng, name: t.pickup.name } : null}
+            customer={addr.lat && addr.lng ? { lat: addr.lat, lng: addr.lng } : null}
+            rider={live ? rider : null} trail={live ? trail : []} riderAssigned={live} now={now} offline={offline} />
+        ) : null}
+
+        <section className={CARD} aria-labelledby="deliver-to">
+          <div className="flex items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-info-50 text-info"><MapPin className="h-5 w-5" aria-hidden /></span>
+            <div className="min-w-0 flex-1">
+              <h2 id="deliver-to" className="text-[11px] font-semibold uppercase tracking-wide text-ink-3">{active ? "Delivering to" : o.status === "delivered" || o.status === "completed" ? "Delivered to" : "Delivery address"}{addr.label ? ` · ${addr.label}` : ""}</h2>
+              <p className="text-[15px] font-bold leading-snug text-ink">{[addr.house, addr.street, addr.area].filter(Boolean).join(", ")}</p>
+              <p className="mt-0.5 text-xs text-ink-3">{[addr.landmark, `${addr.city} – ${addr.pincode}`].filter(Boolean).join(" · ")}</p>
+              <p className="mt-1 text-xs text-ink-2">{addr.full_name} · {addr.phone}</p>
+              {o.delivery_instructions ? <p className="mt-2 rounded-lg bg-surface px-2.5 py-1.5 text-xs text-ink-2">“{o.delivery_instructions}”</p> : null}
+            </div>
+          </div>
+        </section>
+
         {upi && active && o.payment_method === "cod" && o.payment_status === "cod_pending" ? (
-          <details className="rounded-lg border border-line bg-card px-4 py-3">
+          <details className="rounded-2xl border border-line bg-card px-4 py-3 shadow-card">
             <summary className="tap min-h-11 cursor-pointer content-center text-sm font-semibold text-ink">Pay by PhonePe, Google Pay or Paytm, or cash on delivery</summary>
             <div className="pb-2 pt-2"><UpiQr upi={upi} amount={Number(o.total)} note={o.order_number} /><p className="mt-2 text-center text-xs text-ink-3">Pay now or when the rider is with you, then show the payment success screen and give your delivery OTP.</p></div>
           </details>
         ) : null}
-        {paymentState === "setup" ? <Alert tone="warning" title="Online payment unavailable">Razorpay is not configured on this deployment yet. Your order is saved with payment pending; please contact support or choose Cash on Delivery next time.</Alert> : null}
-        {paymentState === "failed" ? <Alert tone="danger" title="Payment failed">We could not verify the payment. If money was deducted it will be refunded automatically within 5–7 days.</Alert> : null}
         {placed && active && push ? <PushOptInCard configured={push.configured} vapidPublicKey={push.vapidPublicKey} /> : null}
 
-        <section className="rounded-lg border border-line bg-card p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-3">
-              <OrderStatusArt key={o.status} status={o.status} />
-              {/* Status changes arrive over Realtime; announce the new headline to screen readers. */}
-              <div aria-live="polite" aria-atomic="true" className="min-w-0">
-                <p className="text-xs text-ink-3">Order {o.order_number}</p>
-                <h1 className="text-xl font-bold text-ink">{headline(o.status, paid)}</h1>
-                <p className="text-sm text-ink-3">{active && paid && eta != null && eta > 0 ? `Arriving in about ${eta} min · by ${formatTime(o.promised_at!)}` : meta.description}</p>
-              </div>
-            </div>
-            <div className="flex flex-col items-end gap-1.5"><OrderStatusBadge status={o.status} size="md" />{active ? <span role="status" aria-live="polite" className={cn("inline-flex items-center gap-1 text-[11px] font-semibold", connected ? "text-success" : "text-ink-3")}>{connected ? <Wifi className="h-3 w-3" aria-hidden /> : <WifiOff className="h-3 w-3" aria-hidden />}{connected ? "Live updates" : "Reconnecting…"}</span> : null}</div>
-          </div>
-          {o.status === "out_for_delivery" ? <DeliveryOtpStrip otp={t.delivery_otp} locked={t.otp_locked} /> : null}
-        </section>
-
-        {live || o.status === "ready_for_pickup" ? (
-          <section>
-            <LiveMap store={{ lat: t.pickup.lat ?? 0, lng: t.pickup.lng ?? 0, name: t.pickup.name }} customer={addr.lat && addr.lng ? { lat: addr.lat, lng: addr.lng } : null} rider={live ? rider : null} trail={trail} showRoute={Boolean(live)} />
-          </section>
-        ) : null}
-
-        {t.assignment && t.assignment.status !== "offered" ? (
-          <section className="flex items-center gap-3 rounded-lg border border-line bg-card p-4">
-            <Avatar name={t.assignment.rider.name} src={t.assignment.rider.avatar_url} size={44} />
-            <div className="min-w-0 flex-1"><p className="text-sm font-bold text-ink">{t.assignment.rider.name ?? "Delivery partner"}</p><p className="text-xs text-ink-3 capitalize">{t.assignment.rider.vehicle_type}{t.assignment.rider.vehicle_number ? ` · ${t.assignment.rider.vehicle_number}` : ""}</p><StarRating value={t.assignment.rider.rating_avg} size={12} /></div>
-            {t.assignment.rider.phone && live ? <a href={`tel:${t.assignment.rider.phone}`} className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-50 text-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600" aria-label={`Call ${t.assignment.rider.name ?? "delivery partner"}`}><Phone className="h-5 w-5" aria-hidden /></a> : null}
-          </section>
-        ) : null}
-
-        <section className="rounded-lg border border-line bg-card p-4">
-          <h2 className="mb-4 text-base font-bold text-ink">Order status</h2>
+        <section className={CARD}>
+          <h2 className="mb-4 font-display text-base font-bold text-ink">Order updates</h2>
           <CustomerOrderSteps status={o.status} history={t.history} promisedAt={active ? o.promised_at : null} paid={paid} />
         </section>
 
-        <section className="rounded-lg border border-line bg-card p-4">
-          <h2 className="mb-3 text-base font-bold text-ink">Items ({o.item_count})</h2>
-          <ul className="divide-y divide-line">{t.items.map((i) => <li key={i.id} className="flex items-center gap-3 py-2.5"><ProductImage image={i.image_url} brand={i.brand_name} productName={i.product_name} packSize={i.pack_label} className="h-12 w-12 rounded-sm" sizes="48px" /><span className="min-w-0 flex-1"><span className="line-clamp-1 text-sm font-medium text-ink">{i.product_name}</span><span className="text-xs text-ink-3">{i.pack_label} · {i.quantity} × {formatINR(i.unit_price)}</span>{lineOptionsText(i) ? <span className="block text-xs font-medium text-brand-800">{lineOptionsText(i)}</span> : null}</span><span className="text-sm font-bold tabular text-ink">{formatINR(i.line_total)}</span></li>)}</ul>
+        <section className={CARD}>
+          <h2 className="mb-2 font-display text-base font-bold text-ink">Items ({o.item_count})</h2>
+          <ul className="divide-y divide-line">{t.items.map((i) => <li key={i.id} className="flex items-center gap-3 py-2.5"><ProductImage image={i.image_url} brand={i.brand_name} productName={i.product_name} packSize={i.pack_label} className="h-12 w-12 rounded-lg" sizes="48px" /><span className="min-w-0 flex-1"><span className="line-clamp-1 text-sm font-medium text-ink">{i.product_name}</span><span className="text-xs text-ink-3">{i.pack_label} · {i.quantity} × {formatINR(i.unit_price)}</span>{lineOptionsText(i) ? <span className="block text-xs font-medium text-brand-800">{lineOptionsText(i)}</span> : null}</span><span className="text-sm font-bold tabular text-ink">{formatINR(i.line_total)}</span></li>)}</ul>
         </section>
       </div>
 
-      <aside className="space-y-3">
-        <section className="rounded-lg border border-line bg-card p-4">
-          <h2 className="mb-3 text-base font-bold text-ink">Bill</h2>
+      <aside className="space-y-3.5">
+        <section className={CARD}>
+          <h2 className="mb-3 font-display text-base font-bold text-ink">Bill</h2>
           <KeyValue items={[
             { label: "Items", value: formatINR(o.subtotal) },
             ...(Number(o.coupon_discount) > 0 ? [{ label: `Coupon ${o.coupon_code}`, value: `− ${formatINR(o.coupon_discount)}` }] : []),
@@ -173,24 +219,26 @@ export function OrderTrackingView({ initial, placed, paymentState, push }: { ini
           ]} />
           <p className="mt-3 text-xs text-ink-3">{PAYMENT_METHOD_LABEL[o.payment_method]} · {PAYMENT_STATUS_LABEL[o.payment_status]}</p>
         </section>
-        <section className="rounded-lg border border-line bg-card p-4 text-sm">
-          <p className="flex items-center gap-2 font-bold text-ink"><StoreIcon className="h-4 w-4 text-brand-600" />{t.pickup.name}</p><p className="mt-0.5 text-xs text-ink-3">{[t.pickup.address_line1, t.pickup.area].filter(Boolean).join(", ")}</p>
-          {t.pickup.phone ? <a href={`tel:${t.pickup.phone}`} className="tap mt-1 inline-flex min-h-9 items-center gap-1 text-xs font-semibold text-brand-700"><Phone className="h-3 w-3" aria-hidden /> Call us</a> : null}
-          <p className="mt-3 flex items-center gap-2 font-bold text-ink"><MapPin className="h-4 w-4 text-info" />Deliver to</p><p className="mt-0.5 text-xs text-ink-3">{addr.full_name} · {addr.phone}<br />{[addr.house, addr.street, addr.area, addr.landmark, `${addr.city} – ${addr.pincode}`].filter(Boolean).join(", ")}</p>
-          {o.delivery_instructions ? <p className="mt-2 rounded-sm bg-surface px-2 py-1.5 text-xs text-ink-2">“{o.delivery_instructions}”</p> : null}
-          <p className="mt-3 text-xs text-ink-3">Placed {formatDateTime(o.created_at)}</p>
+        <section className={`${CARD} text-sm`}>
+          <div className="flex items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700"><StoreIcon className="h-5 w-5" aria-hidden /></span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-3">Packed by</p>
+              <p className="font-bold text-ink">{t.pickup.name}</p>
+              <p className="text-xs text-ink-3">{[t.pickup.address_line1, t.pickup.area].filter(Boolean).join(", ")}</p>
+              <p className="mt-1.5 text-xs text-ink-3">Placed {formatDateTime(o.created_at)}</p>
+            </div>
+            {t.pickup.phone ? <a href={`tel:${t.pickup.phone}`} aria-label={`Call ${t.pickup.name}`} className="tap flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"><Phone className="h-5 w-5" aria-hidden /></a> : null}
+          </div>
         </section>
         <div className="grid grid-cols-2 gap-2" id="review">
-          {t.can_review ? <Button variant="saffron" onClick={() => setReviewOpen(true)}><Star className="h-4 w-4" /> Rate order</Button> : null}
-          {o.status === "delivered" ? <Button variant="secondary" loading={busy} onClick={complete}><CheckCircle2 className="h-4 w-4" /> Mark received</Button> : null}
-          {["delivered", "completed", "cancelled", "rejected"].includes(o.status) ? <ReorderButton orderId={o.id} size="md" variant="outline" /> : null}
-          {canCustomerCancel(o.status) ? <Button variant="outline" onClick={() => setCancelOpen(true)} className="text-danger"><XCircle className="h-4 w-4" /> Cancel order</Button> : null}
+          {t.can_review ? <Button variant="saffron" onClick={onReview}><Star className="h-4 w-4" /> Rate order</Button> : null}
+          {o.status === "delivered" ? <Button variant="secondary" loading={busy} onClick={onComplete}><CheckCircle2 className="h-4 w-4" /> Mark received</Button> : null}
+          {TERMINAL.includes(o.status) ? <ReorderButton orderId={o.id} size="md" variant="outline" /> : null}
+          {canCustomerCancel(o.status) ? <Button variant="outline" onClick={onCancel} className="text-danger"><XCircle className="h-4 w-4" /> Cancel order</Button> : null}
           <Button variant="ghost" href={`/account/support?order=${o.id}`}><HelpCircle className="h-4 w-4" /> Need help?</Button>
         </div>
       </aside>
-
-      <ConfirmDialog open={cancelOpen} onClose={() => setCancelOpen(false)} tone="danger" title="Cancel this order?" description="You can cancel until your order is packed. Any payment made will be refunded to the original method." confirmLabel="Yes, cancel" loading={busy} onConfirm={() => cancel("Cancelled by customer")} />
-      <ReviewSheet open={reviewOpen} onClose={() => setReviewOpen(false)} tracking={t} onDone={() => { refresh(); router.refresh(); }} />
     </div>
   );
 }

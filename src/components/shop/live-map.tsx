@@ -29,19 +29,28 @@ export function LiveMap(props: Props) {
   );
 }
 
-function Pin({ icon, color, pulse }: { icon: React.ReactNode; color: string; pulse?: boolean }) {
+/** The round map marker shared by every delivery map. */
+export function Pin({ icon, color, pulse }: { icon: React.ReactNode; color: string; pulse?: boolean }) {
   return <span className={cn("flex h-8 w-8 items-center justify-center rounded-full border-2 border-white text-white shadow-float", pulse && "animate-pulse-soft")} style={{ backgroundColor: color }}>{icon}</span>;
 }
 
-function FitAndTrail({ store, customer, rider, trail, showRoute }: Omit<Props, "className">) {
+/**
+ * Keeps the points in view and draws what is real: the trail of GPS fixes received, and Google's road
+ * route when the Directions call answers. `store` may be missing (a pickup point without coordinates):
+ * it is then simply left out, never replaced by a made-up position. `refit` re-runs the fit on demand.
+ */
+export function FitAndTrail({ store, customer, rider, trail, showRoute, padding = 60, refit = 0 }: Omit<Props, "className" | "store"> & { store: Point | null; padding?: number | google.maps.Padding; refit?: number }) {
   const map = useMap();
   const polyRef = React.useRef<google.maps.Polyline | null>(null);
   const routeRef = React.useRef<google.maps.DirectionsRenderer | null>(null);
   React.useEffect(() => {
     if (!map) return;
-    const b = new google.maps.LatLngBounds(); b.extend(store); if (customer) b.extend(customer); if (rider) b.extend({ lat: rider.lat, lng: rider.lng });
-    map.fitBounds(b, 60);
-  }, [map, store, customer, rider?.lat, rider?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+    const pts: Point[] = [store, customer, rider ? { lat: rider.lat, lng: rider.lng } : null].filter((x): x is Point => Boolean(x));
+    if (pts.length === 0) return;
+    if (pts.length === 1) { map.setCenter(pts[0]); map.setZoom(16); return; }
+    const b = new google.maps.LatLngBounds(); for (const pt of pts) b.extend(pt);
+    map.fitBounds(b, padding);
+  }, [map, store?.lat, store?.lng, customer?.lat, customer?.lng, rider?.lat, rider?.lng, refit]); // eslint-disable-line react-hooks/exhaustive-deps
   React.useEffect(() => {
     if (!map) return;
     polyRef.current?.setMap(null);
@@ -51,6 +60,7 @@ function FitAndTrail({ store, customer, rider, trail, showRoute }: Omit<Props, "
   React.useEffect(() => {
     if (!map || !showRoute || !customer) return;
     const origin = rider ? { lat: rider.lat, lng: rider.lng } : store;
+    if (!origin) return;
     const svc = new google.maps.DirectionsService();
     routeRef.current?.setMap(null);
     routeRef.current = new google.maps.DirectionsRenderer({ map, suppressMarkers: true, polylineOptions: { strokeColor: "#329537", strokeWeight: 4, strokeOpacity: 0.7 } });
