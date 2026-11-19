@@ -44,7 +44,7 @@ export function AddressList({ initial, defaultName, defaultPhone, openNew = fals
     if (editing === "new") {
       const q = new URLSearchParams(a.lat != null && a.lng != null ? { lat: String(a.lat), lng: String(a.lng), pincode: a.pincode } : { pincode: a.pincode });
       fetch(`/api/location/serviceability?${q}`).then((r) => r.json() as Promise<Serviceability>).then((s) => {
-        setLocation({ label: `${a.label || a.type[0].toUpperCase() + a.type.slice(1)} · ${a.area}`, area: a.area, pincode: a.pincode, lat: a.lat, lng: a.lng, serviceable: s.serviceable, zoneName: s.zone_name, etaMin: s.eta_min_minutes, etaMax: s.eta_max_minutes, addressId: a.id });
+        setLocation({ label: [a.label || a.type[0].toUpperCase() + a.type.slice(1), a.area].filter(Boolean).join(" · "), area: a.area, pincode: a.pincode, lat: a.lat, lng: a.lng, serviceable: s.serviceable, zoneName: s.zone_name, etaMin: s.eta_min_minutes, etaMax: s.eta_max_minutes, addressId: a.id });
         if (!s.serviceable) toast.info("Address saved", s.message ?? "We don't deliver to this pincode yet.");
       }).catch(() => {});
     }

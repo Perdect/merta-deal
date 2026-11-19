@@ -24,7 +24,7 @@ export type AddressDraft = AddressInput;
  * the geocoder in the background (typing continues meanwhile; a slow geocoder is simply abandoned),
  * and "Choose on map" hands the current draft to the map picker for a precise pin.
  */
-export function AddressForm({ initial, onSaved, onCancel, defaultName, defaultPhone, onChooseMap }: { initial?: Partial<Address>; onSaved: (a: Address) => void; onCancel?: () => void; defaultName?: string | null; defaultPhone?: string | null; onChooseMap?: (draft: AddressDraft) => void }) {
+export function AddressForm({ initial, onSaved, onCancel, defaultName, defaultPhone, onChooseMap, pinLabel }: { initial?: Partial<Address>; onSaved: (a: Address) => void; onCancel?: () => void; defaultName?: string | null; defaultPhone?: string | null; onChooseMap?: (draft: AddressDraft) => void; /** What the map called the pinned spot (area, street or place name), when it gave one. */ pinLabel?: string | null }) {
   const [form, setForm] = React.useState<AddressInput>({
     id: initial?.id, type: initial?.type ?? "home", label: initial?.label ?? "", full_name: initial?.full_name ?? defaultName ?? "", phone: initial?.phone ?? defaultPhone ?? "",
     house: initial?.house ?? "", street: initial?.street ?? "", area: initial?.area ?? "", landmark: initial?.landmark ?? "", city: site.city, pincode: site.defaultPincode,
@@ -38,6 +38,9 @@ export function AddressForm({ initial, onSaved, onCancel, defaultName, defaultPh
   // A "Guest" placeholder name is not a receiver's name.
   const nameValue = form.full_name === "Guest" ? "" : form.full_name;
   const pinned = form.lat != null && form.lng != null;
+  // The delivery line names the customer's own spot: the area they typed, else what the map or GPS lookup called the pin.
+  const [pinPlace, setPinPlace] = React.useState<string | null>(pinLabel?.trim() || null);
+  const chosenPlace = (form.area ?? "").trim() || pinPlace;
 
   /* Early delivery-area feedback while typing (debounced, newest request wins). It never blocks typing
      or saving: the save itself is checked again on the server, which is the only check that counts. */
@@ -76,8 +79,9 @@ export function AddressForm({ initial, onSaved, onCancel, defaultName, defaultPh
       const ctrl = new AbortController(); geocodeRef.current = ctrl;
       const timeout = setTimeout(() => ctrl.abort(), 6000);
       try {
-        const d = await (await fetch(`/api/maps/geocode?lat=${lat.toFixed(6)}&lng=${lng.toFixed(6)}`, { signal: ctrl.signal })).json() as { ok: boolean; area?: string; pincode?: string; street?: string; source?: string };
+        const d = await (await fetch(`/api/maps/geocode?lat=${lat.toFixed(6)}&lng=${lng.toFixed(6)}`, { signal: ctrl.signal })).json() as { ok: boolean; area?: string; pincode?: string; street?: string; formatted?: string; source?: string };
         if (d.ok) {
+          setPinPlace(d.area ?? d.street ?? d.formatted?.split(",")[0]?.trim() ?? null);
           setForm((f) => ({ ...f, area: f.area || d.area || f.area, street: f.street || d.street || f.street }));
           toast.success("Location pinned", d.source === "osm" ? "Area suggested from OpenStreetMap. Check it before saving." : "Check the suggested area before saving.");
         } else toast.info("Location pinned", "Type your house and area details.");
@@ -117,7 +121,7 @@ export function AddressForm({ initial, onSaved, onCancel, defaultName, defaultPh
     <form onSubmit={submit} className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2">
         <Input label="House / Flat / Shop no." required value={form.house} onChange={(e) => set("house", e.target.value)} error={errors.house} placeholder="e.g. 12, First floor" autoComplete="address-line1" />
-        <Input label="Area / Colony" required value={form.area} onChange={(e) => set("area", e.target.value)} error={errors.area} placeholder="e.g. Sadar Bazaar" autoComplete="address-level3" />
+        <Input label={pinned ? "Area / Colony (optional)" : "Area / Colony"} required={!pinned} value={form.area ?? ""} onChange={(e) => set("area", e.target.value)} error={errors.area} placeholder="e.g. Sadar Bazaar" autoComplete="address-level3" />
         <Input label="Receiver's name" required value={nameValue} onChange={(e) => set("full_name", e.target.value)} error={errors.full_name} autoComplete="name" hint="Ordering for someone else? Enter their name and number." />
         <Input label="Mobile number" required inputMode="numeric" value={form.phone} onChange={(e) => set("phone", e.target.value.replace(/\D/g, "").slice(0, 10))} error={errors.phone} autoComplete="tel-national" placeholder="10-digit number" hint="The rider calls this number." />
         <div className="space-y-1.5"><p className="text-sm font-medium text-ink-2">City</p><p className="flex h-11 items-center rounded-sm border border-line bg-surface-2 px-3.5 text-sm text-ink-2">{site.city}, Rajasthan</p></div>
@@ -126,7 +130,7 @@ export function AddressForm({ initial, onSaved, onCancel, defaultName, defaultPh
       {zone ? (
         <p role="status" aria-live="polite" className={cn("flex items-start gap-2 rounded-md px-3 py-2 text-sm", zone.state === "ok" ? "bg-success-50 text-brand-800" : zone.state === "no" ? "bg-danger-50 text-[#8a1f18]" : "bg-surface-2 text-ink-3")}>
           {zone.state === "checking" ? <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin" aria-hidden /> : zone.state === "ok" ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden /> : <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />}
-          <span>{zone.state === "checking" ? "Checking delivery area…" : zone.state === "ok" ? `We deliver to ${zone.info?.area ?? zone.info?.zone_name ?? "this area"}${zone.info?.eta_max_minutes ? ` in ${etaText(zone.info.eta_min_minutes, zone.info.eta_max_minutes, "minutes")}` : ""}.` : zone.state === "no" ? (zone.info?.message ?? "This pincode is outside our delivery area.") : "Couldn't check the delivery area yet; you can still save and we check again."}</span>
+          <span>{zone.state === "checking" ? "Checking delivery area…" : zone.state === "ok" ? `We deliver to ${chosenPlace ?? "this location"}${zone.info?.eta_max_minutes ? ` in ${etaText(zone.info.eta_min_minutes, zone.info.eta_max_minutes, "minutes")}` : ""}.` : zone.state === "no" ? (zone.info?.message ?? "This pincode is outside our delivery area.") : "Couldn't check the delivery area yet; you can still save and we check again."}</span>
         </p>
       ) : null}
 

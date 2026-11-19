@@ -19,13 +19,17 @@ const addressSchema = z.object({
   house: z.string().trim().min(1, "Enter your house, flat or shop number"),
   // Optional: most Merta addresses are house + area + landmark. Stored as "" (column is NOT NULL).
   street: z.string().trim().max(120).optional().nullable().transform((v) => v ?? ""),
-  area: z.string().trim().min(2, "Enter your area or colony"),
+  // Optional when the address carries a map pin (the rider navigates to the pin); stored as "" (column is NOT NULL).
+  area: z.string().trim().max(80).optional().nullable().transform((v) => v ?? ""),
   landmark: z.string().trim().max(120).optional().nullable().transform((v) => v || null),
   city: z.string().min(2).default("Merta City"),
   pincode: z.string().regex(/^[1-9][0-9]{5}$/, "Enter a valid 6-digit pincode"),
   lat: z.coerce.number().optional().nullable(),
   lng: z.coerce.number().optional().nullable(),
   is_default: z.coerce.boolean().default(false),
+}).superRefine((a, ctx) => {
+  // House number alone does not find a door: without a pin the rider needs the area or colony.
+  if (a.area.length < 2 && (a.lat == null || a.lng == null)) ctx.addIssue({ code: "custom", path: ["area"], message: "Enter your area or colony, or choose the spot on the map" });
 });
 export type AddressInput = z.input<typeof addressSchema>;
 

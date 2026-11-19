@@ -51,6 +51,7 @@ export function AddressWizard({ onSaved, onCancel, defaultName, defaultPhone, ma
           ...(draft ? { type: draft.type, label: draft.label ?? null, full_name: draft.full_name, phone: draft.phone, house: draft.house, street: draft.street ?? "", area: draft.area, landmark: draft.landmark ?? null, city: draft.city, pincode: draft.pincode, lat: num(draft.lat), lng: num(draft.lng), is_default: Boolean(draft.is_default) } : {}),
           ...(picked ? { lat: picked.lat, lng: picked.lng, area: draft?.area || picked.area || "", street: draft?.street || picked.street || "" } : {}),
         } as Partial<Address>}
+        pinLabel={picked ? picked.area ?? picked.street ?? picked.formatted?.split(",")[0]?.trim() ?? picked.city ?? null : null}
         defaultName={defaultName} defaultPhone={defaultPhone} onSaved={onSaved} onCancel={onCancel}
         onChooseMap={(d) => { setDraft(d); setMapOpen(true); }} />
     </div>

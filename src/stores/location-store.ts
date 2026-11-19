@@ -54,7 +54,7 @@ export async function checkAddress(a: Pick<Address, "lat" | "lng" | "pincode">):
 export async function adoptAddress(a: Address): Promise<Serviceability> {
   const s = await checkAddress(a);
   useLocationStore.getState().setLocation({
-    label: `${addressTitle(a)} · ${a.area}`, detail: addressLine(a), area: a.area, pincode: a.pincode, lat: a.lat, lng: a.lng,
+    label: [addressTitle(a), a.area].filter(Boolean).join(" · "), detail: addressLine(a), area: a.area, pincode: a.pincode, lat: a.lat, lng: a.lng,
     serviceable: s.serviceable, zoneName: s.zone_name, etaMin: s.eta_min_minutes, etaMax: s.eta_max_minutes, addressId: a.id, source: "address",
   });
   return s;
