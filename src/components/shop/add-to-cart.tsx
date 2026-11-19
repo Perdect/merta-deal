@@ -24,6 +24,7 @@ export function AddToCart({ inventoryId, maxQty, stockQty, size = "md", classNam
   const signedInStore = useSignedIn();
   const signedIn = signedInProp ?? signedInStore;
   const openSheet = useCartStore((s) => s.openSheet);
+  const setAdded = useCartStore((s) => s.setAdded);
   const qty = useCartStore((s) => (inventoryId ? s.qtyFor(inventoryId) : 0));
   const syncing = useCartStore((s) => (inventoryId ? inventoryId in s.pending : false));
   const [starting, setStarting] = React.useState(false);
@@ -44,7 +45,8 @@ export function AddToCart({ inventoryId, maxQty, stockQty, size = "md", classNam
     if (next === limit.max && next > qty) toast.info(limit.message, "That's the most you can add of this item.");
     const res = await setLineQuantity(inventoryId, next);
     // No toast: the button turns into the quantity stepper and the cart bar/badge update (a toast covered the header).
-    if (res.ok && first) track("add_to_cart", { items: [{ item_id: inventoryId, quantity: next }] });
+    // On wide screens the header shows an "Added to Cart" card for the first pack of a product.
+    if (res.ok && first) { setAdded(inventoryId); track("add_to_cart", { items: [{ item_id: inventoryId, quantity: next }] }); }
   };
 
   if (outOfStock) {

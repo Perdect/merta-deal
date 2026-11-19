@@ -21,6 +21,9 @@ type CartState = {
   /** Explanation shown at the top of the cart until dismissed (e.g. what a reorder changed). */
   notice: { title: string; lines: string[] } | null;
   setNotice: (n: { title: string; lines: string[] } | null) => void;
+  /** The product just added for the first time, for the header's "Added to Cart" card; the line itself is read from `summary`. */
+  added: { inventoryId: string; at: number } | null;
+  setAdded: (inventoryId: string | null) => void;
   openDrawer: (step?: "cart" | "pay") => void;
   closeDrawer: () => void;
   openSheet: (sheet: "address" | "login" | "schedule") => void;
@@ -46,6 +49,8 @@ export const useCartStore = create<CartState>((set, get) => ({
   sheet: null,
   notice: null,
   setNotice: (notice) => set({ notice }),
+  added: null,
+  setAdded: (inventoryId) => set({ added: inventoryId ? { inventoryId, at: Date.now() } : null }),
   openDrawer: (step = "cart") => set({ drawer: step }),
   closeDrawer: () => set({ drawer: null }),
   openSheet: (sheet) => set({ sheet }),

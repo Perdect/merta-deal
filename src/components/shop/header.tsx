@@ -4,6 +4,7 @@ import { Logo } from "@/components/ui/misc";
 import { SearchBar } from "./search-bar";
 import { LocationPicker } from "./location-picker";
 import { CartButton } from "./cart-button";
+import { AddedToCart } from "./added-to-cart";
 import { HideOnRoutes } from "./route-gate";
 import { HeaderHeight } from "./header-height";
 
@@ -34,7 +35,10 @@ export function Header({ defaultEta }: { defaultEta?: { min: number; max: number
           <div className="flex-1"><Suspense fallback={null}><SearchBar compact /></Suspense></div>
           <nav className="flex items-center gap-1" aria-label="Account and cart">
             <AccountLink />
-            <CartButton className="h-11 w-11 bg-brand-600 text-white hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600" />
+            <div className="relative">
+              <CartButton className="h-11 w-11 bg-brand-600 text-white hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600" />
+              <AddedToCart />
+            </div>
           </nav>
         </div>
       </div>
