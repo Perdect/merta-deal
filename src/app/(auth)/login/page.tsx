@@ -6,5 +6,5 @@ export const metadata: Metadata = { title: "Sign in", robots: { index: false } }
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string; confirmed?: string }> }) {
   const sp = await searchParams;
-  return <LoginForm next={sp.next} phoneEnabled={env.phoneAuthEnabled} guestEnabled={env.anonymousAuthEnabled} confirmed={sp.confirmed === "1"} />;
+  return <LoginForm next={sp.next} phoneEnabled={env.phoneAuthEnabled} confirmed={sp.confirmed === "1"} />;
 }

@@ -1,52 +1,37 @@
 import type { Metadata } from "next";
-import { Cake, Candy, Wheat, ShoppingBasket, Zap, Banknote, ShieldCheck } from "lucide-react";
 import { Logo } from "@/components/ui/misc";
 import { site } from "@/config/site";
 import { AuthClose } from "@/components/auth/auth-close";
-
-/** Sweet-shop icons drifting in the hero; purely decorative, still when reduced motion is preferred. */
-const FLOATERS = [
-  { Icon: Cake, cls: "right-1 top-1 h-11 w-11 text-saffron-300", delay: "0s", tilt: "-8deg" },
-  { Icon: Candy, cls: "right-16 top-9 h-7 w-7 text-saffron-400/70", delay: "1.2s", tilt: "18deg" },
-  { Icon: Wheat, cls: "right-28 -top-1 h-8 w-8 text-white/30", delay: "0.6s", tilt: "-14deg" },
-  { Icon: ShoppingBasket, cls: "right-40 top-7 hidden h-7 w-7 text-white/20 sm:block", delay: "2s", tilt: "6deg" },
-];
-const PERKS = [
-  { Icon: Zap, t: site.deliveryWindowShort, s: "delivery target" },
-  { Icon: Banknote, t: "Pay on", s: "delivery" },
-  { Icon: ShieldCheck, t: "OTP", s: "safe handover" },
-];
+import { LoginArt } from "@/components/auth/login-art";
 
 /** Sign-in pages carry no search value. */
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
+/**
+ * Sign-in shell: one card with two panels from `sm` up (brand and illustration on the left, the form in a
+ * white panel on the right); on a phone the illustration is a short banner and the form is a sheet over it.
+ * The words and the picture sit in separate rows, so nothing is ever drawn over the rider.
+ */
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
+  const [lead, ...rest] = site.tagline.split(", ");
   return (
-    <div className="flex min-h-dvh flex-col bg-surface">
-      <div className="relative overflow-hidden bg-gradient-to-br from-brand-800 via-brand-700 to-brand-600 px-6 pb-20 pt-8 text-white">
-        <AuthClose />
-        <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-white/10 blur-2xl" />
-        <div aria-hidden className="pointer-events-none absolute -bottom-20 -left-16 h-56 w-56 rounded-full bg-saffron-400/20 blur-2xl" />
-        <div aria-hidden className="pointer-events-none absolute inset-x-6 top-7 mx-auto h-16 max-w-md">
-          {FLOATERS.map(({ Icon, cls, delay, tilt }, i) => (
-            <Icon key={i} className={`absolute motion-safe:animate-float ${cls}`} strokeWidth={1.5} style={{ animationDelay: delay, ["--tilt" as string]: tilt, transform: `rotate(${tilt})` }} />
-          ))}
+    <div className="flex min-h-dvh flex-col bg-card sm:items-center sm:justify-center sm:bg-surface-2 sm:p-6">
+      <div className="relative flex w-full flex-1 flex-col bg-gradient-to-br from-brand-50 via-white to-saffron-50 motion-safe:animate-rise sm:grid sm:max-w-[880px] sm:flex-none sm:grid-cols-[1fr_1.08fr] sm:gap-3 sm:overflow-hidden sm:rounded-[28px] sm:p-3 sm:shadow-float">
+        <div className="flex flex-col sm:min-h-[540px]">
+          <div className="px-5 pt-[calc(env(safe-area-inset-top,0px)+14px)] sm:px-5 sm:pt-6">
+            <Logo size="md" />
+            <p className="mt-5 hidden font-display text-[32px] font-extrabold leading-[1.12] tracking-tight text-ink sm:block">
+              {lead}{rest.length ? "," : ""}<br /><span className="text-brand-700">{rest.join(", ")}</span>
+            </p>
+            <p className="mt-3 hidden max-w-[17rem] text-sm leading-relaxed text-ink-2 sm:block">Groceries, sweets and cakes from Merta&apos;s own shop, with a {site.deliveryWindow} delivery target.</p>
+          </div>
+          <div className="relative mt-1 h-40 sm:mt-4 sm:h-auto sm:flex-1"><LoginArt className="absolute inset-0 h-full w-full sm:rounded-b-[18px]" /></div>
         </div>
-        <div className="relative mx-auto max-w-md motion-safe:animate-rise">
-          <Logo light size="lg" />
-          <p className="mt-3 font-display text-2xl font-extrabold leading-tight">{site.tagline}</p>
-          <p className="mt-1 max-w-[18rem] text-sm text-white/80">Groceries, sweets, cakes and dry fruits from Merta Deal, with a {site.deliveryWindow} delivery target.</p>
-          <ul className="mt-5 flex gap-2">
-            {PERKS.map(({ Icon, t, s }, i) => (
-              <li key={t} className="flex items-center gap-2 rounded-full bg-white/12 px-3 py-1.5 text-xs backdrop-blur motion-safe:animate-rise" style={{ animationDelay: `${150 + i * 90}ms` }}>
-                <Icon className="h-3.5 w-3.5 text-saffron-300" /><span><b>{t}</b> {s}</span>
-              </li>
-            ))}
-          </ul>
+
+        <div className="relative -mt-5 flex flex-1 flex-col rounded-t-[28px] bg-card px-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] pt-7 shadow-[0_-8px_24px_-12px_rgb(0_0_0/0.18)] sm:mt-0 sm:rounded-[20px] sm:px-8 sm:pb-7 sm:pt-10 sm:shadow-card">
+          <AuthClose />
+          {children}
         </div>
-      </div>
-      <div className="mx-auto -mt-12 w-full max-w-md flex-1 px-4 pb-10">
-        <div className="rounded-2xl border border-line bg-card p-5 shadow-float motion-safe:animate-rise sm:p-6" style={{ animationDelay: "120ms" }}>{children}</div>
       </div>
     </div>
   );

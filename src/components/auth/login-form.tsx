@@ -2,74 +2,103 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Lock, Smartphone, UserRound, Eye, EyeOff } from "lucide-react";
-import { signInAction, sendPhoneOtpAction, verifyPhoneOtpAction, type AuthResult } from "@/lib/actions/auth";
-import { continueAsGuestAction } from "@/lib/actions/guest";
+import { Pencil } from "lucide-react";
+import { sendPhoneOtpAction, verifyPhoneOtpAction } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/states";
-import { toast } from "@/components/ui/toast";
+import { InstallButtons } from "@/components/pwa/install-buttons";
 import { safeNext } from "@/lib/safe-next";
 import { createClient } from "@/lib/supabase/client";
+import { notifySessionChanged } from "@/stores/me-store";
+import { OtpInput } from "./otp-input";
 
-/** Sign in with mobile number + 6-digit PIN. OTP login appears only when the project has an SMS provider. */
-export function LoginForm({ next, phoneEnabled, guestEnabled, confirmed }: { next?: string; phoneEnabled: boolean; guestEnabled: boolean; confirmed?: boolean }) {
+const RESEND_AFTER_S = 30;
+const spaced = (m: string) => (m.length === 10 ? `${m.slice(0, 5)} ${m.slice(5)}` : m);
+
+/**
+ * Customer sign-in: mobile number, then the 6-digit code sent to it. There is nothing else on the screen:
+ * a number seen for the first time gets its account when the code is checked, so there is no sign-up step,
+ * no PIN and no guest button here. Errors come from the server and are shown as they are; nothing is called
+ * sent unless the send succeeded.
+ */
+export function LoginForm({ next, phoneEnabled, confirmed, initial }: {
+  next?: string; phoneEnabled: boolean; confirmed?: boolean;
+  /** Development preview only: open on the code step without sending anything. */
+  initial?: { mobile: string; step: "otp" };
+}) {
   const router = useRouter();
-  const [state, formAction, pending] = React.useActionState<AuthResult | null, FormData>(signInAction, null);
-  const [mobile, setMobile] = React.useState("");
-  const [showPw, setShowPw] = React.useState(false);
-  const [otpMode, setOtpMode] = React.useState(phoneEnabled);
-  const [otp, setOtp] = React.useState(""); const [otpSent, setOtpSent] = React.useState(false); const [busy, setBusy] = React.useState(false);
-  const [guestBusy, setGuestBusy] = React.useState(false);
+  const [mobile, setMobile] = React.useState(initial?.mobile ?? "");
+  const [step, setStep] = React.useState<"mobile" | "otp">(initial?.step ?? "mobile");
+  const [otp, setOtp] = React.useState("");
+  const [busy, setBusy] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [cooldown, setCooldown] = React.useState(initial ? RESEND_AFTER_S : 0);
   // A guest (anonymous session) signing in keeps their cart and addresses: the id lets the server merge them.
   const [guestId, setGuestId] = React.useState("");
   React.useEffect(() => { createClient().auth.getUser().then(({ data }) => setGuestId(data.user?.is_anonymous ? data.user.id : "")).catch(() => {}); }, []);
+  React.useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setInterval(() => setCooldown((c) => (c > 0 ? c - 1 : 0)), 1000);
+    return () => clearInterval(t);
+  }, [cooldown]);
 
-  const sendOtp = async () => { setBusy(true); const r = await sendPhoneOtpAction(mobile); setBusy(false); if (r.ok) { setOtpSent(true); toast.success("OTP sent to +91 " + mobile); } else toast.error(r.error); };
-  const verify = async () => { setBusy(true); const r = await verifyPhoneOtpAction(mobile, otp, guestId || undefined); setBusy(false); if (r.ok) router.replace(safeNext(next, r.redirectTo ?? "/")); else toast.error(r.error); };
-  const guest = async () => { setGuestBusy(true); const r = await continueAsGuestAction(next); if (r && !r.ok) { toast.error(r.error); setGuestBusy(false); } };
-  const fieldErr = (k: string) => (state && !state.ok ? state.fieldErrors?.[k] : undefined);
+  const sendOtp = async () => {
+    if (mobile.length !== 10 || busy) return;
+    setBusy(true); setError(null);
+    const r = await sendPhoneOtpAction(mobile);
+    setBusy(false);
+    if (r.ok) { setOtp(""); setStep("otp"); setCooldown(RESEND_AFTER_S); } else setError(r.error);
+  };
+  const verify = async (code = otp) => {
+    if (code.length !== 6 || busy) return;
+    setBusy(true); setError(null);
+    const r = await verifyPhoneOtpAction(mobile, code, guestId || undefined);
+    if (!r.ok) { setBusy(false); setOtp(""); setError(r.error); return; }
+    notifySessionChanged();
+    router.replace(safeNext(next, r.redirectTo ?? "/"));
+  };
 
   return (
-    <div>
-      <p className="text-xs font-bold uppercase tracking-wide text-brand-700">Customer login</p>
-      <h1 className="mt-1 text-xl font-bold text-ink">Welcome back</h1>
-      <p className="mt-1 text-sm text-ink-3">Sign in with your mobile number to order and track deliveries.</p>
-      {confirmed ? <Alert tone="success" className="mt-3">Your account is active. You can sign in now.</Alert> : null}
+    <div className="flex flex-1 flex-col">
+      <h1 className="px-8 text-center font-display text-2xl font-extrabold leading-tight tracking-tight text-ink sm:text-[26px]">
+        {step === "otp" ? "Enter the code" : <>Sign in to <span className="text-brand-700">start ordering</span></>}
+      </h1>
+      {confirmed && step === "mobile" ? <Alert tone="success" className="mt-4">Your account is active. You can sign in now.</Alert> : null}
 
-      {otpMode ? (
-        <div className="mt-5 space-y-4">
-          <Input label="Mobile number" inputMode="numeric" leftIcon={<span className="text-sm font-semibold text-ink-3">+91</span>} value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))} placeholder="10-digit mobile" disabled={otpSent} className="pl-12" />
-          {otpSent ? <Input label="Enter OTP" inputMode="numeric" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="6-digit code" autoFocus /> : null}
-          {otpSent ? <Button fullWidth size="lg" loading={busy} onClick={verify}>Verify & continue</Button> : <Button fullWidth size="lg" loading={busy} onClick={sendOtp} disabled={mobile.length !== 10}>Send OTP</Button>}
-          <button type="button" className="w-full text-center text-xs font-semibold text-brand-700" onClick={() => { setOtpMode(false); setOtpSent(false); setOtp(""); }}>Use PIN instead</button>
-        </div>
-      ) : (
-        <form action={formAction} className="mt-5 space-y-4">
-          <input type="hidden" name="next" value={next ?? ""} />
-          <input type="hidden" name="guestUserId" value={guestId} />
-          <Input name="mobile" type="tel" inputMode="numeric" label="Mobile number" autoComplete="tel-national" required maxLength={10} value={mobile} onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))} leftIcon={<span className="text-sm font-semibold text-ink-3">+91</span>} className="pl-12" error={fieldErr("mobile")} placeholder="10-digit mobile number" />
-          <Input name="password" type={showPw ? "text" : "password"} label="6-digit PIN" inputMode="numeric" maxLength={6} pattern="[0-9]{6}" placeholder="6 digits" autoComplete="current-password" required onInput={(e) => { const t = e.currentTarget; t.value = t.value.replace(/\D/g, "").slice(0, 6); }} leftIcon={<Lock className="h-4 w-4" />} error={fieldErr("password")}
-            rightSlot={<button type="button" onClick={() => setShowPw((v) => !v)} aria-label={showPw ? "Hide PIN" : "Show PIN"} className="flex h-8 w-8 items-center justify-center rounded-full text-ink-3 hover:bg-surface-2">{showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>} />
-          {state && !state.ok && !state.fieldErrors ? <Alert tone="danger">{state.error}</Alert> : null}
-          <Button type="submit" fullWidth size="lg" loading={pending}><Smartphone className="h-4 w-4" /> Sign in</Button>
-          <p className="flex justify-between text-xs">
-            <Link href="/forgot-password" className="font-semibold text-brand-700">Forgot PIN?</Link>
-            {phoneEnabled ? <button type="button" onClick={() => setOtpMode(true)} className="font-semibold text-brand-700">Sign in with OTP</button> : null}
-          </p>
+      {step === "mobile" ? (
+        <form className="mt-6 space-y-3" onSubmit={(e) => { e.preventDefault(); void sendOtp(); }} noValidate>
+          <Input name="mobile" type="tel" inputMode="numeric" autoComplete="tel-national" maxLength={10} value={mobile} autoFocus
+            onChange={(e) => { setMobile(e.target.value.replace(/\D/g, "").slice(0, 10)); setError(null); }}
+            leftIcon={<span className="inline-flex items-center gap-1 text-sm font-bold text-ink"><span aria-hidden>🇮🇳</span>+91</span>}
+            className="h-14 rounded-xl pl-20 text-base" placeholder="Enter Phone Number" aria-label="Mobile number" disabled={!phoneEnabled} />
+          {phoneEnabled ? null : <Alert tone="warning">Sign-in by OTP is not switched on for this site yet.</Alert>}
+          {error ? <Alert tone="danger">{error}</Alert> : null}
+          <Button type="submit" size="lg" fullWidth className="h-13 rounded-xl text-base" disabled={mobile.length !== 10 || !phoneEnabled} loading={busy}>Continue</Button>
+          <p className="pt-1 text-center text-xs text-ink-3">We&apos;ll text a 6-digit code to this number. New here? The same step creates your account.</p>
         </form>
+      ) : (
+        <div className="mt-4 space-y-4">
+          <p className="flex flex-wrap items-center justify-center gap-x-1 text-center text-sm text-ink-2">Sent by SMS to <span className="font-semibold text-ink">+91 {spaced(mobile)}</span>
+            <button type="button" onClick={() => { setStep("mobile"); setOtp(""); setError(null); }} aria-label="Change mobile number" className="tap inline-flex h-9 w-9 items-center justify-center rounded-full text-brand-700 hover:bg-surface-2"><Pencil className="h-4 w-4" aria-hidden /></button></p>
+          <OtpInput value={otp} onChange={(v) => { setOtp(v); setError(null); if (v.length === 6) void verify(v); }} autoFocus disabled={busy} />
+          {error ? <Alert tone="danger">{error}</Alert> : null}
+          <Button type="button" size="lg" fullWidth className="h-13 rounded-xl text-base" disabled={otp.length !== 6} loading={busy} onClick={() => void verify()}>Verify &amp; continue</Button>
+          <p className="text-center text-sm text-ink-3" aria-live="polite">
+            {cooldown > 0 ? <>Didn&apos;t get it? Resend in <span className="font-semibold tabular-nums text-ink">{cooldown}s</span></> : <button type="button" onClick={() => void sendOtp()} disabled={busy} className="tap min-h-11 font-semibold text-brand-700">Resend code</button>}
+          </p>
+        </div>
       )}
 
-      {guestEnabled ? (
-        <div className="mt-5">
-          <div className="relative my-4 text-center text-xs text-ink-3"><span className="relative z-10 bg-card px-2">or</span><span className="absolute inset-x-0 top-1/2 h-px bg-line" /></div>
-          <Button variant="outline" fullWidth size="lg" loading={guestBusy} onClick={guest}><UserRound className="h-4 w-4" /> Continue as guest</Button>
-          <p className="mt-2 text-center text-[11px] text-ink-3">No registration needed. Just pick a location and pay.</p>
-        </div>
-      ) : null}
+      <p className="mt-4 text-center text-xs leading-relaxed text-ink-3">By continuing, you agree to our<br /><Link href="/terms" target="_blank" className="font-semibold text-brand-700">Terms and Conditions</Link> &amp; <Link href="/privacy" target="_blank" className="font-semibold text-brand-700">Privacy Policy</Link></p>
 
-      {phoneEnabled ? null : <p className="mt-6 text-center text-sm text-ink-3">New to Merta Deal? <Link href={`/register${next ? `?next=${encodeURIComponent(next)}` : ""}`} className="font-semibold text-brand-700">Create account</Link></p>}
-      <p className="mt-3 text-center text-xs text-ink-3">Staff: <Link href="/rider/login" className="font-semibold text-ink-2 underline-offset-2 hover:underline">Delivery partner login</Link></p>
+      <div className="mt-auto pt-7">
+        <div className="rounded-2xl bg-surface-2 px-4 py-4">
+          <p className="text-center text-xs font-medium text-ink-2">Order faster with the Merta Deal app</p>
+          <InstallButtons className="mt-3 flex flex-wrap justify-center gap-2 space-y-0 [&>p]:hidden" />
+        </div>
+        <p className="mt-4 text-center text-xs text-ink-3">Delivery partner? <Link href="/rider/login" className="font-semibold text-ink-2 underline-offset-2 hover:underline">Sign in here</Link></p>
+      </div>
     </div>
   );
 }
