@@ -6,7 +6,7 @@ import { useMeStore } from "@/stores/me-store";
 
 type DrawerProps = React.ComponentProps<typeof import("./cart-drawer").CartDrawer>;
 /** Settings-derived props come from the layout; who is signed in, their addresses, wallet and coupons come from `/api/me`. */
-type Props = Pick<DrawerProps, "razorpayEnabled" | "codEnabled" | "slots" | "slotRules" | "eta">;
+type Props = Pick<DrawerProps, "razorpayEnabled" | "codEnabled" | "verifyMobile" | "slots" | "slotRules" | "eta">;
 
 const CartDrawer = dynamic(() => import("./cart-drawer").then((m) => m.CartDrawer), { ssr: false });
 const NONE: never[] = [];

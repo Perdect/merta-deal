@@ -112,6 +112,7 @@ export function friendlyError(err: unknown): string {
   if (raw.startsWith("UNIT_NOT_ALLOWED:")) return raw.slice("UNIT_NOT_ALLOWED:".length).trim();
   if (raw.startsWith("BARCODE_IN_USE:")) return `That barcode is already on ${raw.slice("BARCODE_IN_USE:".length).trim()}.`;
   for (const code of ["CAPACITY_FULL", "HANDOVER_SCAN_REQUIRED", "EXCEPTION_PENDING", "INVALID_QUANTITY", "GRN_POSTED", "NO_LINES", "CARTON_SIZE_REQUIRED", "NOT_LISTED", "INVALID_PRICE", "NOTHING_TO_PAY", "REFERENCE_REQUIRED", "INVALID_RULES", "SERVICE_REQUEST", "LISTING", "BUSINESS_INCOMPLETE", "UPI"]) if (raw.startsWith(`${code}:`)) return raw.slice(code.length + 1).trim();
+  if (/MOBILE_NOT_VERIFIED/.test(raw)) return "Please confirm your mobile number with the OTP to place this order.";
   const below = raw.match(/^BELOW_COST:\s*([\d.]+)/);
   if (below) return `This price is below cost (₹${Number(below[1]).toFixed(2)}).`;
   if (/^BELOW_COST/.test(raw)) return raw.replace(/^BELOW_COST:?\s*/, "Below cost: ");

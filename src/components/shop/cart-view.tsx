@@ -19,12 +19,12 @@ import { formatINR } from "@/lib/utils";
  * The full /cart page (deep links, desktop). Same steps as the cart panel: address first, sign in only
  * at "Proceed to Pay", then the payment step opens in the panel. Totals are for the chosen address.
  */
-export function CartView({ initial, coupons, addresses, signedIn, isGuest }: { initial: CartSummary | null; coupons: { code: string; title: string; min_order_amount: number }[]; addresses: Address[]; signedIn: boolean; isGuest: boolean }) {
+export function CartView({ initial, coupons, addresses, signedIn, isGuest, verifyMobile = false }: { initial: CartSummary | null; coupons: { code: string; title: string; min_order_amount: number }[]; addresses: Address[]; signedIn: boolean; isGuest: boolean; verifyMobile?: boolean }) {
   const summary = useCartStore((s) => s.summary) ?? initial;
   const setSummary = useCartStore((s) => s.setSummary);
   const openSheet = useCartStore((s) => s.openSheet);
   const deliveryType = useCheckoutStore((s) => s.deliveryType);
-  const gate = useCheckoutGate({ summary, addresses, signedIn, isGuest });
+  const gate = useCheckoutGate({ summary, addresses, signedIn, isGuest, verifyMobile });
   const { addressId, selectedAddress } = gate;
   const [code, setCode] = React.useState("");
   const [couponBusy, setCouponBusy] = React.useState(false);

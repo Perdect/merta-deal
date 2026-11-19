@@ -17,11 +17,14 @@ import { addressLine, addressTitle } from "./address-sheet";
  *   address not served    → "Change address"
  *   guest                 → "Proceed to Pay" saves the address's name + mobile on the guest profile (no OTP)
  *                           and opens the payment step; the order is placed under that number
+ *   guest, OTP required   → setting `order_mobile_otp_required` on: "Verify mobile to proceed" opens sign-in with the
+ *                           address's number filled in; after the code is checked the payment step opens with the same
+ *                           cart and address (the server refuses a guest's order regardless: trigger in 0057)
  *   no session at all     → "Login to Proceed" opens sign-in (only when guest sessions are switched off)
  *   signed in             → "Proceed to Pay" opens the payment step
  * The rules (minimum order, stock, serviceability) come from cart_summary, never from here.
  */
-export function useCheckoutGate({ summary, addresses: serverAddresses, signedIn, isGuest }: { summary: CartSummary | null; addresses: Address[]; signedIn: boolean; isGuest: boolean }) {
+export function useCheckoutGate({ summary, addresses: serverAddresses, signedIn, isGuest, verifyMobile = false }: { summary: CartSummary | null; addresses: Address[]; signedIn: boolean; isGuest: boolean; /** Setting `order_mobile_otp_required`: a guest confirms the number by OTP before paying. */ verifyMobile?: boolean }) {
   const added = useCheckoutStore((s) => s.added);
   const chosenId = useCheckoutStore((s) => s.addressId);
   const setResume = useCheckoutStore((s) => s.setResume);
@@ -42,9 +45,10 @@ export function useCheckoutGate({ summary, addresses: serverAddresses, signedIn,
     : s.issues.length ? "Some items are no longer available in the quantity you chose. Update the quantities to continue."
     : null;
   const unserved = Boolean(selectedAddress && s && !s.serviceable);
-  const needsLogin = !signedIn;
+  const mustVerify = verifyMobile && isGuest;
+  const needsLogin = !signedIn || mustVerify;
 
-  const ctaLabel = !selectedAddress ? "Add Address to proceed" : unserved ? "Change address" : needsLogin ? "Login to Proceed" : `Proceed to Pay ${formatINR(s?.total ?? 0, { precise: true })}`;
+  const ctaLabel = !selectedAddress ? "Add Address to proceed" : unserved ? "Change address" : mustVerify ? "Verify mobile to proceed" : needsLogin ? "Login to Proceed" : `Proceed to Pay ${formatINR(s?.total ?? 0, { precise: true })}`;
   const ctaDisabled = Boolean(selectedAddress && !unserved && (cartBlocker || pendingCount > 0));
 
   const proceed = async () => {
@@ -59,7 +63,7 @@ export function useCheckoutGate({ summary, addresses: serverAddresses, signedIn,
     openDrawer("pay");
   };
 
-  return { addresses, addressId, selectedAddress, cartBlocker, unserved, serviceMessage: s?.service_message ?? null, needsLogin, ctaLabel, ctaDisabled, proceed };
+  return { addresses, addressId, selectedAddress, cartBlocker, unserved, serviceMessage: s?.service_message ?? null, needsLogin, mustVerify, ctaLabel, ctaDisabled, proceed };
 }
 
 /** "Delivering to Home · 12, Sadar Bazaar" with a tap target to change it (cart header / cart page). */

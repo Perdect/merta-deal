@@ -25,7 +25,7 @@ import { OtpInput } from "./otp-input";
  * guest never loses their place. When a guest session exists its id is sent along so the server
  * can carry the guest cart over to the account (merge_guest_cart).
  */
-export function LoginModal({ open, onClose, eta, guest, onGuestContinue, title = "Login to start ordering", defaultMobile }: { open: boolean; onClose: () => void; eta: string; guest?: boolean; onGuestContinue?: () => void; /** Heading, e.g. "Login to place your order" from the cart. */ title?: string; /** Mobile number already given with the delivery address: pre-filled so it is not typed twice. Pass it as `key` too so a new address refreshes it. */ defaultMobile?: string | null }) {
+export function LoginModal({ open, onClose, onVerified, eta, guest, onGuestContinue, title = "Login to start ordering", defaultMobile }: { open: boolean; onClose: () => void; /** Called instead of `onClose` once the code is accepted, for hosts that carry on with what the customer was doing. */ onVerified?: () => void; eta: string; guest?: boolean; onGuestContinue?: () => void; /** Heading, e.g. "Login to place your order" from the cart. */ title?: string; /** Mobile number already given with the delivery address: pre-filled so it is not typed twice. Pass it as `key` too so a new address refreshes it. */ defaultMobile?: string | null }) {
   const pathname = usePathname();
   const hydrated = useHydrated();
   const [state, formAction, pending] = React.useActionState<AuthResult | null, FormData>(signInAction, null);
@@ -59,7 +59,7 @@ export function LoginModal({ open, onClose, eta, guest, onGuestContinue, title =
     // Signed in: the chrome reloads its personal data and the page re-renders for the account; the sheet closes with it.
     notifySessionChanged();
     router.refresh();
-    onClose();
+    (onVerified ?? onClose)();
     setBusy(false);
   };
 

@@ -39,7 +39,7 @@ declare global { interface Window { Razorpay?: new (opts: Record<string, unknown
 
 type Coupon = { code: string; title: string; min_order_amount: number };
 type Props = {
-  signedIn: boolean; isGuest: boolean; addresses: Address[]; walletBalance: number; razorpayEnabled: boolean; codEnabled: boolean; slots: string[]; /** Slot rules from settings: lead time and days offered. */ slotRules: { leadMinutes: number; daysAhead: number };
+  signedIn: boolean; isGuest: boolean; addresses: Address[]; walletBalance: number; razorpayEnabled: boolean; codEnabled: boolean; /** Setting `order_mobile_otp_required`: guests confirm their number by OTP before the payment step. */ verifyMobile?: boolean; slots: string[]; /** Slot rules from settings: lead time and days offered. */ slotRules: { leadMinutes: number; daysAhead: number };
   coupons: Coupon[]; user: { name: string | null; phone: string | null }; eta: { min: number; max: number };
 };
 const TYPE_ICON = { home: Home, work: Briefcase, other: MapPin };
@@ -77,7 +77,7 @@ function PayRow({ id, current, onPick, icon, title, sub, disabled }: { id: Payme
  * through place_order — this component only arranges them. The address and sign-in sheets live here
  * too and open from any page (cart store `sheet`), the panel itself need not be open.
  */
-export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, walletBalance, razorpayEnabled, codEnabled, slots, slotRules, coupons, user, eta }: Props) {
+export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, walletBalance, razorpayEnabled, codEnabled, verifyMobile = false, slots, slotRules, coupons, user, eta }: Props) {
   const router = useRouter();
   const hydrated = useHydrated();
   const step = useCartStore((s) => s.drawer);
@@ -102,7 +102,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
   const setGiftMessage = useCheckoutStore((s) => s.setGiftMessage);
   const resume = useCheckoutStore((s) => s.resume);
   const setResume = useCheckoutStore((s) => s.setResume);
-  const gate = useCheckoutGate({ summary, addresses: serverAddresses, signedIn, isGuest });
+  const gate = useCheckoutGate({ summary, addresses: serverAddresses, signedIn, isGuest, verifyMobile });
   const { addresses, addressId, selectedAddress } = gate;
 
   const slotKey = useCheckoutStore((st) => st.slotKey);
@@ -134,7 +134,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
   // The payment step needs a session: someone who lands here signed out (e.g. Back after signing out) goes to
   // the cart. A guest with a session stays: since the no-OTP checkout, the name and mobile given with the
   // address are enough to pay, and `proceed()` saves them before opening this step.
-  React.useEffect(() => { if (step === "pay" && !signedIn) openDrawer("cart"); }, [step, signedIn, openDrawer]);
+  React.useEffect(() => { if (step === "pay" && (!signedIn || (verifyMobile && isGuest))) openDrawer("cart"); }, [step, signedIn, verifyMobile, isGuest, openDrawer]);
   React.useEffect(() => {
     if (!open) return;
     document.body.style.overflow = "hidden";
@@ -250,7 +250,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
       ) : null}
       <AddressSheet open={sheet === "address"} onClose={closeSheet} addresses={addresses} selectedId={addressId} defaultName={user.name} defaultPhone={user.phone}
         onPick={(a, isNew) => { if (isNew) { addAddress(a); notifySessionChanged(); router.refresh(); } setAddressId(a.id); void adoptAddress(a); closeSheet(); }} />
-      <LoginModal key={selectedAddress?.phone ?? ""} defaultMobile={selectedAddress?.phone} open={sheet === "login" && !account} onClose={() => { closeSheet(); setResume(null); }} eta={`${eta.min}–${eta.max} minutes`} guest={isGuest} title={resume === "pay" ? "Login to place your order" : undefined} />
+      <LoginModal key={selectedAddress?.phone ?? ""} defaultMobile={selectedAddress?.phone} open={sheet === "login" && !account} onClose={() => { closeSheet(); setResume(null); }} onVerified={closeSheet} eta={`${eta.min}–${eta.max} minutes`} guest={isGuest} title={resume === "pay" ? (gate.mustVerify ? "Verify your mobile number to place the order" : "Login to place your order") : undefined} />
     </>
   );
 

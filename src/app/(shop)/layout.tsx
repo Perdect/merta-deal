@@ -33,7 +33,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
       <ChromePart part="footer"><Footer social={socialLinks(settings)} categories={[...activeCategories]} /></ChromePart>
       <ChromePart part="cartBar"><StickyCartBar /></ChromePart>
       <NavSpacer />
-      <CartDrawerLazy razorpayEnabled={isRazorpayConfigured() && settings.online_payments_enabled !== false} codEnabled={settings.cod_enabled !== false} slots={slots} slotRules={{ leadMinutes: num("scheduled_slot_lead_minutes", 30), daysAhead: num("scheduled_days_ahead", 2) }} eta={defaultEta} />
+      <CartDrawerLazy razorpayEnabled={isRazorpayConfigured() && settings.online_payments_enabled !== false} codEnabled={settings.cod_enabled !== false} verifyMobile={settings.order_mobile_otp_required === true} slots={slots} slotRules={{ leadMinutes: num("scheduled_slot_lead_minutes", 30), daysAhead: num("scheduled_days_ahead", 2) }} eta={defaultEta} />
       <ChromePart part="bottomNav"><BottomNav /></ChromePart>
       <PwaClient />
       <UpdatePrompt />
