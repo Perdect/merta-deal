@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { indianMobile, otpSmsConfig, otpSmsMissing, sendOtpSms, verifyHookSignature } from "@/lib/sms/otp-sms";
+import { indianMobile, keyShape, otpSmsConfig, otpSmsMissing, sendOtpSms, verifyHookSignature } from "@/lib/sms/otp-sms";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 10;
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
 
   const sent = await sendOtpSms(cfg, mobile, otp);
   if (!sent.ok) {
-    console.error("sms-hook: panel refused", sent.code ?? "-", sent.reason);
+    console.error("sms-hook: panel refused", sent.code ?? "-", sent.reason, sent.code === 101 ? `| key shape: ${keyShape(process.env.PARKEN_SMS_KEY ?? "")}` : "");
     return refuse(502, "We couldn't send the OTP right now. Please try again in a minute, or sign in with your PIN.");
   }
   console.log("sms-hook: accepted, message id", sent.messageId);

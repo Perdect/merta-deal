@@ -29,9 +29,10 @@ export function otpSmsConfig(e: Record<string, string | undefined> = process.env
   return {
     hookSecret: e.SEND_SMS_HOOK_SECRET ?? "",
     apiUrl: e.PARKEN_SMS_API_URL || "https://sms.par-ken.com/api/smsapi",
-    key: e.PARKEN_SMS_KEY ?? "",
-    sender: e.PARKEN_SMS_SENDER ?? "",
-    templateId: e.PARKEN_SMS_TEMPLATE_ID ?? "",
+    // Pasted values often carry a stray space or line break; none of these may contain one.
+    key: (e.PARKEN_SMS_KEY ?? "").trim(),
+    sender: (e.PARKEN_SMS_SENDER ?? "").trim(),
+    templateId: (e.PARKEN_SMS_TEMPLATE_ID ?? "").trim(),
     template: e.PARKEN_SMS_TEMPLATE ?? "",
     route: e.PARKEN_SMS_ROUTE || "4",
   };
@@ -135,4 +136,11 @@ export async function sendOtpSms(cfg: OtpSmsConfig, mobile: string, otp: string,
     const timedOut = err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError");
     return { ok: false, code: null, reason: timedOut ? "SMS panel did not answer in time" : "Could not reach the SMS panel" };
   }
+}
+
+/** What a saved API key looks like, without the key: for telling a mis-pasted value from a wrong one. */
+export function keyShape(key: string): string {
+  const k = key.trim();
+  const kind = /^[0-9a-f]{32}$/i.test(k) ? "32 hex characters (as the panel issues)" : /^https?:/i.test(k) ? "a URL" : /key=/i.test(k) ? "contains 'key='" : /\s/.test(k) ? "contains spaces" : "unexpected";
+  return `${kind}, length ${k.length}${key !== k ? ", had surrounding whitespace" : ""}`;
 }
