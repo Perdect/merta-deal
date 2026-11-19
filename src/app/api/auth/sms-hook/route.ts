@@ -23,7 +23,12 @@ export async function POST(req: NextRequest) {
   const sig = verifyHookSignature(raw, {
     id: req.headers.get("webhook-id"), timestamp: req.headers.get("webhook-timestamp"), signature: req.headers.get("webhook-signature"),
   }, cfg.hookSecret);
-  if (!sig.ok) return refuse(sig.reason.includes("not configured") ? 503 : 401, sig.reason);
+  if (!sig.ok) {
+    // Why a call was refused, without the secret itself: only its shape and length, so a mis-pasted value can be told from a wrong one.
+    const shape = /^v1,whsec_[A-Za-z0-9+/=]+$/.test(cfg.hookSecret.trim()) ? "v1,whsec_<base64>" : /^https?:/i.test(cfg.hookSecret.trim()) ? "a URL" : "unexpected";
+    console.error("sms-hook: refused,", sig.reason, "| secret shape:", shape, "| length:", cfg.hookSecret.length, "| has headers:", Boolean(req.headers.get("webhook-signature")));
+    return refuse(sig.reason.includes("not configured") ? 503 : 401, sig.reason);
+  }
 
   const missing = otpSmsMissing();
   if (missing.length) {
