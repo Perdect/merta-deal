@@ -17,9 +17,10 @@ import { addressLine, addressTitle } from "./address-sheet";
  *   address not served    → "Change address"
  *   guest                 → "Proceed to Pay" saves the address's name + mobile on the guest profile (no OTP)
  *                           and opens the payment step; the order is placed under that number
- *   guest, OTP required   → setting `order_mobile_otp_required` on: "Verify mobile to proceed" opens sign-in with the
- *                           address's number filled in; after the code is checked the payment step opens with the same
- *                           cart and address (the server refuses a guest's order regardless: trigger in 0057)
+ *   guest, OTP required   → setting `order_mobile_otp_required` on: signing in comes FIRST, before the address.
+ *                           "Login to Proceed" opens sign-in (mobile → OTP); once the code is checked the same steps
+ *                           carry on for the account with the cart kept (address if there is none, then payment).
+ *                           The server refuses a guest's order regardless: trigger in 0057
  *   no session at all     → "Login to Proceed" opens sign-in (only when guest sessions are switched off)
  *   signed in             → "Proceed to Pay" opens the payment step
  * The rules (minimum order, stock, serviceability) come from cart_summary, never from here.
@@ -48,10 +49,11 @@ export function useCheckoutGate({ summary, addresses: serverAddresses, signedIn,
   const mustVerify = verifyMobile && isGuest;
   const needsLogin = !signedIn || mustVerify;
 
-  const ctaLabel = !selectedAddress ? "Add Address to proceed" : unserved ? "Change address" : mustVerify ? "Verify mobile to proceed" : needsLogin ? "Login to Proceed" : `Proceed to Pay ${formatINR(s?.total ?? 0, { precise: true })}`;
-  const ctaDisabled = Boolean(selectedAddress && !unserved && (cartBlocker || pendingCount > 0));
+  const ctaLabel = mustVerify ? "Login to Proceed" : !selectedAddress ? "Add Address to proceed" : unserved ? "Change address" : needsLogin ? "Login to Proceed" : `Proceed to Pay ${formatINR(s?.total ?? 0, { precise: true })}`;
+  const ctaDisabled = !mustVerify && Boolean(selectedAddress && !unserved && (cartBlocker || pendingCount > 0));
 
   const proceed = async () => {
+    if (mustVerify) { setResume("pay"); openSheet("login"); return; }
     if (!selectedAddress || unserved) { openSheet("address"); return; }
     if (cartBlocker) return;
     if (needsLogin) { setResume("pay"); openSheet("login"); return; }

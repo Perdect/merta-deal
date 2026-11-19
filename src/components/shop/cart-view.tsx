@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { ShoppingBag, TicketPercent, X } from "lucide-react";
+import { Lock, ShoppingBag, TicketPercent, X } from "lucide-react";
 import type { Address, CartSummary } from "@/types/app";
 import { applyCouponAction, getCartSummary, removeCouponAction } from "@/lib/actions/cart";
 import { setLineQuantity } from "@/lib/cart-sync";
@@ -66,7 +66,9 @@ export function CartView({ initial, coupons, addresses, signedIn, isGuest, verif
 
         <div className="rounded-lg border border-line bg-card p-4">
           <p className="mb-2 flex items-center gap-2 text-sm font-bold text-ink"><TicketPercent className="h-4 w-4 text-saffron-600" /> Coupons & offers</p>
-          {summary.coupon?.valid && summary.coupon_discount > 0 ? (
+          {gate.mustVerify ? (
+            <button type="button" onClick={() => void gate.proceed()} className="tap flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-surface-2 text-sm font-bold text-ink"><Lock className="h-4 w-4" aria-hidden /> Login to view coupons</button>
+          ) : summary.coupon?.valid && summary.coupon_discount > 0 ? (
             <div className="flex items-center justify-between rounded-md bg-success-50 px-3 py-2.5 text-sm"><span className="font-semibold text-brand-800">{summary.coupon.code} applied · −{formatINR(summary.coupon_discount)}</span><button type="button" onClick={remove} disabled={couponBusy} className="text-ink-3 hover:text-danger" aria-label="Remove coupon"><X className="h-4 w-4" /></button></div>
           ) : (
             <div className="flex gap-2">
@@ -75,7 +77,7 @@ export function CartView({ initial, coupons, addresses, signedIn, isGuest, verif
             </div>
           )}
           {summary.coupon && !summary.coupon.valid ? <p className="mt-2 text-xs text-danger">{summary.coupon.reason}</p> : null}
-          {coupons.length && !(summary.coupon?.valid) ? (
+          {!gate.mustVerify && coupons.length && !(summary.coupon?.valid) ? (
             <div className="scroll-x mt-3">
               {coupons.map((c) => <button key={c.code} type="button" onClick={() => apply(c.code)} className="rounded-md border border-dashed border-saffron-500 bg-saffron-50 px-3 py-2 text-left"><span className="block text-xs font-bold text-saffron-700">{c.code}</span><span className="block text-[11px] text-ink-2">{c.title}</span></button>)}
             </div>
@@ -93,7 +95,7 @@ export function CartView({ initial, coupons, addresses, signedIn, isGuest, verif
           <Button variant="outline" size="lg" href="/categories">Continue shopping</Button>
           <Button size="lg" disabled={gate.ctaDisabled} onClick={() => void gate.proceed()}>{gate.ctaLabel}</Button>
         </div>
-        <p className="text-center text-[11px] text-ink-3">{selectedAddress ? gate.needsLogin ? "You'll sign in with your mobile number before paying. Your cart and address are kept." : "Delivery fee and ETA above are for the selected address." : "Add a delivery address to see the delivery fee and ETA."}</p>
+        <p className="text-center text-[11px] text-ink-3">{gate.mustVerify ? "Sign in with your mobile number and the code we text you. Your cart is kept." : selectedAddress ? gate.needsLogin ? "You'll sign in with your mobile number before paying. Your cart and address are kept." : "Delivery fee and ETA above are for the selected address." : "Add a delivery address to see the delivery fee and ETA."}</p>
       </aside>
     </div>
   );

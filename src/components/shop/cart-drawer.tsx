@@ -6,7 +6,7 @@ import Script from "next/script";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { hasCake, lineOptionsText } from "@/lib/cake";
-import { ChevronLeft, X, Clock, TicketPercent, ReceiptText, Check, Plus, Home, Briefcase, MapPin, Zap, CalendarClock, Smartphone, CreditCard, Landmark, Wallet, Banknote, ShoppingBag, BadgePercent, Truck } from "lucide-react";
+import { ChevronLeft, X, Lock, Clock, TicketPercent, ReceiptText, Check, Plus, Home, Briefcase, MapPin, Zap, CalendarClock, Smartphone, CreditCard, Landmark, Wallet, Banknote, ShoppingBag, BadgePercent, Truck } from "lucide-react";
 import type { Address, CartLine, PaymentMethod, ProductCard as ProductCardType } from "@/types/app";
 import { applyCouponAction, getCartSummary, removeCouponAction } from "@/lib/actions/cart";
 import { packLimit, setLineQuantity } from "@/lib/cart-sync";
@@ -103,6 +103,9 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
   const resume = useCheckoutStore((s) => s.resume);
   const setResume = useCheckoutStore((s) => s.setResume);
   const gate = useCheckoutGate({ summary, addresses: serverAddresses, signedIn, isGuest, verifyMobile });
+  // The newest `proceed` for the resume-after-sign-in effect, which must not re-run every render.
+  const proceedRef = React.useRef(gate.proceed);
+  React.useEffect(() => { proceedRef.current = gate.proceed; });
   const { addresses, addressId, selectedAddress } = gate;
 
   const slotKey = useCheckoutStore((st) => st.slotKey);
@@ -146,8 +149,12 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
   // A guest sent to sign in from "Proceed to Pay" comes back signed in: continue to the payment step
   // with the cart and address they had (merge_guest_cart moved both to the account).
   React.useEffect(() => {
-    if (resume === "pay" && account && hydrated) { setResume(null); closeSheet(); openDrawer("pay"); }
-  }, [resume, account, hydrated, setResume, closeSheet, openDrawer]);
+    if (resume !== "pay" || !account || !hydrated) return;
+    setResume(null); closeSheet();
+    // Signed in from "Login to Proceed": carry on where the gate left off: the address step if there is no
+    // address yet, else the payment step. The gate's rules (minimum order, stock, served area) still apply.
+    void proceedRef.current();
+  }, [resume, account, hydrated, setResume, closeSheet]);
 
   // Fresh totals whenever the panel opens, the address changes or the delivery option changes: the
   // delivery fee, ETA and serviceability all depend on the address, on the cart step too.
@@ -250,7 +257,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
       ) : null}
       <AddressSheet open={sheet === "address"} onClose={closeSheet} addresses={addresses} selectedId={addressId} defaultName={user.name} defaultPhone={user.phone}
         onPick={(a, isNew) => { if (isNew) { addAddress(a); notifySessionChanged(); router.refresh(); } setAddressId(a.id); void adoptAddress(a); closeSheet(); }} />
-      <LoginModal key={selectedAddress?.phone ?? ""} defaultMobile={selectedAddress?.phone} open={sheet === "login" && !account} onClose={() => { closeSheet(); setResume(null); }} onVerified={closeSheet} eta={`${eta.min}–${eta.max} minutes`} guest={isGuest} title={resume === "pay" ? (gate.mustVerify ? "Verify your mobile number to place the order" : "Login to place your order") : undefined} />
+      <LoginModal key={selectedAddress?.phone ?? ""} defaultMobile={selectedAddress?.phone} open={sheet === "login" && !account} onClose={() => { closeSheet(); setResume(null); }} onVerified={closeSheet} eta={`${eta.min}–${eta.max} minutes`} guest={isGuest} title={resume === "pay" ? "Login to place your order" : undefined} />
     </>
   );
 
@@ -301,7 +308,15 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
               {gate.unserved ? <Alert tone="danger">{gate.serviceMessage ?? "We don't deliver to this address yet."} <button type="button" onClick={() => openSheet("address")} className="font-bold underline underline-offset-2">Change address</button></Alert> : null}
               <Card className="p-4">
                 <h3 className="font-display text-base font-bold text-ink">Coupons & offers</h3>
-                {s.coupon?.valid && s.coupon_discount > 0 ? (
+                {gate.mustVerify ? (
+                  <button type="button" onClick={() => void gate.proceed()} className="tap relative mt-3 block w-full overflow-hidden rounded-xl py-1 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">
+                    {/* Blurred bars only: no offer is shown or implied until the customer has signed in. */}
+                    <span aria-hidden className="block space-y-4 opacity-70 blur-[5px]">
+                      {[0, 1].map((i) => <span key={i} className="flex items-center gap-3"><span className="h-10 w-10 shrink-0 rounded-md bg-brand-200" /><span className="flex-1 space-y-2"><span className="block h-3 w-2/3 rounded bg-line-2" /><span className="block h-3 w-1/2 rounded bg-saffron-200" /></span><span className="h-8 w-16 rounded-lg bg-surface-2" /></span>)}
+                    </span>
+                    <span className="absolute inset-0 flex items-center justify-center gap-2 font-display text-base font-bold text-ink"><Lock className="h-5 w-5" aria-hidden /> Login to view coupons</span>
+                  </button>
+                ) : s.coupon?.valid && s.coupon_discount > 0 ? (
                   <div className="mt-3 flex items-center gap-3 rounded-xl bg-success-50 px-3 py-3">
                     <span className="flex h-9 w-9 items-center justify-center rounded-md bg-brand-600 text-white"><BadgePercent className="h-5 w-5" /></span>
                     <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-brand-800">{s.coupon.code} applied</span><span className="block text-xs text-ink-2">You save {formatINR(s.coupon_discount)}</span></span>
@@ -377,16 +392,18 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
                 </div>
                 <div className="px-4 py-1">
                   <Row label="Item Total" value={formatINR(s.subtotal)} strike={s.mrp_total > s.subtotal ? s.mrp_total : undefined} />
+                  {gate.mustVerify ? <p className="mb-3 mt-1 rounded-lg bg-saffron-50 px-3 py-2.5 text-xs leading-relaxed text-ink-2">Log in to see your exact total. Delivery charges and discounts are worked out for your address.</p> : <>
                   <Row label="Delivery Fee" value={s.delivery_fee === 0 ? <span className="font-bold text-success">FREE</span> : formatINR(s.delivery_fee)} strike={s.delivery_fee === 0 && deliveryWaived > 0 ? deliveryWaived : undefined} sub={s.referral_delivery_credit ? "Your referral reward covers standard delivery" : s.free_delivery_threshold > 0 && s.free_delivery_gap > 0 ? `Free above ${formatINR(s.free_delivery_threshold)} (Unlock by adding ${formatINR(s.free_delivery_gap)} more)` : !selectedAddress ? "Confirmed for your address" : undefined} />
                   {s.express_fee > 0 ? <Row label="Express delivery" value={formatINR(s.express_fee)} /> : null}
                   {s.coupon_discount > 0 ? <Row label={`Coupon (${s.coupon?.code})`} value={<span className="text-success">− {formatINR(s.coupon_discount)}</span>} /> : null}
                   {s.platform_fee > 0 ? <Row label="Platform fee" value={formatINR(s.platform_fee)} /> : null}
                   {s.tax > 0 ? <Row label={`GST on fees (${s.tax_rate}%)`} value={formatINR(s.tax, { precise: true })} /> : null}
                   <Row label="To Pay" value={formatINR(s.total, { precise: true })} strike={savings > 0 ? s.total + savings : undefined} strong />
+                  </>}
                 </div>
               </Card>
 
-              {savings > 0 ? (
+              {savings > 0 && !gate.mustVerify ? (
                 <section className="rounded-2xl border border-success/30 bg-success-50 p-3">
                   <div className="flex items-center justify-between px-1 pb-3"><p className="font-display text-base font-bold text-ink">Savings on this order</p><span className="rounded-md bg-brand-600 px-2.5 py-1 text-sm font-bold text-white">{formatINR(savings)}</span></div>
                   <div className="divide-y divide-dashed divide-line rounded-xl bg-card px-3">
@@ -475,10 +492,11 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
               <>
                 {gate.cartBlocker && selectedAddress ? <Alert tone="warning" className="mb-2">{gate.cartBlocker}</Alert> : null}
                 {!gate.cartBlocker && selectedAddress && !gate.unserved && items.some((l) => l.price_changed) ? <Alert tone="info" className="mb-2">Some prices changed since you added these items. The bill above uses today&rsquo;s prices.</Alert> : null}
-                {!instantOk && !chosenSlot && selectedAddress && !gate.unserved
+                {!instantOk && !chosenSlot && selectedAddress && !gate.unserved && !gate.mustVerify
                   ? <Button size="lg" fullWidth className="h-13 rounded-xl text-base" onClick={() => openSheet("schedule")}>Select delivery options</Button>
                   : <Button size="lg" fullWidth className="h-13 rounded-xl text-base" disabled={gate.ctaDisabled} onClick={() => void gate.proceed()}>{gate.ctaLabel}</Button>}
-                {gate.needsLogin && selectedAddress && !gate.unserved ? <p className="mt-2 text-center text-[11px] text-ink-3">You&rsquo;ll sign in with your mobile number before paying. Your cart and address are kept.</p> : null}
+                {gate.mustVerify ? <p className="mt-2 text-center text-[11px] text-ink-3">Sign in with your mobile number and the code we text you. Your cart is kept.</p>
+                  : gate.needsLogin && selectedAddress && !gate.unserved ? <p className="mt-2 text-center text-[11px] text-ink-3">You&rsquo;ll sign in with your mobile number before paying. Your cart and address are kept.</p> : null}
               </>
             ) : (
               <>
