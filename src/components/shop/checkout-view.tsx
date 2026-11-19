@@ -21,6 +21,7 @@ import { ScheduleSheet } from "./schedule-sheet";
 import { useCheckoutStore } from "@/stores/checkout-store";
 import { parseSlotKey, slotSummary, slotWindow } from "@/lib/slots";
 import { cn, formatINR } from "@/lib/utils";
+import { hasCake } from "@/lib/cake";
 
 declare global { interface Window { Razorpay?: new (opts: Record<string, unknown>) => { open: () => void; on: (e: string, cb: (r: unknown) => void) => void } } }
 
@@ -65,6 +66,10 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
 
   const online = ["upi", "card", "netbanking"] as PaymentMethod[];
   const walletOk = walletBalance >= summary.total;
+  // The wallet is offered only to someone who has money in it; nobody is shown a ₹0 option they cannot use.
+  const showWallet = walletBalance > 0;
+  // A gift message is asked for only when the order has a cake in it.
+  const cakeInCart = hasCake(summary.items);
   // The first reason the order cannot be placed, in the order a customer can fix it. Shown next
   // to the button so a greyed-out "Place order" is never a mystery. The rules themselves come from
   // cart_summary (zone min order, serviceability), not from here.
@@ -89,7 +94,7 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
 
   const place = async () => {
     if (!addressId || placing) return; setConfirming(false); setPlacing(true);
-    const res = await placeOrderAction({ addressId, paymentMethod: payment, deliveryType, instructions: orderNote(instructions, gift), ...scheduledRange() });
+    const res = await placeOrderAction({ addressId, paymentMethod: payment, deliveryType, instructions: orderNote(instructions, cakeInCart ? gift : ""), ...scheduledRange() });
     if (!res.ok) {
       toast.error(res.error); setPlacing(false);
       // The address list on screen can belong to an earlier (guest) session; reload it so the customer picks a current one.
@@ -148,7 +153,7 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
         <Section step={3} title="Payment">
           <div className="space-y-2">
             {codEnabled ? <PayOption active={payment === "cod"} onClick={() => setPayment("cod")} icon={<Banknote className="h-5 w-5 text-brand-600" />} title={upi ? "Cash or UPI on delivery" : "Cash on delivery"} subtitle={upi ? "Pay cash or by PhonePe, Google Pay or Paytm when your order arrives" : "Pay the rider when your order arrives"} /> : null}
-            <PayOption active={payment === "wallet"} disabled={!walletOk} onClick={() => setPayment("wallet")} icon={<Wallet className="h-5 w-5 text-saffron-600" />} title="Merta Wallet" subtitle={`Balance ${formatINR(walletBalance)}${walletOk ? "" : " · insufficient"}`} />
+            {showWallet ? <PayOption active={payment === "wallet"} disabled={!walletOk} onClick={() => setPayment("wallet")} icon={<Wallet className="h-5 w-5 text-saffron-600" />} title="Merta Wallet" subtitle={`Balance ${formatINR(walletBalance)}${walletOk ? "" : " · insufficient"}`} /> : null}
             {razorpayEnabled || upi?.payNow ? <PayOption active={payment === "upi"} onClick={() => setPayment("upi")} icon={<Smartphone className="h-5 w-5 text-info" />} title="UPI · PhonePe, Google Pay, Paytm" subtitle={razorpayEnabled ? "Pay securely in the next step" : "Pay right after ordering; we pack once your payment is confirmed"} /> : null}
             {razorpayEnabled ? <PayOption active={payment === "card"} disabled={!razorpayEnabled} onClick={() => setPayment("card")} icon={<CreditCard className="h-5 w-5 text-info" />} title="Credit / Debit card" subtitle="Visa, Mastercard, RuPay" /> : null}
             {razorpayEnabled ? <PayOption active={payment === "netbanking"} disabled={!razorpayEnabled} onClick={() => setPayment("netbanking")} icon={<Landmark className="h-5 w-5 text-info" />} title="Net banking" subtitle="All major banks" /> : null}
@@ -157,7 +162,7 @@ export function CheckoutView({ initial, addresses: initialAddresses, walletBalan
 
         <Section step={4} title="Delivery instructions (optional)">
           <Textarea value={instructions} onChange={(e) => setInstructions(e.target.value.slice(0, 200))} placeholder="e.g. Ring the bell twice, leave at hotel reception" />
-          <Input label="Gift message (optional)" wrapperClassName="mt-2" value={gift} onChange={(e) => setGift(e.target.value.slice(0, 150))} placeholder="e.g. Happy birthday, Asha!" hint="Ordering for someone else? Put their name and number on the address." />
+          {cakeInCart ? <Input label="Gift message (optional)" wrapperClassName="mt-2" value={gift} onChange={(e) => setGift(e.target.value.slice(0, 150))} placeholder="e.g. Happy birthday, Asha!" hint="Ordering for someone else? Put their name and number on the address." /> : null}
         </Section>
       </div>
 

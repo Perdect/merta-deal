@@ -5,7 +5,7 @@ import Link from "next/link";
 import Script from "next/script";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { lineOptionsText } from "@/lib/cake";
+import { hasCake, lineOptionsText } from "@/lib/cake";
 import { ChevronLeft, X, Clock, TicketPercent, ReceiptText, Check, Plus, Home, Briefcase, MapPin, Zap, CalendarClock, Smartphone, CreditCard, Landmark, Wallet, Banknote, ShoppingBag, BadgePercent, Truck } from "lucide-react";
 import type { Address, CartLine, PaymentMethod, ProductCard as ProductCardType } from "@/types/app";
 import { applyCouponAction, getCartSummary, removeCouponAction } from "@/lib/actions/cart";
@@ -183,6 +183,10 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
   void eta;
   const headerLine = selectedAddress ? `${addressTitle(selectedAddress)} · ${addressLine(selectedAddress)}` : hydrated && location ? location.label : `Delivering across ${site.city}`;
   const walletOk = walletBalance >= (s?.total ?? 0);
+  // The wallet is offered only to someone who has money in it; nobody is shown a ₹0 option they cannot use.
+  const showWallet = walletBalance > 0;
+  // A gift message is asked for only when the order has a cake in it.
+  const cakeInCart = hasCake(items);
 
   const payBlocker = !s ? null : !addressId ? "Select or add a delivery address to continue."
     : !s.serviceable ? (s.service_message ?? "We don't deliver to this address yet.")
@@ -205,7 +209,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
   const place = async () => {
     if (!addressId || !s || placingRef.current) return;
     placingRef.current = true; setConfirming(false); setPlacing(true);
-    const res = await placeOrderAction({ addressId, paymentMethod: payment, deliveryType, instructions: orderNote(instructions, giftMessage), ...scheduledRange() });
+    const res = await placeOrderAction({ addressId, paymentMethod: payment, deliveryType, instructions: orderNote(instructions, cakeInCart ? giftMessage : ""), ...scheduledRange() });
     if (!res.ok) {
       // Nothing was ordered and the cart is untouched; reload it so any change (stock, limit, price) shows.
       toast.error(res.error);
@@ -403,7 +407,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
               <Card className="p-4">
                 <h3 className="font-display text-base font-bold text-ink">Delivery instructions</h3>
                 <Textarea value={instructions} onChange={(e) => setInstructions(e.target.value.slice(0, 200))} placeholder="e.g. Ring the bell twice, leave at hotel reception" className="mt-2" />
-                <Input label="Gift message (optional)" wrapperClassName="mt-2" value={giftMessage} onChange={(e) => setGiftMessage(e.target.value.slice(0, 150))} placeholder="e.g. Happy birthday, Asha!" hint="Ordering for someone else? Put their name and number on the address." />
+                {cakeInCart ? <Input label="Gift message (optional)" wrapperClassName="mt-2" value={giftMessage} onChange={(e) => setGiftMessage(e.target.value.slice(0, 150))} placeholder="e.g. Happy birthday, Asha!" hint="Ordering for someone else? Put their name and number on the address." /> : null}
               </Card>
 
               {suggestions.filter((p) => !items.some((i) => i.product_id === p.id)).length ? (
@@ -456,7 +460,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
               <div className="space-y-3">
                 {razorpayEnabled || upi?.payNow ? <div><p className="mb-1.5 px-1 text-sm font-bold text-ink">Pay by UPI</p><Card><PayRow current={payment} onPick={setPayment} id="upi" icon={<Smartphone className="h-5 w-5" />} title="UPI · PhonePe, Google Pay, Paytm" sub={razorpayEnabled ? "Pay securely in the next step" : "Pay right after ordering; we pack once your payment is confirmed"} /></Card></div> : null}
                 {razorpayEnabled ? <div><p className="mb-1.5 px-1 text-sm font-bold text-ink">Credit & Debit Cards</p><Card><PayRow current={payment} onPick={setPayment} id="card" icon={<CreditCard className="h-5 w-5" />} title="Add New Card" sub={razorpayEnabled ? "Visa, Mastercard, RuPay & more" : "Available once online payments are set up"} disabled={!razorpayEnabled} /></Card></div> : null}
-                <div><p className="mb-1.5 px-1 text-sm font-bold text-ink">Wallets</p><Card><PayRow current={payment} onPick={setPayment} id="wallet" icon={<Wallet className="h-5 w-5" />} title="Merta Wallet" sub={`Balance ${formatINR(walletBalance)}${walletOk ? "" : " · insufficient for this order"}`} disabled={!walletOk} /></Card></div>
+                {showWallet ? <div><p className="mb-1.5 px-1 text-sm font-bold text-ink">Wallets</p><Card><PayRow current={payment} onPick={setPayment} id="wallet" icon={<Wallet className="h-5 w-5" />} title="Merta Wallet" sub={`Balance ${formatINR(walletBalance)}${walletOk ? "" : " · insufficient for this order"}`} disabled={!walletOk} /></Card></div> : null}
                 {razorpayEnabled ? <div><p className="mb-1.5 px-1 text-sm font-bold text-ink">Netbanking</p><Card><PayRow current={payment} onPick={setPayment} id="netbanking" icon={<Landmark className="h-5 w-5" />} title="Net banking" sub={razorpayEnabled ? "All major banks" : "Available once online payments are set up"} disabled={!razorpayEnabled} /></Card></div> : null}
                 {codEnabled ? <div><p className="mb-1.5 px-1 text-sm font-bold text-ink">Pay on delivery</p><Card><PayRow current={payment} onPick={setPayment} id="cod" icon={<Banknote className="h-5 w-5" />} title={upi ? "Cash or UPI on delivery" : "Cash on delivery"} sub={upi ? "Pay cash or by PhonePe, Google Pay or Paytm when your order arrives" : "Pay the rider when your order arrives"} /></Card></div> : null}
               </div>

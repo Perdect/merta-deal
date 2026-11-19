@@ -31,3 +31,13 @@ export function lineOptionsText(l: { eggless?: boolean | null; cake_message?: st
   if (l.cake_message) parts.push(`Message on cake: “${l.cake_message}”`);
   return parts.length ? parts.join(" · ") : null;
 }
+
+/**
+ * Is this cart or order line a cake? Lines carry neither the category nor the tags, so this goes by what
+ * they do carry: a cake option chosen on the line, or the word "cake" in the product name. Used only to
+ * decide whether the optional gift-message box is worth showing, so a near miss costs nothing.
+ */
+export function isCakeLine(l: { name?: string | null; eggless?: boolean | null; cake_message?: string | null }) {
+  return Boolean(l.eggless || l.cake_message) || /\bcakes?\b/i.test(l.name ?? "");
+}
+export function hasCake(lines: { name?: string | null; eggless?: boolean | null; cake_message?: string | null }[]) { return lines.some(isCakeLine); }
