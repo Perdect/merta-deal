@@ -77,7 +77,8 @@ export function AddressForm({ initial, onSaved, onCancel, defaultName, defaultPh
       // The pin is set; the address text is a suggestion that arrives when the geocoder answers, filling only fields still empty.
       geocodeRef.current?.abort();
       const ctrl = new AbortController(); geocodeRef.current = ctrl;
-      const timeout = setTimeout(() => ctrl.abort(), 6000);
+      let timedOut = false;
+      const timeout = setTimeout(() => { timedOut = true; ctrl.abort(); }, 6000);
       try {
         const d = await (await fetch(`/api/maps/geocode?lat=${lat.toFixed(6)}&lng=${lng.toFixed(6)}`, { signal: ctrl.signal })).json() as { ok: boolean; area?: string; pincode?: string; street?: string; formatted?: string; source?: string };
         if (d.ok) {
@@ -85,7 +86,7 @@ export function AddressForm({ initial, onSaved, onCancel, defaultName, defaultPh
           setForm((f) => ({ ...f, area: f.area || d.area || f.area, street: f.street || d.street || f.street }));
           toast.success("Location pinned", d.source === "osm" ? "Area suggested from OpenStreetMap. Check it before saving." : "Check the suggested area before saving.");
         } else toast.info("Location pinned", "Type your house and area details.");
-      } catch { if (!ctrl.signal.aborted || geocodeRef.current === ctrl) toast.info("Location pinned", "The address lookup is slow; type your house and area details."); }
+      } catch { if (!ctrl.signal.aborted || geocodeRef.current === ctrl) toast.info("Location pinned", timedOut ? "The address lookup is slow; type your house and area details." : "We couldn't look up the address just now; type your house and area details."); }
       finally { clearTimeout(timeout); if (geocodeRef.current === ctrl) { geocodeRef.current = null; setLocating(null); } }
     }, (err) => {
       toast.error(err.code === err.PERMISSION_DENIED ? "Location permission is blocked. You can still type the address, or choose it on the map." : "Could not get your location. Type the address or choose it on the map.");

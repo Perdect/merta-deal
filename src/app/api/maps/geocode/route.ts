@@ -6,7 +6,10 @@ export const dynamic = "force-dynamic";
 
 type Suggestion = { ok: true; source: "google" | "osm"; formatted: string; street?: string; area?: string; city?: string; pincode?: string };
 const NO_MATCH = { ok: false, message: "Location pinned. Please type your house and area details." };
-const UPSTREAM_MS = 4000;
+/* The form gives up on a lookup after 6 s. Google is asked first but briefly (a refused key answers in well
+   under a second; a hung call must not eat the whole budget), then OpenStreetMap: 1.5 s + 3.5 s at worst. */
+const GOOGLE_MS = 1500;
+const OSM_MS = 3500;
 /* A key that Google refuses (billing off, API disabled, referrer rules) is refused on every call; remembering
    that for a while saves a dead round trip in front of the OpenStreetMap answer on each pin and GPS tap. */
 let googleDeniedUntil = 0;
@@ -32,7 +35,7 @@ export async function GET(req: NextRequest) {
 }
 
 async function google(lat: number, lng: number, key: string): Promise<Suggestion | null> {
-  const r = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&region=in&key=${key}`, { headers: { Referer: `${site.url}/` }, signal: AbortSignal.timeout(UPSTREAM_MS) });
+  const r = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&region=in&key=${key}`, { headers: { Referer: `${site.url}/` }, signal: AbortSignal.timeout(GOOGLE_MS) });
   const d = await r.json() as { status: string; error_message?: string; results: { formatted_address: string; address_components: { long_name: string; types: string[] }[] }[] };
   if (d.status !== "OK" || !d.results.length) {
     if (d.status !== "ZERO_RESULTS") console.warn("maps/geocode: Google returned", d.status, d.error_message ?? "");
@@ -49,7 +52,7 @@ async function osm(lat: number, lng: number): Promise<Suggestion | null> {
   const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&zoom=18&lat=${lat.toFixed(4)}&lon=${lng.toFixed(4)}`;
   const r = await fetch(url, {
     headers: { "User-Agent": `MertaDeal/1.0 (${site.url}; ${site.supportEmail})`, "Accept-Language": "en-IN,en" },
-    next: { revalidate: 60 * 60 * 24 * 7 }, signal: AbortSignal.timeout(UPSTREAM_MS),
+    next: { revalidate: 60 * 60 * 24 * 7 }, signal: AbortSignal.timeout(OSM_MS),
   });
   if (!r.ok) return null;
   const d = await r.json() as { display_name?: string; address?: Record<string, string> };
