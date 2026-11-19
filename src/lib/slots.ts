@@ -62,3 +62,20 @@ export function parseSlotKey(key: string | null | undefined): { date: string; ra
 export function slotSummary(key: string | null | undefined, now = new Date()): string | null {
   const p = parseSlotKey(key); return p ? `${dayLabel(p.date, now)} · ${rangeLabel(p.range)}` : null;
 }
+
+/** Opening hours from the `business_hours` setting ("HH:MM", close may be "24:00"). */
+export type OpenHours = { open: string; close: string };
+/**
+ * When the shop is closed by the clock (India time), the label of the time it opens next ("6 AM");
+ * null while it is within hours, or when the hours are missing or malformed. It says nothing about
+ * ordering being switched off or the shop being at capacity: callers use it only to explain "closed".
+ */
+export function opensAtIfClosed(hours: OpenHours | null | undefined, now = new Date()): string | null {
+  if (!hours || !/^\d{1,2}:\d{2}$/.test(hours.open ?? "") || !/^\d{1,2}:\d{2}$/.test(hours.close ?? "")) return null;
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(now);
+  const mins = (Number(parts.find((x) => x.type === "hour")?.value ?? 0) % 24) * 60 + Number(parts.find((x) => x.type === "minute")?.value ?? 0);
+  const toMin = (t: string) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+  const open = toMin(hours.open), close = toMin(hours.close);
+  const within = open < close ? mins >= open && mins < close : open > close ? mins >= open || mins < close : true;
+  return within ? null : hourLabel(hours.open);
+}

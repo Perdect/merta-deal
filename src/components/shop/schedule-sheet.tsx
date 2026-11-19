@@ -4,7 +4,7 @@ import { Zap, CalendarDays, Sunrise, Sun, Sunset, Info } from "lucide-react";
 import { BottomSheet } from "@/components/ui/overlay";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { upcomingSlots, type SlotOption } from "@/lib/slots";
+import { opensAtIfClosed, upcomingSlots, type OpenHours, type SlotOption } from "@/lib/slots";
 
 export type ScheduleChoice = { type: "standard" } | { type: "scheduled"; key: string };
 const GROUPS: { id: SlotOption["group"]; icon: React.ReactNode }[] = [
@@ -18,8 +18,9 @@ const GROUPS: { id: SlotOption["group"]; icon: React.ReactNode }[] = [
  * number of days come from settings; a slot is offered only if it still starts after the lead time.
  * Mount it fresh each time it opens (the parent renders it only while open) so the slot list reflects "now".
  */
-export function ScheduleSheet({ onClose, ranges, leadMinutes, daysAhead, instantAvailable, etaLabel, itemCount, current, onConfirm }: {
+export function ScheduleSheet({ onClose, ranges, leadMinutes, daysAhead, instantAvailable, etaLabel, itemCount, current, onConfirm, hours }: {
   onClose: () => void; ranges: string[]; leadMinutes: number; daysAhead: number;
+  /** Opening hours (setting `business_hours`): lets a closed shop say when it opens instead of only "unavailable". */ hours?: OpenHours | null;
   /** False outside business hours: the instant tile is shown but cannot be chosen. */ instantAvailable: boolean;
   etaLabel: string | null; itemCount: number; current: ScheduleChoice; onConfirm: (c: ScheduleChoice) => void;
 }) {
@@ -32,6 +33,8 @@ export function ScheduleSheet({ onClose, ranges, leadMinutes, daysAhead, instant
   });
   const day = days[dayIdx];
   const noSlots = days.every((d) => d.slots.length === 0);
+  // Only a shop that is closed by the clock gets an opening time; switched off or at capacity stays "unavailable".
+  const opensAt = instantAvailable ? null : opensAtIfClosed(hours);
   const canConfirm = mode === "instant" ? instantAvailable : Boolean(key && day?.slots.some((s) => s.key === key));
 
   return (
@@ -45,7 +48,7 @@ export function ScheduleSheet({ onClose, ranges, leadMinutes, daysAhead, instant
       <div className="grid grid-cols-2 gap-2">
         <button type="button" disabled={!instantAvailable} aria-pressed={mode === "instant"} onClick={() => setMode("instant")}
           className={cn("flex items-start justify-between rounded-xl border p-3 text-left disabled:cursor-not-allowed", mode === "instant" ? "border-brand-600 bg-brand-50" : "border-line bg-surface-2", !instantAvailable && "opacity-70")}>
-          <span><span className="block text-sm font-bold text-ink">Instant Delivery</span><span className="block text-xs text-ink-3">{instantAvailable ? (etaLabel ? `In about ${etaLabel}` : "Right away") : "Unavailable right now"}</span></span>
+          <span><span className="block text-sm font-bold text-ink">Instant Delivery</span><span className="block text-xs text-ink-3">{instantAvailable ? (etaLabel ? `In about ${etaLabel}` : "Right away") : opensAt ? `Closed now · opens ${opensAt}` : "Unavailable right now"}</span></span>
           <Zap className={cn("h-5 w-5", instantAvailable ? "text-brand-600" : "text-ink-4")} aria-hidden />
         </button>
         <button type="button" aria-pressed={mode === "scheduled"} onClick={() => setMode("scheduled")}
@@ -57,7 +60,7 @@ export function ScheduleSheet({ onClose, ranges, leadMinutes, daysAhead, instant
 
       {mode === "scheduled" ? (
         <div className="mt-4">
-          {noSlots ? <p className="rounded-xl bg-surface-2 px-3 py-4 text-center text-sm text-ink-3">No slots are open right now. Please check back later.</p> : (
+          {noSlots ? <p className="rounded-xl bg-surface-2 px-3 py-4 text-center text-sm text-ink-3">{ranges.length === 0 ? "Scheduled delivery isn't available yet." : "No slots are open right now."}{opensAt ? ` You can order again from ${opensAt}.` : ranges.length === 0 ? "" : " Please check back later."}</p> : (
             <>
               <div className="grid gap-1 border-b border-line" style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }} role="tablist">
                 {days.map((d, i) => (

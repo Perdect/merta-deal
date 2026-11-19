@@ -39,7 +39,7 @@ declare global { interface Window { Razorpay?: new (opts: Record<string, unknown
 
 type Coupon = { code: string; title: string; min_order_amount: number };
 type Props = {
-  signedIn: boolean; isGuest: boolean; addresses: Address[]; walletBalance: number; razorpayEnabled: boolean; codEnabled: boolean; /** Setting `order_mobile_otp_required`: guests confirm their number by OTP before the payment step. */ verifyMobile?: boolean; slots: string[]; /** Slot rules from settings: lead time and days offered. */ slotRules: { leadMinutes: number; daysAhead: number };
+  signedIn: boolean; isGuest: boolean; addresses: Address[]; walletBalance: number; razorpayEnabled: boolean; codEnabled: boolean; /** Setting `order_mobile_otp_required`: guests confirm their number by OTP before the payment step. */ verifyMobile?: boolean; /** Setting `business_hours`, for the closed-shop message. */ hours?: { open: string; close: string } | null; slots: string[]; /** Slot rules from settings: lead time and days offered. */ slotRules: { leadMinutes: number; daysAhead: number };
   coupons: Coupon[]; user: { name: string | null; phone: string | null }; eta: { min: number; max: number };
 };
 const TYPE_ICON = { home: Home, work: Briefcase, other: MapPin };
@@ -77,7 +77,7 @@ function PayRow({ id, current, onPick, icon, title, sub, disabled }: { id: Payme
  * through place_order — this component only arranges them. The address and sign-in sheets live here
  * too and open from any page (cart store `sheet`), the panel itself need not be open.
  */
-export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, walletBalance, razorpayEnabled, codEnabled, verifyMobile = false, slots, slotRules, coupons, user, eta }: Props) {
+export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, walletBalance, razorpayEnabled, codEnabled, verifyMobile = false, hours = null, slots, slotRules, coupons, user, eta }: Props) {
   const router = useRouter();
   const hydrated = useHydrated();
   const step = useCartStore((s) => s.drawer);
@@ -244,7 +244,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
     <>
       <PlaceOrderSheet open={confirming} onClose={() => setConfirming(false)} onPlace={() => void place()} address={selectedAddress} total={s?.total ?? 0} payment={payment} upi={Boolean(upi)} upiNow={Boolean(upi?.payNow) && !razorpayEnabled} />
       {sheet === "schedule" && s ? (
-        <ScheduleSheet onClose={closeSheet} ranges={slots} leadMinutes={slotRules.leadMinutes} daysAhead={slotRules.daysAhead} instantAvailable={instantOk} etaLabel={etaLabel} itemCount={s.item_count}
+        <ScheduleSheet onClose={closeSheet} ranges={slots} leadMinutes={slotRules.leadMinutes} daysAhead={slotRules.daysAhead} instantAvailable={instantOk} hours={hours} etaLabel={etaLabel} itemCount={s.item_count}
           current={chosenSlot ? { type: "scheduled", key: chosenSlot } : { type: "standard" }}
           onConfirm={(c) => { if (c.type === "scheduled") { setSlotKey(c.key); setDeliveryType("scheduled"); } else if (deliveryType === "scheduled") setDeliveryType("standard"); closeSheet(); }} />
       ) : null}
