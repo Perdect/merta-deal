@@ -1,8 +1,8 @@
 "use client";
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { KeyRound, Bell, Languages, UserPlus, Trash2, CheckCircle2 } from "lucide-react";
+import { KeyRound, Bell, Languages, UserPlus, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { updateProfileAction, createTicketAction } from "@/lib/actions/account";
 import type { Profile } from "@/types/app";
@@ -111,57 +111,16 @@ export function PreferencesForm({ profile }: { profile: Profile }) {
   );
 }
 
-/* -------------------------------------------------------------- save account */
-export function SaveAccountForm({ profile }: { profile: Profile }) {
-  const [name, setName] = React.useState(profile.full_name && profile.full_name !== "Guest" ? profile.full_name : "");
-  const [phone, setPhone] = React.useState(profile.phone ?? "");
-  const [password, setPassword] = React.useState("");
-  const [errors, setErrors] = React.useState<Record<string, string>>({});
-  const [busy, setBusy] = React.useState(false);
-  const [done, setDone] = React.useState<string | null>(null);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (busy) return;
-    const errs: Record<string, string> = {};
-    if (name.trim().length < 2) errs.name = "Enter your name";
-    if (!isValidIndianMobile(phone)) errs.phone = "Enter a valid 10-digit mobile number";
-    if (!/^\d{6}$/.test(password)) errs.password = "PIN must be exactly 6 digits";
-    setErrors(errs);
-    if (Object.keys(errs).length) return;
-    setBusy(true);
-    try {
-      // Converts the anonymous session into a permanent mobile + PIN account (phone OTP only when the project requires confirmation).
-      const { error } = await createClient().auth.updateUser({ phone: `+91${phone}`, password, data: { full_name: name.trim(), phone } });
-      if (error) { toast.error("Could not save your account", error.message); return; } // name, number and PIN stay filled in
-      setDone(phone);
-    } catch {
-      toast.error("Could not save your account", "Check your connection and try again.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  if (done) {
-    return (
-      <SettingsCard id="save-account" icon={<UserPlus className="h-5 w-5" />} title="Account saved">
-        <Alert tone="success" icon={<CheckCircle2 className="h-4 w-4" />} title={`You can now sign in with +91 ${done}`}>
-          Use this mobile number and your PIN on any device — your orders, addresses and wallet stay with you. If your number needs verification, enter the SMS code on the sign-in page.
-        </Alert>
-      </SettingsCard>
-    );
-  }
+/* ------------------------------------------------------------ guest sign-in */
+/**
+ * A guest has nothing to fill in here: signing in with the mobile number and the code we text is what makes
+ * the account, and the guest's cart and addresses move over with it (the sign-in screen sends the guest id along).
+ */
+export function GuestSignInCard() {
+  const pathname = usePathname();
   return (
-    <SettingsCard id="save-account" icon={<UserPlus className="h-5 w-5" />} title="Save your account" description="You're browsing as a guest. Add your mobile number and a 6-digit PIN so you can sign in again and keep your orders, addresses and wallet.">
-      <form onSubmit={submit} className="space-y-3">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Input label="Full name" required value={name} onChange={(e) => setName(e.target.value)} error={errors.name} autoComplete="name" />
-          <Input label="Mobile number" required inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))} error={errors.phone} autoComplete="tel" />
-          <Input label="6-digit PIN" type="password" inputMode="numeric" required minLength={6} maxLength={6} pattern="[0-9]{6}" value={password} onChange={(e) => setPassword(e.target.value.replace(/\D/g, "").slice(0, 6))} error={errors.password} autoComplete="new-password" wrapperClassName="sm:col-span-2" />
-        </div>
-        <p className="text-xs text-ink-3">Your mobile number becomes your login.</p>
-        <Button type="submit" fullWidth loading={busy} disabled={busy}>Save my account</Button>
-      </form>
+    <SettingsCard id="save-account" icon={<UserPlus className="h-5 w-5" />} title="Sign in to keep your orders" description="You're browsing as a guest. Sign in with your mobile number and the code we text you; your cart and addresses come with you.">
+      <Link href={`/login?next=${encodeURIComponent(pathname)}`} className="tap flex h-12 w-full items-center justify-center rounded-md bg-brand-600 text-base font-semibold text-white hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600">Login with mobile number</Link>
     </SettingsCard>
   );
 }

@@ -32,6 +32,9 @@ const nextConfig: NextConfig = {
       // lands on the line that now holds the goods. Bringing a shelf back under the same slug means
       // deleting its line here first, or this redirect will shadow the real page.
       ...Object.entries(RETIRED_CATEGORIES).map(([slug, line]) => ({ source: `/c/${slug}`, destination: `/c/${line}`, permanent: true })),
+      // Customers sign in with a mobile number and an OTP only; the old sign-up and PIN-reset pages are gone.
+      { source: "/register", destination: "/login", permanent: false },
+      { source: "/forgot-password", destination: "/login", permanent: false },
       { source: "/grocery-merta-city", destination: "/c/grocery", permanent: true },
       { source: "/fresh-grocery-merta", destination: "/c/vegetables", permanent: true },
       { source: "/masala-merta", destination: "/c/grocery", permanent: true },

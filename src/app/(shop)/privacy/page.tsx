@@ -16,7 +16,7 @@ export default function PrivacyPage() {
       <section>
         <h2>1. Data we collect</h2>
         <ul>
-          <li><b>Account:</b> your mobile number, name, and (if you add them) email address and profile photo. Your sign-in PIN is stored only in encrypted (hashed) form; we cannot read it.</li>
+          <li><b>Account:</b> your mobile number, name, and (if you add them) email address and profile photo. You sign in with a one-time code sent to your mobile number, so there is no password to keep. A PIN set on an older account is stored only in encrypted (hashed) form; we cannot read it.</li>
           <li><b>Guest browsing:</b> if you shop without signing in, we create an anonymous guest session so your cart works.</li>
           <li><b>Addresses and location:</b> the delivery addresses you save, including a map pin. We read your device&rsquo;s location only when you tap &ldquo;use my location&rdquo; and allow it.</li>
           <li><b>Orders:</b> items, cart, coupons used, order history, delivery OTPs, ratings and reviews, and support conversations.</li>

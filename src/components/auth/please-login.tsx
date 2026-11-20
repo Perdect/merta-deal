@@ -1,11 +1,8 @@
 "use client";
 import * as React from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LoginModal } from "./login-modal";
-import { env } from "@/lib/env";
 
 /**
  * Signed-out visitor on a private page (account, orders, checkout): the page stays in the shop frame
@@ -15,7 +12,6 @@ import { env } from "@/lib/env";
 export function PleaseLogin({ title = "Please login", description = "Please login to access your account.", eta, loginTitle, defaultMobile }: {
   title?: string; description?: string; /** "20 mins" style figure for the sign-in sheet. */ eta: string; loginTitle?: string; /** Mobile from the address a guest already saved, pre-filled in the sheet. */ defaultMobile?: string | null;
 }) {
-  const pathname = usePathname();
   const [open, setOpen] = React.useState(false);
   return (
     <section className="flex min-h-[60dvh] flex-col items-center justify-center px-4 py-16 text-center sm:px-0">
@@ -23,7 +19,7 @@ export function PleaseLogin({ title = "Please login", description = "Please logi
       <h1 className="font-display text-2xl font-extrabold text-ink">{title}</h1>
       <p className="mt-2 max-w-sm text-sm text-ink-3">{description}</p>
       <Button size="lg" className="mt-7 h-13 w-full max-w-md rounded-xl text-base" onClick={() => setOpen(true)}>Login</Button>
-      {env.phoneAuthEnabled ? <p className="mt-4 text-sm text-ink-3">Just your mobile number and an OTP. No account to create.</p> : <p className="mt-4 text-sm text-ink-3">New to Merta Deal? <Link href={`/register?next=${encodeURIComponent(pathname)}`} className="font-semibold text-brand-700">Create account</Link></p>}
+      <p className="mt-4 text-sm text-ink-3">Just your mobile number and an OTP. No account to create.</p>
       <LoginModal open={open} onClose={() => setOpen(false)} eta={eta} title={loginTitle} defaultMobile={defaultMobile} />
     </section>
   );

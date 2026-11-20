@@ -1,5 +1,6 @@
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Star, ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react";
 import { cn, formatINR, initials } from "@/lib/utils";
 
@@ -64,13 +65,14 @@ export function QuantityStepper({ value, onChange, min = 0, max = 99, size = "md
 }
 
 export function Logo({ className, size = "md", light }: { className?: string; size?: "sm" | "md" | "lg"; light?: boolean }) {
-  const s = { sm: { box: 26, text: "text-base" }, md: { box: 32, text: "text-lg" }, lg: { box: 44, text: "text-2xl" } }[size];
+  const heights = { sm: 25, md: 32, lg: 42 };
   return (
     <Link href="/" className={cn("tap inline-flex items-center gap-2", className)} aria-label="Merta Deal home">
-      <LogoMark size={s.box} />
-      <span className={cn("font-display font-extrabold tracking-tight", s.text, light ? "text-white" : "text-ink")}>
-        Merta<span className={light ? "text-saffron-300" : "text-fresh"}>Deal</span>
-      </span>
+      {light ? (
+        <><LogoMark size={heights[size]} /><span className="font-display text-lg font-extrabold tracking-tight text-white">Merta<span className="text-saffron-300">Deal</span></span></>
+      ) : (
+        <Image src="/brand/merta-deal-wordmark.webp" alt="Merta Deal" width={870} height={205} className="h-auto w-auto" style={{ height: heights[size], maxWidth: "none" }} />
+      )}
     </Link>
   );
 }

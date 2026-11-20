@@ -20,7 +20,7 @@ export default function TermsPage() {
       <section>
         <h2>2. Your account</h2>
         <ul>
-          <li>You sign in with your mobile number and a 6-digit PIN. Keep your PIN private; you are responsible for orders placed from your account.</li>
+          <li>You sign in with your mobile number and a one-time code (OTP) sent to it by SMS; there is no separate sign-up. Never share the code; you are responsible for orders placed from your account.</li>
           <li>Give correct contact and address details so we can deliver. You must be 18 or older, or use the service with a parent or guardian.</li>
           <li>We may suspend accounts used for fraud, abuse of offers, or harassment of our staff or delivery partners.</li>
         </ul>

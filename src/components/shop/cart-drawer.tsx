@@ -257,7 +257,7 @@ export function CartDrawer({ signedIn, isGuest, addresses: serverAddresses, wall
       ) : null}
       <AddressSheet open={sheet === "address"} onClose={closeSheet} addresses={addresses} selectedId={addressId} defaultName={user.name} defaultPhone={user.phone}
         onPick={(a, isNew) => { if (isNew) { addAddress(a); notifySessionChanged(); router.refresh(); } setAddressId(a.id); void adoptAddress(a); closeSheet(); }} />
-      <LoginModal key={selectedAddress?.phone ?? ""} defaultMobile={selectedAddress?.phone} open={sheet === "login" && !account} onClose={() => { closeSheet(); setResume(null); }} onVerified={closeSheet} eta={`${eta.min}–${eta.max} minutes`} guest={isGuest} title={resume === "pay" ? "Login to place your order" : undefined} />
+      <LoginModal key={selectedAddress?.phone ?? ""} defaultMobile={selectedAddress?.phone} open={sheet === "login" && !account} onClose={() => { closeSheet(); setResume(null); }} onVerified={closeSheet} eta={`${eta.min}–${eta.max} minutes`} title={resume === "pay" ? "Login to place your order" : undefined} />
     </>
   );
 

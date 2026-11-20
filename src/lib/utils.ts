@@ -127,7 +127,7 @@ export function friendlyError(err: unknown): string {
   // SMS OTP could not be sent (Supabase sms_send_failed). The customer gets a plain line; the provider's text goes to the console for the admin.
   if (/Error sending confirmation OTP|sms_send_failed|verified tester|predefined SMS templates/i.test(raw)) {
     console.warn("sms otp:", raw);
-    return /verified tester/i.test(raw) ? "OTP can't be sent to this number yet. Please sign in with your PIN, or try another number." : "We couldn't send the OTP right now. Please try again in a minute or sign in with your PIN.";
+    return /verified tester/i.test(raw) ? "OTP can't be sent to this number yet. Please try another number." : "We couldn't send the OTP right now. Please try again in a minute.";
   }
   if (raw.startsWith("ITEMS_UNAVAILABLE")) return "Some items in your cart changed (stock or per-order limit). Review your cart and try again.";
   if (/inventory_stock_qty_check|violates check constraint "inventory_stock/i.test(raw)) return "Some items just sold out. Review your cart and try again.";

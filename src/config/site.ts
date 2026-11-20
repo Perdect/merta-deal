@@ -39,7 +39,7 @@ export const customerNav = [
   { href: "/", label: "Home", icon: "home", match: ["/"] },
   { href: "/categories", label: "Categories", icon: "grid", match: ["/categories", "/c/", "/p/"] },
   { href: "/search", label: "Search", icon: "search", match: ["/search"] },
-  { href: "/account", label: "Account", icon: "user", match: ["/account", "/orders", "/login", "/register", "/forgot-password", "/track"] },
+  { href: "/account", label: "Account", icon: "user", match: ["/account", "/orders", "/login", "/track"] },
 ] as const;
 
 export const riderNav = [

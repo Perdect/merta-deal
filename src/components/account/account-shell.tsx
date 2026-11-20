@@ -18,7 +18,7 @@ const MORE = [
   { href: "/account/rewards", label: "Rewards", icon: Star },
   { href: "/account/wholesale", label: "Wholesale orders", icon: Store },
   { href: "/account/notifications", label: "Notifications", icon: Bell },
-  { href: "/account/settings", label: "Settings & PIN", icon: Settings },
+  { href: "/account/settings", label: "Settings", icon: Settings },
 ];
 function Item({ href, label, icon: Icon, compact, current }: { href: string; label: string; icon: LucideIcon; compact?: boolean; current: boolean }) {
   return (

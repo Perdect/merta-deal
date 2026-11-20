@@ -11,6 +11,8 @@ import { BannerCarousel } from "@/components/shop/banner-carousel";
 import { site } from "@/config/site";
 import { paymentPhrase } from "@/lib/seo-copy";
 import type { Metadata } from "next";
+import Link from "next/link";
+import { ArrowRight, MapPin, ShoppingBag } from "lucide-react";
 
 export const revalidate = 60;
 
@@ -61,13 +63,21 @@ export default async function HomePage() {
   const etaLabel = `${num("delivery_eta_min_minutes", 20)} min`;
 
   return (
-    <div className="space-y-4 pt-2.5 sm:space-y-7 sm:pt-4">
+    <div className="space-y-5 pt-2.5 sm:space-y-8 sm:pt-5">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdHtml(homeJsonLd(settings)) }} />
-      {/* The page's one H1 is visible and says what the service is (one compact line on phones); the shopping sections follow. */}
-      <header className="px-4 sm:px-0">
-        <h1 className="font-display text-[17px] font-bold leading-tight text-ink sm:text-2xl">{homeH1}</h1>
-        <p className="mt-0.5 line-clamp-1 text-[13px] text-ink-2 sm:line-clamp-none sm:text-sm">{capitalise(listNames(home.categories.map((c) => c.name.toLowerCase())))} delivered to your home in {site.city}, Rajasthan, with a {etaLabel} delivery target.</p>
-      </header>
+      <section className="relative mx-4 overflow-hidden rounded-2xl border border-brand-100 bg-gradient-to-br from-[#f0f9f2] via-white to-[#fff8eb] px-5 py-6 sm:mx-0 sm:rounded-3xl sm:px-9 sm:py-9">
+        <div aria-hidden className="absolute -right-10 -top-16 h-48 w-48 rounded-full bg-brand-100/50 blur-2xl sm:h-64 sm:w-64" />
+        <div className="relative max-w-2xl">
+          <p className="inline-flex items-center gap-1.5 rounded-full border border-brand-200 bg-white/80 px-3 py-1 text-xs font-bold tracking-wide text-brand-800"><MapPin className="h-3.5 w-3.5" aria-hidden /> MADE FOR {site.city.toUpperCase()}</p>
+          <h1 className="mt-4 max-w-xl font-display text-[28px] font-extrabold leading-[1.12] tracking-tight text-ink sm:text-[40px]">{homeH1}</h1>
+          <p className="mt-2 max-w-xl text-sm leading-relaxed text-ink-2 sm:text-base">{capitalise(listNames(home.categories.map((c) => c.name.toLowerCase())))} delivered to your home in {site.city}, Rajasthan. Browse local essentials and place your order in a few simple steps.</p>
+          <div className="mt-5 flex flex-wrap gap-2.5">
+            <Link href="/search" className="tap inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700"><ShoppingBag className="h-4 w-4" aria-hidden />Start shopping<ArrowRight className="h-4 w-4" aria-hidden /></Link>
+            <Link href="/categories" className="tap inline-flex min-h-11 items-center justify-center rounded-xl border border-line-2 bg-white/90 px-5 text-sm font-semibold text-ink transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700">Browse categories</Link>
+          </div>
+          <p className="mt-4 text-xs font-medium text-ink-3">{etaLabel} delivery target across {site.city}</p>
+        </div>
+      </section>
       {home.sections.length ? (
         <HomeBrowse
           tabs={railTabs}
