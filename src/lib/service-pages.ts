@@ -1,7 +1,7 @@
 import { site } from "@/config/site";
 import type { RequestDestination, RequestKind } from "@/lib/service-requests";
 
-export const SERVICE_SLUGS = ["gifts-delivery-merta-city", "sweets-delivery-merta-city", "food-delivery-merta-city", "fast-food-delivery-merta-city", "cake-delivery-merta-city", "bulk-gifts-sweets-merta-city", "urgent-delivery-merta-city", "home-delivery-merta-city", "hotel-delivery-merta-city", "office-delivery-merta-city", "delivery-boy-merta-city"] as const;
+export const SERVICE_SLUGS = ["gifts-delivery-merta-city", "sweets-delivery-merta-city", "food-delivery-merta-city", "fast-food-delivery-merta-city", "pizza-delivery-merta-city", "cake-delivery-merta-city", "bulk-gifts-sweets-merta-city", "urgent-delivery-merta-city", "home-delivery-merta-city", "hotel-delivery-merta-city", "office-delivery-merta-city", "delivery-boy-merta-city"] as const;
 export type ServiceSlug = (typeof SERVICE_SLUGS)[number];
 
 /** Short names for links between the pages, the footer and the sitemap. */
@@ -10,6 +10,7 @@ export const SERVICE_LINKS: { slug: ServiceSlug; href: string; label: string; bl
   { slug: "sweets-delivery-merta-city", href: "/sweets-delivery-merta-city", label: "Sweets delivery", blurb: "Mithai ordered online and delivered locally" },
   { slug: "food-delivery-merta-city", href: "/food-delivery-merta-city", label: "Food delivery", blurb: "Meals from local kitchens, confirmed before you pay" },
   { slug: "fast-food-delivery-merta-city", href: "/fast-food-delivery-merta-city", label: "Fast food delivery", blurb: "Snacks and quick bites, delivered hot where possible" },
+  { slug: "pizza-delivery-merta-city", href: "/pizza-delivery-merta-city", label: "Pizza delivery", blurb: "Ask what can be made today; price and time confirmed first" },
   { slug: "cake-delivery-merta-city", href: "/cake-delivery-merta-city", label: "Cake delivery", blurb: "Ready cakes and custom cakes with confirmed timing" },
   { slug: "bulk-gifts-sweets-merta-city", href: "/bulk-gifts-sweets-merta-city", label: "Bulk gifts & sweets", blurb: "Weddings, festivals and offices, by quotation" },
   { slug: "urgent-delivery-merta-city", href: "/urgent-delivery-merta-city", label: "Urgent delivery", blurb: "Eligible orders, with a delivery time target" },
@@ -70,6 +71,8 @@ const directoryLinks = [
   { href: "/bakeries-merta-city", label: `Bakeries in ${city}` },
   { href: "/hotels-merta-city", label: `Hotels in ${city}` },
 ];
+/** Payment wording from the live settings; when they give none, the honest fallback. */
+const payLine = (c: ServiceContext) => c.pay || "We confirm the payment method with your order.";
 const hoursLine = (c: ServiceContext) => (c.hours ? `Requests are handled during our order hours, ${c.hours}.` : "Call us to check today's timings.");
 const targetFactors = "product availability, preparation time, delivery distance and rider availability";
 
@@ -264,81 +267,148 @@ export function serviceCopy(slug: ServiceSlug, c: ServiceContext): ServiceCopy {
       };
     case "food-delivery-merta-city":
       return {
-        title: `Food Delivery in ${city}: Meals Brought to You`,
-        description: `Food delivery in ${city}, Rajasthan, to homes, hotels and offices. Tell ${site.seoName} what you'd like and we confirm availability, price and time first.`,
-        h1: `Food delivery in ${city}`, crumb: "Food delivery", serviceType: "Food delivery",
-        hindi: `${site.cityHindi} में खाने की डिलीवरी। क्या खाना है बताइए, उपलब्धता, कीमत और समय हम पहले बताएंगे।`,
+        title: `Food Delivery in ${city}: Breakfast, Lunch, Dinner & Khana`,
+        description: `Online food delivery in ${city}, Rajasthan: breakfast, lunch, dinner and everyday khana to homes, hotels and offices. Send ${site.seoName} a request and we confirm what is available, the price and the time first.`,
+        h1: `Food delivery in ${city}: breakfast, lunch and dinner`, crumb: "Food delivery", serviceType: "Food delivery",
+        hindi: `${site.cityHindi} में खाने की ऑनलाइन डिलीवरी: नाश्ता, दोपहर का खाना और रात का खाना। क्या खाना है बताइए; उपलब्धता, कीमत और समय हम पहले बताएँगे।`,
         intro: [
-          `Too tired to cook, or staying in town for work? Tell ${site.seoName} what you feel like eating and where you are, and we'll check what we can bring you in ${city}.`,
-          "Restaurants that list with us show their own menus and prices. For everything else, we confirm the food, the price and a delivery estimate before you pay.",
+          `Too tired to cook, travelling for work, or looking after someone at home? You can place an online khana order in ${city} with ${site.seoName}: tell us what you would like to eat, for which meal, and where it should go.`,
+          `Cooked meals are not sold from a fixed menu in our shop yet. So for breakfast, lunch or dinner we take your request, check what can be arranged at that hour, and reply with the food, the full amount and an honest estimate before you pay. Restaurants that list with us show their own menus and prices on their pages.`,
         ],
-        order: { label: "Order food", href: "#request" },
+        notice: "Cooked meals are taken by request, not from a fixed online menu. Nothing is ordered until we confirm what is available, the price and the time with you.",
+        order: { label: "Order food by request", href: "#request" },
         whatsappText: `Hi ${site.seoName}, can you deliver food in ${city} now?`,
-        offersTitle: "When people order",
+        offersTitle: "When people order food here",
         offers: [
-          { t: "Lunch at work", s: "A meal to your office, so you don't lose your break." },
+          { t: "Lunch at work", s: "A meal to your office or shop, so you do not lose your break." },
           { t: "Dinner at home", s: "For evenings when nobody wants to cook." },
-          { t: "Staying at a hotel", s: "A meal to your room or the reception." },
-          { t: "Family visiting", s: "Extra food when guests turn up." },
+          { t: "Staying at a hotel", s: "A meal to your room or the reception; add the hotel name and room number." },
+          { t: "Guests or family visiting", s: "Extra food when more people turn up than you planned for." },
+          { t: "For parents in town", s: `Living elsewhere? Send a meal to family in ${city}; add their name and mobile number in the request.` },
         ],
-        stepsTitle: "How to order food",
+        stepsTitle: `How to order khana online in ${city}`,
         steps: [
-          { t: "Tell us what you'd like", s: "Use the form, or call or WhatsApp us. You can also browse restaurants listed on the site." },
-          { t: "We check and confirm", s: "We tell you what's available, the total and an estimated arrival time." },
+          { t: "Tell us what you would like", s: "Use the form, or call or WhatsApp us. Say the meal, the dishes and how many people." },
+          { t: "We check and reply", s: "We tell you what can be arranged at that time, the total and an estimated arrival." },
           { t: "You approve", s: "Nothing is ordered until you say yes." },
-          { t: "We deliver", s: "A delivery partner brings it to your door, room or desk." },
+          { t: "We deliver", s: `A delivery partner brings it to your door, room or desk. ${payLine(c)}` },
         ],
+        extra: {
+          title: "Breakfast, lunch and dinner: what to ask for",
+          items: [
+            { t: `Breakfast delivery in ${city}`, s: `For nashta, send the request the evening before or early in the morning, so there is time to check and reply before you need it. ${c.hours ? `We handle requests from ${c.hours}.` : "Call us to check today's timings."}` },
+            { t: "Lunch delivery", s: "Tell us the time you want to eat and the address. For an office or shop, add the floor or counter and one mobile number for the delivery partner." },
+            { t: "Dinner delivery", s: "Evenings are the busiest time for food. Ask a little early and say whether it is for a family meal or a few people, so the quantity is right." },
+            { t: "Simple ghar jaisa khana", s: "If you want plain roti, sabzi, dal and rice rather than a particular dish, write exactly that and for how many people. We tell you whether it can be arranged." },
+          ],
+        },
         conditionsTitle: "Delivery conditions",
-        conditions: [coverageLine(c), hoursLine(c), "Cooking time adds to the delivery time, so food usually takes longer than ready items.", "If anyone has an allergy, ask about ingredients before you order."],
+        conditions: [coverageLine(c), hoursLine(c), "Cooking time adds to the delivery time, so food usually takes longer than ready items from the shop.", "What can be arranged changes by the hour; sometimes the answer will be no, and we tell you quickly.", "If anyone has an allergy, ask about ingredients before you order.", payLine(c)],
         faqs: [
-          { q: `Which food can I order in ${city}?`, a: "It depends on what's available at that time. Tell us what you'd like and we'll confirm." },
-          { q: `Can food arrive in ${c.target} minutes?`, a: `Only if the order is eligible. ${c.target} minutes is a target that depends on preparation time, stock, distance and delivery partner availability.` },
-          { q: "Can you deliver to my hotel?", a: "Yes, if it's in our delivery area. Give us the hotel name and your room number." },
+          { q: `Which food can I order online in ${city}?`, a: "There is no fixed online menu for cooked meals yet. Tell us the meal and the dishes you would like and we confirm what can be arranged at that time." },
+          { q: `Can I order breakfast online in ${city}?`, a: "You can send a breakfast request. It is confirmed only after we reply with what is available and when it can reach you, so ask the evening before or early in the morning." },
+          { q: "Do you deliver lunch and dinner?", a: "Lunch and dinner are taken the same way: by request, with the food, the total and an estimate confirmed before you pay." },
+          { q: `Can food arrive in ${c.target} minutes?`, a: `Only if the order is eligible. ${c.target} minutes is a target for ready items; cooked food adds preparation time, and we give you an estimate before you confirm.` },
+          { q: "Can you deliver to my hotel or office?", a: "Yes, if it is in our delivery area. Give us the hotel name and room number, or the office name and floor." },
           { q: "How much is the delivery charge?", a: "We tell you the total, including delivery, before you confirm." },
+          { q: "How do I pay?", a: payLine(c) },
+          { q: "Do you deliver pizza and fast food too?", a: "Both are taken by request as well. See the pizza delivery and fast food delivery pages for how each works." },
         ],
-        form: { kind: "food_order", title: "Tell us what you'd like", hindi: "क्या खाना चाहिए और कहाँ, यहाँ लिखें।", submit: "Send food request" },
+        form: { kind: "food_order", title: "Tell us what you'd like to eat", hindi: "क्या खाना चाहिए, किस समय और कहाँ, यहाँ लिखें।", submit: "Send food request" },
         category: { slug: "food", label: "Browse food" },
-        shopLinks: directoryLinks.slice(0, 1),
-        related: ["fast-food-delivery-merta-city", "urgent-delivery-merta-city", "hotel-delivery-merta-city"],
+        shopLinks: [{ href: "/c/grocery", label: "Grocery & kitchen, to cook at home" }, ...directoryLinks.slice(0, 1)],
+        related: ["fast-food-delivery-merta-city", "pizza-delivery-merta-city", "urgent-delivery-merta-city", "hotel-delivery-merta-city"],
       };
     case "fast-food-delivery-merta-city":
       return {
-        title: `Fast Food Delivery in ${city}: Snacks and Quick Bites`,
-        description: `Fast food delivery in ${city}: snacks and quick bites to your home, hotel or office. Check with ${site.seoName} what's available and how soon it can reach you.`,
+        title: `Fast Food Delivery in ${city}: Snacks, Quick Bites & Cold Drinks`,
+        description: `Fast food delivery in ${city}, Rajasthan. Packaged snacks and cold drinks can be ordered from the ${site.seoName} shop now; for hot fast food, send a request and we confirm what is available, the price and the time first.`,
         h1: `Fast food delivery in ${city}`, crumb: "Fast food delivery", serviceType: "Fast food delivery",
-        hindi: `${site.cityHindi} में फास्ट फूड और नाश्ते की डिलीवरी। पहले पूछें क्या उपलब्ध है और कितनी देर लगेगी।`,
+        hindi: `${site.cityHindi} में फास्ट फूड और नाश्ते की डिलीवरी। पैकेट वाले स्नैक्स और कोल्ड ड्रिंक अभी ऑर्डर करें; गरम फास्ट फूड के लिए पहले पूछें क्या उपलब्ध है और कितनी देर लगेगी।`,
         intro: [
-          `Craving something quick? Whether it's an evening snack at home or a bite between meetings, ask ${site.seoName} what we can bring you in ${city} right now.`,
-          "Fast food tastes best hot, so we'd rather tell you honestly how long it will take than promise a time we can't keep.",
+          `Looking for fast food delivery in ${city}? There are two ways to get a quick bite from ${site.seoName}. Packaged snacks, namkeen, instant noodles, chocolates and cold drinks are in our online shop and can be ordered straight away.`,
+          `Hot fast food that is made to order is handled by request: tell us what you feel like, and we check what can be arranged today and come back with the items, the total and an honest estimate before you pay anything.`,
         ],
-        order: { label: "Order fast food", href: "#request" },
-        whatsappText: `Hi ${site.seoName}, can you deliver fast food in ${city} now?`,
-        offersTitle: "Good for",
+        notice: "Hot, made-to-order fast food is not on our online menu yet, so it is taken by request and confirmed with you first. Packaged snacks and drinks can be ordered now.",
+        order: { label: "Request fast food", href: "#request" },
+        whatsappText: `Hi ${site.seoName}, what fast food can you deliver in ${city} right now?`,
+        offersTitle: "When people order fast food here",
         offers: [
-          { t: "Evening snacks", s: "Something small for the family at tea time." },
-          { t: "Office breaks", s: "A round of snacks for the team." },
-          { t: "Late cravings", s: c.hours ? `Before we close. We take orders from ${c.hours}.` : "During our order hours." },
-          { t: "Kids' parties", s: "For a larger order, ask us early so we can plan." },
+          { t: "Evening snack at home", s: "Something small with chai, for the family or for guests who dropped in." },
+          { t: "A round for the office", s: "One order for the whole team, delivered to the front desk or your floor." },
+          { t: "Hostel, PG and hotel rooms", s: "Delivered to the reception or your room; add the room number in the request." },
+          { t: "Late cravings", s: c.hours ? `Before we close. Requests are taken from ${c.hours}.` : "During our order hours; call us to check today's timings." },
+          { t: "Children's parties", s: "For a larger order, ask a few hours ahead so it can be planned." },
         ],
-        stepsTitle: "How to order",
+        stepsTitle: `How to order fast food online in ${city}`,
         steps: [
-          { t: "Say what you want", s: "Tell us the items and how many." },
-          { t: "We check", s: "We confirm what's available, the total and an estimate." },
-          { t: "You say yes", s: "We place it with the kitchen." },
-          { t: "It's on the way", s: "A delivery partner brings it to you." },
+          { t: "Tell us what you want", s: "Write the items and how many, for example snacks for four people." },
+          { t: "We check what is possible", s: "We confirm what can be arranged today, the total and an estimated time." },
+          { t: "You agree", s: "Nothing is placed until you say yes." },
+          { t: "It is delivered", s: `A delivery partner brings it to your door. ${payLine(c)}` },
         ],
         conditionsTitle: "Delivery conditions",
-        conditions: [coverageLine(c), hoursLine(c), "Items are made to order, so preparation time adds to delivery time.", "Availability changes through the day."],
+        conditions: [coverageLine(c), hoursLine(c), "Made-to-order items need preparation time, which is added to the delivery time.", "What can be arranged changes through the day, so a request is not a confirmed order until we reply.", payLine(c)],
         faqs: [
-          { q: "What fast food can I order?", a: "It changes with what's available. Ask us and we'll tell you." },
-          { q: "Will it still be hot?", a: "We keep the trip as short as we can, but we can't promise a temperature. Distance and traffic matter." },
-          { q: "Is there a minimum order?", a: "We confirm any minimum, along with the total, before you order." },
-          { q: `Do you guarantee ${c.target} minutes?`, a: `No. It's a target for eligible orders. Food that's made to order takes longer.` },
+          { q: `Which fast food can I order online in ${city}?`, a: "Packaged snacks and cold drinks are listed in the shop with their prices. For hot fast food we do not publish a fixed menu yet: ask for what you want and we tell you what can be arranged today." },
+          { q: "How long does fast food delivery take?", a: `Our delivery time target is ${c.target} minutes for eligible orders of items that are ready in the shop. Fast food that is made to order takes longer, and we give you an estimate before you confirm.` },
+          { q: "Will it still be hot?", a: "We keep the trip as short as we can, but we cannot promise a temperature. Distance and traffic matter." },
+          { q: "Is there a minimum order?", a: "For a request we confirm any minimum, along with the total, before you order. Shop orders follow the charges shown in your cart." },
+          { q: "How do I pay?", a: payLine(c) },
+          { q: `Do you deliver pizza in ${city}?`, a: "Pizza is taken by request in the same way. See our pizza delivery page for how it works." },
         ],
         form: { kind: "food_order", title: "What are you craving?", hindi: "क्या चाहिए और कहाँ भेजना है, यहाँ लिखें।", submit: "Send request" },
         category: { slug: "fast-food", label: "Browse fast food" },
-        shopLinks: directoryLinks.slice(0, 1),
-        related: ["food-delivery-merta-city", "urgent-delivery-merta-city", "office-delivery-merta-city"],
+        shopLinks: [{ href: "/c/snacks", label: "Snacks & drinks in the shop" }, ...directoryLinks.slice(0, 1)],
+        related: ["pizza-delivery-merta-city", "food-delivery-merta-city", "urgent-delivery-merta-city", "office-delivery-merta-city"],
+      };
+    case "pizza-delivery-merta-city":
+      return {
+        title: `Pizza Delivery in ${city}: Order Pizza Online by Request`,
+        description: `Pizza delivery in ${city}, Rajasthan with ${site.seoName}. Pizza is not on our online menu yet: send a request and we tell you whether it can be arranged today, with the price and time, before you pay.`,
+        h1: `Pizza delivery in ${city}`, crumb: "Pizza delivery", serviceType: "Pizza delivery",
+        hindi: `${site.cityHindi} में पिज़्ज़ा की होम डिलीवरी। पिज़्ज़ा अभी हमारी ऑनलाइन दुकान में नहीं है; अनुरोध भेजें, हम बताएँगे कि आज मिल सकता है या नहीं, दाम और समय के साथ।`,
+        intro: [
+          `Want to order pizza online in ${city}? ${site.seoName} does not list pizzas in the online shop yet, so we will not show you a menu or a price we cannot stand behind.`,
+          `What we can do is take your request. Tell us the kind of pizza you would like, the size and how many, and where it should go. We check whether it can be arranged today and reply with what is possible, the full amount and an honest estimate of the time. You decide after that.`,
+        ],
+        notice: "Pizza is not on our online menu yet. A request is not a confirmed order: we first tell you whether it can be arranged today, the price and the time.",
+        order: { label: "Request a pizza", href: "#request" },
+        whatsappText: `Hi ${site.seoName}, can you deliver pizza in ${city} today?`,
+        offersTitle: "What to tell us in your pizza request",
+        offers: [
+          { t: "The pizza", s: "The topping or style you want. Say if it must be pure vegetarian or Jain, so we only check options that fit." },
+          { t: "Size and number", s: "How many pizzas and what size, or simply how many people are eating." },
+          { t: "When you need it", s: "As soon as possible, or a time later today. A birthday or party order is easier to arrange with notice." },
+          { t: "Where it goes", s: "Your home, a hotel room or an office, with a landmark and a mobile number the delivery partner can call." },
+        ],
+        stepsTitle: `How pizza delivery works in ${city}`,
+        steps: [
+          { t: "Send the request", s: "Use the form below, WhatsApp or a call." },
+          { t: "We check today's availability", s: "We find out whether the pizza you asked for can be made and delivered to your address." },
+          { t: "We reply with price and time", s: "You get the items, the total and an estimated time. If it cannot be arranged, we say so." },
+          { t: "You confirm, we deliver", s: `Only then is it ordered and brought to you. ${payLine(c)}` },
+        ],
+        conditionsTitle: "Good to know before you ask",
+        conditions: [
+          coverageLine(c), hoursLine(c),
+          "Pizza is made to order, so baking time is added to the delivery time. We give an estimate, not a guarantee.",
+          "Availability depends on the day and the hour. Sometimes the answer will be no, and we will tell you quickly.",
+          payLine(c),
+        ],
+        faqs: [
+          { q: `Can I order pizza online in ${city} right now?`, a: `You can send a pizza request right now. Pizza is not listed in our shop with fixed prices yet, so the order is only confirmed after we reply with what is available, the total and the time.` },
+          { q: "Which pizzas and sizes do you have?", a: "We do not publish a pizza menu at the moment, because we cannot promise the same items every day. Tell us what you would like and we will tell you what can be arranged." },
+          { q: "How much does a pizza cost?", a: "There is no fixed price list yet. You get the full amount, including any delivery charge, in our reply, before you agree to anything." },
+          { q: "How long does pizza delivery take?", a: `A pizza has to be baked first, so it takes longer than the ${c.target}-minute target we use for ready items from the shop. We give you an estimate with the price.` },
+          { q: "Which areas do you deliver to?", a: coverageLine(c) },
+          { q: "How do I pay?", a: payLine(c) },
+          { q: "Can you deliver pizza for a birthday or a party?", a: "Yes, ask us. For several pizzas, send the request a few hours ahead so it can be planned; you can order a cake from us for the same delivery." },
+        ],
+        form: { kind: "food_order", title: "Which pizza would you like?", hindi: "कौन सा पिज़्ज़ा, कितने और कहाँ भेजना है, यहाँ लिखें।", submit: "Send pizza request" },
+        category: { slug: "pizza", label: "Browse pizzas" },
+        shopLinks: [{ href: "/c/snacks", label: "Snacks & cold drinks to go with it" }, ...directoryLinks.slice(0, 1)],
+        related: ["fast-food-delivery-merta-city", "food-delivery-merta-city", "cake-delivery-merta-city", "urgent-delivery-merta-city"],
       };
     case "cake-delivery-merta-city":
       return {

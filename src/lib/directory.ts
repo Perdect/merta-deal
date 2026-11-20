@@ -30,7 +30,7 @@ export const DIRECTORY: Record<BusinessCategory, DirectoryCopy> = {
     description: `Find restaurants in ${site.city}, Rajasthan. Compare menus, vegetarian options, timings and delivery, using details each business has confirmed with ${site.seoName}.`,
     h1: `Restaurants in ${site.city}`, hindi: `${site.cityHindi} के रेस्टोरेंट: मेन्यू, समय और डिलीवरी की जानकारी।`,
     intro: `Looking for somewhere to eat in ${site.city}, or a meal delivered? Search by name, or filter by cuisine, vegetarian options and delivery.`,
-    orderLabel: "Order Food", related: ["food-delivery-merta-city", "fast-food-delivery-merta-city", "urgent-delivery-merta-city", "hotel-delivery-merta-city"],
+    orderLabel: "Order Food", related: ["food-delivery-merta-city", "fast-food-delivery-merta-city", "pizza-delivery-merta-city", "urgent-delivery-merta-city", "hotel-delivery-merta-city"],
   },
   bakery: {
     path: "/bakeries-merta-city", plural: "Bakeries", singular: "Bakery", schemaType: "Bakery",
