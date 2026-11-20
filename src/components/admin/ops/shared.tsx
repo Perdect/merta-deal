@@ -101,7 +101,7 @@ export function FormErrorSummary({ errors }: { errors: Record<string, string | u
   const list = Object.values(errors).filter(Boolean) as string[];
   if (!list.length) return null;
   return (
-    <div role="alert" className="mb-4 rounded-lg border border-danger/30 bg-danger-50 px-3 py-2 text-sm text-[#b4231b]">
+    <div role="alert" className="mb-4 rounded-lg border border-danger/30 bg-danger-50 px-3 py-2 text-sm text-danger">
       <p className="font-semibold">Fix {list.length === 1 ? "this field" : `these ${list.length} fields`} to save:</p>
       <ul className="mt-1 list-disc pl-5 text-xs">{list.map((e, i) => <li key={i}>{e}</li>)}</ul>
     </div>

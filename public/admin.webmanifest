@@ -1,0 +1,25 @@
+{
+  "name": "Merta Deal Admin",
+  "short_name": "MD Admin",
+  "description": "Staff app for Merta Deal: orders, scan and pack, dispatch, stock and payments. Needs an internet connection and a staff sign-in.",
+  "id": "/admin",
+  "start_url": "/admin?source=pwa",
+  "scope": "/admin",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#f4f6f9",
+  "theme_color": "#1d4ed8",
+  "lang": "en-IN",
+  "dir": "ltr",
+  "categories": ["business", "productivity"],
+  "launch_handler": { "client_mode": "navigate-existing" },
+  "icons": [
+    { "src": "/icons/admin-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/admin-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/admin-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Orders", "short_name": "Orders", "url": "/admin/orders?source=pwa", "description": "Open the orders list", "icons": [{ "src": "/icons/admin-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Scan & pack", "short_name": "Scan", "url": "/admin/scan?source=pwa", "description": "Scan labels to pack orders and count stock", "icons": [{ "src": "/icons/admin-192.png", "sizes": "192x192", "type": "image/png" }] }
+  ]
+}

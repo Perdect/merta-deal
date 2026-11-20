@@ -2,11 +2,13 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Bot, Loader2, MessageCircle, Mic, MicOff, Send, ShoppingCart, Sparkles, User } from "lucide-react";
-import type { AssistantResponse } from "@/lib/ai/schemas";
+import { AlertTriangle, Bot, Loader2, MessageCircle, Mic, MicOff, RotateCcw, Send, ShoppingCart, Sparkles, User } from "lucide-react";
+import type { AssistantAnswer } from "@/lib/ai/assistant-types";
 import { addToCartAction, getCartSummary } from "@/lib/actions/cart";
+import { ensureGuestSessionAction } from "@/lib/actions/guest";
 import { useCartStore } from "@/stores/cart-store";
-import { cn, maxPerOrderMessage, onlyAvailableMessage } from "@/lib/utils";
+import { notifySessionChanged, useSignedIn } from "@/stores/me-store";
+import { cn, formatINR, maxPerOrderMessage, onlyAvailableMessage } from "@/lib/utils";
 import { packLimit } from "@/lib/cart-sync";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/states";
@@ -14,23 +16,31 @@ import { Chip } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/toast";
 import { MatchRow, type LineChoice } from "./match-row";
 import { SourceBadge } from "./source-badge";
-import { planAddAll } from "./plan-add-all";
+import { canBuy, initialChoices, planAddSelected } from "./plan-add-all";
 import { useSpeechInput } from "./use-speech";
 
 type Mode = "list" | "order";
-type Turn = { id: number; role: "user" | "assistant"; text: string; mode?: Mode; result?: AssistantResponse; choices?: LineChoice[]; error?: string };
+type Turn = { id: number; role: "user" | "assistant"; text: string; mode?: Mode; result?: AssistantAnswer; choices?: LineChoice[]; error?: string };
 
 const EXAMPLES: { text: string; mode: Mode }[] = [
-  { text: "I need groceries for a family of 4 for one week", mode: "list" },
-  { text: "Diwali sweets aur namkeen", mode: "list" },
+  { text: "Chai ka saaman", mode: "list" },
+  { text: "Kheer banana hai", mode: "list" },
+  { text: "10 logon ki party", mode: "list" },
   { text: "Bhai 2 kilo aata aur ek kilo chini bhej do", mode: "order" },
-  { text: "Chai party for 10 guests on Sunday", mode: "list" },
+  { text: "Delivery charge kitna hai?", mode: "list" },
+  { text: "Kitne baje tak order le sakte hain?", mode: "list" },
 ];
 
 let turnSeq = 1;
 
-export function AssistantChat({ signedIn, aiConfigured, autoVoice, waId }: { signedIn: boolean; aiConfigured: boolean; autoVoice: boolean; waId: string | null }) {
+/**
+ * The shopping assistant. It proposes; the customer decides. A list arrives with every available row
+ * ticked, the customer changes the ticks, products and packs, and only "Add selected to cart" changes the
+ * cart, through the cart's own server action. It never checks out, orders or pays.
+ */
+export function AssistantChat({ signedIn, member, aiConfigured, autoVoice, waId }: { signedIn: boolean; /** Signed in with an account (not a guest session): may ask for suggestions from past orders. */ member: boolean; aiConfigured: boolean; autoVoice: boolean; waId: string | null }) {
   const router = useRouter();
+  const signedInNow = useSignedIn();
   const [turns, setTurns] = React.useState<Turn[]>([]);
   const [input, setInput] = React.useState("");
   const [mode, setMode] = React.useState<Mode>(autoVoice ? "order" : "list");
@@ -41,20 +51,18 @@ export function AssistantChat({ signedIn, aiConfigured, autoVoice, waId }: { sig
   const modeRef = React.useRef(mode);
   React.useEffect(() => { modeRef.current = mode; }, [mode]);
 
-  const send = React.useCallback(async (text: string, sendMode: Mode) => {
-    const message = text.trim();
-    if (message.length < 2 || busy) return;
-    setInput("");
+  const ask = React.useCallback(async (shown: string, body: { message?: string; mode: Mode; action?: "reorder" }) => {
+    if (busy) return;
     setBusy(true);
-    setTurns((t) => [...t, { id: turnSeq++, role: "user", text: message, mode: sendMode }]);
+    setTurns((t) => [...t, { id: turnSeq++, role: "user", text: shown, mode: body.mode }]);
     try {
-      const res = await fetch("/api/ai/assistant", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message, mode: sendMode }) });
-      const data = (await res.json()) as AssistantResponse | { error: string };
+      const res = await fetch("/api/ai/assistant", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const data = (await res.json()) as AssistantAnswer | { error: string };
       if (!res.ok || "error" in data) {
         setTurns((t) => [...t, { id: turnSeq++, role: "assistant", text: "", error: "error" in data ? data.error : `Request failed (${res.status})` }]);
       } else {
-        const choices = data.lines.map((l) => ({ candidate: 0, packs: l.candidates[0]?.suggested_packs ?? 1 }));
-        setTurns((t) => [...t, { id: turnSeq++, role: "assistant", text: data.reply, result: data, choices }]);
+        // A list made from a request starts ticked; "buy again" rows start unticked, since nobody asked for them yet.
+        setTurns((t) => [...t, { id: turnSeq++, role: "assistant", text: data.reply, result: data, choices: initialChoices(data.lines, data.lines_from === "request") }]);
       }
     } catch {
       setTurns((t) => [...t, { id: turnSeq++, role: "assistant", text: "", error: "Network error — internet check karke dobara try kijiye." }]);
@@ -63,7 +71,14 @@ export function AssistantChat({ signedIn, aiConfigured, autoVoice, waId }: { sig
     }
   }, [busy]);
 
-  const speech = useSpeechInput({ onFinal: (text) => { setInput(text); void send(text, modeRef.current); } });
+  const send = React.useCallback((text: string, sendMode: Mode) => {
+    const message = text.trim();
+    if (message.length < 2) return;
+    setInput("");
+    void ask(message, { message, mode: sendMode });
+  }, [ask]);
+
+  const speech = useSpeechInput({ onFinal: (text) => { setInput(text); send(text, modeRef.current); } });
 
   // ?mode=voice — start listening as soon as the page is ready (browser may still ask for mic permission).
   const autoStarted = React.useRef(false);
@@ -85,7 +100,7 @@ export function AssistantChat({ signedIn, aiConfigured, autoVoice, waId }: { sig
         if (!res.ok || "error" in data) { setWaBanner({ from: "", status: "error", message: "error" in data ? data.error : "Could not load the WhatsApp draft." }); return; }
         setWaBanner({ from: data.from, status: "ok" });
         setMode("order");
-        if (data.body) void send(data.body, "order");
+        if (data.body) send(data.body, "order");
       } catch {
         if (!cancelled) setWaBanner({ from: "", status: "error", message: "Could not load the WhatsApp draft." });
       }
@@ -96,51 +111,68 @@ export function AssistantChat({ signedIn, aiConfigured, autoVoice, waId }: { sig
 
   React.useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [turns.length, busy]);
 
-  const updateChoice = (turnId: number, lineIdx: number, choice: LineChoice) => {
-    setTurns((t) => t.map((turn) => (turn.id === turnId && turn.choices ? { ...turn, choices: turn.choices.map((c, i) => (i === lineIdx ? choice : c)) } : turn)));
+  const setChoices = (turnId: number, update: (choices: LineChoice[], turn: Turn) => LineChoice[]) => {
+    setTurns((t) => t.map((turn) => (turn.id === turnId && turn.choices ? { ...turn, choices: update(turn.choices, turn) } : turn)));
   };
 
-  const addAll = async (turn: Turn) => {
-    if (!turn.result || !turn.choices) return;
-    if (!signedIn) { router.push(`/login?next=${encodeURIComponent("/assistant")}`); return; }
-    const cart = useCartStore.getState();
-    const plan = planAddAll(turn.result.lines, turn.choices);
-    if (!plan.adds.length) { toast.warning("Nothing to add", plan.skipped[0]?.reason ? `Skipped: ${plan.skipped.map((s) => s.name).join(", ")}` : undefined); return; }
+  const addSelected = async (turn: Turn) => {
+    if (!turn.result || !turn.choices || adding != null) return;
+    const lines = turn.result.lines;
+    const plan = planAddSelected(lines, turn.choices);
+    if (!plan.adds.length) { toast.warning("Nothing selected", "Tick the items you want, then add them."); return; }
     setAdding(turn.id);
-    let added = 0; const failed: string[] = []; const reduced: string[] = [];
-    for (const a of plan.adds) {
-      // Never exceed the product's per-order limit (or stock): add what fits and say what was cut.
-      const c = turn.result.lines[a.lineIdx]?.candidates[a.candidateIdx];
-      const lim = packLimit(c?.max_order_qty, c?.stock_qty);
-      const existing = useCartStore.getState().qtyFor(a.inventoryId);
-      const target = Math.min(existing + a.packs, lim.max);
-      if (target < existing + a.packs) reduced.push(target <= existing ? `${a.name}: already at the limit (${(lim.byStock ? onlyAvailableMessage(lim.max) : maxPerOrderMessage(lim.max)).toLowerCase()})` : `${a.name}: ${target - existing} of ${a.packs} added (${lim.message.toLowerCase()})`);
-      if (target <= existing) continue;
-      const res = await addToCartAction(a.inventoryId, target);
-      if (res.ok) added++;
-      else failed.push(`${a.name} (${res.error})`);
+    try {
+      // Same start as the shop's ADD button: a visitor gets a guest session, or is asked to sign in when guests are off.
+      if (!signedIn && !signedInNow) {
+        const g = await ensureGuestSessionAction();
+        if (!g.ok) { toast.info("Sign in to add items", g.error); useCartStore.getState().openSheet("login"); return; }
+        if (g.created) { notifySessionChanged(); router.refresh(); }
+      }
+      const cart = useCartStore.getState();
+      const before = await getCartSummary();
+      if (before) cart.setSummary(before);
+      const have = (inventoryId: string) => before?.items.find((i) => i.inventory_id === inventoryId)?.quantity ?? 0;
+      const added: number[] = []; const failed: string[] = []; const reduced: string[] = [];
+      for (const a of plan.adds) {
+        // Never exceed the product's per-order limit (or stock): add what fits and say what was cut.
+        const c = lines[a.lineIdx]?.candidates[a.candidateIdx];
+        const lim = packLimit(c?.max_order_qty, c?.stock_qty);
+        const existing = have(a.inventoryId);
+        const target = Math.min(existing + a.packs, lim.max);
+        if (target < existing + a.packs) reduced.push(target <= existing ? `${a.name}: already at the limit (${(lim.byStock ? onlyAvailableMessage(lim.max) : maxPerOrderMessage(lim.max)).toLowerCase()})` : `${a.name}: ${target - existing} of ${a.packs} added (${lim.message.toLowerCase()})`);
+        if (target <= existing) continue;
+        const res = await addToCartAction(a.inventoryId, target);
+        if (res.ok) added.push(a.lineIdx);
+        else failed.push(`${a.name} (${res.error})`);
+      }
+      const summary = await getCartSummary();
+      if (summary) cart.setSummary(summary);
+      // What went in is unticked, so a second tap cannot add the same packs again by accident.
+      if (added.length) setChoices(turn.id, (choices) => choices.map((c, i) => (added.includes(i) ? { ...c, selected: false } : c)));
+      if (reduced.length) { cart.setNotice({ title: "Some quantities were reduced", lines: reduced }); cart.openDrawer("cart"); }
+      const notes = [...plan.skipped.map((s) => `${s.name} — ${s.reason}`), ...failed];
+      if (added.length) toast.success(`Added ${added.length} item${added.length > 1 ? "s" : ""} to your cart`, notes.length ? `Not added: ${notes.slice(0, 3).join("; ")}${notes.length > 3 ? "…" : ""}` : undefined);
+      else if (failed.length) toast.error("Could not add items", failed.slice(0, 3).join("; "));
+    } catch {
+      toast.error("You seem to be offline. Check your internet connection and try again.");
+    } finally {
+      setAdding(null);
     }
-    const summary = await getCartSummary();
-    cart.setSummary(summary);
-    setAdding(null);
-    if (reduced.length) { cart.setNotice({ title: "Some quantities were reduced", lines: reduced }); cart.openDrawer("cart"); }
-    const skippedNote = [...plan.skipped.map((s) => `${s.name} — ${s.reason}`), ...failed];
-    if (added) toast.success(`Added ${added} item${added > 1 ? "s" : ""}`, skippedNote.length ? `Skipped ${skippedNote.length}: ${skippedNote.slice(0, 3).join("; ")}${skippedNote.length > 3 ? "…" : ""}` : undefined);
-    else toast.error("Could not add items", skippedNote.slice(0, 3).join("; "));
   };
 
-  const onSubmit = (e: React.FormEvent) => { e.preventDefault(); void send(input, mode); };
+  const onSubmit = (e: React.FormEvent) => { e.preventDefault(); send(input, mode); };
+  const canReorder = member;
 
   return (
     <div className="flex min-h-[70vh] flex-col">
       {!aiConfigured ? (
         <Alert tone="neutral" icon={<AlertTriangle className="h-4 w-4" />} className="mb-3">
-          <span className="font-semibold">Rule-based mode.</span> ANTHROPIC_API_KEY is not configured, so lists come from the Hinglish parser and fixed starter templates instead of Claude. See <Link href="/setup" className="font-semibold underline">/setup</Link>.
+          <span className="font-semibold">AI is not set up on this shop.</span> ANTHROPIC_API_KEY is not configured, so nothing here is written by AI: lists come from the built-in Hinglish word matcher and fixed starter lists, and answers about delivery, timings and payment are read straight from the shop&apos;s settings. See <Link href="/setup" className="font-semibold underline">/setup</Link>.
         </Alert>
       ) : null}
       {waBanner ? (
         <Alert tone={waBanner.status === "error" ? "warning" : "success"} icon={<MessageCircle className="h-4 w-4" />} className="mb-3">
-          {waBanner.status === "loading" ? "Loading your WhatsApp order…" : waBanner.status === "ok" ? <>Prefilled from your WhatsApp message{waBanner.from ? ` (${waBanner.from})` : ""}. Review the matches below, then add to cart and checkout.</> : waBanner.message}
+          {waBanner.status === "loading" ? "Loading your WhatsApp order…" : waBanner.status === "ok" ? <>Prefilled from your WhatsApp message{waBanner.from ? ` (${waBanner.from})` : ""}. Review the matches below, then add what you want to your cart.</> : waBanner.message}
         </Alert>
       ) : null}
 
@@ -151,12 +183,14 @@ export function AssistantChat({ signedIn, aiConfigured, autoVoice, waId }: { sig
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700"><Sparkles className="h-5 w-5" /></span>
               <div>
                 <p className="font-display text-base font-bold text-ink">Batao kya chahiye — list ready ho jayegi</p>
-                <p className="text-sm text-ink-3">Hinglish, Hindi ya English mein likhiye ya boliye. Har item ko Merta Deal ke asli products se match karte hain.</p>
+                <p className="text-sm text-ink-3">Hinglish, Hindi ya English mein likhiye ya boliye. Har item shop ke asli products se match hota hai, aaj ke daam aur stock ke saath. Cart mein wahi jaata hai jo aap chunte hain.</p>
               </div>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
-              {EXAMPLES.map((ex) => <Chip key={ex.text} onClick={() => { setMode(ex.mode); void send(ex.text, ex.mode); }}>{ex.text}</Chip>)}
+              {EXAMPLES.map((ex) => <Chip key={ex.text} onClick={() => { setMode(ex.mode); send(ex.text, ex.mode); }}>{ex.text}</Chip>)}
+              {canReorder ? <Chip icon={<RotateCcw className="h-3.5 w-3.5" />} onClick={() => void ask("Buy again from my past orders", { mode: "list", action: "reorder" })}>Buy again from my past orders</Chip> : null}
             </div>
+            <p className="mt-3 text-xs text-ink-4">{aiConfigured ? "Suggestions are written by an AI model and can be wrong. " : ""}The assistant cannot see your orders or account; for those use <Link href="/track" className="underline">Track an order</Link> or <Link href="/account/support" className="underline">Support</Link>.</p>
           </div>
         ) : null}
 
@@ -170,25 +204,7 @@ export function AssistantChat({ signedIn, aiConfigured, autoVoice, waId }: { sig
             <span className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700"><Bot className="h-4 w-4" /></span>
             <div className="min-w-0 flex-1 space-y-3">
               {turn.error ? <Alert tone="danger">{turn.error}</Alert> : null}
-              {turn.result ? (
-                <>
-                  <div className="rounded-2xl rounded-tl-sm border border-line bg-card px-4 py-3 shadow-card">
-                    <div className="mb-1.5 flex flex-wrap items-center gap-2"><SourceBadge source={turn.result.source} model={turn.result.model} fallbackReason={turn.result.fallback_reason} /><span className="text-[11px] text-ink-4">{turn.result.lines.length} item{turn.result.lines.length === 1 ? "" : "s"}</span></div>
-                    <p className="text-sm text-ink">{turn.text}</p>
-                  </div>
-                  {turn.result.lines.length ? (
-                    <>
-                      <ul className="space-y-2">
-                        {turn.result.lines.map((line, i) => <MatchRow key={`${turn.id}-${i}`} line={line} choice={turn.choices![i]!} onChange={(c) => updateChoice(turn.id, i, c)} signedIn={signedIn} />)}
-                      </ul>
-                      <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-line bg-surface-2/60 px-3 py-2.5">
-                        <p className="text-xs text-ink-3">“Add all” puts every matched item in your cart and tells you about anything it had to skip.</p>
-                        <Button size="sm" onClick={() => addAll(turn)} loading={adding === turn.id} disabled={adding != null}><ShoppingCart className="h-4 w-4" />{signedIn ? "Add all to cart" : "Sign in to add all"}</Button>
-                      </div>
-                    </>
-                  ) : null}
-                </>
-              ) : null}
+              {turn.result ? <Answer turn={turn} result={turn.result} choices={turn.choices ?? []} adding={adding} onChoices={(update) => setChoices(turn.id, update)} onAdd={() => void addSelected(turn)} /> : null}
             </div>
           </div>
         ))}
@@ -196,7 +212,7 @@ export function AssistantChat({ signedIn, aiConfigured, autoVoice, waId }: { sig
         {busy ? (
           <div className="flex gap-2">
             <span className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700"><Bot className="h-4 w-4" /></span>
-            <div className="inline-flex items-center gap-2 rounded-2xl rounded-tl-sm border border-line bg-card px-4 py-3 text-sm text-ink-3 shadow-card"><Loader2 className="h-4 w-4 animate-spin" />{aiConfigured ? "Claude list bana raha hai aur products match kar raha hai…" : "Parsing and matching products…"}</div>
+            <div className="inline-flex items-center gap-2 rounded-2xl rounded-tl-sm border border-line bg-card px-4 py-3 text-sm text-ink-3 shadow-card"><Loader2 className="h-4 w-4 animate-spin" />{aiConfigured ? "Samajh raha hoon aur shop mein dekh raha hoon…" : "Shop mein dekh raha hoon…"}</div>
           </div>
         ) : null}
         <div ref={endRef} />
@@ -214,12 +230,13 @@ export function AssistantChat({ signedIn, aiConfigured, autoVoice, waId }: { sig
           </div>
         ) : null}
         {speech.error ? <p className="mb-2 text-xs text-danger">{speech.error}</p> : null}
-        <div className="mb-2 flex gap-2">
-          <Chip active={mode === "list"} onClick={() => setMode("list")} className="h-8 text-xs">Plan a list</Chip>
+        <div className="mb-2 flex flex-wrap gap-2">
+          <Chip active={mode === "list"} onClick={() => setMode("list")} className="h-8 text-xs">Help me shop</Chip>
           <Chip active={mode === "order"} onClick={() => setMode("order")} className="h-8 text-xs">Dictate an order</Chip>
+          {canReorder && turns.length > 0 ? <Chip icon={<RotateCcw className="h-3.5 w-3.5" />} onClick={() => void ask("Buy again from my past orders", { mode: "list", action: "reorder" })} className="h-8 text-xs">Buy again</Chip> : null}
         </div>
         <div className="flex items-end gap-2">
-          <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(input, mode); } }} rows={1} placeholder={mode === "order" ? "2 kg atta, 1 litre oil, Amul butter…" : "Family of 4 ke liye ek hafte ka saaman…"} aria-label="Message" className="max-h-32 min-h-11 flex-1 resize-y rounded-sm border border-line-2 bg-card px-3.5 py-2.5 text-base text-ink sm:text-[15px] placeholder:text-ink-4 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100" />
+          <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input, mode); } }} rows={1} maxLength={1200} placeholder={mode === "order" ? "2 kg atta, 1 litre oil, Amul butter…" : "Kheer banana hai… ya delivery charge kitna hai?"} aria-label="Message" className="max-h-32 min-h-11 flex-1 resize-y rounded-sm border border-line-2 bg-card px-3.5 py-2.5 text-base text-ink sm:text-[15px] placeholder:text-ink-4 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100" />
           {speech.supported !== false ? (
             <button type="button" onClick={() => (speech.listening ? speech.stop() : speech.start())} disabled={speech.supported === null} aria-pressed={speech.listening} aria-label={speech.listening ? "Stop listening" : "Speak your order"} className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition-colors", speech.listening ? "border-danger bg-danger text-white" : "border-line-2 bg-card text-brand-700 hover:bg-brand-50")}>
               <Mic className="h-5 w-5" />
@@ -229,5 +246,67 @@ export function AssistantChat({ signedIn, aiConfigured, autoVoice, waId }: { sig
         </div>
       </form>
     </div>
+  );
+}
+
+/** One answer: the reply with its source label, shop-data blocks, links to existing pages, and the list to choose from. */
+function Answer({ turn, result, choices, adding, onChoices, onAdd }: { turn: Turn; result: AssistantAnswer; choices: LineChoice[]; adding: number | null; onChoices: (update: (choices: LineChoice[]) => LineChoice[]) => void; onAdd: () => void }) {
+  const fromOrders = result.lines_from === "orders";
+  const plan = planAddSelected(result.lines, choices);
+  const total = plan.adds.reduce((sum, a) => sum + a.price * a.packs, 0);
+  const buyable = result.lines.map((l, i) => canBuy(l.candidates[choices[i]?.candidate ?? 0] ?? l.candidates[0]));
+  const buyableCount = buyable.filter(Boolean).length;
+  const missing = result.lines.filter((l) => !l.candidates.length && !l.lookup_failed).length;
+  const allTicked = buyableCount > 0 && plan.adds.length === buyableCount;
+  return (
+    <>
+      <div className="rounded-2xl rounded-tl-sm border border-line bg-card px-4 py-3 shadow-card">
+        <div className="mb-1.5 flex flex-wrap items-center gap-2">
+          <SourceBadge source={result.source} model={result.model} fallbackReason={result.fallback_reason} />
+          {fromOrders && result.source !== "orders" ? <SourceBadge source="orders" /> : null}
+          {result.lines.length ? <span className="text-[11px] text-ink-4">{result.lines.length} item{result.lines.length === 1 ? "" : "s"}{missing ? ` · ${missing} not in our shop right now` : ""}</span> : null}
+        </div>
+        <p className="text-sm text-ink">{turn.text}</p>
+        {result.needs_sign_in ? <Button href={`/login?next=${encodeURIComponent("/assistant")}`} size="sm" variant="secondary" className="mt-2.5">Sign in</Button> : null}
+      </div>
+
+      {result.facts.map((card) => (
+        <section key={card.topic} className="rounded-lg border border-line bg-card px-4 py-3 shadow-card" aria-label={card.title}>
+          <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-display text-sm font-bold text-ink">{card.title}</h3>
+            <SourceBadge source="shop" />
+          </div>
+          <ul className="space-y-1 text-sm text-ink-2">
+            {card.lines.map((line) => <li key={line}>{line}</li>)}
+          </ul>
+        </section>
+      ))}
+
+      {result.links.length ? (
+        <div className="flex flex-wrap gap-2">
+          {result.links.map((l) => <Button key={l.href} href={l.href} size="sm" variant="outline">{l.label}</Button>)}
+        </div>
+      ) : null}
+
+      {result.lines.length ? (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-ink-3">{fromOrders ? "From your past orders, at today's prices. Tick what you want." : result.source === "claude" ? "AI suggestion — check each item, change the product or packs, untick what you don't want." : "Suggested matches — check each item, change the product or packs, untick what you don't want."}</p>
+            {buyableCount > 1 ? <button type="button" onClick={() => onChoices((cs) => cs.map((c, i) => ({ ...c, selected: !allTicked && buyable[i] })))} className="tap text-xs font-semibold text-brand-700 hover:underline">{allTicked ? "Clear all" : "Select all"}</button> : null}
+          </div>
+          <ul className="space-y-2">
+            {result.lines.map((line, i) => <MatchRow key={`${turn.id}-${i}`} line={line} choice={choices[i]!} from={result.lines_from} onChange={(c) => onChoices((cs) => cs.map((old, j) => (j === i ? c : old)))} />)}
+          </ul>
+          {buyableCount ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-line bg-surface-2/60 px-3 py-2.5">
+              <p className="text-xs text-ink-3">
+                {plan.adds.length ? <><span className="font-semibold text-ink">{plan.adds.length} selected · {formatINR(total)}</span> at today&apos;s prices. Delivery charge and offers are worked out in the cart.</> : "Nothing is added until you tick items and tap the button."}
+              </p>
+              <Button size="sm" onClick={onAdd} loading={adding === turn.id} disabled={adding != null || !plan.adds.length}><ShoppingCart className="h-4 w-4" />Add selected to cart</Button>
+            </div>
+          ) : <p className="rounded-md border border-line bg-surface-2/60 px-3 py-2.5 text-xs text-ink-3">None of these can be added right now.</p>}
+        </>
+      ) : null}
+    </>
   );
 }

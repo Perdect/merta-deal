@@ -20,6 +20,11 @@ const SORTS = [
 const PRICE_BANDS = [{ label: "Under ₹50", min: 0, max: 50 }, { label: "₹50 – ₹100", min: 50, max: 100 }, { label: "₹100 – ₹250", min: 100, max: 250 }, { label: "₹250 – ₹500", min: 250, max: 500 }, { label: "Above ₹500", min: 500, max: undefined as number | undefined }];
 const DISCOUNTS = [10, 20, 30];
 
+/* Every control in the toolbar is the same 40px pill, so buttons and chips sit on one line. */
+const barButton = "h-10 shrink-0 rounded-full px-3.5 text-[13px]";
+const barButtonOn = "border-brand-600 bg-brand-50 text-brand-800";
+const barChip = "h-10 px-3.5 text-[13px] pointer-coarse:h-10";
+
 export type ListingFilters = { brands: { name: string; slug: string }[]; categories?: { name: string; slug: string }[] };
 
 /* ------------------------------------------------------------------------------------------------
@@ -59,11 +64,13 @@ export function ProductListing({ result, filters, signedIn, loadMoreHref, scope,
   const [hasMore, setHasMore] = React.useState(restored?.hasMore ?? result.has_more);
   const [loadingMore, setLoadingMore] = React.useState(false);
   const [moreError, setMoreError] = React.useState(false);
+  // How many cards this result set arrived with: only the ones "Load more" adds after that fade in.
+  const [arrived, setArrived] = React.useState(() => (restored?.items ?? result.items).length);
   const [seen, setSeen] = React.useState(result);
   // A new result set (other category, filter or sort): replace the list; any "Load more" still in flight
   // belongs to the old set and is dropped when it lands.
   const generation = React.useRef(0);
-  if (seen !== result) { setSeen(result); setItems(result.items); setPage(result.page); setHasMore(result.has_more); setLoadingMore(false); setMoreError(false); }
+  if (seen !== result) { setSeen(result); setItems(result.items); setArrived(result.items.length); setPage(result.page); setHasMore(result.has_more); setLoadingMore(false); setMoreError(false); }
   React.useEffect(() => { generation.current += 1; }, [result]);
 
   // Keep the memory current, and put the shopper back where they were after a Back navigation
@@ -97,6 +104,8 @@ export function ProductListing({ result, filters, signedIn, loadMoreHref, scope,
     set({ [key]: next.join(",") });
   };
   const sort = sp.get("sort") ?? "relevance";
+  const sorted = sort !== "relevance";
+  const sortLabel = SORTS.find((s) => s.value === sort)?.label ?? "Relevance";
   const activeBrands = sp.get("brand")?.split(",").filter(Boolean) ?? [];
   const activeCount = [sp.get("brand"), sp.get("minPrice") ?? sp.get("maxPrice"), sp.get("minDiscount"), sp.get("inStock"), sp.get("local")].filter(Boolean).length;
 
@@ -146,14 +155,22 @@ export function ProductListing({ result, filters, signedIn, loadMoreHref, scope,
 
   return (
     <div>
-      <div className="sticky top-[var(--header-h,114px)] z-20 -mx-4 mb-3 flex items-center gap-2 bg-surface/95 px-4 py-2 backdrop-blur sm:static sm:mx-0 sm:bg-transparent sm:px-0">
-        <Button variant="outline" size="sm" onClick={() => setFilterOpen(true)} className={cn(activeCount && "border-brand-600 text-brand-700")}><SlidersHorizontal className="h-4 w-4" /> Filters{activeCount ? ` (${activeCount})` : ""}</Button>
-        <Button variant="outline" size="sm" onClick={() => setSortOpen(true)}><ArrowUpDown className="h-4 w-4" /> {SORTS.find((s) => s.value === sort)?.label ?? "Sort"}</Button>
-        <div className="scroll-x ml-1 flex-1">
-          <Chip active={sp.get("inStock") === "1"} onClick={() => set({ inStock: sp.get("inStock") === "1" ? null : "1" })}>In stock</Chip>
-          <Chip active={sp.get("minDiscount") === "10"} onClick={() => set({ minDiscount: sp.get("minDiscount") === "10" ? null : "10" })}>10%+ off</Chip>
-          <Chip active={sp.get("local") === "1"} onClick={() => set({ local: sp.get("local") === "1" ? null : "1" })}>Local</Chip>
-          {!hideCategoryChips && filters.categories?.slice(0, 8).map((c) => <Chip key={c.slug} active={sp.get("category") === c.slug} onClick={() => set({ category: sp.get("category") === c.slug ? null : c.slug })}>{c.name}</Chip>)}
+      {/* One row: Filters, Sort, then the one-tap filters. On a phone it sticks under the page bar and the
+          whole row scrolls sideways (its right edge fades to show there is more); from sm up it wraps. */}
+      <div className="sticky top-[var(--header-h,114px)] z-20 -mx-4 mb-2 border-b border-line bg-surface/95 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:backdrop-blur-none">
+        <div role="group" aria-label="Filter and sort" className="no-scrollbar flex items-center gap-2 overflow-x-auto py-2 pl-4 pr-8 max-sm:[mask-image:linear-gradient(to_right,black_calc(100%-28px),transparent)] sm:flex-wrap sm:overflow-visible sm:px-0">
+          <Button variant="outline" size="sm" onClick={() => setFilterOpen(true)} aria-label={activeCount ? `Filters, ${activeCount} applied` : "Filters"} className={cn(barButton, activeCount > 0 && barButtonOn)}>
+            <SlidersHorizontal className="h-4 w-4" aria-hidden /> Filters
+            {activeCount ? <span aria-hidden className="-mr-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-600 px-1 text-[11px] font-bold leading-none text-white tabular">{activeCount}</span> : null}
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setSortOpen(true)} aria-label={`Sort: ${sortLabel}`} className={cn(barButton, sorted && barButtonOn)}>
+            <ArrowUpDown className="h-4 w-4" aria-hidden /> {sorted ? sortLabel : "Sort"}
+          </Button>
+          <span aria-hidden className="h-5 w-px shrink-0 bg-line-2" />
+          <Chip className={barChip} active={sp.get("inStock") === "1"} onClick={() => set({ inStock: sp.get("inStock") === "1" ? null : "1" })}>In stock</Chip>
+          <Chip className={barChip} active={sp.get("minDiscount") === "10"} onClick={() => set({ minDiscount: sp.get("minDiscount") === "10" ? null : "10" })}>10%+ off</Chip>
+          <Chip className={barChip} active={sp.get("local") === "1"} onClick={() => set({ local: sp.get("local") === "1" ? null : "1" })}>Local</Chip>
+          {!hideCategoryChips && filters.categories?.slice(0, 8).map((c) => <Chip className={barChip} key={c.slug} active={sp.get("category") === c.slug} onClick={() => set({ category: sp.get("category") === c.slug ? null : c.slug })}>{c.name}</Chip>)}
         </div>
       </div>
 
@@ -161,13 +178,14 @@ export function ProductListing({ result, filters, signedIn, loadMoreHref, scope,
         <ErrorState title="Couldn't load products" description="Check your connection and try again. Your filters are kept." onRetry={() => router.refresh()} />
       ) : (
         <>
-          <p className="mb-3 text-xs text-ink-3" aria-live="polite">{result.total} product{result.total === 1 ? "" : "s"}{pending ? " · updating…" : ""}</p>
+          <p className="mb-2.5 text-xs font-medium text-ink-3 tabular" aria-live="polite">{result.total} product{result.total === 1 ? "" : "s"}{pending ? " · updating…" : ""}</p>
 
           {pending && items.length === 0 ? <ProductGridSkeleton /> : items.length === 0 ? (
             <EmptyState title={emptyTitle} description={emptyHint ?? "Try removing a filter, or search with a different word — Hindi words like aata, chini and lal mirch work too."} action={activeCount ? <Button variant="outline" onClick={() => startTransition(() => router.replace(pathname))}>Clear filters</Button> : null} />
           ) : (
             <>
-              <ProductGrid products={items} signedIn={signedIn} className={cn(pending && "opacity-60")} />
+              {/* While a filter or sort is on its way the grid dims, then settles back with the new set. */}
+              <ProductGrid products={items} signedIn={signedIn} enterFrom={arrived} className={cn("transition-opacity duration-200 motion-reduce:transition-none", pending && "opacity-60")} />
               {hasMore ? <div ref={sentinel} className="mt-6 flex flex-col items-center gap-2">{moreError ? <p role="alert" className="text-sm text-danger">Couldn&apos;t load more products. Check your connection and try again.</p> : null}
                 {/* A real link to the next page (crawlers and no-JS get ?page=N), appended in place for shoppers. */}
                 <Button variant="outline" href={nextPageHref} loading={loadingMore} onClick={(e) => { e.preventDefault(); void loadMore(); }}>{moreError ? "Try again" : "Load more"}</Button></div> : null}

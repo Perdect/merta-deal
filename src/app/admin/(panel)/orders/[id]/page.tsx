@@ -41,7 +41,7 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
 
           {(live || o.status === "ready_for_pickup") ? (
             <Panel title="Live location" description={live ? "Rider GPS, pickup point and customer" : "Pickup point and customer; rider appears once assigned"} flush>
-              <div className="overflow-hidden rounded-b-[14px] border-t border-line">
+              <div className="overflow-hidden rounded-b-xl border-t border-line">
                 <LiveMap store={{ lat: t.pickup.lat ?? 0, lng: t.pickup.lng ?? 0, name: t.pickup.name }} customer={addr.lat && addr.lng ? { lat: addr.lat, lng: addr.lng } : null} rider={live ? t.assignment!.last_location : null} trail={t.assignment?.last_location ? [{ lat: t.assignment.last_location.lat, lng: t.assignment.last_location.lng }] : []} showRoute={Boolean(live)} />
               </div>
             </Panel>
@@ -56,6 +56,7 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
                     <span className="font-medium text-ink">{a.rider?.id ? <Link href={`/admin/riders/${a.rider.id}`} className="hover:underline">{a.rider.user?.full_name ?? "Rider"}</Link> : "Rider"}</span>
                     <span className="text-xs text-ink-3">Offered {formatDateTime(a.offered_at)}{a.responded_at ? ` · responded ${formatTime(a.responded_at)}` : ""}{a.picked_up_at ? ` · picked up ${formatTime(a.picked_up_at)}` : ""}{a.delivered_at ? ` · delivered ${formatTime(a.delivered_at)}` : ""}</span>
                     <span className="ml-auto text-xs tabular text-ink-3">{a.distance_km ?? "?"} km · earns {formatINR(a.earning)}{Number(a.cod_amount) ? ` · COD ${formatINR(a.cod_amount)}` : ""}</span>
+                    {a.failed_at ? <span className="w-full text-xs font-medium text-danger">Delivery failed {formatDateTime(a.failed_at)}{a.failure_reason ? ` · ${a.failure_reason}` : ""}</span> : null}
                     {a.note ? <span className="w-full text-xs text-ink-4">{a.note}</span> : null}
                   </li>
                 ))}

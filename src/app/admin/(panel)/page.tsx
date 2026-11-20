@@ -1,35 +1,137 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AlertTriangle, Bike, Clock, IndianRupee, Inbox, LifeBuoy, PackageCheck, RotateCcw, ShoppingBag, Smartphone, Star, Timer, Truck, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, BellRing, Bike, CircleAlert, Clock, IndianRupee, Inbox, LifeBuoy, PackageCheck, PackageMinus, PackageSearch, PackageX, RotateCcw, ShoppingBag, Smartphone, Star, Timer, TimerOff, Truck, UserX, CheckCircle2, type LucideIcon } from "lucide-react";
 import { getAttentionItems, spGet, type SP } from "@/lib/data/admin";
-import { getToday, getLateOrders, getUnconfirmed, getPeriod, getRecentOrders, getLiveCounts, pctChange, ACTIVE_STATUSES, RANGE_OPTIONS, type RangeKey, type LiveCounts } from "@/lib/data/admin-dashboard";
+import { getToday, getLateOrders, getUnconfirmed, getOrderExceptions, getUpiWaiting, getDispatchAlerts, getStockAlerts, getPeriod, getRecentOrders, getLiveCounts, loaded, pctChange, ACTIVE_STATUSES, RANGE_OPTIONS, type RangeKey, type LiveCounts, type OrderException } from "@/lib/data/admin-dashboard";
 import { AdminPageHeader, Panel, MetricCard, ActionRow, DataTable, CellStack, RowLink, EmptyBlock, TrendChart, BreakdownBar, RangePicker, OrderStatusPill, PaymentStatusPill, paymentMethodLabel, ORDER_STATUS_COLOR, rupees } from "@/components/admin/kit";
 import { dayLabel } from "@/components/admin/bar-chart";
+import { minutesLabel } from "@/components/admin/order-summary";
 import { ORDER_STATUS_META, type OrderStatus } from "@/lib/order-status";
-import { cn, formatINR, formatNumber, formatDateTime, timeAgo } from "@/lib/utils";
+import { cn, formatINR, formatNumber, formatDateTime, minutesUntil, timeAgo } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
 export default async function AdminDashboardPage({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
   const rangeKey = (RANGE_OPTIONS.some((r) => r.value === spGet(sp, "range")) ? spGet(sp, "range") : "14d") as RangeKey;
-  const [today, attention, late, unconfirmed, period, recent, live] = await Promise.all([
-    getToday(), getAttentionItems(), getLateOrders(), getUnconfirmed(5), getPeriod(rangeKey), getRecentOrders(8), getLiveCounts(),
+  // The attention reads run with the rest of the page; each is wrapped so one failed read becomes a
+  // "couldn't load" row for its own line instead of an empty list or an error page.
+  const [today, attentionR, lateR, unconfirmedR, exceptionsR, upi, dispatchR, stockR, period, recent, live] = await Promise.all([
+    getToday(), loaded(getAttentionItems()), loaded(getLateOrders()), loaded(getUnconfirmed(5)), loaded(getOrderExceptions()), getUpiWaiting(),
+    loaded(getDispatchAlerts()), loaded(getStockAlerts()), getPeriod(rangeKey), getRecentOrders(8), getLiveCounts(),
   ]);
 
   const r = period.report; const p = period.previous;
   const vsYesterday = "vs. same time yesterday";
   const prevLabel = `vs. previous ${RANGE_OPTIONS.find((o) => o.value === rangeKey)?.label}`;
 
-  const attentionRows = [
-    late.length ? { href: "/admin/orders?status=active&late=1", icon: Timer, title: `${late.length} ${late.length === 1 ? "order is" : "orders are"} past the promised time`, detail: late.slice(0, 3).map((o) => `${o.order_number} · ${ORDER_STATUS_META[o.status].short}`).join(", "), tone: "red" as const, count: late.length } : null,
-    attention.unassignedReady.length ? { href: "/admin/orders?status=ready_for_pickup", icon: Bike, title: "Packed orders waiting for a rider", detail: attention.unassignedReady.slice(0, 3).map((o) => `${o.order_number} · ready ${timeAgo(o.ready_at ?? o.created_at)}`).join(", "), tone: "red" as const, count: attention.unassignedReady.length } : null,
-    unconfirmed.count ? { href: "/admin/orders?status=placed", icon: Clock, title: "Orders waiting for payment for over 5 minutes", detail: unconfirmed.items.slice(0, 3).map((o) => `${o.order_number} · ${timeAgo(o.created_at)}`).join(", "), tone: "amber" as const, count: unconfirmed.count } : null,
-    attention.refundsPending.length ? { href: "/admin/payments?tab=refunds", icon: RotateCcw, title: "Refunds to issue", detail: attention.refundsPending.slice(0, 3).map((x) => `${x.order?.order_number ?? "Order"} · ${formatINR(Number(x.amount) - Number(x.refund_amount))}`).join(", "), tone: "red" as const, count: attention.refundsPending.length } : null,
-    attention.openTickets.length ? { href: "/admin/support?status=open_all", icon: LifeBuoy, title: "Open support tickets", detail: attention.openTickets.slice(0, 2).map((t) => `${t.ticket_number} · ${t.subject}`).join(", "), tone: "amber" as const, count: attention.openTickets.length } : null,
-    attention.pendingReviews ? { href: "/admin/reviews", icon: Star, title: "Reviews to moderate", tone: "blue" as const, count: attention.pendingReviews } : null,
-  ].filter(Boolean) as { href: string; icon: typeof Timer; title: string; detail?: string; tone: "red" | "amber" | "blue"; count: number }[];
-  const needsAttention = late.length + attention.unassignedReady.length + unconfirmed.count + attention.refundsPending.length;
+  const plural = (n: number, one: string, many: string) => `${formatNumber(n)} ${n === 1 ? one : many}`;
+  /** The first `n` of a list as one line, then how many more there are (`total` when the list itself is only a page of them). */
+  const first = <T,>(list: T[], n: number, text: (x: T) => string, total = list.length) => { const shown = list.slice(0, n); return shown.map(text).join(", ") + (shown.length && total > shown.length ? ` +${formatNumber(total - shown.length)} more` : ""); };
+  const failed = (key: string, href: string, icon: LucideIcon, what: string): AttentionRow => ({ key, href, icon, title: `Couldn't load ${what}`, detail: "Not counted here. Reload the page, or open the list to check.", tone: "amber" });
+
+  /* ---- Orders and payments ---- */
+  const orderRows: AttentionRow[] = [];
+  if (!lateR.ok) orderRows.push(failed("late", "/admin/orders?status=active&late=1", Timer, "late orders"));
+  else if (lateR.data.count) orderRows.push({ key: "late", href: "/admin/orders?status=active&late=1", icon: Timer, tone: "red", count: lateR.data.count,
+    title: `${lateR.data.count === 1 ? "Order" : "Orders"} past the promised time`,
+    detail: first(lateR.data.items, 3, (o) => `${o.order_number} · ${ORDER_STATUS_META[o.status].short} · ${minutesLabel(minutesUntil(o.promised_at) ?? 0)} late`, lateR.data.count) });
+
+  const waiting = attentionR.ok ? attentionR.data.unassignedReady : [];
+  const waitingIds = new Set(waiting.map((o) => o.id));
+  const exceptionOf = new Map((exceptionsR.ok ? exceptionsR.data : []).map((o) => [o.id, o.exception]));
+  if (!attentionR.ok) orderRows.push(failed("attention", "/admin/orders?status=ready", Bike, "packed orders, refunds, tickets and reviews"));
+  else if (waiting.length) orderRows.push({ key: "ready", href: "/admin/orders?status=ready", icon: Bike, tone: "red", count: waiting.length,
+    title: "Packed orders waiting for a rider",
+    detail: first(waiting, 3, (o) => `${o.order_number} · ready ${timeAgo(o.ready_at ?? o.created_at)}${exceptionOf.get(o.id) === "no_rider" ? " · no rider in range" : ""}`) });
+
+  if (!exceptionsR.ok) orderRows.push(failed("exceptions", "/admin/orders?status=exceptions", CircleAlert, "order exceptions"));
+  else {
+    const of = (kind: string) => exceptionsR.data.filter((o) => o.exception === kind);
+    const since = (o: OrderException) => `${o.order_number}${o.exception_at ? ` · ${timeAgo(o.exception_at)}` : ""}`;
+    const add = (kind: string, list: OrderException[], icon: LucideIcon, title: string, tone: "red" | "amber") => { if (list.length) orderRows.push({ key: `exception-${kind}`, href: "/admin/orders?status=exceptions", icon, tone, count: list.length, title, detail: first(list, 3, since) }); };
+    add("delivery_failed", of("delivery_failed"), PackageX, "Deliveries the rider could not complete", "red");
+    add("unattended", of("unattended"), BellRing, "New orders nobody has accepted", "red");
+    add("item_exception", of("item_exception"), PackageSearch, "Item unavailable · waiting for the customer's answer", "amber");
+    // "No rider in range" is already said on the packed-orders row above; only orders that row cannot show get their own line.
+    add("no_rider", of("no_rider").filter((o) => !attentionR.ok || !waitingIds.has(o.id)), UserX, "Dispatch found no rider in range", "red");
+    const known = ["delivery_failed", "unattended", "item_exception", "no_rider"];
+    add("other", exceptionsR.data.filter((o) => !known.includes(o.exception)), CircleAlert, "Orders flagged with another exception", "amber");
+  }
+
+  const upiCount = (upi.orders?.length ?? 0) + (upi.rider?.length ?? 0);
+  if (upiCount) orderRows.push({ key: "upi", href: "/admin/payments", icon: Smartphone, tone: "amber", count: upiCount,
+    title: `UPI ${upiCount === 1 ? "payment" : "payments"} waiting for your confirmation`,
+    detail: [
+      ...(upi.orders ?? []).slice(0, 3).map((x) => `${x.order_number} · ${formatINR(x.amount)} · ${x.claimed_at ? "customer says paid" : "customer has not confirmed"}`),
+      ...(upi.rider ?? []).slice(0, 2).map((x) => `${x.order_number} · ${formatINR(x.amount)} · taken by the rider`),
+    ].join(", ") });
+  if (upi.orders === null || upi.rider === null) orderRows.push(failed("upi-failed", "/admin/payments", Smartphone, upi.orders === null && upi.rider === null ? "UPI payments to confirm" : upi.orders === null ? "UPI orders waiting for payment" : "UPI collected by riders"));
+
+  // An order waiting on a direct UPI payment is also "placed"; it is listed once, on the UPI row.
+  if (!unconfirmedR.ok) orderRows.push(failed("placed", "/admin/orders?status=placed", Clock, "unconfirmed orders"));
+  else {
+    const upiIds = new Set((upi.orders ?? []).map((x) => x.order_id));
+    const cutoff = new Date(unconfirmedR.data.cutoff).getTime();
+    const overlap = (upi.orders ?? []).filter((x) => new Date(x.placed_at).getTime() < cutoff).length;
+    const others = Math.max(0, unconfirmedR.data.count - overlap);
+    if (others) orderRows.push({ key: "placed", href: "/admin/orders?status=placed", icon: Clock, tone: "amber", count: others,
+      title: `Orders not confirmed for over ${unconfirmedR.data.minutes} minutes`,
+      detail: first(unconfirmedR.data.items.filter((o) => !upiIds.has(o.id)), 3, (o) => `${o.order_number} · placed ${timeAgo(o.created_at)}`, others) || undefined });
+  }
+
+  if (attentionR.ok && attentionR.data.refundsPending.length) orderRows.push({ key: "refunds", href: "/admin/payments?tab=refunds", icon: RotateCcw, tone: "red", count: attentionR.data.refundsPending.length,
+    title: "Refunds to issue",
+    detail: first(attentionR.data.refundsPending, 3, (x) => `${x.order?.order_number ?? "Order"} · ${formatINR(Number(x.amount) - Number(x.refund_amount))}`) });
+
+  /* ---- Riders and dispatch ---- */
+  const riderRows: AttentionRow[] = [];
+  if (!dispatchR.ok) riderRows.push(failed("dispatch", "/admin/riders", Bike, "rider availability and offers"));
+  else {
+    const d = dispatchR.data;
+    if (d.packed && d.online === 0) riderRows.push({ key: "no-rider-online", href: "/admin/riders", icon: UserX, tone: "red", count: d.packed,
+      title: "No rider is online", detail: `${plural(d.packed, "packed order is", "packed orders are")} waiting and nobody can take ${d.packed === 1 ? "it" : "them"}` });
+    else if (d.packed && d.free === 0) riderRows.push({ key: "riders-busy", href: "/admin/riders", icon: Bike, tone: "amber", count: d.packed,
+      title: `${d.online === 1 ? "The only rider online is" : `All ${formatNumber(d.online)} riders online are`} on a delivery`, detail: `${plural(d.packed, "packed order is", "packed orders are")} waiting for a free rider` });
+    if (d.unanswered.length) riderRows.push({ key: "offers", href: "/admin/orders?status=ready", icon: TimerOff, tone: "amber", count: d.timedOut + d.declined,
+      title: d.timedOut ? "Rider offers ran out with no answer" : "Rider offers were declined",
+      detail: first(d.unanswered, 3, (o) => `${o.order_number} · ${[o.timedOut ? `${o.timedOut} timed out` : "", o.declined ? `${o.declined} declined` : ""].filter(Boolean).join(", ")}`) });
+  }
+
+  /* ---- Stock ---- */
+  const stockRows: AttentionRow[] = [];
+  if (!stockR.ok) stockRows.push(failed("stock", "/admin/inventory", PackageX, "stock alerts"));
+  else {
+    const st = stockR.data;
+    if (st.out) stockRows.push({ key: "out", href: "/admin/inventory?filter=out", icon: PackageX, tone: "red", count: st.out, title: `${st.out === 1 ? "Listing" : "Listings"} out of stock`, detail: first(st.outNames, 3, (n) => n, st.out) || undefined });
+    if (st.low) stockRows.push({ key: "low", href: "/admin/inventory?filter=low", icon: PackageMinus, tone: "amber", count: st.low, title: `${st.low === 1 ? "Listing" : "Listings"} at or below ${st.low === 1 ? "its" : "their"} low-stock level`, detail: first(st.lowNames, 3, (n) => n, st.low) || undefined });
+  }
+
+  /* ---- Customer care ---- */
+  const careRows: AttentionRow[] = [];
+  if (attentionR.ok && attentionR.data.openTickets.length) careRows.push({ key: "tickets", href: "/admin/support?status=open_all", icon: LifeBuoy, tone: "amber", count: attentionR.data.openTickets.length, title: "Open support tickets", detail: first(attentionR.data.openTickets, 2, (t) => `${t.ticket_number} · ${t.subject}`) });
+  if (attentionR.ok && attentionR.data.pendingReviews) careRows.push({ key: "reviews", href: "/admin/reviews", icon: Star, tone: "blue", count: attentionR.data.pendingReviews, title: "Reviews to moderate" });
+
+  const groups = [
+    { label: "Orders and payments", rows: orderRows },
+    { label: "Riders and dispatch", rows: riderRows },
+    { label: "Stock", rows: stockRows },
+    { label: "Customer care", rows: careRows },
+  ].filter((g) => g.rows.length);
+  const attentionCount = groups.reduce((n, g) => n + g.rows.length, 0);
+  const anyFailed = [...orderRows, ...riderRows, ...stockRows].some((x) => x.count == null);
+  // The headline figure counts each order once, however many rows it sits in (late and unassigned, say).
+  // Lists are read a page at a time, so anything beyond the page is added from that read's own count.
+  const flagged = new Set<string>([
+    ...(lateR.ok ? lateR.data.items.map((o) => o.id) : []),
+    ...waiting.map((o) => o.id),
+    ...(exceptionsR.ok ? exceptionsR.data.map((o) => o.id) : []),
+    ...(upi.orders ?? []).map((x) => x.order_id), ...(upi.rider ?? []).map((x) => x.order_id),
+    ...(unconfirmedR.ok ? unconfirmedR.data.items.map((o) => o.id) : []),
+    ...(attentionR.ok ? attentionR.data.refundsPending.map((x) => x.order_id) : []),
+  ]);
+  const beyondPage = (lateR.ok ? Math.max(0, lateR.data.count - lateR.data.items.length) : 0) + (unconfirmedR.ok ? Math.max(0, unconfirmedR.data.count - unconfirmedR.data.items.length) : 0);
+  const needsAttention = flagged.size + beyondPage;
 
   const statusItems = (Object.keys(ORDER_STATUS_META) as OrderStatus[])
     .map((s) => ({ label: ORDER_STATUS_META[s].label, value: period.statusCounts[s] ?? 0, color: ORDER_STATUS_COLOR[s], href: `/admin/orders?status=${s}&from=${period.start}&to=${period.end}` }))
@@ -41,12 +143,19 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       <AdminPageHeader title="Dashboard" description={`Today's operations and how the business is trending. Times are IST.`} actions={<Link href="/admin/orders?status=active" className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 text-sm font-semibold text-white hover:bg-brand-700"><ShoppingBag className="h-4 w-4" aria-hidden />Active orders</Link>} />
 
       {/* 1. What needs a hand right now; 2. the live order pipeline; 3. today's figures; 4. trends and lists. */}
-      {attentionRows.length ? (
-        <Panel id="attention" title={`Needs attention · ${attentionRows.length}`} description="Issues you can act on now, most urgent first" flush className="mb-4 border-warning/50">
-          <div className="grid gap-x-4 px-2 pb-2 md:grid-cols-2">{attentionRows.map((a) => <ActionRow key={a.title} {...a} />)}</div>
+      {attentionCount ? (
+        <Panel id="attention" title={`Needs attention · ${attentionCount}`} description="What you can act on now, grouped by where it is fixed. Tap a row to open that screen." flush className="mb-4 border-warning/50">
+          <div className="space-y-1 px-2 pb-2 pt-1">
+            {groups.map((g) => (
+              <section key={g.label} aria-label={g.label}>
+                <h3 className="px-2 pb-0.5 pt-2 text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3">{g.label}</h3>
+                <div className="grid gap-x-4 md:grid-cols-2">{g.rows.map(({ key, ...row }) => <ActionRow key={key} {...row} />)}</div>
+              </section>
+            ))}
+          </div>
         </Panel>
       ) : (
-        <p id="attention" className="mb-4 flex items-center gap-2 rounded-xl border border-success/25 bg-success-50 px-4 py-2.5 text-sm font-medium text-success"><CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden />All clear: no late or unassigned orders, refunds, tickets or reviews waiting.</p>
+        <p id="attention" className="mb-4 flex items-start gap-2 rounded-xl border border-success/25 bg-success-50 px-4 py-2.5 text-sm font-medium text-success"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />All clear: no late, unassigned or flagged orders, no payments or refunds to settle, no stock alerts, and no tickets or reviews waiting.</p>
       )}
 
       <Panel title="Right now" description="Live orders by stage · tap a stage to open those orders" className="mb-4">
@@ -61,8 +170,8 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           change={pctChange(today.sales, today.salesSameTimeYesterday) != null ? { pct: pctChange(today.sales, today.salesSameTimeYesterday)!, label: vsYesterday } : null} />
         <MetricCard label="Active deliveries" period="Right now" value={formatNumber(today.activeDeliveries)} icon={Truck} href="/admin/orders?status=out_for_delivery"
           hint={`${today.awaitingRider} packed, awaiting rider · ${today.onlineRiders} ${today.onlineRiders === 1 ? "rider" : "riders"} online`} />
-        <MetricCard label="Needs attention" period="Right now" value={formatNumber(needsAttention)} icon={AlertTriangle} tone={needsAttention ? "attention" : "default"} href="#attention"
-          hint={needsAttention ? "Late, unassigned, unconfirmed or refunds" : "Nothing waiting"} />
+        <MetricCard label="Orders needing attention" period="Right now" value={formatNumber(needsAttention)} icon={AlertTriangle} tone={needsAttention || anyFailed ? "attention" : "default"} href="#attention"
+          hint={anyFailed ? "Some checks could not be loaded; see the list above" : needsAttention ? "Late, unassigned, flagged, or with a payment or refund to settle" : "Nothing waiting"} />
       </section>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
@@ -122,6 +231,8 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
   );
 }
 
+type AttentionRow = { key: string; href: string; icon: LucideIcon; title: string; detail?: string; tone: "red" | "amber" | "blue"; /** Absent on a row that says its own read failed. */ count?: number };
+
 function Total({ label, value, change, prevLabel, goodWhenUp = true, hasPrev }: { label: string; value: string; change: number | null; prevLabel: string; goodWhenUp?: boolean; hasPrev: boolean }) {
   const good = change == null ? null : goodWhenUp ? change >= 0 : change <= 0;
   return (
@@ -159,7 +270,7 @@ function Pipeline({ live }: { live: LiveCounts }) {
       <ul className="flex flex-wrap gap-2 text-sm" aria-label="People and payments">
         <li><Link href="/admin/riders" className={cn(chip, "border-line bg-card hover:border-brand-300")}><Bike className="h-4 w-4 text-ink-3" aria-hidden /><span><span className="font-display font-bold tabular text-ink">{live.onlineRiders}</span> {live.onlineRiders === 1 ? "rider" : "riders"} online</span></Link></li>
         <li><Link href="/admin/payments" className={cn(chip, live.upiToConfirm ? "border-warning/50 bg-warning-50 text-warning" : "border-line bg-card hover:border-brand-300")}><Smartphone className="h-4 w-4" aria-hidden /><span><span className="font-display font-bold tabular">{live.upiToConfirm}</span> UPI {live.upiToConfirm === 1 ? "payment" : "payments"} to confirm</span></Link></li>
-        <li><Link href="/admin/requests" className={cn(chip, live.newRequests ? "border-info/40 bg-info-50 text-[#1d4ed8]" : "border-line bg-card hover:border-brand-300")}><Inbox className="h-4 w-4" aria-hidden /><span><span className="font-display font-bold tabular">{live.newRequests}</span> new {live.newRequests === 1 ? "request" : "requests"}</span></Link></li>
+        <li><Link href="/admin/requests" className={cn(chip, live.newRequests ? "border-info/40 bg-info-50 text-info" : "border-line bg-card hover:border-brand-300")}><Inbox className="h-4 w-4" aria-hidden /><span><span className="font-display font-bold tabular">{live.newRequests}</span> new {live.newRequests === 1 ? "request" : "requests"}</span></Link></li>
       </ul>
     </div>
   );

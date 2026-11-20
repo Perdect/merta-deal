@@ -3,7 +3,7 @@ import { ShoppingBag, SearchX } from "lucide-react";
 import { listOrders, countOrdersByTab, getOrderAdmin, getLiveRiders, spGet, spPage, type SP, type OrderFilters } from "@/lib/data/admin";
 import { serverEnv } from "@/lib/env";
 import { AdminPageHeader, DataTable, CellStack, RowLink, EmptyBlock, ListToolbar, StatusTabs, ListPagination, QuickView, OrderStatusPill, PaymentStatusPill, paymentMethodLabel, StatusPill, rupees, LiveList } from "@/components/admin/kit";
-import { OrderFacts } from "@/components/admin/order-summary";
+import { OrderFacts, minutesLabel } from "@/components/admin/order-summary";
 import { OrderAdminActions } from "@/components/admin/order-actions";
 import { PAYMENT_STATUS_OPTIONS, PAYMENT_METHOD_OPTIONS } from "@/components/admin/constants";
 import { formatDateTime, minutesUntil, timeAgo } from "@/lib/utils";
@@ -59,11 +59,11 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
           ? <EmptyBlock icon={SearchX} title="No orders match" description="Try another tab, clear a filter chip, or search by a different order number or phone." />
           : <EmptyBlock icon={ShoppingBag} title="No orders yet" description="Orders appear here the moment a customer checks out." />}
         columns={[
-          { key: "order", header: "Order", render: (o) => <CellStack primary={<>{o.order_number}{o.exception ? <span className="ml-1.5 rounded-full bg-danger-50 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-danger">{EXCEPTION_LABEL[o.exception] ?? o.exception}</span> : !o.accepted_at && !TERMINAL.includes(o.status) && !["ready_for_pickup", "rider_assigned", "out_for_delivery"].includes(o.status) ? <span className="ml-1.5 rounded-full bg-brand-50 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-brand-700">New</span> : null}</>} secondary={o.short_code ? `Code ${o.short_code}` : undefined} href={viewHref(o.id)} scroll={false} /> },
+          { key: "order", header: "Order", render: (o) => <CellStack primary={<>{o.order_number}{o.exception ? <span className="ml-1.5 rounded-full bg-danger-50 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-danger">{EXCEPTION_LABEL[o.exception] ?? o.exception}</span> : !o.accepted_at && !TERMINAL.includes(o.status) && !["ready_for_pickup", "rider_assigned", "out_for_delivery"].includes(o.status) ? <span className="ml-1.5 rounded-full bg-brand-50 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-brand-700">New</span> : null}</>} secondary={<OrderSecondary name={(o.address_snapshot as { full_name?: string } | null)?.full_name ?? o.customer?.full_name ?? null} code={o.short_code} />} href={viewHref(o.id)} scroll={false} /> },
           { key: "customer", header: "Customer", hideBelow: "md", render: (o) => { const a = o.address_snapshot as { full_name?: string; phone?: string } | null; return <CellStack primary={a?.full_name ?? o.customer?.full_name ?? "—"} secondary={a?.phone ?? o.customer?.phone ?? undefined} />; } },
-          { key: "status", header: "Order status", render: (o) => { const eta = minutesUntil(o.promised_at); const late = eta != null && eta < 0 && !TERMINAL.includes(o.status); return <span className="flex flex-col items-start gap-1"><OrderStatusPill status={o.status} />{late ? <StatusPill tone="red">{Math.abs(eta!)} min late</StatusPill> : null}</span>; } },
+          { key: "status", header: "Order status", render: (o) => { const eta = minutesUntil(o.promised_at); const late = eta != null && eta < 0 && !TERMINAL.includes(o.status); return <span className="flex flex-col items-start gap-1"><OrderStatusPill status={o.status} />{late ? <StatusPill tone="red">{minutesLabel(eta!)} late</StatusPill> : null}</span>; } },
           { key: "method", header: "Method", hideBelow: "lg", render: (o) => <span className="text-ink-2">{paymentMethodLabel(o.payment_method)}</span> },
-          { key: "paystatus", header: "Payment", hideBelow: "sm", render: (o) => <PaymentStatusPill status={o.payment_status} /> },
+          { key: "paystatus", header: "Payment", render: (o) => <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-1 @max-lg:justify-end"><span className="text-xs text-ink-2 @4xl:hidden">{paymentMethodLabel(o.payment_method)}</span><PaymentStatusPill status={o.payment_status} /></span> },
           { key: "items", header: "Items", align: "right", hideBelow: "xl", render: (o) => <span className="tabular text-ink-3">{o.item_count}</span> },
           { key: "total", header: "Total", align: "right", render: (o) => <span className="font-semibold tabular">{rupees(o.total)}</span> },
           { key: "placed", header: "Placed", hideBelow: "lg", render: (o) => <span className="whitespace-nowrap text-xs text-ink-3" title={formatDateTime(o.created_at)}>{timeAgo(o.created_at)}{o.delivery_type !== "standard" ? <span className="block capitalize">{o.delivery_type}</span> : null}</span> },
@@ -83,4 +83,13 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
       ) : null}
     </>
   );
+}
+
+/**
+ * Second line under the order number. The customer's name is shown here only while the Customer column
+ * is hidden (phone cards, narrow tables), so a card can be read without opening it.
+ */
+function OrderSecondary({ name, code }: { name: string | null; code: string | null }) {
+  if (!name && !code) return null;
+  return <>{name ? <span className="@2xl:hidden">{name}{code ? " · " : ""}</span> : null}{code ? `Code ${code}` : null}</>;
 }

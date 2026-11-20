@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/supabase/server";
 import { getAdminNotifications } from "@/lib/data/admin";
@@ -7,8 +7,11 @@ import { AdminShell } from "@/components/admin/kit/shell";
 import { PortalTheme } from "@/components/shared/portal-theme";
 import { createClient } from "@/lib/supabase/server";
 import { env, isPushConfigured } from "@/lib/env";
+import { adminAppMetadata, adminAppViewport } from "@/components/pwa/admin-app";
 
-export const metadata: Metadata = { title: { default: "Admin", template: "%s · Admin | Merta Deal" }, robots: { index: false, follow: false } };
+// The admin installs as its own app (manifest scope /admin, blue icon and title bar), apart from the shop and the rider app.
+export const metadata: Metadata = { title: { default: "Admin", template: "%s · Admin | Merta Deal" }, robots: { index: false, follow: false }, ...adminAppMetadata };
+export const viewport: Viewport = adminAppViewport;
 export const dynamic = "force-dynamic";
 
 /**

@@ -294,3 +294,8 @@ html.md-scroll-lock body { position: fixed; left: 0; right: 0; overflow: hidden;
   .print-hide { display: none !important; }
   body { background: #fff !important; }
 }
+
+/* Admin offline state (useAdminOffline in src/components/admin/kit/pwa.tsx). While the browser has no
+   connection the admin page (<main inert>) and any open panel or dialog (marked by that hook) cannot be
+   acted on; this only makes it visible: their controls look disabled, the data stays fully readable. */
+:is(#admin-main[inert], [data-admin-offline-blocked]) :is(button, input, select, textarea, summary, [role="switch"], [role="button"], [role="tab"], a[class*="inline-flex"]) { opacity: 0.5; }

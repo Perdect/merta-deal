@@ -19,6 +19,13 @@ import { cn, formatINR, haversineKm, timeAgo } from "@/lib/utils";
 // A rider is only sent for a packed bag (0050): assigning earlier left orders stuck with nothing to collect.
 const ASSIGNABLE = ["ready_for_pickup"];
 const CANCELLABLE = ["placed", "confirmed", "preparing", "ready_for_pickup", "rider_assigned", "out_for_delivery"];
+/** What each `orders.exception` value means for the operator and where it is resolved. Words only; nothing here changes an action. */
+const EXCEPTION_NOTICE: Record<string, { tone: "warning" | "danger"; title: string; body: string }> = {
+  no_rider: { tone: "danger", title: "no rider found", body: "Dispatch found no free rider online within range. Assign a rider yourself or re-run dispatch below." },
+  unattended: { tone: "danger", title: "nobody has accepted this order", body: "It has waited past the alert window. Open the full order to accept it, or use the buttons below." },
+  delivery_failed: { tone: "danger", title: "delivery failed", body: "The rider could not complete the delivery. Call the customer, then send a rider again or cancel the order below. The rider's reason is under Rider assignments on the full order page." },
+  item_exception: { tone: "warning", title: "an item is unavailable", body: "The customer has been asked to approve the change. Open the full order to see their answer or resolve it for them." },
+};
 
 /** Admin controls for one order: packing, dispatch, cancellation and refunds. Subscribes to realtime so the page refreshes when a rider acts. */
 export function OrderAdminActions({ tracking: t, riders, razorpayConfigured, compact }: { tracking: OrderTracking; riders: LiveRider[]; razorpayConfigured: boolean; /** Single row of buttons (quick-view footer). */ compact?: boolean }) {
@@ -51,12 +58,16 @@ export function OrderAdminActions({ tracking: t, riders, razorpayConfigured, com
   const canCancel = CANCELLABLE.includes(o.status);
   const refundable = t.payment && t.payment.provider === "razorpay" && ["paid", "authorized", "partially_refunded"].includes(t.payment.status);
   const refundPending = t.payment?.refund_required;
+  // `orders.exception` (0036) is only meaningful while the order is still live.
+  const exception = o.exception && CANCELLABLE.includes(o.status) ? EXCEPTION_NOTICE[o.exception] ?? { tone: "warning" as const, title: o.exception.replace(/_/g, " "), body: "Open the full order to see what happened." } : null;
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between text-xs"><span className="font-semibold text-ink-3">{compact ? "Actions for this order" : "Admin actions"}</span><span className={cn("inline-flex items-center gap-1 font-semibold", connected ? "text-success" : "text-ink-4")}>{connected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}{connected ? "Live updates" : "Refreshing every 20 s"}</span></div>
 
-      {o.status === "ready_for_pickup" && !t.assignment ? <Alert tone="warning" title="No rider on this order">Auto-dispatch found nobody within range. Assign a rider manually or re-run dispatch.</Alert> : null}
+      {/* Notices sit directly above the buttons that resolve them: the order's exception first, then dispatch and refund. */}
+      {exception ? <Alert tone={exception.tone} title={`Exception: ${exception.title}${o.exception_at ? ` · ${timeAgo(o.exception_at)}` : ""}`}>{exception.body}</Alert> : null}
+      {o.status === "ready_for_pickup" && !t.assignment && o.exception !== "no_rider" ? <Alert tone="warning" title="No rider on this order">Auto-dispatch found nobody within range. Assign a rider manually or re-run dispatch.</Alert> : null}
       {refundPending ? <Alert tone="danger" title="Refund pending">{formatINR(Number(t.payment!.amount))} was paid online and the order is cancelled. Issue the refund below.</Alert> : null}
 
       <FulfilActions tracking={t} compact={compact} />

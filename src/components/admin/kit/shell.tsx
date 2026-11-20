@@ -13,6 +13,7 @@ import { AdminTrail } from "./client";
 import { OrderAlerts } from "@/components/admin/alerts/order-alerts";
 import { LiveCounts } from "./live-list";
 import { AlertBanner, type PushConfig } from "@/components/alerts/alert-setup";
+import { AdminInstallItem, AdminOfflineBanner, AdminOfflineLayerNotice, AdminPwa, OfflineLocalOnly, useAdminOffline } from "./pwa";
 
 /* Collapsed state lives in localStorage (a per-admin convenience). useSyncExternalStore keeps the
    server render (expanded) and the client in agreement without a hydration mismatch. */
@@ -28,6 +29,10 @@ type ShellUser = { name: string | null; email: string | null; role: string; avat
  * Admin frame: light grouped sidebar (collapsible on desktop, drawer on smaller screens) and a
  * compact top bar with breadcrumbs, notifications, the customer site and the account menu.
  * Page headings live in each page (AdminPageHeader), never here, so there is exactly one h1.
+ *
+ * Offline (see ./pwa): a strip under the top bar says so, <main> and every open panel or dialog are
+ * inert so no order, payment, dispatch or stock action can be attempted, and on reconnect the server
+ * data is refreshed once. Navigation, the account menu and muting a ringing alert keep working.
  */
 export type NavCounts = Record<NavBadgeKey, number>;
 
@@ -40,6 +45,8 @@ export function AdminShell({ user, userId, unread, counts, push, children }: { u
   useBackToClose(drawer, () => setDrawer(false));
   const active = activeNavHref(pathname);
   const crumbs = breadcrumbs(pathname);
+  const shellRef = React.useRef<HTMLDivElement>(null);
+  const offline = useAdminOffline(shellRef);
 
   React.useEffect(() => {
     if (!drawer) return;
@@ -50,7 +57,7 @@ export function AdminShell({ user, userId, unread, counts, push, children }: { u
   }, [drawer]);
 
   return (
-    <div className="flex min-h-dvh bg-surface text-ink [--admin-bottom-nav:3.75rem] lg:[--admin-bottom-nav:0px]">
+    <div ref={shellRef} className="flex min-h-dvh bg-surface text-ink [--admin-bottom-nav:3.75rem] lg:[--admin-bottom-nav:0px]">
       <React.Suspense fallback={null}><AdminTrail /></React.Suspense>
       <a href="#admin-main" className="sr-only z-[70] rounded-md bg-card px-3 py-2 text-sm font-semibold focus:not-sr-only focus:fixed focus:left-3 focus:top-3">Skip to content</a>
 
@@ -111,14 +118,17 @@ export function AdminShell({ user, userId, unread, counts, push, children }: { u
             <AccountMenu user={user} />
           </div>
           </div>
+          <AdminOfflineBanner offline={offline} />
         </header>
-        <main id="admin-main" className="min-w-0 flex-1 px-3 py-4 pb-[calc(var(--admin-bottom-nav)+1rem+var(--safe-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] sm:px-5 sm:py-5 sm:pb-[calc(var(--admin-bottom-nav)+1.25rem+var(--safe-bottom))] lg:px-8 lg:py-7">
+        <main id="admin-main" inert={offline} className="min-w-0 flex-1 px-3 py-4 pb-[calc(var(--admin-bottom-nav)+1rem+var(--safe-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] sm:px-5 sm:py-5 sm:pb-[calc(var(--admin-bottom-nav)+1.25rem+var(--safe-bottom))] lg:px-8 lg:py-7">
           <div className="mx-auto w-full max-w-[1400px]"><AlertBanner portal="admin" push={push} href="/admin/notifications#alerts" />{children}</div>
         </main>
         <MobileBar active={active} counts={counts ?? null} onMenu={() => setDrawer(true)} />
       </div>
-      <OrderAlerts userId={userId} push={push} />
+      <OfflineLocalOnly offline={offline}><OrderAlerts userId={userId} push={push} /></OfflineLocalOnly>
       <LiveCounts />
+      <AdminOfflineLayerNotice offline={offline} />
+      <AdminPwa />
     </div>
   );
 }
@@ -261,6 +271,7 @@ function AccountMenu({ user }: { user: ShellUser }) {
           </div>
           <Link role="menuitem" href="/admin/settings" onClick={() => setOpen(false)} className="flex items-center gap-2.5 px-3 py-2 text-sm text-ink-2 hover:bg-surface-2 pointer-coarse:min-h-11"><Settings className="h-4 w-4" aria-hidden />Settings</Link>
           <Link role="menuitem" href="/" target="_blank" onClick={() => setOpen(false)} className="flex items-center gap-2.5 px-3 py-2 text-sm text-ink-2 hover:bg-surface-2 pointer-coarse:min-h-11 md:hidden"><ExternalLink className="h-4 w-4" aria-hidden />Customer site</Link>
+          <AdminInstallItem onDone={() => setOpen(false)} />
           <form action={staffSignOutAction} className="border-t border-line"><input type="hidden" name="portal" value="admin" />
             <SignOutItem />
           </form>

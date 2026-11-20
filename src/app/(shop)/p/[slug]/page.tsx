@@ -15,10 +15,11 @@ import { ProductPurchase, EtaBadge } from "@/components/shop/product-purchase";
 import { ProductBuyBar } from "@/components/shop/product-buy-bar";
 import { PackChips } from "@/components/shop/pack-chips";
 import { CakeOptions } from "@/components/shop/cake-options";
-import { isMadeToOrder, weightLabel } from "@/lib/cake";
+import { isMadeToOrder } from "@/lib/cake";
 import { DetailSection, type DetailRow } from "@/components/shop/product-details";
 import { ProductRail } from "@/components/shop/product-card";
-import { VegMark } from "@/components/ui/badge";
+import { Badge, DiscountBadge, VegMark } from "@/components/ui/badge";
+import { resolveOffer } from "@/components/shop/product-offer";
 import { StarRating } from "@/components/ui/misc";
 import { SectionHeader } from "@/components/ui/card";
 import { formatDate } from "@/lib/utils";
@@ -64,6 +65,14 @@ export default async function ProductPage({ params }: Props) {
   const price = product.selling_price ?? product.base_mrp;
   const mrp = product.mrp ?? product.base_mrp;
   const brandHref = product.brand_slug ? `/search?brand=${product.brand_slug}` : null;
+  // The same listing the price block and the buy bar read, so the photo's badge can never disagree with them.
+  const offer = resolveOffer(product);
+  const soldOut = !offer || offer.status === "out_of_stock";
+  const offPct = offer && !soldOut && offer.mrp > offer.selling_price ? Math.round(Number(offer.discount_pct ?? 0)) : 0;
+  // Only the pack size the catalogue states. A product without one shows no size at all: the weight
+  // columns behind it are defaults on those rows, not a measured pack.
+  const packSize = product.pack_label?.trim() || null;
+  const seeAll = "tap inline-flex items-center gap-0.5 text-sm font-semibold text-brand-700 hover:underline focus-visible:outline-2 focus-visible:outline-brand-600";
   const supportEmail = str(settings.support_email, site.supportEmail);
   const supportPhone = str(settings.support_phone, site.supportPhone);
   const telHref = `tel:+${supportPhone.replace(/\D/g, "").replace(/^0+/, "").replace(/^(?!91)/, "91")}`;
@@ -100,7 +109,7 @@ export default async function ProductPage({ params }: Props) {
   const highlights = ([
     product.brand_name ? { label: "Brand", value: product.brand_name } : null,
     { label: "Product Type", value: product.category_name },
-    { label: "Weight", value: product.pack_label ?? weightLabel(product.weight_value, product.weight_unit) },
+    packSize ? { label: "Pack size", value: packSize } : null,
     product.shelf_life ? { label: "Shelf Life", value: product.shelf_life } : null,
     product.ingredients ? { label: "Ingredients", value: product.ingredients } : null,
     nutrition.length ? { label: "Nutrition", value: nutrition.join(", ") } : null,
@@ -125,7 +134,8 @@ export default async function ProductPage({ params }: Props) {
 
       <div className="md:grid md:grid-cols-[1.05fr_1fr] md:items-start md:gap-8">
         <div>
-          <ProductHero images={images} name={product.name} brand={product.brand_name} packSize={product.pack_label} price={price} mrp={mrp} backHref={`/c/${product.category_slug}`} />
+          <ProductHero images={images} name={product.name} brand={product.brand_name} packSize={product.pack_label} price={price} mrp={mrp} backHref={`/c/${product.category_slug}`} dimmed={soldOut}
+            badge={soldOut ? <Badge tone="dark" size="md" className="rounded-lg">Out of stock</Badge> : offPct > 0 ? <DiscountBadge pct={offPct} className="rounded-lg px-2.5 py-1.5 text-[13px] shadow-card" /> : null} />
           {/* Floats above the dock on mobile; a wide button under the gallery on desktop. */}
           <div className="md:mt-4"><ProductBuyBar product={product} /></div>
         </div>
@@ -135,6 +145,8 @@ export default async function ProductPage({ params }: Props) {
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <VegMark veg={product.is_veg} />
+                {/* The way back to the shelf on phones and tablets, where the breadcrumb is not shown. */}
+                <Link href={`/c/${product.category_slug}`} className="tap inline-flex items-center gap-0.5 text-[13px] font-semibold text-brand-700 hover:underline focus-visible:outline-2 focus-visible:outline-brand-600 lg:hidden">{product.category_name}<ChevronRight className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden /></Link>
                 {product.rating_count ? (
                   <span className="inline-flex items-center gap-1 rounded-md bg-fresh-50 px-2 py-1 text-sm font-bold text-brand-800">
                     <Star className="h-3.5 w-3.5 fill-fresh text-fresh" />{Number(product.rating_avg).toFixed(1)}
@@ -144,7 +156,7 @@ export default async function ProductPage({ params }: Props) {
                 {product.is_local ? <span className="rounded-md bg-saffron-100 px-2 py-1 text-xs font-bold text-saffron-700">MERTA LOCAL</span> : null}
               </div>
               <h1 className="mt-2 font-display text-[22px] font-bold leading-tight text-ink md:text-2xl">{product.name}</h1>
-              <p className="mt-1.5 text-[15px] text-ink-3">Net Qty: {product.pack_label ?? weightLabel(product.weight_value, product.weight_unit)}</p>
+              {packSize ? <p className="mt-1.5 text-[15px] text-ink-3">Net Qty: <span className="font-semibold text-ink-2">{packSize}</span></p> : null}
             </div>
             <ShareButton name={product.name} price={price} className="hidden shrink-0 md:flex" />
           </div>
@@ -188,9 +200,10 @@ export default async function ProductPage({ params }: Props) {
         </div>
       </div>
 
-      {moreFromBrand.length ? <section className="mt-8"><SectionHeader title={`More from ${product.brand_name}`} href={brandHref ?? undefined} /><ProductRail products={moreFromBrand} /></section> : null}
+      {/* "See all" is a router link (the default header link reloads the whole page). */}
+      {moreFromBrand.length ? <section className="mt-8"><SectionHeader title={`More from ${product.brand_name}`} action={brandHref ? <Link href={brandHref} className={seeAll}>See all<ChevronRight className="h-4 w-4" strokeWidth={2} aria-hidden /></Link> : undefined} /><ProductRail products={moreFromBrand} /></section> : null}
       {product.frequently_bought.length ? <section className="mt-8"><SectionHeader title="Frequently bought together" /><ProductRail products={product.frequently_bought} /></section> : null}
-      {product.related.length ? <section className="mt-8"><SectionHeader title="Similar products" href={`/c/${product.category_slug}`} /><ProductRail products={product.related} /></section> : null}
+      {product.related.length ? <section className="mt-8"><SectionHeader title="Similar products" action={<Link href={`/c/${product.category_slug}`} className={seeAll}>See all<ChevronRight className="h-4 w-4" strokeWidth={2} aria-hidden /></Link>} /><ProductRail products={product.related} /></section> : null}
     </div>
   );
 }

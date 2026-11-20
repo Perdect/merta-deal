@@ -42,10 +42,14 @@ export function ShareButton({ name, price, className }: { name: string; price?: 
  * Edge-to-edge swipeable gallery on phones (Back / Share / Cart live in the page's AppBar), a plain
  * framed gallery with thumbnails on desktop.
  */
-export function ProductHero({ images, name, brand, packSize, children }: {
+export function ProductHero({ images, name, brand, packSize, badge, dimmed, children }: {
   images: string[]; name: string; brand?: string | null; packSize?: string | null; price: number; mrp: number;
   /** Where "back" goes when the page was opened directly (no history). */
   backHref: string;
+  /** Top-left corner of the photo: the saving, or that the product is out of stock. Never takes a tap. */
+  badge?: React.ReactNode;
+  /** Fade the photos (out of stock). */
+  dimmed?: boolean;
   /** Overlay slot (top-right of the gallery). */
   children?: React.ReactNode;
 }) {
@@ -68,7 +72,7 @@ export function ProductHero({ images, name, brand, packSize, children }: {
         {list.length > 1 ? (
           <div className="hidden gap-2 md:order-1 md:flex md:flex-col">
             {list.map((src, i) => (
-              <button key={i} type="button" onClick={() => goTo(i)} aria-label={`Image ${i + 1}`} aria-current={i === active} className={cn("h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 bg-white transition-colors", i === active ? "border-ink" : "border-line hover:border-line-2")}>
+              <button key={i} type="button" onClick={() => goTo(i)} aria-label={`Image ${i + 1}`} aria-current={i === active} className={cn("h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 bg-white transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 motion-reduce:transition-none", i === active ? "border-brand-600" : "border-line hover:border-line-2")}>
                 <ProductImage image={src} brand={brand} productName={name} className="h-full w-full" sizes="64px" />
               </button>
             ))}
@@ -78,17 +82,18 @@ export function ProductHero({ images, name, brand, packSize, children }: {
           <div ref={scroller} onScroll={onScroll} className="no-scrollbar flex snap-x snap-mandatory overflow-x-auto overflow-y-hidden bg-white md:rounded-2xl md:border md:border-line">
             {list.map((src, i) => (
               <div key={i} className="w-full shrink-0 snap-center">
-                <ProductImage image={src} brand={brand} productName={name} packSize={packSize} className="aspect-square w-full" rounded="rounded-none" sizes="(max-width: 768px) 100vw, 560px" priority={i === 0} />
+                <ProductImage image={src} brand={brand} productName={name} packSize={packSize} className={cn("aspect-square w-full", dimmed && "opacity-60")} rounded="rounded-none" sizes="(max-width: 768px) 100vw, 560px" priority={i === 0} />
               </div>
             ))}
           </div>
           {list.length > 1 ? (
             <div className="pointer-events-none absolute inset-x-0 bottom-10 flex justify-center gap-1.5 md:hidden">
-              {list.map((_, i) => <span key={i} className={cn("h-1.5 rounded-full transition-all duration-200", i === active ? "w-4 bg-brand-700" : "w-1.5 bg-ink/25")} />)}
+              {list.map((_, i) => <span key={i} className={cn("h-1.5 rounded-full transition-all duration-200 motion-reduce:transition-none", i === active ? "w-4 bg-brand-700" : "w-1.5 bg-ink/25")} />)}
             </div>
           ) : null}
           {list.length > 1 ? <button type="button" onClick={() => goTo((active + 1) % list.length)} aria-label="Next image" className="absolute bottom-4 right-4 hidden h-10 w-10 items-center justify-center rounded-full border border-line bg-card text-ink shadow-card hover:bg-surface-2 md:flex"><ChevronRight className="h-5 w-5" /></button> : null}
-          {children ? <div className="absolute bottom-9 right-3 md:right-auto md:left-3 md:top-3 md:bottom-auto">{children}</div> : null}
+          {badge ? <div className="pointer-events-none absolute left-3 top-3 md:left-4 md:top-4">{badge}</div> : null}
+          {children ? <div className="absolute bottom-9 right-3 md:bottom-auto md:top-3">{children}</div> : null}
         </div>
       </div>
     </>

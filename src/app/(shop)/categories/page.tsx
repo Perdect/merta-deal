@@ -16,7 +16,8 @@ export default async function CategoriesPage({ searchParams }: { searchParams: P
   const products = Object.fromEntries(leaf.map((t, i) => [t.slug, { items: lists[i].items, total: lists[i].total }]));
   return (
     <div className="bg-card px-4 pb-6 pt-1 sm:rounded-2xl sm:px-5 lg:mt-4 lg:border lg:border-line lg:py-5">
-      <ShopPageHeader title="Categories" barTitle="Categories" cart barClassName="-mt-1" actions={<SearchLink />} className="px-0 lg:pb-3" />
+      {/* No gap under the bar: the category band sits flush against it, as it does on the home. */}
+      <ShopPageHeader title="Categories" barTitle="Categories" cart barClassName="-mt-1 mb-0" actions={<SearchLink />} className="px-0 lg:pb-3" />
       <CategoryBrowser tabs={tabs} initial={tab ?? tabs[0]?.slug ?? ""} products={products} />
     </div>
   );

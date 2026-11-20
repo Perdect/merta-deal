@@ -3,19 +3,34 @@ import type { ShoppingItem, Unit } from "./schemas";
 /**
  * Deterministic "starter list" generator used when ANTHROPIC_API_KEY is not configured.
  * It is intentionally simple and transparent: fixed per-person-per-week quantities scaled by
- * household size and duration, plus a few occasion templates (Diwali, Holi, vrat, chai-party).
+ * household size and duration, plus a few occasion templates (Diwali, Holi, vrat, chai-party) and two
+ * dishes (chai, kheer). The lists are only names and quantities: whether the shop has each item, and at
+ * what price, is looked up in the catalogue afterwards, and a missing item is shown as missing.
  * The UI labels these results as rule-based so nobody mistakes them for AI output.
  */
 
-export type StarterPlan = { kind: "weekly" | "diwali" | "holi" | "vrat" | "party" | "breakfast" | "cleaning"; persons: number; weeks: number; items: ShoppingItem[]; summary: string };
+export type StarterPlan = { kind: "weekly" | "diwali" | "holi" | "vrat" | "party" | "breakfast" | "cleaning" | "chai" | "kheer"; persons: number; weeks: number; items: ShoppingItem[]; summary: string };
 
 const NUMBER_WORDS: Record<string, number> = { ek: 1, one: 1, do: 2, two: 2, teen: 3, three: 3, char: 4, chaar: 4, four: 4, paanch: 5, panch: 5, five: 5, che: 6, chhe: 6, six: 6, saat: 7, seven: 7, aath: 8, eight: 8, nau: 9, nine: 9, das: 10, dus: 10, ten: 10 };
 
 const PLANNING_HINTS = /\b(family|parivar|pariwar|ghar|household|week|weekly|hafta|hafte|haftey|saptah|month|monthly|mahina|mahine|mahiney|days?|din|list|plan|planning|ration|saaman|samaan|saman|stock|diwali|deepawali|deepavali|holi|navratri|vrat|fasting|upvas|party|guests?|mehman|breakfast|nashta|cleaning|safai|log|members?|people|persons?|adults?|bachche|bacche|kids?)\b/i;
 
+/**
+ * A dish named as something to make ("kheer banana hai", "chai ka saaman"), not as an item to buy
+ * ("2 packet chai patti"). Only these two have a fixed list; anything else needs the AI.
+ */
+const MAKING = "(?:ka |ki |ke )?(?:saaman|samaan|saman|samagri|ingredients?|banan[aie]|banau|banaun|recipe|ke liye)";
+const DISHES: { kind: "kheer" | "chai"; re: RegExp }[] = [
+  { kind: "kheer", re: new RegExp(`\\b(?:kheer|khir|payasam)\\b[^,.]{0,20}\\b${MAKING}\\b|\\b(?:make|making|cook|recipe for)\\b[^,.]{0,12}\\bkheer\\b`, "i") },
+  { kind: "chai", re: new RegExp(`\\b(?:chai|chay|tea)\\b\\s+${MAKING}\\b|\\b(?:make|making)\\b[^,.]{0,12}\\b(?:chai|tea)\\b`, "i") },
+];
+function dishKind(text: string) {
+  return DISHES.find((d) => d.re.test(text))?.kind ?? null;
+}
+
 /** Heuristic: does the text ask for a plan/occasion list rather than dictating specific items? */
 export function looksLikePlanningRequest(text: string) {
-  return PLANNING_HINTS.test(text);
+  return PLANNING_HINTS.test(text) || dishKind(text) != null;
 }
 
 function detectPersons(text: string, fallback = 4) {
@@ -168,6 +183,26 @@ const CLEANING_ROWS: Row[] = [
   { query: "bathing soap", perHousehold: [4, "pcs"] },
 ];
 
+// Dish lists use the per-person column as "per serving" (the week count is fixed at 1).
+const CHAI_ROWS: Row[] = [
+  { query: "tea", perHousehold: [250, "g"], note: "Chai patti" },
+  { query: "sugar", perHousehold: [1, "kg"] },
+  { query: "milk", perPersonPerWeek: [150, "ml"] },
+  { query: "elaichi", perHousehold: [1, "pack"], note: "Optional" },
+  { query: "ginger", perHousehold: [100, "g"], note: "Adrak, optional" },
+];
+
+const KHEER_ROWS: Row[] = [
+  { query: "milk", perPersonPerWeek: [250, "ml"], note: "Full cream" },
+  { query: "rice", perPersonPerWeek: [25, "g"], note: "Basmati or small-grain rice" },
+  { query: "sugar", perPersonPerWeek: [50, "g"] },
+  { query: "elaichi", perHousehold: [1, "pack"] },
+  { query: "kaju", perHousehold: [100, "g"] },
+  { query: "kishmish", perHousehold: [100, "g"] },
+  { query: "badam", perHousehold: [100, "g"] },
+  { query: "kesar", perHousehold: [1, "pack"], note: "Optional" },
+];
+
 function build(rows: Row[], persons: number, weeks: number): ShoppingItem[] {
   return rows.map((r) => {
     const q = r.perPersonPerWeek ? scaled(r.perPersonPerWeek[0], r.perPersonPerWeek[1], persons, weeks) : perHousehold(r.perHousehold![0], r.perHousehold![1], weeks);
@@ -184,6 +219,9 @@ export function generateStarterList(text: string): StarterPlan {
   if (/\bholi\b/.test(t)) return { kind: "holi", persons, weeks: 1, items: build(HOLI_ROWS, persons, 1), summary: `Holi starter list — colours, gujiya and snacks for ${label}.` };
   if (/\b(vrat|fasting|upvas|navratri|ekadashi)\b/.test(t)) return { kind: "vrat", persons, weeks: 1, items: build(VRAT_ROWS, persons, 1), summary: `Vrat / fasting starter list for ${label}.` };
   if (/\b(party|guests?|mehman|get.?together|birthday)\b/.test(t)) return { kind: "party", persons: Math.max(persons, 6), weeks: 1, items: build(PARTY_ROWS, Math.max(persons, 6), 1), summary: `Snacks and drinks starter list for about ${Math.max(persons, 6)} guests.` };
+  const dish = dishKind(text);
+  if (dish === "kheer") return { kind: "kheer", persons, weeks: 1, items: build(KHEER_ROWS, persons, 1), summary: `Kheer starter list for ${label} — milk, rice, sugar and dry fruits.` };
+  if (dish === "chai") return { kind: "chai", persons, weeks: 1, items: build(CHAI_ROWS, persons, 1), summary: `Chai starter list for ${label} — tea, sugar and milk.` };
   if (/\b(breakfast|nashta|nasta)\b/.test(t)) return { kind: "breakfast", persons, weeks, items: build(BREAKFAST_ROWS, persons, weeks), summary: `Breakfast essentials for ${label} for ${weeks === 1 ? "a week" : `${weeks} weeks`}.` };
   if (/\b(cleaning|safai|household cleaning|bathroom)\b/.test(t)) return { kind: "cleaning", persons, weeks, items: build(CLEANING_ROWS, persons, weeks), summary: `Home cleaning starter list.` };
   return { kind: "weekly", persons, weeks, items: build(WEEKLY_ROWS, persons, weeks), summary: `Weekly kirana staples for ${label}${weeks !== 1 ? ` for ${weeks === 4 ? "a month" : `${weeks} weeks`}` : ""} — atta 2 kg/person/week, rice, dal, oil, sugar, milk, sabzi and masale.` };

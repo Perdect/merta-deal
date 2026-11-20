@@ -23,4 +23,20 @@ export function OnlinePill({ online }: { online: boolean }) {
   return <StatusPill tone={online ? "green" : "neutral"}>{online ? "Online" : "Offline"}</StatusPill>;
 }
 
+/** What a rider is doing right now, from the assignment they hold and their online switch. */
+export type RiderNow = { status: "offered" | "accepted" | "picked_up"; arrived_pickup_at?: string | null; arrived_customer_at?: string | null } | null | undefined;
+
+export function riderNowLabel(online: boolean, now: RiderNow): { label: string; tone: Tone } {
+  if (now?.status === "picked_up") return { label: now.arrived_customer_at ? "At the customer" : "Delivering", tone: "blue" };
+  if (now?.status === "accepted") return { label: now.arrived_pickup_at ? "At the pickup point" : "Going to pickup", tone: "blue" };
+  if (now?.status === "offered") return { label: "Offer waiting for an answer", tone: "amber" };
+  return online ? { label: "Online · free", tone: "green" } : { label: "Offline", tone: "neutral" };
+}
+
+/** Availability in words plus colour: on a delivery (which step), an offer waiting, online and free, or offline. */
+export function RiderNowPill({ online, now, className }: { online: boolean; now?: RiderNow; className?: string }) {
+  const { label, tone } = riderNowLabel(online, now);
+  return <StatusPill tone={tone} className={className}>{label}</StatusPill>;
+}
+
 export const VEHICLE_LABEL: Record<Enums<"vehicle_type">, string> = { bicycle: "Bicycle", bike: "Bike", scooter: "Scooter", auto: "Auto", van: "Van" };

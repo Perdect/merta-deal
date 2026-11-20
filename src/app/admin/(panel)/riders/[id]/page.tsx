@@ -2,15 +2,30 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Bike, Star } from "lucide-react";
-import { getRiderDetail, getCities } from "@/lib/data/admin";
+import { getRiderDetail, getCities, type RiderAssignmentRow } from "@/lib/data/admin";
+import { riderLastContact } from "@/lib/data/admin-dashboard";
 import { AdminPageHeader, Panel, DetailList, DataTable, CellStack, EmptyBlock, MetricCard, StatusText, rupees, rupeesRounded } from "@/components/admin/kit";
 import { RiderStatusActions, RiderEditPanel } from "@/components/admin/rider-actions";
 import { ResetPinButton } from "@/components/admin/reset-pin";
-import { RiderStatusPill, OnlinePill, ActivePill, VEHICLE_LABEL } from "@/components/admin/ops/pills";
+import { RiderStatusPill, RiderNowPill, OnlinePill, ActivePill, VEHICLE_LABEL } from "@/components/admin/ops/pills";
 import { Avatar, StarRating } from "@/components/ui/misc";
-import { formatDate, formatDateTime, formatNumber, timeAgo } from "@/lib/utils";
+import { formatDate, formatDateTime, formatNumber, formatTime, timeAgo } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Rider" };
+
+type Held = RiderAssignmentRow & { status: "offered" | "accepted" | "picked_up" };
+/** The assignment this rider holds now: a delivery in hand first, else an offer that is still open. */
+function heldNow(assignments: RiderAssignmentRow[]): Held | null {
+  const at = Date.now();
+  const found = assignments.find((a) => a.status === "picked_up") ?? assignments.find((a) => a.status === "accepted") ?? assignments.find((a) => a.status === "offered" && new Date(a.expires_at).getTime() > at);
+  return (found as Held | undefined) ?? null;
+}
+/** When the rider took the step they are on, from the assignment's own timestamps. */
+function heldSince(a: Held) {
+  if (a.status === "picked_up") return a.arrived_customer_at ? `arrived ${timeAgo(a.arrived_customer_at)}` : a.picked_up_at ? `picked up ${timeAgo(a.picked_up_at)}` : "";
+  if (a.status === "accepted") return a.arrived_pickup_at ? `arrived ${timeAgo(a.arrived_pickup_at)}` : a.responded_at ? `accepted ${timeAgo(a.responded_at)}` : "";
+  return `offer open until ${formatTime(a.expires_at)}`;
+}
 
 export default async function AdminRiderPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -23,11 +38,14 @@ export default async function AdminRiderPage({ params }: { params: Promise<{ id:
   const avgMin = delivered.length ? Math.round(delivered.reduce((s, a) => s + (new Date(a.delivered_at!).getTime() - new Date(a.responded_at ?? a.offered_at).getTime()) / 60000, 0) / delivered.length) : null;
   const declined = assignments.filter((a) => a.status === "rejected" || a.status === "expired").length;
   const city = cities.find((c) => c.id === r.city_id);
+  const held = heldNow(assignments);
+  const contact = riderLastContact(r);
+  const nowPill = r.status === "active" ? <RiderNowPill online={r.is_online} now={held} /> : <OnlinePill online={r.is_online} />;
 
   return (
     <>
       <AdminPageHeader back="/admin/riders" title={name} description={`Delivery partner since ${formatDate(r.created_at)}`}
-        meta={<><RiderStatusPill status={r.status} /><OnlinePill online={r.is_online} />{r.user && !r.user.is_active ? <ActivePill active={false} inactiveLabel="Account deactivated" /> : null}</>}
+        meta={<><RiderStatusPill status={r.status} />{nowPill}{r.user && !r.user.is_active ? <ActivePill active={false} inactiveLabel="Account deactivated" /> : null}</>}
         actions={<RiderStatusActions rider={r} name={name} />} />
 
       <section aria-label="Rider performance" className="mb-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
@@ -82,9 +100,11 @@ export default async function AdminRiderPage({ params }: { params: Promise<{ id:
             ]} />
             <div className="mt-4 border-t border-line pt-3"><ResetPinButton userId={r.user_id} name={name} /></div>
           </Panel>
-          <Panel title="Location">
+          <Panel title="Right now" description="Availability, the delivery in hand and when the app was last heard from">
             <DetailList items={[
-              { label: "Availability", value: <OnlinePill online={r.is_online} /> },
+              { label: "Availability", value: r.status === "active" ? nowPill : "Cannot go online until approved" },
+              { label: "Current delivery", value: held?.order ? <span className="inline-flex flex-wrap items-center justify-end gap-x-2"><Link href={`/admin/orders/${held.order.id}`} className="font-semibold text-brand-700 hover:underline">{held.order.order_number}</Link><span className="text-xs text-ink-3">{heldSince(held)}</span></span> : "None" },
+              { label: "Last seen", value: contact ? <span title={formatDateTime(contact)}>{timeAgo(contact)}</span> : "No contact from the app yet" },
               { label: "Last GPS fix", value: r.last_location_at ? <span title={formatDateTime(r.last_location_at)}>{timeAgo(r.last_location_at)}</span> : "Never reported" },
               { label: "Coordinates", value: r.current_lat != null && r.current_lng != null ? <a href={`https://www.google.com/maps?q=${r.current_lat},${r.current_lng}`} target="_blank" rel="noreferrer" className="tabular hover:underline">{r.current_lat.toFixed(4)}, {r.current_lng.toFixed(4)}</a> : "—" },
             ]} />
