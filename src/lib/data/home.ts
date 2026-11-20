@@ -22,7 +22,7 @@ export type HomeCategory = { id: string; name: string; slug: string; color: stri
 export type WelcomeOffer = { code: string; title: string; discount: number; isPercent: boolean; minOrder: number; maxDiscount: number | null; expiresAt: string | null };
 export type HomeSection = { key: string; title: string; href: string | null; products: ProductCard[] };
 /**
- * Products selling below their MRP right now, as one group for the whole shop (`all`) and one per line.
+ * Products selling below their MRP right now, one group per line of the shop.
  * `pct` is the biggest saving in the group and `images` are that group's own best-priced products, so a
  * deal tile can only ever say what a customer will find when they tap it.
  */
@@ -103,10 +103,8 @@ const cachedHomeData = unstable_cache(async (essentialSlugs: string[], welcomeCo
     ? { key, name, href, color, pct: Math.round(Number(list[0].discount_pct)), count: list.length, images: [...new Set(list.map((p) => p.image_url).filter(Boolean) as string[])].slice(0, 3) }
     : null;
   const dealQuery = `sort=discount&minDiscount=${DEAL_MIN_PCT}&inStock=1`;
-  const deals = [
-    dealGroup("all", "All categories", `/search?${dealQuery}`, null, onDeal),
-    ...top.map((c) => dealGroup(c.slug, c.name, `/c/${c.slug}?${dealQuery}`, c.color, onDeal.filter((p) => topSlugOf(p) === c.slug))),
-  ].filter((d): d is DealGroup => d !== null);
+  const deals = top.map((c) => dealGroup(c.slug, c.name, `/c/${c.slug}?${dealQuery}`, c.color, onDeal.filter((p) => topSlugOf(p) === c.slug)))
+    .filter((d): d is DealGroup => d !== null);
 
   return { categories, sections, offers, deals };
 }, ["home-data"], { tags: [CATALOGUE_TAG, "coupons"], revalidate: 60 });

@@ -64,8 +64,6 @@ export default async function HomePage() {
   const etaLabel = `${num("delivery_eta_min_minutes", 20)} min`;
   // A banner without artwork borrows the picture of the line it links to (the category's own image).
   const bannerArt = Object.fromEntries(banners.map((b) => [b.id, railTabs.find((t) => b.link_url?.split("?")[0] === `/c/${t.slug}`)?.image ?? null]));
-  // Match the wholesale page's public availability settings; don't advertise a paused bulk flow.
-  const bulkOn = settings.wholesale_enabled !== false && Number(settings.wholesale_quote_lead_hours ?? 0) > 0;
 
   return (
     <div className="space-y-5 pt-2.5 sm:space-y-8 sm:pt-5">
@@ -73,7 +71,7 @@ export default async function HomePage() {
       {home.sections.length ? (
         <HomeBrowse
           tabs={railTabs}
-          lead={<><BannerCarousel key="banner" banners={banners} art={bannerArt} /><DealZone key="deals" deals={home.deals} coupon={home.offers[0] ?? null} bulk={bulkOn} /></>}
+          lead={<><BannerCarousel key="banner" banners={banners} art={bannerArt} /><DealZone key="deals" deals={home.deals} /></>}
           items={home.sections.map((s, i) => ({ key: s.key, node: <ProductSection key={s.key} section={s} first={i === 0} /> }))}
         />
       ) : (
