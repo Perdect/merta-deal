@@ -26,7 +26,7 @@ export type HomeSection = { key: string; title: string; href: string | null; pro
  * `pct` is the biggest saving in the group and `images` are that group's own best-priced products, so a
  * deal tile can only ever say what a customer will find when they tap it.
  */
-export type DealGroup = { key: string; name: string; href: string; pct: number; count: number; images: string[]; color: string | null };
+export type DealGroup = { key: string; name: string; href: string; pct: number; count: number; images: string[]; color: string | null; /** The line's own picture (Admin → Categories), drawn large on its tile. */ picture: string | null };
 export type HomeData = { categories: HomeCategory[]; sections: HomeSection[]; offers: WelcomeOffer[]; deals: DealGroup[] };
 /** A saving smaller than this is not called a deal. */
 const DEAL_MIN_PCT = 5;
@@ -99,11 +99,11 @@ const cachedHomeData = unstable_cache(async (essentialSlugs: string[], welcomeCo
     .sort((a, b) => Number(b.code === welcomeCode) - Number(a.code === welcomeCode));
 
   const onDeal = products.filter((p) => sellable(p) && Number(p.discount_pct ?? 0) >= DEAL_MIN_PCT).sort((a, b) => Number(b.discount_pct) - Number(a.discount_pct));
-  const dealGroup = (key: string, name: string, href: string, color: string | null, list: ProductCard[]): DealGroup | null => list.length
-    ? { key, name, href, color, pct: Math.round(Number(list[0].discount_pct)), count: list.length, images: [...new Set(list.map((p) => p.image_url).filter(Boolean) as string[])].slice(0, 3) }
+  const dealGroup = (key: string, name: string, href: string, color: string | null, picture: string | null, list: ProductCard[]): DealGroup | null => list.length
+    ? { key, name, href, color, picture, pct: Math.round(Number(list[0].discount_pct)), count: list.length, images: [...new Set(list.map((p) => p.image_url).filter(Boolean) as string[])].slice(0, 3) }
     : null;
   const dealQuery = `sort=discount&minDiscount=${DEAL_MIN_PCT}&inStock=1`;
-  const deals = top.map((c) => dealGroup(c.slug, c.name, `/c/${c.slug}?${dealQuery}`, c.color, onDeal.filter((p) => topSlugOf(p) === c.slug)))
+  const deals = top.map((c) => dealGroup(c.slug, c.name, `/c/${c.slug}?${dealQuery}`, c.color, c.image_url, onDeal.filter((p) => topSlugOf(p) === c.slug)))
     .filter((d): d is DealGroup => d !== null);
 
   return { categories, sections, offers, deals };

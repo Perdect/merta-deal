@@ -1,6 +1,6 @@
 {
  "sweets": {
-  "file": "/categories/sweets-collage.5a72d4ac.webp",
+  "file": "/categories/sweets-collage.4e8b18e7.webp",
   "variant": "cutout",
   "kind": "packaging",
   "source": "Supplied by Merta Deal",
@@ -13,8 +13,8 @@
   "matched_quantity": null,
   "size_match": null,
   "confidence": 1,
-  "notes": "category tile supplied by the shop owner; background removed (ISNet) with the mask repaired against the flat white backdrop — the model dropped the Cadbury wrapper, so a pixel is kept when the model is confident or when it is plainly not the backdrop. Replaces the Motichoor Laddu photo from Commons. Brand names and packaging artwork remain the property of their owners.",
-  "updated_at": "2026-11-16T11:03:17.973033Z"
+  "notes": "category tile supplied by the shop owner. The earlier file (5a72d4ac) had been saved flat on white, which showed as a white box on tinted tiles; this one is the same picture with the white backdrop made transparent (near-white pixels connected to the image border only, so icing, cream and wrappers inside the pile are kept), edge softened by a pixel, trimmed. Brand names and packaging artwork remain the property of their owners.",
+  "updated_at": "2026-11-20T03:56:22.705582Z"
  },
  "personal-care": {
   "file": "/categories/personal-care-collage.06ceb512.webp",
