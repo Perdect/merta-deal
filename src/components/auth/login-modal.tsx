@@ -75,10 +75,11 @@ export function LoginModal({ open, onClose, onVerified, eta, title = "Login to s
       <div className="absolute inset-0 bg-ink/50 animate-fade-in motion-reduce:animate-none" onClick={onClose} aria-hidden="true" />
       <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="login-modal-title" tabIndex={-1} className="relative grid w-full max-h-[92dvh] overflow-y-auto overscroll-contain rounded-t-3xl bg-card shadow-float outline-none animate-slide-up motion-reduce:animate-none sm:max-w-3xl sm:grid-cols-[1fr_1.05fr] sm:overflow-hidden sm:rounded-2xl">
         <button type="button" onClick={onClose} aria-label="Close" className="tap absolute right-3 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/90 text-ink-2 shadow-sm hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-brand-600 sm:shadow-none"><X className="h-5 w-5" aria-hidden /></button>
-        {/* Illustration: a short banner on phones, a full panel beside the form from sm up */}
-        <div className="relative h-48 overflow-hidden bg-white sm:h-auto sm:min-h-[460px]">
-          <LoginArt className="absolute inset-0 h-full w-full" />
-          <div className="absolute inset-x-0 bottom-0 px-4 pb-3 text-center text-white sm:pb-7">
+        {/* Illustration: a short banner on phones, a full panel beside the form from sm up. The words sit in
+            their own strip in the ground band's green, so they are never drawn over the scooter. */}
+        <div className="flex flex-col overflow-hidden bg-white sm:min-h-[460px]">
+          <div className="relative h-[46vw] max-h-52 sm:h-auto sm:max-h-none sm:flex-1"><LoginArt className="absolute inset-0 h-full w-full" /></div>
+          <div className="bg-[#329537] px-4 pb-3 pt-1 text-center text-white sm:pb-6 sm:pt-2">
             <p lang="hi" className="font-display text-base font-bold leading-snug sm:text-2xl">मेड़ता की शॉपिंग, अब ऑनलाइन</p>
             <p className="text-xs font-medium text-white/90 sm:mt-1 sm:text-[15px]">Fresh groceries at your door in {eta}</p>
           </div>

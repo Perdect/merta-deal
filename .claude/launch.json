@@ -44,7 +44,7 @@
       "runtimeExecutable": "sh",
       "runtimeArgs": [
         "-c",
-        "NEXT_PUBLIC_SUPABASE_URL=https://qvpfnwdnnqxjrrjwpevj.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2cGZud2RubnF4anJyandwZXZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwODcwNDksImV4cCI6MjEwNjY2MzA0OX0.LHoJazNMCrOPp8s9bOkixgPLTWHMJAFijhfh7zoGnfo NEXT_PUBLIC_SITE_URL=http://localhost:3001 NEXT_PUBLIC_ANONYMOUS_AUTH_ENABLED=true exec node_modules/.bin/next dev --port 3001"
+        "NEXT_PUBLIC_PHONE_AUTH_ENABLED=true NEXT_PUBLIC_SUPABASE_URL=https://qvpfnwdnnqxjrrjwpevj.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2cGZud2RubnF4anJyandwZXZqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwODcwNDksImV4cCI6MjEwNjY2MzA0OX0.LHoJazNMCrOPp8s9bOkixgPLTWHMJAFijhfh7zoGnfo NEXT_PUBLIC_SITE_URL=http://localhost:3001 NEXT_PUBLIC_ANONYMOUS_AUTH_ENABLED=true exec node_modules/.bin/next dev --port 3001"
       ],
       "port": 3001
     }
