@@ -46,9 +46,9 @@ export function Stars({ value, className }: { value: number; className?: string 
 
 /** Inline notice in the kit's visual language. */
 export function Notice({ tone = "amber", title, children, className }: { tone?: "amber" | "red" | "blue"; title: string; children?: React.ReactNode; className?: string }) {
-  const tones = { amber: "border-warning/35 bg-warning-50 text-[#6b4d00]", red: "border-danger/25 bg-danger-50 text-[#8a1f18]", blue: "border-info/25 bg-info-50 text-[#1e3a8a]" };
+  const tones = { amber: "border-warning/35 bg-warning-50 text-warning", red: "border-danger/25 bg-danger-50 text-[#8a1f18]", blue: "border-info/25 bg-info-50 text-[#1e3a8a]" };
   return (
-    <div role={tone === "red" ? "alert" : "status"} className={cn("rounded-[14px] border px-4 py-3 text-sm", tones[tone], className)}>
+    <div role={tone === "red" ? "alert" : "status"} className={cn("rounded-xl border px-4 py-3 text-sm", tones[tone], className)}>
       <p className="font-semibold">{title}</p>
       {children ? <div className="mt-0.5 text-[13px] opacity-90">{children}</div> : null}
     </div>

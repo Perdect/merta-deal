@@ -6,8 +6,9 @@ import { BackLink } from "./client";
 
 /* ================================================================================================
  * Admin design system — server-safe pieces (no hooks). Interactive parts live in ./client.tsx.
- * Visual language: pale grey canvas, white 14px cards with hairline borders and a barely-there
- * shadow, compact tables, green accent (brand-*), status always carries text as well as colour.
+ * Visual language (tokens come from .theme-admin in globals.css): cool slate canvas, white cards with
+ * 12px corners, a hairline border and a short shadow, compact tables with small-caps headers, the
+ * portal's blue accent (brand-*), and status that always carries words as well as colour.
  * ============================================================================================== */
 
 /** Transaction amounts: always two decimals (₹155.78, ₹200.00), so columns line up. */
@@ -15,7 +16,7 @@ export const rupees = (v: number | string | null | undefined) => formatINR(v, { 
 /** Aggregates and KPIs: whole rupees. */
 export const rupeesRounded = (v: number | string | null | undefined) => formatINR(Math.round(Number(v ?? 0)));
 
-export const card = "rounded-[14px] border border-line bg-card shadow-[0_1px_2px_rgb(23_32_28/0.04)]";
+export const card = "rounded-xl border border-line bg-card shadow-card";
 
 /** The single page heading. Actions sit on the right and wrap under the title on phones. */
 export function AdminPageHeader({ title, description, actions, back, meta, className }: {
@@ -24,12 +25,12 @@ export function AdminPageHeader({ title, description, actions, back, meta, class
   back?: string; meta?: React.ReactNode; className?: string;
 }) {
   return (
-    <div className={cn("mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between", className)}>
+    <div className={cn("mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between", className)}>
       <div className="flex min-w-0 items-start gap-2">
         {back ? <BackLink fallback={back} /> : null}
         <div className="min-w-0">
-          <h1 className="text-balance break-words font-display text-[22px] font-bold leading-tight text-ink">{title}</h1>
-          {description ? <p className="mt-1 text-sm text-ink-3">{description}</p> : null}
+          <h1 className="text-balance break-words font-display text-2xl font-bold leading-tight tracking-tight text-ink">{title}</h1>
+          {description ? <p className="mt-1 max-w-3xl text-sm leading-relaxed text-ink-3">{description}</p> : null}
           {meta ? <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">{meta}</div> : null}
         </div>
       </div>
@@ -46,16 +47,16 @@ export function Panel({ title, description, actions, children, className, bodyCl
   return (
     <section id={id} className={cn(card, "min-w-0", className)}>
       {title || actions ? (
-        <header className={cn("flex items-start justify-between gap-3 px-4 pt-4 sm:px-5", flush ? "pb-3" : "pb-1")}>
+        <header className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-5">
           <div className="min-w-0">
-            {title ? <h2 className="text-[15px] font-semibold text-ink">{title}</h2> : null}
-            {description ? <p className="mt-0.5 text-xs text-ink-3">{description}</p> : null}
+            {title ? <h2 className="text-[15px] font-semibold leading-snug text-ink">{title}</h2> : null}
+            {description ? <p className="mt-0.5 text-xs leading-relaxed text-ink-3">{description}</p> : null}
           </div>
           {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
         </header>
       ) : null}
-      <div className={cn(flush ? "" : "px-4 pb-4 pt-3 sm:px-5", !title && !actions && !flush && "pt-4", bodyClassName)}>{children}</div>
-      {footer ? <footer className="border-t border-line px-4 py-3 sm:px-5">{footer}</footer> : null}
+      <div className={cn(flush ? "" : "p-4 sm:p-5", bodyClassName)}>{children}</div>
+      {footer ? <footer className="rounded-b-xl border-t border-line bg-surface/60 px-4 py-3 sm:px-5">{footer}</footer> : null}
     </section>
   );
 }
@@ -71,12 +72,12 @@ export function MetricCard({ label, period, value, hint, icon: Icon, href, chang
     <>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[13px] font-medium text-ink-2">{label}</p>
-          {period ? <p className="text-[11px] text-ink-4">{period}</p> : null}
+          <p className="text-[13px] font-semibold text-ink-2">{label}</p>
+          {period ? <p className="text-[11px] text-ink-3">{period}</p> : null}
         </div>
-        {Icon ? <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", tone === "attention" ? "bg-warning-50 text-[#8a6300]" : "bg-brand-50 text-brand-700")}><Icon className="h-4 w-4" strokeWidth={1.9} aria-hidden /></span> : null}
+        {Icon ? <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset", tone === "attention" ? "bg-warning-50 text-warning ring-warning/20" : "bg-brand-50 text-brand-700 ring-brand-100")}><Icon className="h-4 w-4" strokeWidth={1.9} aria-hidden /></span> : null}
       </div>
-      <p className="mt-2 break-words font-display text-[22px] font-bold leading-none tabular text-ink sm:text-[26px]">{value}</p>
+      <p className="mt-3 break-words font-display text-[24px] font-bold leading-none tracking-tight tabular text-ink sm:text-[28px]">{value}</p>
       <div className="mt-2 flex min-h-[18px] flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-3">
         {change ? (
           <span className={cn("inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 font-semibold", good ? "bg-success-50 text-success" : "bg-danger-50 text-danger")}>
@@ -89,15 +90,15 @@ export function MetricCard({ label, period, value, hint, icon: Icon, href, chang
       </div>
     </>
   );
-  const cls = cn(card, "block p-4 transition-shadow duration-200", href && "hover:shadow-card focus-visible:outline-2 focus-visible:outline-brand-600", tone === "attention" && "border-warning/40");
+  const cls = cn(card, "block p-4 transition duration-200 motion-reduce:transition-none sm:p-5", href && "hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-float motion-reduce:transform-none focus-visible:outline-2 focus-visible:outline-brand-600", tone === "attention" && "border-warning/40 bg-warning-50/40");
   return href ? <Link href={href} className={cls}>{body}</Link> : <div className={cls}>{body}</div>;
 }
 
 export type Tone = "neutral" | "green" | "amber" | "red" | "blue" | "violet";
 const TONES: Record<Tone, string> = {
   neutral: "bg-surface-2 text-ink-2 ring-line-2",
-  green: "bg-success-50 text-[#26782a] ring-success/25",
-  amber: "bg-warning-50 text-[#7a5600] ring-warning/35",
+  green: "bg-success-50 text-success ring-success/25",
+  amber: "bg-warning-50 text-warning ring-warning/30",
   red: "bg-danger-50 text-[#b4231b] ring-danger/25",
   blue: "bg-info-50 text-[#1d4ed8] ring-info/25",
   violet: "bg-[#f3efff] text-[#5b3cc4] ring-[#5b3cc4]/20",
@@ -107,7 +108,7 @@ const DOT: Record<Tone, string> = { neutral: "bg-ink-4", green: "bg-success", am
 /** Status pill: a coloured dot plus the status in words (never colour alone). */
 export function StatusPill({ tone = "neutral", children, className }: { tone?: Tone; children: React.ReactNode; className?: string }) {
   return (
-    <span className={cn("inline-flex max-w-full items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset", TONES[tone], className)}>
+    <span className={cn("inline-flex max-w-full items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold leading-5 ring-1 ring-inset", TONES[tone], className)}>
       <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", DOT[tone])} aria-hidden />
       <span className="truncate">{children}</span>
     </span>
@@ -172,7 +173,7 @@ export function DataTable<T>({ columns, rows, rowKey, empty, caption, className,
             <tr>
               {columns.map((c) => (
                 <th key={c.key} scope="col" style={c.width ? { width: c.width } : undefined}
-                  className={cn("sticky top-0 z-10 whitespace-nowrap border-b border-line bg-[#fafbfa] px-2.5 py-2.5 @4xl:px-3 text-xs font-semibold text-ink-3 first:pl-4 last:pr-4",
+                  className={cn("sticky top-0 z-10 whitespace-nowrap border-b border-line bg-surface px-2.5 py-2.5 @4xl:px-3 text-[11px] font-bold uppercase tracking-[0.06em] text-ink-3 first:pl-4 last:pr-4",
                     c.align === "right" ? "text-right" : c.align === "center" ? "text-center" : "text-left", c.hideBelow && HIDE[c.hideBelow])}>{c.header}</th>
               ))}
             </tr>
@@ -183,9 +184,9 @@ export function DataTable<T>({ columns, rows, rowKey, empty, caption, className,
             ) : rows.map((r) => {
               const k = rowKey(r);
               return (
-                <tr key={k} className={cn("transition-colors duration-150 hover:bg-[#f8faf8]", CARD_ROW, selectedKey === k && "bg-brand-50/60 hover:bg-brand-50/60")}>
+                <tr key={k} aria-selected={selectedKey === k || undefined} className={cn("transition-colors duration-150 hover:bg-surface/70", CARD_ROW, selectedKey === k && "bg-brand-50/70 hover:bg-brand-50/70 [&>td:first-child]:shadow-[inset_3px_0_0_var(--color-brand-600)]")}>
                   {columns.map((c, i) => (
-                    <td key={c.key} data-label={i === 0 ? undefined : headerText(c)} className={cn("border-b border-line px-2.5 py-2.5 align-middle @4xl:px-3 first:pl-4 last:pr-4 [tr:last-child>&]:border-b-0",
+                    <td key={c.key} data-label={i === 0 ? undefined : headerText(c)} className={cn("border-b border-line px-2.5 py-3 align-middle @4xl:px-3 first:pl-4 last:pr-4 [tr:last-child>&]:border-b-0",
                       c.align === "right" ? "text-right" : c.align === "center" ? "text-center" : "text-left", c.hideBelow && HIDE[c.hideBelow], c.className, cellCard(c, i))}>{i === 0 ? c.render(r) : <div className="min-w-0 @max-lg:flex @max-lg:flex-wrap @max-lg:items-center @max-lg:justify-end @max-lg:gap-x-2 @max-lg:gap-y-1">{c.render(r)}</div>}</td>
                   ))}
                 </tr>
@@ -226,12 +227,12 @@ export function DetailList({ items, className }: { items: { label: React.ReactNo
 /** Long forms are grouped into labelled sections. */
 export function FormSection({ title, description, children, className }: { title: string; description?: string; children: React.ReactNode; className?: string }) {
   return (
-    <section className={cn(card, "p-4 sm:p-5", className)}>
-      <div className="mb-4">
-        <h2 className="text-[15px] font-semibold text-ink">{title}</h2>
-        {description ? <p className="mt-0.5 text-xs text-ink-3">{description}</p> : null}
+    <section className={cn(card, className)}>
+      <div className="border-b border-line px-4 py-3 sm:px-5">
+        <h2 className="text-[15px] font-semibold leading-snug text-ink">{title}</h2>
+        {description ? <p className="mt-0.5 text-xs leading-relaxed text-ink-3">{description}</p> : null}
       </div>
-      {children}
+      <div className="p-4 sm:p-5">{children}</div>
     </section>
   );
 }
@@ -240,7 +241,7 @@ export function FormSection({ title, description, children, className }: { title
 export function ActionRow({ href, icon: Icon, title, detail, tone = "amber", count }: { href: string; icon: LucideIcon; title: string; detail?: string; tone?: Tone; count?: number }) {
   return (
     <Link href={href} className="group flex items-center gap-3 rounded-lg px-2 py-2.5 transition-colors duration-150 hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-brand-600">
-      <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", tone === "red" ? "bg-danger-50 text-danger" : tone === "blue" ? "bg-info-50 text-info" : tone === "green" ? "bg-success-50 text-success" : "bg-warning-50 text-[#8a6300]")}><Icon className="h-4 w-4" aria-hidden /></span>
+      <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", tone === "red" ? "bg-danger-50 text-danger" : tone === "blue" ? "bg-info-50 text-info" : tone === "green" ? "bg-success-50 text-success" : "bg-warning-50 text-warning")}><Icon className="h-4 w-4" aria-hidden /></span>
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-medium text-ink">{title}</span>
         {detail ? <span className="block truncate text-xs text-ink-3">{detail}</span> : null}
@@ -253,14 +254,14 @@ export function ActionRow({ href, icon: Icon, title, detail, tone = "amber", cou
 
 /** Small "View" style button-link used in table rows. */
 export function RowLink({ href, children = "View", label, scroll }: { href: string; children?: React.ReactNode; label?: string; scroll?: boolean }) {
-  return <Link href={href} scroll={scroll} aria-label={label} className="inline-flex h-8 items-center rounded-lg border border-line-2 bg-card px-2.5 text-xs font-semibold text-ink-2 pointer-coarse:h-11 pointer-coarse:px-3.5 transition-colors duration-150 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-800 focus-visible:outline-2 focus-visible:outline-brand-600">{children}</Link>;
+  return <Link href={href} scroll={scroll} aria-label={label} className="inline-flex h-8 items-center rounded-md border border-line-2 bg-card px-3 text-xs font-semibold text-ink-2 shadow-[0_1px_1px_rgb(16_24_40/0.04)] pointer-coarse:h-11 pointer-coarse:px-3.5 transition-colors duration-150 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-800 focus-visible:outline-2 focus-visible:outline-brand-600">{children}</Link>;
 }
 
 /** Inline empty / no-results block for inside panels and tables. */
 export function EmptyBlock({ icon: Icon, title, description, action }: { icon?: LucideIcon; title: string; description?: React.ReactNode; action?: React.ReactNode }) {
   return (
     <div className="flex flex-col items-center px-4 py-10 text-center">
-      {Icon ? <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-surface-2 text-ink-3"><Icon className="h-5 w-5" aria-hidden /></span> : null}
+      {Icon ? <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-surface-2 text-ink-3 ring-1 ring-inset ring-line"><Icon className="h-5 w-5" aria-hidden /></span> : null}
       <p className="text-sm font-semibold text-ink">{title}</p>
       {description ? <p className="mt-1 max-w-sm text-sm text-ink-3">{description}</p> : null}
       {action ? <div className="mt-4">{action}</div> : null}

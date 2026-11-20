@@ -158,7 +158,7 @@ function Pipeline({ live }: { live: LiveCounts }) {
       </ul>
       <ul className="flex flex-wrap gap-2 text-sm" aria-label="People and payments">
         <li><Link href="/admin/riders" className={cn(chip, "border-line bg-card hover:border-brand-300")}><Bike className="h-4 w-4 text-ink-3" aria-hidden /><span><span className="font-display font-bold tabular text-ink">{live.onlineRiders}</span> {live.onlineRiders === 1 ? "rider" : "riders"} online</span></Link></li>
-        <li><Link href="/admin/payments" className={cn(chip, live.upiToConfirm ? "border-warning/50 bg-warning-50 text-[#7a5600]" : "border-line bg-card hover:border-brand-300")}><Smartphone className="h-4 w-4" aria-hidden /><span><span className="font-display font-bold tabular">{live.upiToConfirm}</span> UPI {live.upiToConfirm === 1 ? "payment" : "payments"} to confirm</span></Link></li>
+        <li><Link href="/admin/payments" className={cn(chip, live.upiToConfirm ? "border-warning/50 bg-warning-50 text-warning" : "border-line bg-card hover:border-brand-300")}><Smartphone className="h-4 w-4" aria-hidden /><span><span className="font-display font-bold tabular">{live.upiToConfirm}</span> UPI {live.upiToConfirm === 1 ? "payment" : "payments"} to confirm</span></Link></li>
         <li><Link href="/admin/requests" className={cn(chip, live.newRequests ? "border-info/40 bg-info-50 text-[#1d4ed8]" : "border-line bg-card hover:border-brand-300")}><Inbox className="h-4 w-4" aria-hidden /><span><span className="font-display font-bold tabular">{live.newRequests}</span> new {live.newRequests === 1 ? "request" : "requests"}</span></Link></li>
       </ul>
     </div>

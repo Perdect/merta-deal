@@ -205,7 +205,7 @@ export function DocEditor({ kind, initial, lines: initialLines, suppliers, payme
               <dl className="grid grid-cols-3 gap-2 text-center text-sm">
                 <div className="rounded-md bg-surface p-2"><dt className="text-[11px] text-ink-3">Bill</dt><dd className="font-bold tabular">{formatINR(head.total ?? total)}</dd></div>
                 <div className="rounded-md bg-surface p-2"><dt className="text-[11px] text-ink-3">Paid</dt><dd className="font-bold tabular">{formatINR(head.paid_amount ?? 0)}</dd></div>
-                <div className={cn("rounded-md p-2", due > 0 ? "bg-[#fff6dc]" : "bg-success-50")}><dt className="text-[11px] text-ink-3">Due</dt><dd className="font-bold tabular">{formatINR(due)}</dd></div>
+                <div className={cn("rounded-md p-2", due > 0 ? "bg-warning-50" : "bg-success-50")}><dt className="text-[11px] text-ink-3">Due</dt><dd className="font-bold tabular">{formatINR(due)}</dd></div>
               </dl>
               {due > 0 ? <Button size="sm" className="mt-3" onClick={() => { setPay({ amount: String(due), reference: "", note: "" }); setPayOpen(true); }}><Banknote className="h-4 w-4" /> Record payment</Button> : <p className="mt-2 text-xs font-semibold text-success">Fully paid</p>}
             </div>

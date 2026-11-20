@@ -66,7 +66,7 @@ export function RidersLiveBoard({ initial }: { initial: LiveRider[] }) {
                 <Avatar name={r.name} src={r.avatar_url} size={32} className="shrink-0" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-ink"><Link href={`/admin/riders/${r.id}`} className="hover:underline">{r.name ?? "Rider"}</Link> <span className="text-xs font-normal text-ink-3">{VEHICLE_LABEL[r.vehicle_type] ?? r.vehicle_type}{r.vehicle_number ? ` · ${r.vehicle_number}` : ""}</span></p>
-                  <p className="truncate text-xs text-ink-3">{km != null ? `${km.toFixed(1)} km from ${site.city} centre · ` : "No GPS fix · "}<span className={stale ? "font-medium text-[#8a6300]" : ""}>{r.last_location_at ? `GPS ${timeAgo(r.last_location_at)}${stale ? " (stale)" : ""}` : "GPS never reported"}</span></p>
+                  <p className="truncate text-xs text-ink-3">{km != null ? `${km.toFixed(1)} km from ${site.city} centre · ` : "No GPS fix · "}<span className={stale ? "font-medium text-warning" : ""}>{r.last_location_at ? `GPS ${timeAgo(r.last_location_at)}${stale ? " (stale)" : ""}` : "GPS never reported"}</span></p>
                 </div>
                 {r.busy && r.current_order ? (
                   <Link href={`/admin/orders/${r.current_order.id}`} className="shrink-0 hover:opacity-80"><StatusPill tone="blue">On {r.current_order.order_number}</StatusPill></Link>

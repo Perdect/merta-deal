@@ -57,7 +57,7 @@ export function useAlertSetup(push: PushConfig) {
 }
 
 const pill: Record<"green" | "amber" | "neutral" | "red", string> = {
-  green: "bg-success-50 text-success", amber: "bg-[#fff6dc] text-[#8a6300]", neutral: "bg-surface-2 text-ink-3", red: "bg-danger-50 text-danger",
+  green: "bg-success-50 text-success", amber: "bg-warning-50 text-warning", neutral: "bg-surface-2 text-ink-3", red: "bg-danger-50 text-danger",
 };
 
 /** Full settings block: status rows, the enable button, test, mute and ringtone. */
@@ -125,8 +125,8 @@ export function AlertBanner({ portal, push, href }: { portal: Portal; push: Push
   if (dismissed || !s.needsSetup || s.ringer.sound === "unknown") return null;
   const dismiss = () => { setDismissed(true); try { sessionStorage.setItem(BANNER_KEY, "1"); } catch { /* private mode */ } };
   return (
-    <div role="region" aria-label="Order alerts" className="mb-3 flex items-center gap-3 rounded-lg border border-saffron-300 bg-[#fff6dc] px-3 py-2">
-      {s.ringer.sound === "locked" ? <VolumeX className="h-5 w-5 shrink-0 text-[#8a6300]" aria-hidden /> : <BellRing className="h-5 w-5 shrink-0 text-[#8a6300]" aria-hidden />}
+    <div role="region" aria-label="Order alerts" className="mb-3 flex items-center gap-3 rounded-lg border border-saffron-300 bg-warning-50 px-3 py-2">
+      {s.ringer.sound === "locked" ? <VolumeX className="h-5 w-5 shrink-0 text-warning" aria-hidden /> : <BellRing className="h-5 w-5 shrink-0 text-warning" aria-hidden />}
       <p className="min-w-0 flex-1 text-sm text-ink">
         <span className="font-semibold">{s.ringer.sound === "locked" ? "This device cannot ring yet." : "Background alerts are off on this device."}</span>{" "}
         <span className="text-ink-2">{portal === "admin" ? "Tap Enable so new orders ring here." : "Tap Enable so delivery requests ring here."}</span>{" "}

@@ -34,7 +34,7 @@ export function ProfitPanel({ r }: { r: ProfitReport }) {
           ]} />
           <ul className="space-y-1 rounded-lg bg-surface p-3 text-xs text-ink-2">
             {r.notes.map((n, i) => <li key={i} className="flex gap-1.5"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-4" aria-hidden />{n}</li>)}
-            {r.cogs_missing_lines > 0 ? <li className="flex gap-1.5 font-semibold text-[#8a6300]"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />{r.cogs_missing_lines} order lines have no cost on record (sold before a goods receipt was posted for them); they count as zero cost here.</li> : null}
+            {r.cogs_missing_lines > 0 ? <li className="flex gap-1.5 font-semibold text-warning"><Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />{r.cogs_missing_lines} order lines have no cost on record (sold before a goods receipt was posted for them); they count as zero cost here.</li> : null}
           </ul>
         </div>
       </div>

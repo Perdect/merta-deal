@@ -112,7 +112,7 @@ export function LiveList({ topic, tables, pollMs = 30_000, reconcileMs = 120_000
   const label = state === "live" ? "Live" : state === "connecting" ? "Connecting…" : `Live updates unavailable · refreshing every ${Math.round(pollMs / 1000)} s`;
   return (
     <span className={cn("inline-flex items-center gap-1.5 text-xs font-semibold", className)} role="status" aria-live="polite">
-      <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-1", state === "live" ? "bg-success-50 text-success" : state === "connecting" ? "bg-surface-2 text-ink-3" : "bg-warning-50 text-[#8a6300]")} title={state === "live" ? "New orders and status changes appear here as they happen" : state === "connecting" ? "Connecting to live updates" : "Realtime is not connected; the list is refreshed on a timer instead"}>
+      <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-1", state === "live" ? "bg-success-50 text-success" : state === "connecting" ? "bg-surface-2 text-ink-3" : "bg-warning-50 text-warning")} title={state === "live" ? "New orders and status changes appear here as they happen" : state === "connecting" ? "Connecting to live updates" : "Realtime is not connected; the list is refreshed on a timer instead"}>
         {state === "live" ? <Wifi className="h-3 w-3" aria-hidden /> : <WifiOff className="h-3 w-3" aria-hidden />}{label}
       </span>
       <button type="button" onClick={refresh} disabled={pending} aria-label="Refresh list" title="Refresh now"

@@ -26,7 +26,7 @@ export function PackingPanel({ order: s }: { order: ScanOrder }) {
           return (
             <li key={l.id} className="flex items-center gap-3 px-4 py-2 sm:px-5">
               <span className={cn("w-14 font-bold tabular", done ? "text-success" : l.packed_qty ? "text-saffron-700" : "text-ink-3")}>{l.packed_qty}/{l.quantity}</span>
-              <span className="min-w-0 flex-1 truncate text-ink">{l.name} <span className="text-xs text-ink-3">{l.pack_label ?? ""}</span>{l.exception && l.exception.status === "pending" ? <span className="ml-2 rounded-full bg-[#fff6dc] px-1.5 py-0.5 text-[10px] font-semibold text-[#8a6300]">customer deciding · {l.exception.available_qty} available</span> : null}</span>
+              <span className="min-w-0 flex-1 truncate text-ink">{l.name} <span className="text-xs text-ink-3">{l.pack_label ?? ""}</span>{l.exception && l.exception.status === "pending" ? <span className="ml-2 rounded-full bg-warning-50 px-1.5 py-0.5 text-[10px] font-semibold text-warning">customer deciding · {l.exception.available_qty} available</span> : null}</span>
               {l.bin_location ? <span className="rounded bg-surface-2 px-1.5 py-0.5 text-[11px] font-semibold text-ink-2" title="Bin / shelf">{l.bin_location}</span> : null}
               <span className="font-mono text-xs text-ink-4">{l.sku ?? ""}</span>
             </li>

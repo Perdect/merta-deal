@@ -59,7 +59,7 @@ export function ConfirmChange({ open, onClose, onConfirm, title, description, co
       <div className="space-y-3">
         {description ? <div className="text-sm text-ink-2">{description}</div> : null}
         {warning ? (
-          <div role="note" className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning-50 px-3 py-2 text-sm text-[#7a5600]">
+          <div role="note" className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning-50 px-3 py-2 text-sm text-warning">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden /><div>{warning}</div>
           </div>
         ) : null}
@@ -78,7 +78,7 @@ export function ConfirmChange({ open, onClose, onConfirm, title, description, co
 export function PanelFormFooter({ dirty, saving, onCancel, submitLabel = "Save changes", formId, disabled }: { dirty: boolean; saving: boolean; onCancel: () => void; submitLabel?: string; formId: string; disabled?: boolean }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <p className="mr-auto text-xs text-ink-3" role="status">{saving ? "Saving…" : dirty ? <span className="font-medium text-[#8a6300]">Unsaved changes</span> : "No changes yet"}</p>
+      <p className="mr-auto text-xs text-ink-3" role="status">{saving ? "Saving…" : dirty ? <span className="font-medium text-warning">Unsaved changes</span> : "No changes yet"}</p>
       <Button variant="outline" size="sm" onClick={onCancel} disabled={saving}>Cancel</Button>
       <Button type="submit" form={formId} size="sm" loading={saving} disabled={disabled || !dirty}>{saving ? "Saving…" : submitLabel}</Button>
     </div>

@@ -81,12 +81,18 @@
   --animate-rise: rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   --animate-bump: bump 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   --animate-tag: tag 0.22s ease-out both;
+  /* Admin: a page settling in after navigation. `backwards`, not `both`: once it has played no transform
+     is left on the wrapper, so sticky bars and fixed overlays inside the page keep their own frame. */
+  --animate-page-in: page-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  --animate-menu-in: menu-in 0.14s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   /* Order-placed splash: the circle pops in, a soft ring spreads, then the tick draws itself. */
   --animate-tick-pop: tick-pop 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   --animate-tick-ring: tick-ring 0.9s ease-out 0.2s both;
   --animate-tick-draw: tick-draw 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s both;
 
   @keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
+  @keyframes page-in { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: translateY(0) } }
+  @keyframes menu-in { from { opacity: 0; transform: translateY(-4px) scale(0.98) } to { opacity: 1; transform: translateY(0) scale(1) } }
 
   @keyframes slide-up { from { opacity: 0; transform: translateY(16px) } to { opacity: 1; transform: translateY(0) } }
   /* Search hint: hold each word ~2.2s, slide up 0.3s; the 4th row repeats the 1st for a seamless loop. */
@@ -124,6 +130,25 @@
 /* Portal themes. A wrapper class re-maps the brand scale, so every brand-* utility inside (buttons,
    links, tabs, nav, selected states, focus rings, inputs) follows the portal without per-component code. */
 .theme-admin {
+  /* The admin's own look, set once here so every admin page, panel and dialog follows without
+     per-component colours: cool slate neutrals instead of the shop's warm greys, tighter corners
+     (a business tool, not a storefront) and crisper, shorter shadows. Status colours are unchanged. */
+  --color-ink: #101828;
+  --color-ink-2: #344054;
+  --color-ink-3: #5b6779;   /* 5.7:1 on white, 5.2:1 on the canvas */
+  --color-ink-4: #8a94a6;   /* decorative marks and disabled states only */
+  --color-surface: #f4f6f9;
+  --color-surface-2: #eceff4;
+  --color-line: #e3e7ee;
+  --color-line-2: #cdd4df;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.05), 0 1px 3px rgb(16 24 40 / 0.04);
+  --shadow-float: 0 16px 40px -12px rgb(16 24 40 / 0.22), 0 4px 12px -4px rgb(16 24 40 / 0.08);
   --color-brand-50: #eff6ff;
   --color-brand-100: #dbeafe;
   --color-brand-200: #bfdbfe;

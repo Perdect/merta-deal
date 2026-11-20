@@ -8,6 +8,7 @@ import { TicketReply, TicketControls } from "@/components/admin/ticket-actions";
 import { TicketThread } from "@/components/admin/care/ticket-thread";
 import { TICKET_CATEGORY_OPTIONS } from "@/components/admin/constants";
 import { formatDateTime, timeAgo } from "@/lib/utils";
+import { isClaudeConfigured } from "@/lib/ai/client";
 
 export const metadata: Metadata = { title: "Ticket" };
 
@@ -32,7 +33,7 @@ export default async function AdminTicketPage({ params }: { params: Promise<{ id
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <Panel title="Conversation" description={`${messages.length} ${messages.length === 1 ? "message" : "messages"}${last ? ` · last ${timeAgo(last.created_at)} from ${last.is_staff ? "support" : "the customer"}` : ""}`}
-          footer={<TicketReply ticketId={t.id} closed={closed} />}>
+          footer={<TicketReply ticketId={t.id} closed={closed} aiConfigured={isClaudeConfigured()} />}>
           <TicketThread messages={messages} />
         </Panel>
 

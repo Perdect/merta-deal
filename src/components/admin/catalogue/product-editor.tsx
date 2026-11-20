@@ -352,7 +352,7 @@ export function ProductEditor({ product, listing, movements = [], scan = null, s
                 ) : <p className="mt-2 text-xs text-ink-3">Leave these empty to add the product to the catalogue without putting it on sale.</p>}
               </div>
 
-              {product && !f.is_active ? <p className="text-xs font-medium text-[#8a6300]">This product is deactivated, so customers don&apos;t see it. Use Activate at the top of the page.</p> : null}
+              {product && !f.is_active ? <p className="text-xs font-medium text-warning">This product is deactivated, so customers don&apos;t see it. Use Activate at the top of the page.</p> : null}
               {!product ? <Switch checked={Boolean(f.is_active)} onChange={(v) => set("is_active", v)} label="Active (customers can see it)" /> : null}
             </div>
           </section>

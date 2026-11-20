@@ -14,7 +14,7 @@ export default async function PrintLayout({ children }: { children: React.ReactN
   const { data: isAdmin } = await supabase.rpc("is_admin");
   if (!isAdmin || (user.role !== "admin" && user.role !== "super_admin")) redirect("/admin/login?denied=1");
   return (
-    <div className="min-h-dvh bg-[#f4f5f3] text-ink print:bg-white">
+    <div className="min-h-dvh bg-surface text-ink print:bg-white">
       <PrintBar />
       {children}
     </div>

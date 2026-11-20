@@ -193,11 +193,11 @@ export function SettingsForm({ groups, aside }: { groups: SettingsGroup[]; aside
 export function SettingsEditor({ settings, title, description }: { settings: Setting[]; title?: string; description?: string }) {
   const api = useSettingsDraft(settings);
   return (
-    <form noValidate onSubmit={(e) => { e.preventDefault(); void api.save(); }} className="rounded-[14px] border border-line bg-card shadow-[0_1px_2px_rgb(23_32_28/0.04)]">
+    <form noValidate onSubmit={(e) => { e.preventDefault(); void api.save(); }} className="rounded-xl border border-line bg-card shadow-card">
       {title || description ? <div className="px-4 pt-4 sm:px-5">{title ? <h2 className="text-[15px] font-semibold text-ink">{title}</h2> : null}{description ? <p className="mt-0.5 text-xs text-ink-3">{description}</p> : null}</div> : null}
       <div className="px-4 py-1 sm:px-5"><SettingRows settings={settings} api={api} /></div>
       <div className="flex flex-wrap items-center gap-2 border-t border-line px-4 py-3 sm:px-5">
-        <p className="mr-auto text-xs text-ink-3" role="status">{api.saving ? "Saving…" : api.dirty ? <span className="font-medium text-[#8a6300]">{api.dirtyKeys.length} unsaved {api.dirtyKeys.length === 1 ? "change" : "changes"}</span> : "All changes saved"}</p>
+        <p className="mr-auto text-xs text-ink-3" role="status">{api.saving ? "Saving…" : api.dirty ? <span className="font-medium text-warning">{api.dirtyKeys.length} unsaved {api.dirtyKeys.length === 1 ? "change" : "changes"}</span> : "All changes saved"}</p>
         {api.dirty ? <button type="button" className={btn.secondary} disabled={api.saving} onClick={api.cancel}>Cancel</button> : null}
         <button type="submit" className={btn.primary} disabled={!api.dirty || api.saving}>{api.saving ? "Saving…" : "Save changes"}</button>
       </div>

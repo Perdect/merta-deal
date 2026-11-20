@@ -53,7 +53,7 @@ export default async function PhotoStudioPage({ searchParams }: { searchParams: 
       {error ? (
         <ErrorBlock title="Couldn't load the photo queue" description={`${error}. Your filters are kept; try again.`} retryHref={`/admin/products/images${qs ? `?${qs}` : ""}`} />
       ) : items.length === 0 ? (
-        <div className="rounded-[14px] border border-line bg-card">
+        <div className="rounded-xl border border-line bg-card">
           {filters.q || category || filters.brand
             ? <EmptyBlock icon={SearchX} title="No products match" description="Clear a filter chip or search by a shorter name." />
             : have === "0"

@@ -98,21 +98,21 @@ export function SidePanel({ open, onClose, title, description, children, footer,
   const closeBtn = "-mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-ink-3 hover:bg-surface-2 hover:text-ink tap";
   return createPortal(
     <div ref={rootRef} data-admin-layer="" className="fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-label={typeof title === "string" ? title : undefined}>
-      <div className="absolute inset-0 bg-ink/30 motion-safe:animate-fade-in" onClick={onClose} />
+      <div className="absolute inset-0 bg-ink/40 backdrop-blur-[2px] motion-safe:animate-fade-in" onClick={onClose} />
       <div ref={ref} tabIndex={-1} className={cn("absolute right-0 flex w-full flex-col bg-card shadow-float outline-none sm:inset-y-0 sm:motion-safe:animate-panel-in", w,
         sheet ? "max-sm:inset-x-0 max-sm:bottom-0 max-sm:max-h-[88dvh] max-sm:rounded-t-2xl max-sm:motion-safe:animate-slide-up" : "max-sm:inset-y-0 max-sm:pt-[env(safe-area-inset-top)] max-sm:motion-safe:animate-panel-in")}>
         {sheet ? <span aria-hidden className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-line-2 sm:hidden" /> : null}
         <div className="flex items-start gap-3 border-b border-line px-4 py-3.5 sm:px-5">
           {!sheet ? <button type="button" onClick={onClose} aria-label="Back" className={cn(closeBtn, "-ml-1 mr-0 text-ink-2 sm:hidden")}><ArrowLeft className="h-5 w-5" /></button> : null}
           <div className="min-w-0 flex-1">
-            <h2 className="break-words text-base font-semibold text-ink">{title}</h2>
+            <h2 className="break-words font-display text-[17px] font-bold leading-snug tracking-tight text-ink">{title}</h2>
             {description ? <div className="mt-0.5 text-xs text-ink-3">{description}</div> : null}
           </div>
           {headerActions}
           <button type="button" onClick={onClose} aria-label="Close panel" className={cn(closeBtn, !sheet && "max-sm:hidden")}><X className="h-[18px] w-[18px]" /></button>
         </div>
         <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5">{children}</div>
-        {footer ? <div className="border-t border-line bg-card px-4 pt-3 pb-[calc(0.75rem+var(--safe-bottom))] sm:px-5">{footer}</div> : null}
+        {footer ? <div className="border-t border-line bg-card px-4 pt-3 pb-[calc(0.75rem+var(--safe-bottom))] shadow-[0_-4px_12px_-6px_rgb(16_24_40/0.08)] sm:px-5">{footer}</div> : null}
       </div>
     </div>,
     document.body,
@@ -239,14 +239,14 @@ export function StatusTabs({ param = "status", items, defaultValue = "", classNa
   const { sp, set } = useQueryState();
   const value = sp.get(param) ?? defaultValue;
   return (
-    <div role="tablist" aria-label="Filter by status" className={cn("mb-3 flex gap-1 overflow-x-auto border-b border-line no-scrollbar", className)}>
+    <div role="tablist" aria-label="Filter by status" className={cn("mb-4 flex gap-1 overflow-x-auto border-b border-line no-scrollbar", className)}>
       {items.map((t) => {
         const active = t.value === value;
         return (
           <button key={t.value || "all"} type="button" role="tab" aria-selected={active} onClick={() => set({ [param]: t.value === defaultValue ? null : t.value })}
-            className={cn("-mb-px inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium pointer-coarse:min-h-11 transition-colors duration-150", active ? "border-brand-600 text-brand-800" : "border-transparent text-ink-3 hover:text-ink")}>
+            className={cn("-mb-px inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm pointer-coarse:min-h-11 transition-colors duration-150", active ? "border-brand-600 font-semibold text-brand-800" : "border-transparent font-medium text-ink-3 hover:border-line-2 hover:text-ink")}>
             {t.label}
-            {typeof t.count === "number" ? <span className={cn("rounded-full px-1.5 text-[11px] font-semibold leading-[18px] tabular", active ? "bg-brand-100 text-brand-800" : "bg-surface-2 text-ink-3")}>{t.count}</span> : null}
+            {typeof t.count === "number" ? <span className={cn("min-w-5 rounded-full px-1.5 text-center text-[11px] font-bold leading-[18px] tabular transition-colors duration-150", active ? "bg-brand-600 text-white" : "bg-surface-2 text-ink-3")}>{t.count}</span> : null}
           </button>
         );
       })}
@@ -319,10 +319,10 @@ export function CollapsibleSection({ id, title, description, summary, icon: Icon
   open: boolean; onOpenChange: (open: boolean) => void; alert?: boolean; children: React.ReactNode; className?: string;
 }) {
   return (
-    <section className={cn("rounded-[14px] border bg-card shadow-[0_1px_2px_rgb(23_32_28/0.04)]", alert ? "border-danger/40" : "border-line", className)}>
+    <section className={cn("rounded-xl border bg-card shadow-card", alert ? "border-danger/40" : "border-line", className)}>
       <h2>
         <button type="button" id={`${id}-button`} aria-expanded={open} aria-controls={id} onClick={() => onOpenChange(!open)}
-          className="flex w-full items-center gap-3 rounded-[14px] px-4 py-3.5 text-left transition-colors duration-150 hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600 sm:px-5">
+          className="flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left transition-colors duration-150 hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600 sm:px-5">
           {Icon ? <Icon className={cn("h-4 w-4 shrink-0", alert ? "text-danger" : "text-ink-3")} strokeWidth={1.9} aria-hidden /> : null}
           <span className="min-w-0 flex-1">
             <span className="block text-[15px] font-semibold text-ink">{title}</span>
@@ -349,7 +349,7 @@ export function FormActions({ dirty, saving, onCancel, submitLabel = "Save chang
   return (
     <div className={inline ? "" : cn("z-20 -mx-3 mt-4 border-t border-line bg-card/95 px-3 py-3 backdrop-blur pb-[calc(0.75rem+var(--safe-bottom))] sm:-mx-5 sm:px-5 lg:-mx-7 lg:px-7", keyboard ? "static" : "sticky bottom-0")}>
       <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-2">
-        <p className="mr-auto text-xs text-ink-3" role="status">{saving ? "Saving…" : dirty ? <span className="font-medium text-[#8a6300]">Unsaved changes</span> : "All changes saved"}</p>
+        <p className="mr-auto text-xs text-ink-3" role="status">{saving ? "Saving…" : dirty ? <span className="font-semibold text-warning">Unsaved changes</span> : "All changes saved"}</p>
         {extra}
         {onCancel ? <button type="button" onClick={onCancel} disabled={saving} className="h-9 rounded-lg border border-line-2 bg-card px-4 text-sm font-semibold text-ink-2 hover:bg-surface-2 disabled:opacity-50 pointer-coarse:h-11">{cancelLabel}</button> : null}
         <button type="submit" disabled={saving || disabled} className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:opacity-60 pointer-coarse:h-11">

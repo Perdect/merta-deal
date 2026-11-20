@@ -144,7 +144,7 @@ function QuickEditPanel({ product, offer, showFlags, onClose }: { product: Quick
           <ProductStatusPill isActive={product.is_active} />
         </div>
 
-        <section aria-labelledby="qe-offer" className="space-y-3 rounded-[12px] border border-line p-3.5">
+        <section aria-labelledby="qe-offer" className="space-y-3 rounded-lg border border-line p-3.5">
           <div className="flex items-start justify-between gap-2">
             <div>
               <h3 id="qe-offer" className="flex items-center gap-1.5 text-sm font-semibold text-ink"><Tag className="h-4 w-4 text-ink-3" aria-hidden />Price and stock</h3>
@@ -214,7 +214,7 @@ function QuickEditPanel({ product, offer, showFlags, onClose }: { product: Quick
         </section>
 
         {showFlags ? (
-          <section aria-labelledby="qe-flags" className="space-y-3 rounded-[12px] border border-line p-3.5">
+          <section aria-labelledby="qe-flags" className="space-y-3 rounded-lg border border-line p-3.5">
             <div>
               <h3 id="qe-flags" className="text-sm font-semibold text-ink">Catalogue visibility</h3>
               <p className="text-xs text-ink-3">Customers see the product only while it is active.</p>

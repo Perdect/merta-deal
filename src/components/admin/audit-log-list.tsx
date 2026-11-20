@@ -37,13 +37,13 @@ export function AuditChanges({ before, after }: { before: unknown; after: unknow
           <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-3">Changed fields ({changed.length})</h3>
           <div className="overflow-x-auto rounded-lg border border-line">
             <table className="w-full text-xs">
-              <thead><tr className="bg-[#fafbfa] text-left text-ink-3"><th scope="col" className="px-2.5 py-1.5 font-semibold">Field</th><th scope="col" className="px-2.5 py-1.5 font-semibold">Before</th><th scope="col" className="px-2.5 py-1.5 font-semibold">After</th></tr></thead>
+              <thead><tr className="bg-surface text-left text-ink-3"><th scope="col" className="px-2.5 py-1.5 font-semibold">Field</th><th scope="col" className="px-2.5 py-1.5 font-semibold">Before</th><th scope="col" className="px-2.5 py-1.5 font-semibold">After</th></tr></thead>
               <tbody className="divide-y divide-line">
                 {changed.map((k) => (
                   <tr key={k} className="align-top">
                     <td className="px-2.5 py-1.5 font-mono text-ink-2">{k}</td>
                     <td className="max-w-[180px] break-words px-2.5 py-1.5 font-mono text-[#b4231b]"><span className="sr-only">Before: </span>{fmt(b[k])}</td>
-                    <td className="max-w-[180px] break-words px-2.5 py-1.5 font-mono text-[#26782a]"><span className="sr-only">After: </span>{fmt(a[k])}</td>
+                    <td className="max-w-[180px] break-words px-2.5 py-1.5 font-mono text-success"><span className="sr-only">After: </span>{fmt(a[k])}</td>
                   </tr>
                 ))}
               </tbody>

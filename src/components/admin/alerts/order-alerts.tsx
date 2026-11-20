@@ -232,7 +232,7 @@ export function OrderAlertView(p: OrderAlertViewProps) {
           <p className="font-display text-2xl font-extrabold tabular text-ink">{o.order_number}</p>
           <p className="mt-0.5 text-sm text-ink-2">{o.item_count} {o.item_count === 1 ? "item" : "items"} · <span className="font-bold text-ink">{formatINR(o.total, { precise: true })}</span> · {PAYMENT_METHOD_LABEL[o.payment_method]}{o.delivery_type === "express" ? " · Express" : o.delivery_type === "scheduled" ? " · Scheduled" : ""}</p>
           <p className="mt-1 flex items-center gap-1.5 text-sm text-ink-2"><MapPin className="h-4 w-4 shrink-0 text-ink-3" aria-hidden />{[o.area, o.city].filter(Boolean).join(", ") || "Delivery area not set"}</p>
-          {ringer.sound === "locked" ? <button type="button" onClick={() => void ringer.unlock()} className="mt-2 flex w-full items-center gap-2 rounded-lg bg-[#fff6dc] px-3 py-2 text-left text-xs font-semibold text-[#8a6300]"><Volume2 className="h-4 w-4" aria-hidden />Sound is blocked on this device. Tap here to turn it on.</button> : null}
+          {ringer.sound === "locked" ? <button type="button" onClick={() => void ringer.unlock()} className="mt-2 flex w-full items-center gap-2 rounded-lg bg-warning-50 px-3 py-2 text-left text-xs font-semibold text-warning"><Volume2 className="h-4 w-4" aria-hidden />Sound is blocked on this device. Tap here to turn it on.</button> : null}
           {loadError ? <p className="mt-2 text-xs text-danger">{loadError}</p> : null}
         </div>
         <div className="grid grid-cols-2 gap-2 px-4 pb-3">
@@ -256,7 +256,7 @@ export function OrderAlertView(p: OrderAlertViewProps) {
 function UpiAcceptBlock({ o, busy, disabled, onConfirm }: { o: AlertOrder; busy: boolean; disabled: boolean; onConfirm: (received: boolean, reference: string) => void }) {
   const [ref, setRef] = React.useState(o.upi_reference ?? "");
   return (
-    <div className="col-span-2 rounded-lg border border-line-2 bg-[#fff6dc] p-3">
+    <div className="col-span-2 rounded-lg border border-line-2 bg-warning-50 p-3">
       <p className="text-sm font-semibold text-ink">UPI payment of {formatINR(o.total, { precise: true })} to confirm</p>
       <p className="mt-0.5 text-xs text-ink-2">{o.upi_claimed_at ? `Customer says paid ${timeAgo(o.upi_claimed_at)}${o.upi_reference ? ` · ref ${o.upi_reference}` : ""}.` : "The customer hasn't said they've paid yet."} Check your bank, then confirm.</p>
       <input value={ref} onChange={(e) => setRef(e.target.value.slice(0, 40))} placeholder="UPI reference / UTR from your bank" aria-label="UPI reference" maxLength={40} className="mt-2 h-11 w-full rounded-md border border-line-2 bg-card px-3 text-sm text-ink" />

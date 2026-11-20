@@ -26,7 +26,7 @@ export function ReportRangeControls({ start, end, today }: { start: string; end:
   const dirty = s !== start || e !== end;
   const inputCls = "h-9 rounded-lg border border-line-2 bg-card px-2.5 text-sm text-ink focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 aria-[invalid=true]:border-danger";
   return (
-    <form noValidate onSubmit={(ev) => { ev.preventDefault(); if (!error) go(s, e); }} className="mb-4 rounded-[14px] border border-line bg-card px-4 py-3 shadow-[0_1px_2px_rgb(23_32_28/0.04)]" aria-label="Report period">
+    <form noValidate onSubmit={(ev) => { ev.preventDefault(); if (!error) go(s, e); }} className="mb-4 rounded-xl border border-line bg-card px-4 py-3 shadow-card" aria-label="Report period">
       <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
         <label className="text-xs font-medium text-ink-3">From<input type="date" value={s} max={today} onChange={(x) => setS(x.target.value)} aria-invalid={Boolean(error && dirty)} className={cn(inputCls, "mt-1 block w-[150px]")} /></label>
         <label className="text-xs font-medium text-ink-3">To<input type="date" value={e} max={today} onChange={(x) => setE(x.target.value)} aria-invalid={Boolean(error && dirty)} className={cn(inputCls, "mt-1 block w-[150px]")} /></label>

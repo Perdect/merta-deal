@@ -46,7 +46,7 @@ export function FulfilActions({ tracking: t, compact, className }: { tracking: O
       {s === "placed" ? (
         <>
           <Button size={size} variant="primary" loading={busy === "accept"} disabled={unpaid || busy !== null} onClick={() => run("accept")} title={unpaid ? "Waiting for online payment" : undefined}><Check className="h-4 w-4" /> Accept</Button>
-          {unpaid ? <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#8a6300]"><CreditCard className="h-3.5 w-3.5" /> Payment pending{compact ? "" : " — confirmed automatically once paid"}</span> : null}
+          {unpaid ? <span className="inline-flex items-center gap-1 text-xs font-semibold text-warning"><CreditCard className="h-3.5 w-3.5" /> Payment pending{compact ? "" : " — confirmed automatically once paid"}</span> : null}
         </>
       ) : (
         <Button size={size} variant="primary" loading={busy === "ready"} disabled={busy !== null} onClick={() => run("ready")}><PackageCheck className="h-4 w-4" /> Packed · call rider</Button>

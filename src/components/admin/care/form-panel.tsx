@@ -23,7 +23,7 @@ export function FormPanel({ open, title, description, dirty, saving, onClose, on
     <SidePanel open={open} onClose={close} title={title} description={description} width={width}
       footer={
         <div className="flex flex-wrap items-center gap-2">
-          <p className="mr-auto text-xs text-ink-3" role="status">{saving ? "Saving…" : dirty ? <span className="font-medium text-[#8a6300]">Unsaved changes</span> : null}</p>
+          <p className="mr-auto text-xs text-ink-3" role="status">{saving ? "Saving…" : dirty ? <span className="font-medium text-warning">Unsaved changes</span> : null}</p>
           <button type="button" onClick={close} disabled={saving} className={btn.secondary}>Cancel</button>
           <button type="submit" form={formId} disabled={saving} className={btn.primary}>
             {saving ? <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white motion-reduce:animate-none" aria-hidden /> : null}

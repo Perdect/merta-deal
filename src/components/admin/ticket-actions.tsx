@@ -1,13 +1,15 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Send, UserCheck, UserMinus } from "lucide-react";
+import { Send, Sparkles, UserCheck, UserMinus } from "lucide-react";
 import { Select } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/overlay";
 import { toast } from "@/components/ui/toast";
 import { btn } from "@/components/admin/care/shared";
 import { replyTicketAction } from "@/lib/actions/account";
 import { updateTicketAction } from "@/lib/actions/admin";
+import { ticketAssistAction } from "@/lib/actions/ai";
+import type { TicketAssistResult } from "@/lib/ai/ticket-assist";
 import { TICKET_PRIORITY_OPTIONS } from "@/components/admin/constants";
 import type { TicketRow } from "@/lib/data/admin";
 import type { Enums } from "@/types/database";
@@ -16,13 +18,28 @@ import { cn } from "@/lib/utils";
 const STATUS_OPTIONS = [{ value: "open", label: "Open" }, { value: "in_progress", label: "In progress" }, { value: "resolved", label: "Resolved" }, { value: "closed", label: "Closed" }];
 const MAX = 2000;
 
-/** Staff reply box. Sending marks the ticket in progress (replyTicketAction). */
-export function TicketReply({ ticketId, closed }: { ticketId: string; closed: boolean }) {
+/**
+ * Staff reply box. Sending marks the ticket in progress (replyTicketAction).
+ *
+ * "Draft with AI" asks Claude for a summary, a draft reply and next steps from this ticket's conversation
+ * (personal details masked on the server). Nothing is sent or changed by it: the draft only reaches the
+ * customer if a person puts it in the box, edits it and presses Send. Without an AI key the button is not
+ * shown and the box says so.
+ */
+export function TicketReply({ ticketId, closed, aiConfigured = false }: { ticketId: string; closed: boolean; aiConfigured?: boolean }) {
   const router = useRouter();
   const [text, setText] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
   const id = React.useId();
+  const [assist, setAssist] = React.useState<TicketAssistResult | null>(null);
+  const [drafting, setDrafting] = React.useState(false);
+  const draft = async () => {
+    if (drafting) return;
+    setDrafting(true);
+    const r = await ticketAssistAction(ticketId).catch((): TicketAssistResult => ({ ok: false, reason: "failed", message: "The draft could not be made. Check your connection and try again." }));
+    setDrafting(false); setAssist(r);
+  };
   const send = async () => {
     if (busy) return;
     if (!text.trim()) { setError("Write a reply before sending."); return; }
@@ -33,13 +50,40 @@ export function TicketReply({ ticketId, closed }: { ticketId: string; closed: bo
   return (
     <form noValidate onSubmit={(e) => { e.preventDefault(); void send(); }} className="space-y-2">
       <label htmlFor={id} className="block text-sm font-medium text-ink-2">Reply as Merta Deal support</label>
-      {closed ? <p className="text-xs text-[#8a6300]">This ticket is resolved or closed. Replying moves it back to in progress.</p> : null}
+      {closed ? <p className="text-xs text-warning">This ticket is resolved or closed. Replying moves it back to in progress.</p> : null}
       <textarea id={id} value={text} maxLength={MAX} onChange={(e) => { setText(e.target.value); if (error) setError(null); }} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-err` : undefined}
         onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); void send(); } }}
         placeholder="Type your reply…" className="min-h-24 w-full rounded-lg border border-line-2 bg-card px-3 py-2.5 text-sm text-ink placeholder:text-ink-4 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100 aria-[invalid=true]:border-danger" />
       {error ? <p id={`${id}-err`} className="text-xs font-medium text-danger" role="alert">{error}</p> : null}
+      {assist ? (
+        <section aria-label="AI suggestion" className="rounded-lg border border-brand-200 bg-brand-50/60 p-3 text-sm motion-safe:animate-fade-in">
+          <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-brand-800"><Sparkles className="h-3.5 w-3.5" aria-hidden />AI suggestion · review before sending</p>
+          {assist.ok ? (
+            <>
+              <p className="mt-2 text-xs font-semibold text-ink-2">Summary</p>
+              <p className="text-ink">{assist.summary}</p>
+              {assist.nextSteps.length ? (<><p className="mt-2 text-xs font-semibold text-ink-2">Check before you reply</p><ul className="list-disc space-y-0.5 pl-5 text-ink">{assist.nextSteps.map((n) => <li key={n}>{n}</li>)}</ul></>) : null}
+              <p className="mt-2 text-xs font-semibold text-ink-2">Draft reply</p>
+              <p className="whitespace-pre-wrap rounded-md border border-line bg-card px-3 py-2 text-ink">{assist.reply}</p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <button type="button" className={cn(btn.secondary, btn.small)} onClick={() => { setText(assist.reply.slice(0, MAX)); setError(null); document.getElementById(id)?.focus(); }}>{text.trim() ? "Replace my text with this draft" : "Put this draft in the reply box"}</button>
+                <button type="button" className="h-8 rounded-md px-2 text-xs font-semibold text-ink-3 hover:text-ink pointer-coarse:h-11" onClick={() => setAssist(null)}>Dismiss</button>
+              </div>
+              <p className="mt-2 text-xs text-ink-3">Written by Claude ({assist.model}) from {assist.shared.messages} {assist.shared.messages === 1 ? "message" : "messages"} on this ticket{assist.shared.order ? " and the linked order's status" : ""}. Names, phone numbers, emails, addresses and order numbers were not shared. It cannot see your records, so check any fact before sending.</p>
+            </>
+          ) : (
+            <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2"><p className="text-ink-2" role="alert">{assist.message}</p><button type="button" className="h-8 rounded-md px-2 text-xs font-semibold text-ink-3 hover:text-ink pointer-coarse:h-11" onClick={() => setAssist(null)}>Dismiss</button></div>
+          )}
+        </section>
+      ) : null}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-ink-3">Ctrl/⌘ + Enter to send · {text.length}/{MAX}</p>
+        <p className="text-xs text-ink-3">Ctrl/⌘ + Enter to send · {text.length}/{MAX}{aiConfigured ? null : <span className="block sm:inline"> · AI drafting is not set up (needs ANTHROPIC_API_KEY)</span>}</p>
+        {aiConfigured ? (
+          <button type="button" className={cn(btn.secondary, "ml-auto")} disabled={drafting} aria-busy={drafting || undefined} onClick={() => void draft()}>
+            {drafting ? <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-brand-200 border-t-brand-700 motion-reduce:animate-none" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
+            {drafting ? "Drafting…" : "Draft with AI"}
+          </button>
+        ) : null}
         <button type="submit" className={btn.primary} disabled={busy}>
           {busy ? <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white motion-reduce:animate-none" aria-hidden /> : <Send className="h-4 w-4" aria-hidden />}
           {busy ? "Sending…" : "Send reply"}

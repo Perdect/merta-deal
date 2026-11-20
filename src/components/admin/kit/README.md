@@ -5,10 +5,18 @@ Reference implementations: `src/app/admin/page.tsx` (dashboard), `src/app/admin/
 (list + tabs + filters + quick view), `src/app/admin/orders/[id]/page.tsx` (detail).
 
 ## Look
-Pale grey canvas (set by the shell), white cards `rounded-[14px] border border-line` with a barely
-visible shadow (`card` class string), compact tables, green accent (`brand-*`), lucide outline icons
-at `h-4 w-4` / `strokeWidth 1.9`. Transitions 150–250 ms, always `motion-safe:` / `motion-reduce:`.
-Status = coloured dot + words (`StatusPill`, `OrderStatusPill`, `PaymentStatusPill`, `StatusText`).
+Set once in `.theme-admin` (globals.css), so pages never carry their own colours: cool slate canvas and
+lines, tighter corners (`rounded-md` 8px controls, `rounded-xl` 12px cards — the `card` class string),
+short crisp shadows, the portal's blue accent (`brand-*`), lucide outline icons at `h-4 w-4` /
+`strokeWidth 1.9`. Tables have small-caps headers; the selected row carries an accent bar. Panels and
+form sections have a header divided from the body by a hairline. Status = coloured dot + words
+(`StatusPill`, `OrderStatusPill`, `PaymentStatusPill`, `StatusText`), never colour alone; use the
+`text-warning` / `text-success` / `text-danger` tokens, not hex values.
+
+## Motion
+150–250 ms, always `motion-safe:` / `motion-reduce:`: a section settles in when opened from the sidebar
+(`(panel)/template.tsx`, `animate-page-in`), sidebar groups open by height, menus use `animate-menu-in`,
+side panels slide in over a dimmed page, metric cards lift on hover. Nothing loops.
 
 ## Navigation
 `nav.ts` holds the sidebar: `ADMIN_NAV_DAILY` (always visible: Dashboard, Orders, Scan & pack, Service requests, Riders,

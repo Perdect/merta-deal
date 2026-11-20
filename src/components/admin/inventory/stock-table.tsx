@@ -33,7 +33,7 @@ export function StockTable({ rows, filtered }: { rows: InventoryRow[]; filtered:
               </span>
             </span>
           ) },
-          { key: "available", header: "Available", align: "right", render: (r) => <span className={`font-semibold tabular ${r.available <= 0 ? "text-danger" : r.available <= r.low_stock_threshold ? "text-[#8a6300]" : "text-ink"}`}>{formatNumber(r.available)}</span> },
+          { key: "available", header: "Available", align: "right", render: (r) => <span className={`font-semibold tabular ${r.available <= 0 ? "text-danger" : r.available <= r.low_stock_threshold ? "text-warning" : "text-ink"}`}>{formatNumber(r.available)}</span> },
           { key: "reserved", header: "Reserved", align: "right", render: (r) => r.reserved > 0
             ? <span className="tabular text-ink">{formatNumber(r.reserved)} <span className="text-xs text-ink-3">· {r.open_orders} order{r.open_orders === 1 ? "" : "s"}</span></span>
             : <span className="tabular text-ink-4">0</span> },
