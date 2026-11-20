@@ -21,7 +21,15 @@ const SECTION_SIZE = 6;
 export type HomeCategory = { id: string; name: string; slug: string; color: string | null; images: string[]; cover: boolean };
 export type WelcomeOffer = { code: string; title: string; discount: number; isPercent: boolean; minOrder: number; maxDiscount: number | null; expiresAt: string | null };
 export type HomeSection = { key: string; title: string; href: string | null; products: ProductCard[] };
-export type HomeData = { categories: HomeCategory[]; sections: HomeSection[]; offers: WelcomeOffer[] };
+/**
+ * Products selling below their MRP right now, as one group for the whole shop (`all`) and one per line.
+ * `pct` is the biggest saving in the group and `images` are that group's own best-priced products, so a
+ * deal tile can only ever say what a customer will find when they tap it.
+ */
+export type DealGroup = { key: string; name: string; href: string; pct: number; count: number; images: string[]; color: string | null };
+export type HomeData = { categories: HomeCategory[]; sections: HomeSection[]; offers: WelcomeOffer[]; deals: DealGroup[] };
+/** A saving smaller than this is not called a deal. */
+const DEAL_MIN_PCT = 5;
 
 /**
  * Everything the homepage needs in one concurrent batch: top-level categories, the sellable catalogue
@@ -90,7 +98,17 @@ const cachedHomeData = unstable_cache(async (essentialSlugs: string[], welcomeCo
     .map((k) => ({ code: k.code, title: k.title, discount: Number(k.value), isPercent: k.type === "percentage", minOrder: Number(k.min_order_amount ?? 0), maxDiscount: k.max_discount == null ? null : Number(k.max_discount), expiresAt: k.expires_at }))
     .sort((a, b) => Number(b.code === welcomeCode) - Number(a.code === welcomeCode));
 
-  return { categories, sections, offers };
+  const onDeal = products.filter((p) => sellable(p) && Number(p.discount_pct ?? 0) >= DEAL_MIN_PCT).sort((a, b) => Number(b.discount_pct) - Number(a.discount_pct));
+  const dealGroup = (key: string, name: string, href: string, color: string | null, list: ProductCard[]): DealGroup | null => list.length
+    ? { key, name, href, color, pct: Math.round(Number(list[0].discount_pct)), count: list.length, images: [...new Set(list.map((p) => p.image_url).filter(Boolean) as string[])].slice(0, 3) }
+    : null;
+  const dealQuery = `sort=discount&minDiscount=${DEAL_MIN_PCT}&inStock=1`;
+  const deals = [
+    dealGroup("all", "All categories", `/search?${dealQuery}`, null, onDeal),
+    ...top.map((c) => dealGroup(c.slug, c.name, `/c/${c.slug}?${dealQuery}`, c.color, onDeal.filter((p) => topSlugOf(p) === c.slug))),
+  ].filter((d): d is DealGroup => d !== null);
+
+  return { categories, sections, offers, deals };
 }, ["home-data"], { tags: [CATALOGUE_TAG, "coupons"], revalidate: 60 });
 /** Served from the data cache for a minute: the home screen is the same for every visitor. */
 export const getHomeData = cache((essentialSlugs: string[], welcomeCode: string) => cachedHomeData(essentialSlugs, welcomeCode));

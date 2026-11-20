@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ProductSection, ServiceStrip } from "@/components/home/home-sections";
 import { CakeRequest, LocalIntro } from "@/components/home/local-intro";
 import { HomeBrowse } from "@/components/home/home-browse";
+import { DealZone } from "@/components/home/deal-zone";
 import { BannerCarousel } from "@/components/shop/banner-carousel";
 import { site } from "@/config/site";
 import { paymentPhrase } from "@/lib/seo-copy";
@@ -47,8 +48,8 @@ const homeJsonLd = (settings: Record<string, unknown>) => ({
 });
 
 /**
- * Launch homepage, shopping first: offer strip → category tiles → everyday essentials → fresh
- * the product sections → service strip. One concurrent batch of queries;
+ * Homepage, shopping first: the category tabs band → banner → Deal Zone → the product rows → the
+ * page's headline and local intro → service strip. One concurrent batch of queries;
  * each product appears once.
  */
 export default async function HomePage() {
@@ -61,35 +62,39 @@ export default async function HomePage() {
   const num = (k: string, d: number) => { const v = Number(settings[k]); return Number.isFinite(v) && v > 0 ? v : d; };
   // Headline promise: the quick-commerce single figure (the settings minimum); the window stays in the order promise.
   const etaLabel = `${num("delivery_eta_min_minutes", 20)} min`;
+  // A banner without artwork borrows the picture of the line it links to (the category's own image).
+  const bannerArt = Object.fromEntries(banners.map((b) => [b.id, railTabs.find((t) => b.link_url?.split("?")[0] === `/c/${t.slug}`)?.image ?? null]));
+  // Match the wholesale page's public availability settings; don't advertise a paused bulk flow.
+  const bulkOn = settings.wholesale_enabled !== false && Number(settings.wholesale_quote_lead_hours ?? 0) > 0;
 
   return (
     <div className="space-y-5 pt-2.5 sm:space-y-8 sm:pt-5">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdHtml(homeJsonLd(settings)) }} />
-      <section className="relative mx-4 overflow-hidden rounded-2xl border border-brand-100 bg-gradient-to-br from-[#f0f9f2] via-white to-[#fff8eb] px-5 py-6 sm:mx-0 sm:rounded-3xl sm:px-9 sm:py-9">
-        <div aria-hidden className="absolute -right-10 -top-16 h-48 w-48 rounded-full bg-brand-100/50 blur-2xl sm:h-64 sm:w-64" />
-        <div className="relative max-w-2xl">
-          <p className="inline-flex items-center gap-1.5 rounded-full border border-brand-200 bg-white/80 px-3 py-1 text-xs font-bold tracking-wide text-brand-800"><MapPin className="h-3.5 w-3.5" aria-hidden /> MADE FOR {site.city.toUpperCase()}</p>
-          <h1 className="mt-4 max-w-xl font-display text-[28px] font-extrabold leading-[1.12] tracking-tight text-ink sm:text-[40px]">{homeH1}</h1>
-          <p className="mt-2 max-w-xl text-sm leading-relaxed text-ink-2 sm:text-base">{capitalise(listNames(home.categories.map((c) => c.name.toLowerCase())))} delivered to your home in {site.city}, Rajasthan. Browse local essentials and place your order in a few simple steps.</p>
-          <div className="mt-5 flex flex-wrap gap-2.5">
-            <Link href="/search" className="tap inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700"><ShoppingBag className="h-4 w-4" aria-hidden />Start shopping<ArrowRight className="h-4 w-4" aria-hidden /></Link>
-            <Link href="/categories" className="tap inline-flex min-h-11 items-center justify-center rounded-xl border border-line-2 bg-white/90 px-5 text-sm font-semibold text-ink transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700">Browse categories</Link>
-          </div>
-          <p className="mt-4 text-xs font-medium text-ink-3">{etaLabel} delivery target across {site.city}</p>
-        </div>
-      </section>
       {home.sections.length ? (
         <HomeBrowse
           tabs={railTabs}
-          banner={<BannerCarousel banners={banners} />}
-          items={home.sections.map((s, i) => ({ key: s.key, node: <ProductSection section={s} first={i === 0} /> }))}
+          lead={<><BannerCarousel key="banner" banners={banners} art={bannerArt} /><DealZone key="deals" deals={home.deals} coupon={home.offers[0] ?? null} bulk={bulkOn} /></>}
+          items={home.sections.map((s, i) => ({ key: s.key, node: <ProductSection key={s.key} section={s} first={i === 0} /> }))}
         />
       ) : (
         <>
-          <BannerCarousel banners={banners} />
+          <BannerCarousel banners={banners} art={bannerArt} />
           <EmptyState title="Stocking up" description="Products will appear here as soon as they are in stock." action={<Button href="/categories" variant="outline">Browse categories</Button>} compact />
         </>
       )}
+      {/* The page's headline and what the shop is, under the shopping: the tabs, banner and offers lead. */}
+      <section className="relative mx-4 overflow-hidden rounded-2xl border border-brand-100 bg-gradient-to-br from-[#f0f9f2] via-white to-[#fff8eb] px-5 py-5 sm:mx-0 sm:rounded-3xl sm:px-9 sm:py-7">
+        <div className="relative max-w-2xl">
+          <p className="inline-flex items-center gap-1.5 rounded-full border border-brand-200 bg-white/80 px-3 py-1 text-xs font-bold tracking-wide text-brand-800"><MapPin className="h-3.5 w-3.5" aria-hidden /> MADE FOR {site.city.toUpperCase()}</p>
+          <h1 className="mt-3 max-w-xl font-display text-[22px] font-extrabold leading-[1.15] tracking-tight text-ink sm:text-[30px]">{homeH1}</h1>
+          <p className="mt-2 max-w-xl text-sm leading-relaxed text-ink-2">{capitalise(listNames(home.categories.map((c) => c.name.toLowerCase())))} delivered to your home in {site.city}, Rajasthan. Browse local essentials and place your order in a few simple steps.</p>
+          <div className="mt-4 flex flex-wrap gap-2.5">
+            <Link href="/search" className="tap inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700"><ShoppingBag className="h-4 w-4" aria-hidden />Start shopping<ArrowRight className="h-4 w-4" aria-hidden /></Link>
+            <Link href="/categories" className="tap inline-flex min-h-11 items-center justify-center rounded-xl border border-line-2 bg-white/90 px-5 text-sm font-semibold text-ink transition-colors hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700">Browse categories</Link>
+          </div>
+          <p className="mt-3 text-xs font-medium text-ink-3">{etaLabel} delivery target across {site.city}</p>
+        </div>
+      </section>
       <CakeRequest />
       <ServiceStrip etaLabel={etaLabel} />
       <LocalIntro etaLabel={etaLabel} produce={home.categories.some((c) => c.slug === "fruits" || c.slug === "vegetables")} />

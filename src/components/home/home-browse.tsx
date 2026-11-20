@@ -1,23 +1,24 @@
 "use client";
 import * as React from "react";
-import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import Image from "next/image";
+import { LayoutGrid, Package } from "lucide-react";
 import type { CategoryTab } from "@/lib/data/catalog";
 import { cn } from "@/lib/utils";
 
 /**
- * The home's category selector and the sections it filters.
+ * The home's category tabs and everything they switch.
  *
- * The tabs are the same pills the Categories screen uses (`CategoryBrowser`): a grey track, the chosen
- * pill filled brand green. "All" comes first and is the default, then the shop's own lines in the
- * catalogue's `sort_order` — there is no slug list in here, so adding or reordering a line is still an
- * Admin → Categories change. Picking one hides the rows that belong to the others; "All" brings them back.
+ * The tabs are a band across the top of the home: a picture over a name for each of the shop's lines, the
+ * chosen one filled brand green and standing on the band's bottom line. "All" comes first and is the
+ * default, then the lines in the catalogue's `sort_order` with the picture and tint set in Admin →
+ * Categories — there is no slug list in here, so adding or reordering a line is still an admin change.
  *
- * On a phone five pills do not fit side by side without crushing "Beauty & Personal Care", so the track
- * scrolls sideways with every label on one line; from `sm` up the pills share the width equally.
+ * Under "All" the home leads with the banner and the Deal Zone (`lead`), then every row. Picking a line
+ * hides the lead and the rows that belong to the others; "All" brings them back. On a phone the tabs share
+ * the width when they fit and the band scrolls sideways when a longer catalogue does not.
  *
- * The sections themselves are rendered on the server and handed in as nodes, so filtering costs no
- * fetch and no re-render of the product grids: a hidden row is `hidden`, still in the document, still
+ * The lead and the sections are rendered on the server and handed in as nodes, so switching costs no
+ * fetch and no re-render of the product grids: what is not chosen is `hidden`, still in the document, still
  * indexable, and instantly back when the customer taps All. A line with nothing listed yet says so
  * rather than showing an empty screen.
  */
@@ -25,16 +26,16 @@ export type BrowseItem = { key: string; node: React.ReactNode };
 
 const ALL = "__all__";
 
-export function HomeBrowse({ tabs, items, banner, seeAllHref = "/categories" }: {
+export function HomeBrowse({ tabs, items, lead }: {
   tabs: CategoryTab[];
   items: BrowseItem[];
-  banner?: React.ReactNode;
-  seeAllHref?: string;
+  /** Banner and offers: shown under "All" only. */
+  lead?: React.ReactNode;
 }) {
   const [active, setActive] = React.useState<string>(ALL);
   const railRef = React.useRef<HTMLDivElement>(null);
 
-  const options = React.useMemo(() => [{ slug: ALL, name: "All" }, ...tabs.map((t) => ({ slug: t.slug, name: t.name }))], [tabs]);
+  const options = React.useMemo(() => [{ slug: ALL, name: "All", image: null as string | null }, ...tabs.map((t) => ({ slug: t.slug, name: t.name, image: t.image }))], [tabs]);
 
   // A line the customer picked but that has no row of its own (nothing listed yet) still gets an answer.
   const shown = active === ALL ? items : items.filter((i) => i.key === active);
@@ -62,26 +63,15 @@ export function HomeBrowse({ tabs, items, banner, seeAllHref = "/categories" }: 
 
   return (
     <>
-      {/* The banner leads; the tabs sit directly above the products they filter. */}
-      {banner}
-
-      <section aria-labelledby="cats-title" className="px-4 sm:px-0">
-        <div className="mb-2 flex items-baseline justify-between">
-          <h2 id="cats-title" className="font-display text-[15px] font-bold text-ink sm:text-lg">Shop by category</h2>
-          <Link href={seeAllHref} className="tap inline-flex items-center gap-0.5 text-sm font-semibold text-brand-700 hover:underline focus-visible:outline-2 focus-visible:outline-brand-600">
-            See all<ChevronRight className="h-4 w-4" aria-hidden />
-          </Link>
-        </div>
-        {/* The pill track. Phones: one line per label, the track scrolls and nothing is clipped mid-word.
-            From sm up: an equal share each, like the Categories screen. p-1 leaves the focus ring room
-            inside the scroller, which would otherwise cut it off. */}
+      {/* The band runs edge to edge on a phone and sits flush under the header; from sm up it is a rounded strip. */}
+      <section aria-labelledby="cats-title" className="max-sm:-mt-2.5! border-b-2 border-brand-600 bg-gradient-to-b from-brand-100 via-brand-50 to-brand-50/60 pt-2 sm:rounded-t-2xl sm:pt-3">
+        <h2 id="cats-title" className="sr-only">Shop by category</h2>
         <div
           ref={railRef}
           role="tablist"
           aria-label="Shop by category"
           onKeyDown={onKeyDown}
-          className="no-scrollbar flex gap-1.5 overflow-x-auto rounded-2xl bg-surface-2 p-1 sm:grid sm:overflow-visible"
-          style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
+          className="no-scrollbar flex items-end overflow-x-auto px-1 sm:justify-center sm:gap-2 sm:px-4"
         >
           {options.map((o) => {
             const selected = o.slug === active;
@@ -96,18 +86,26 @@ export function HomeBrowse({ tabs, items, banner, seeAllHref = "/categories" }: 
                 tabIndex={selected ? 0 : -1}
                 onClick={() => select(o.slug)}
                 className={cn(
-                  "flex min-h-11 shrink-0 items-center justify-center whitespace-nowrap rounded-xl px-4 py-1.5 text-center text-[13px] font-semibold transition-colors motion-reduce:transition-none",
-                  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600",
-                  "sm:min-w-0 sm:shrink sm:whitespace-normal sm:px-2 sm:text-sm",
-                  selected ? "bg-brand-600 text-white" : "text-ink-2 hover:bg-card",
+                  "flex min-h-[78px] flex-col items-center gap-1 rounded-t-2xl px-0.5 pb-1.5 pt-2 text-center transition-colors motion-reduce:transition-none sm:max-w-[150px] sm:flex-1 sm:px-2",
+                  // "All" is one short word, so it gives its width to the lines whose names run to two.
+                  o.slug === ALL ? "w-[58px] shrink-0" : "min-w-[80px] flex-1",
+                  "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-700",
+                  selected ? "bg-brand-600 text-white shadow-[0_-4px_14px_rgba(21,128,61,0.25)]" : "text-ink hover:bg-white/60",
                 )}
               >
-                <span className="leading-tight sm:line-clamp-2">{o.name}</span>
+                <span className={cn("relative flex h-10 w-12 items-center justify-center transition-transform duration-200 motion-reduce:transform-none", selected && "scale-110")}>
+                  {o.image ? <Image src={o.image} alt="" fill sizes="56px" className="object-contain drop-shadow-sm" />
+                    : o.slug === ALL ? <LayoutGrid className="h-7 w-7" strokeWidth={1.8} aria-hidden />
+                    : <Package className="h-7 w-7" strokeWidth={1.8} aria-hidden />}
+                </span>
+                <span className="line-clamp-2 text-[11px] font-semibold leading-[1.15] sm:text-xs">{o.name}</span>
               </button>
             );
           })}
         </div>
       </section>
+
+      {lead ? <div hidden={active !== ALL} className={cn("space-y-5 sm:space-y-8", active !== ALL && "hidden")}>{lead}</div> : null}
 
       {/* Every section stays mounted; the ones outside the chosen line are hidden rather than dropped,
           so switching back is instant and a crawler still sees the whole home. */}
