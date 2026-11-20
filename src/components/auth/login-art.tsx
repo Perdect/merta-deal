@@ -2,9 +2,9 @@
  * Decorative sign-in illustration: a Rajasthani skyline (chhatris and domes) with a delivery rider on
  * a brand-green scooter over a green ground band. Pure SVG, no image request; hidden from screen readers.
  */
-export function LoginArt({ className }: { className?: string }) {
+export function LoginArt({ className, viewBox = "-30 0 380 240" }: { className?: string; viewBox?: string }) {
   return (
-    <svg viewBox="-30 0 380 240" className={className} preserveAspectRatio="xMidYMax slice" aria-hidden>
+    <svg viewBox={viewBox} className={className} preserveAspectRatio="xMidYMax slice" aria-hidden>
       {/* Skyline (extends past the frame so wide banners have no gaps) */}
       <path fill="#eceee9" d="M-60 182v-40h18v-6c0-7 5-12 10-12s10 5 10 12v6h22v40zM320 182v-46h14v-8c0-8 6-14 12-14s12 6 12 14v8h22v46z" />
       <path fill="#eceee9" d="M0 182V128h14v-8c0-9 6-15 12-15s12 6 12 15v8h12V98c0-17 11-30 24-30s24 13 24 30v30h10V86l7-16 7 16v42h10V102c0-21 14-38 30-38s30 17 30 38v26h10v-10c0-9 6-15 12-15s12 6 12 15v10h12V92c0-19 12-34 26-34s26 15 26 34v36h14v-6c0-8 5-13 10-13s10 5 10 13v60z" />

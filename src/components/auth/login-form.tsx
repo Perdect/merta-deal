@@ -61,38 +61,41 @@ export function LoginForm({ next, phoneEnabled, confirmed, initial }: {
 
   return (
     <div className="flex flex-1 flex-col">
-      <h1 className="px-8 text-center font-display text-2xl font-extrabold leading-tight tracking-tight text-ink sm:text-[26px]">
-        {step === "otp" ? "Enter the code" : <>Sign in to <span className="text-brand-700">start ordering</span></>}
-      </h1>
-      {confirmed && step === "mobile" ? <Alert tone="success" className="mt-4">Your account is active. You can sign in now.</Alert> : null}
+      {/* The part that must stay above the keyboard; AuthHero sizes the picture around it. */}
+      <div data-auth-primary>
+        <h1 className="font-display text-[26px] font-extrabold leading-tight tracking-tight text-ink sm:px-8 sm:text-center">
+          {step === "otp" ? "OTP Verification" : <>Sign in to <span className="text-brand-700">start ordering</span></>}
+        </h1>
+        {confirmed && step === "mobile" ? <Alert tone="success" className="mt-3">Your account is active. You can sign in now.</Alert> : null}
 
-      {step === "mobile" ? (
-        <form className="mt-6 space-y-3" onSubmit={(e) => { e.preventDefault(); void sendOtp(); }} noValidate>
-          <Input name="mobile" type="tel" inputMode="numeric" autoComplete="tel-national" maxLength={10} value={mobile} autoFocus
-            onChange={(e) => { setMobile(e.target.value.replace(/\D/g, "").slice(0, 10)); setError(null); }}
-            leftIcon={<span className="inline-flex items-center gap-1 text-sm font-bold text-ink"><span aria-hidden>🇮🇳</span>+91</span>}
-            className="h-14 rounded-xl pl-20 text-base" placeholder="Enter Phone Number" aria-label="Mobile number" disabled={!phoneEnabled} />
-          {phoneEnabled ? null : <Alert tone="warning">Sign-in by OTP is not switched on for this site yet.</Alert>}
-          {error ? <Alert tone="danger">{error}</Alert> : null}
-          <Button type="submit" size="lg" fullWidth className="h-13 rounded-xl text-base" disabled={mobile.length !== 10 || !phoneEnabled} loading={busy}>Continue</Button>
-          <p className="pt-1 text-center text-xs text-ink-3">We&apos;ll text a 6-digit code to this number. New here? The same step creates your account.</p>
-        </form>
-      ) : (
-        <div className="mt-4 space-y-4">
-          <p className="flex flex-wrap items-center justify-center gap-x-1 text-center text-sm text-ink-2">Sent by SMS to <span className="font-semibold text-ink">+91 {spaced(mobile)}</span>
-            <button type="button" onClick={() => { setStep("mobile"); setOtp(""); setError(null); }} aria-label="Change mobile number" className="tap inline-flex h-9 w-9 items-center justify-center rounded-full text-brand-700 hover:bg-surface-2"><Pencil className="h-4 w-4" aria-hidden /></button></p>
-          <OtpInput value={otp} onChange={(v) => { setOtp(v); setError(null); if (v.length === 6) void verify(v); }} autoFocus disabled={busy} />
-          {error ? <Alert tone="danger">{error}</Alert> : null}
-          <Button type="button" size="lg" fullWidth className="h-13 rounded-xl text-base" disabled={otp.length !== 6} loading={busy} onClick={() => void verify()}>Verify &amp; continue</Button>
-          <p className="text-center text-sm text-ink-3" aria-live="polite">
-            {cooldown > 0 ? <>Didn&apos;t get it? Resend in <span className="font-semibold tabular-nums text-ink">{cooldown}s</span></> : <button type="button" onClick={() => void sendOtp()} disabled={busy} className="tap min-h-11 font-semibold text-brand-700">Resend code</button>}
-          </p>
-        </div>
-      )}
+        {step === "mobile" ? (
+          <form className="mt-5 space-y-3 sm:mt-6" onSubmit={(e) => { e.preventDefault(); void sendOtp(); }} noValidate>
+            <Input name="mobile" type="tel" inputMode="numeric" autoComplete="tel-national" maxLength={10} value={mobile} autoFocus
+              onChange={(e) => { setMobile(e.target.value.replace(/\D/g, "").slice(0, 10)); setError(null); }}
+              leftIcon={<span className="inline-flex items-center gap-1 text-sm font-bold text-ink"><span aria-hidden>🇮🇳</span>+91</span>}
+              className="h-14 rounded-xl pl-20 text-base" placeholder="Enter Phone Number" aria-label="Mobile number" disabled={!phoneEnabled} />
+            {phoneEnabled ? null : <Alert tone="warning">Sign-in by OTP is not switched on for this site yet.</Alert>}
+            {error ? <Alert tone="danger">{error}</Alert> : null}
+            <Button type="submit" size="lg" fullWidth className="h-14 rounded-xl text-base" disabled={mobile.length !== 10 || !phoneEnabled} loading={busy}>Continue</Button>
+          </form>
+        ) : (
+          <div className="mt-1 space-y-3 sm:mt-3 sm:space-y-4">
+            <p className="flex flex-wrap items-center gap-x-1 text-sm text-ink-2 sm:justify-center sm:text-center">OTP has been sent to <span className="font-semibold text-ink">+91 {spaced(mobile)}</span>
+              <button type="button" onClick={() => { setStep("mobile"); setOtp(""); setError(null); }} aria-label="Change mobile number" className="tap inline-flex h-9 w-9 items-center justify-center rounded-full text-brand-700 hover:bg-surface-2"><Pencil className="h-4 w-4" aria-hidden /></button></p>
+            <OtpInput value={otp} onChange={(v) => { setOtp(v); setError(null); if (v.length === 6) void verify(v); }} autoFocus disabled={busy} />
+            {error ? <Alert tone="danger">{error}</Alert> : null}
+            <Button type="button" size="lg" fullWidth className="h-14 rounded-xl text-base" disabled={otp.length !== 6} loading={busy} onClick={() => void verify()}>Verify &amp; continue</Button>
+            <p className="text-sm text-ink-3 sm:text-center" aria-live="polite">
+              {cooldown > 0 ? <>Resend OTP in <span className="font-semibold tabular-nums text-ink">{cooldown}s</span></> : <button type="button" onClick={() => void sendOtp()} disabled={busy} className="tap min-h-11 font-semibold text-brand-700">Resend OTP</button>}
+            </p>
+          </div>
+        )}
 
-      <p className="mt-4 text-center text-xs leading-relaxed text-ink-3">By continuing, you agree to our<br /><Link href="/terms" target="_blank" className="font-semibold text-brand-700">Terms and Conditions</Link> &amp; <Link href="/privacy" target="_blank" className="font-semibold text-brand-700">Privacy Policy</Link></p>
+        {step === "mobile" ? <p className="mt-4 text-center text-xs leading-relaxed text-ink-3">By continuing, you agree to our<br /><Link href="/terms" target="_blank" className="font-semibold text-brand-700">Terms and Conditions</Link> &amp; <Link href="/privacy" target="_blank" className="font-semibold text-brand-700">Privacy Policy</Link></p> : null}
+      </div>
 
-      <div className="mt-auto pt-7">
+      <div data-auth-footer className="mt-auto pt-6">
+        {step === "mobile" ? <p className="mb-4 text-center text-xs text-ink-3">We&apos;ll text a 6-digit code to this number. New here? The same step creates your account.</p> : null}
         <div className="rounded-2xl bg-surface-2 px-4 py-4">
           <p className="text-center text-xs font-medium text-ink-2">Order faster with the Merta Deal app</p>
           <InstallButtons className="mt-3 flex flex-wrap justify-center gap-2 space-y-0 [&>p]:hidden" />
