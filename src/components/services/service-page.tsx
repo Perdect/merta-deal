@@ -50,7 +50,7 @@ export async function serviceMetadata(slug: ServiceSlug): Promise<Metadata> {
   const { ctx } = await loadContext();
   const { title, description } = serviceCopy(slug, ctx);
   const shareTitle = `${title} | ${site.seoName}`;
-  const image = { url: "/opengraph-image", width: 1200, height: 630, alt: `${site.seoName}, ${site.city}` };
+  const image = { url: "/og/merta-deal-share.jpg", width: 1200, height: 630, alt: `${site.seoName}, ${site.city}` };
   return {
     title, description,
     alternates: { canonical: `/${slug}` },

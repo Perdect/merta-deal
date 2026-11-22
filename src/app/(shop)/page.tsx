@@ -34,7 +34,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { absolute: homeTitle },
     description: homeDescription,
     alternates: { canonical: "/" },
-    openGraph: { type: "website", siteName: site.seoName, locale: "en_IN", url: "/", title: homeTitle, description: homeDescription, images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: `${site.seoName} — online grocery delivery in ${site.city}` }] },
+    openGraph: { type: "website", siteName: site.seoName, locale: "en_IN", url: "/", title: homeTitle, description: homeDescription, images: [{ url: "/og/merta-deal-share.jpg", width: 1200, height: 630, alt: `${site.seoName} — online grocery delivery in ${site.city}` }] },
   };
 }
 

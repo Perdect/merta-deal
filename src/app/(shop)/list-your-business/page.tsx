@@ -12,7 +12,7 @@ const description = `Run a hotel, restaurant or bakery in ${site.city}? Ask ${si
 
 export const metadata: Metadata = {
   title, description, alternates: { canonical: "/list-your-business" },
-  openGraph: { type: "website", siteName: site.seoName, locale: "en_IN", url: "/list-your-business", title, description, images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: `${site.seoName}, ${site.city}` }] },
+  openGraph: { type: "website", siteName: site.seoName, locale: "en_IN", url: "/list-your-business", title, description, images: [{ url: "/og/merta-deal-share.jpg", width: 1200, height: 630, alt: `${site.seoName}, ${site.city}` }] },
 };
 
 export default async function ListYourBusinessPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {

@@ -29,7 +29,7 @@ export async function profileMetadata(category: BusinessCategory, params: Profil
   const title = `${b.name}, ${d.singular} in ${site.city}`;
   const description = (b.description ?? "").slice(0, 155);
   const path = profilePath(b);
-  const image = b.photos[0] ?? b.logo_url ?? "/opengraph-image";
+  const image = b.photos[0] ?? b.logo_url ?? "/og/merta-deal-share.jpg";
   return {
     title, description, alternates: { canonical: path }, robots: { index: true, follow: true },
     openGraph: { type: "website", siteName: site.seoName, locale: "en_IN", url: path, title: `${title} | ${site.seoName}`, description, images: [{ url: image, alt: b.name }] },

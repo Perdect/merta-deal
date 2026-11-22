@@ -24,8 +24,8 @@ export async function directoryMetadata(category: BusinessCategory, searchParams
   return {
     title: d.title, description: d.description, alternates: { canonical: d.path },
     robots: items.length && !filtered ? { index: true, follow: true } : { index: false, follow: true },
-    openGraph: { type: "website", siteName: site.seoName, locale: "en_IN", url: d.path, title: `${d.title} | ${site.seoName}`, description: d.description, images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: `${site.seoName}, ${site.city}` }] },
-    twitter: { card: "summary_large_image", title: `${d.title} | ${site.seoName}`, description: d.description, images: ["/opengraph-image"] },
+    openGraph: { type: "website", siteName: site.seoName, locale: "en_IN", url: d.path, title: `${d.title} | ${site.seoName}`, description: d.description, images: [{ url: "/og/merta-deal-share.jpg", width: 1200, height: 630, alt: `${site.seoName}, ${site.city}` }] },
+    twitter: { card: "summary_large_image", title: `${d.title} | ${site.seoName}`, description: d.description, images: ["/og/merta-deal-share.jpg"] },
   };
 }
 

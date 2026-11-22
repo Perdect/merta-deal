@@ -34,7 +34,7 @@ export function businessNode(settings: Settings) {
     "@type": ["LocalBusiness", "OnlineStore"], "@id": `${site.url}/#organization`, name: site.seoName, alternateName: [site.name, "MertaDeal.com"], url: `${site.url}/`,
     description: `${site.descriptionShort} Orders are delivered by ${site.seoName}'s own delivery partners.`,
     logo: { "@type": "ImageObject", url: `${site.url}/icons/icon-512.png`, width: 512, height: 512 },
-    image: `${site.url}/opengraph-image`,
+    image: `${site.url}/og/merta-deal-share.jpg`,
     email: b.email, telephone: b.phone, slogan: site.tagline,
     address: { "@type": "PostalAddress", ...(b.street ? { streetAddress: b.street } : {}), addressLocality: site.city, addressRegion: site.state, postalCode: site.defaultPincode, addressCountry: "IN" },
     areaServed: [
