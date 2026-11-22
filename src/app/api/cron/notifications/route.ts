@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { deliverPendingPush } from "@/lib/notifications/deliver";
+import { deliverRiderAlertsAndPush } from "@/lib/notifications/deliver";
 import { deliverOrderAlerts } from "@/lib/notifications/order-alerts";
 import { requireCronSecret } from "@/lib/notifications/cron-auth";
 
@@ -14,8 +14,11 @@ const querySchema = z.object({ limit: z.coerce.number().int().min(1).max(500).de
  * Scheduled notification work, protected by CRON_SECRET:
  * 1. escalate_unattended_orders(): an order nobody accepted within the configured time notifies every admin.
  * 2. Sends admins' new-order alerts through every configured channel (push, WhatsApp, email), once per channel.
- * 3. Delivers any other pending push notifications (rows with 'push' in channels and sent_push = false).
- * All steps are idempotent, so overlapping runs are safe. pg_cron can call this every minute (run_notification_cron).
+ * 3. Sends riders' delivery requests and "no longer yours" notices (push, and SMS where configured and the rider
+ *    opted in). Each send is claimed in the database first, which re-checks that the delivery is still that rider's.
+ * 4. Delivers any other pending push notifications (rows with 'push' in channels and sent_push = false).
+ * All steps are idempotent, so overlapping runs are safe. pg_cron can call this every minute (run_notification_cron),
+ * and a new rider alert calls it at once through pg_net when the URL and secret are set (0058).
  */
 export async function GET(req: NextRequest) {
   const denied = requireCronSecret(req);
@@ -27,6 +30,6 @@ export async function GET(req: NextRequest) {
 
   const { data: escalated, error: escErr } = await admin.rpc("escalate_unattended_orders");
   const alerts = await deliverOrderAlerts({ limit: q.data.limit });
-  const push = await deliverPendingPush(q.data.limit);
+  const push = await deliverRiderAlertsAndPush(q.data.limit);
   return NextResponse.json({ ...push, order_alerts: alerts, escalated: escErr ? null : Number(escalated ?? 0), escalation_error: escErr?.message ?? null });
 }

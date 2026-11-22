@@ -250,7 +250,7 @@ await as(null);
 
 console.log("Inbox recipients");
 ok("customers never receive admin or rider alert types", (await one(`select count(*)::int n from notifications n join profiles p on p.id = n.user_id where p.role = 'customer' and n.type in ('new_order','order_unattended','dispatch_no_rider','delivery_offer','rider_assigned')`)).n === 0);
-ok("riders only receive their own offers", (await one(`select count(*)::int n from notifications n join profiles p on p.id = n.user_id where p.role = 'rider' and n.type <> 'delivery_offer'`)).n === 0);
+ok("riders only receive their own offers and the request-closed notice (0058)", (await one(`select count(*)::int n from notifications n join profiles p on p.id = n.user_id where p.role = 'rider' and n.type not in ('delivery_offer','delivery_cancelled')`)).n === 0);
 ok("every alert type requests push as well as in-app", (await one(`select count(*)::int n from notifications where type in ('new_order','order_unattended','dispatch_no_rider','delivery_offer') and not ('push' = any(channels))`)).n === 0);
 
 console.log(`\n${pass} passed, ${fail} failed`);

@@ -4,8 +4,11 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * Login OTP by SMS through the Parken panel (sms.par-ken.com), called by Supabase Auth's Send SMS hook.
  * Supabase still creates, stores and checks the code; this only carries it to the phone.
  *
+ * The same panel also carries delivery-request SMS to riders (0058, bottom of this file), on a separate
+ * approved template: the two never share a template or its ID.
+ *
  * Nothing here is imported by client code. It has no `server-only` marker and no path aliases on purpose,
- * so `scripts/test-sms-hook.mjs` can load it directly under Node.
+ * so `scripts/test-sms-hook.mjs` and `scripts/test-rider-alerts.mjs` can load it directly under Node.
  */
 
 export type OtpSmsConfig = {
@@ -121,14 +124,15 @@ export function parseParkenResponse(body: string): ParkenResult {
   return { ok: false, code: null, reason: `Unrecognised answer: ${text.slice(0, 120) || "(empty)"}` };
 }
 
-/** Sends one OTP. Never logs or returns the key, the code or the message text. */
-export async function sendOtpSms(cfg: OtpSmsConfig, mobile: string, otp: string, timeoutMs = 4000): Promise<ParkenResult> {
-  const q = new URLSearchParams({
-    key: cfg.key, route: cfg.route, type: "1", sender: cfg.sender, number: mobile,
-    sms: renderOtpSms(cfg.template, otp), templateid: cfg.templateId,
-  });
+/**
+ * One message through the panel's HTTP API. The text must be an approved DLT template with its variables filled
+ * in, sent with that template's ID, sender and route; the panel (and the operators behind it) refuse anything else.
+ * Never logs or returns the key or the message text.
+ */
+export async function sendParkenSms(p: { apiUrl: string; key: string; sender: string; route: string; templateId: string; mobile: string; text: string }, timeoutMs = 4000): Promise<ParkenResult> {
+  const q = new URLSearchParams({ key: p.key, route: p.route, type: "1", sender: p.sender, number: p.mobile, sms: p.text, templateid: p.templateId });
   try {
-    const res = await fetch(`${cfg.apiUrl}?${q.toString()}`, { method: "GET", cache: "no-store", signal: AbortSignal.timeout(timeoutMs) });
+    const res = await fetch(`${p.apiUrl}?${q.toString()}`, { method: "GET", cache: "no-store", signal: AbortSignal.timeout(timeoutMs) });
     const body = await res.text();
     if (!res.ok) return { ok: false, code: null, reason: `SMS panel answered HTTP ${res.status}` };
     return parseParkenResponse(body);
@@ -138,9 +142,73 @@ export async function sendOtpSms(cfg: OtpSmsConfig, mobile: string, otp: string,
   }
 }
 
+/** Sends one OTP. Never logs or returns the key, the code or the message text. */
+export async function sendOtpSms(cfg: OtpSmsConfig, mobile: string, otp: string, timeoutMs = 4000): Promise<ParkenResult> {
+  return sendParkenSms({ apiUrl: cfg.apiUrl, key: cfg.key, sender: cfg.sender, route: cfg.route, templateId: cfg.templateId, mobile, text: renderOtpSms(cfg.template, otp) }, timeoutMs);
+}
+
 /** What a saved API key looks like, without the key: for telling a mis-pasted value from a wrong one. */
 export function keyShape(key: string): string {
   const k = key.trim();
   const kind = /^[0-9a-f]{32}$/i.test(k) ? "32 hex characters (as the panel issues)" : /^https?:/i.test(k) ? "a URL" : /key=/i.test(k) ? "contains 'key='" : /\s/.test(k) ? "contains spaces" : "unexpected";
   return `${kind}, length ${k.length}${key !== k ? ", had surrounding whitespace" : ""}`;
+}
+
+/* ------------------------------------------------------------------------------------------------
+ * Delivery-request SMS to riders (0058).
+ *
+ * In India every SMS must match a template registered on the DLT platform, sent under that template's
+ * ID. The login template above is an OTP template: its text is fixed around the code, so it cannot
+ * carry a delivery alert, and sending other words under its ID is refused by the operators. Rider
+ * alerts therefore need their OWN approved template (a service / transactional one) with its own ID,
+ * and the panel route that template was approved for. Until those are set here the channel reports
+ * "not configured" and nothing is sent. The API key is the panel account's and is shared.
+ * ---------------------------------------------------------------------------------------------- */
+
+export type RiderAlertSmsConfig = { apiUrl: string; key: string; sender: string; templateId: string; template: string; route: string };
+
+/** `PARKEN_SMS_KEY` is the panel account's key (shared with OTP); the sender falls back to the OTP header when the alert template was approved under the same one. */
+export const RIDER_ALERT_SMS_ENV = ["PARKEN_SMS_KEY", "PARKEN_RIDER_ALERT_TEMPLATE_ID", "PARKEN_RIDER_ALERT_TEMPLATE", "PARKEN_RIDER_ALERT_ROUTE"] as const;
+
+export function riderAlertSmsConfig(e: Record<string, string | undefined> = process.env): RiderAlertSmsConfig {
+  return {
+    apiUrl: e.PARKEN_SMS_API_URL || "https://sms.par-ken.com/api/smsapi",
+    key: (e.PARKEN_SMS_KEY ?? "").trim(),
+    sender: (e.PARKEN_RIDER_ALERT_SENDER ?? e.PARKEN_SMS_SENDER ?? "").trim(),
+    templateId: (e.PARKEN_RIDER_ALERT_TEMPLATE_ID ?? "").trim(),
+    template: e.PARKEN_RIDER_ALERT_TEMPLATE ?? "",
+    // No default: the route an alert template may use is set by its DLT approval, and guessing it sends nothing or bills the wrong route.
+    route: (e.PARKEN_RIDER_ALERT_ROUTE ?? "").trim(),
+  };
+}
+
+/** Names of what is still missing for rider SMS alerts (names only, never values). Empty = configured. */
+export function riderAlertSmsMissing(e: Record<string, string | undefined> = process.env): string[] {
+  const missing: string[] = RIDER_ALERT_SMS_ENV.filter((k) => !(e[k] ?? "").trim());
+  if (!(e.PARKEN_RIDER_ALERT_SENDER ?? e.PARKEN_SMS_SENDER ?? "").trim()) missing.push("PARKEN_RIDER_ALERT_SENDER (or PARKEN_SMS_SENDER)");
+  const template = e.PARKEN_RIDER_ALERT_TEMPLATE ?? "";
+  if (template && !template.includes("{order}")) missing.push("PARKEN_RIDER_ALERT_TEMPLATE (must contain {order})");
+  // The login template cannot be reused: same ID or same words means it is the OTP template, not an alert template.
+  if (template && template.includes("{otp}")) missing.push("PARKEN_RIDER_ALERT_TEMPLATE (this is an OTP template; alerts need their own approved template)");
+  const id = (e.PARKEN_RIDER_ALERT_TEMPLATE_ID ?? "").trim();
+  if (id && id === (e.PARKEN_SMS_TEMPLATE_ID ?? "").trim()) missing.push("PARKEN_RIDER_ALERT_TEMPLATE_ID (same as the OTP template ID; alerts need their own approved template)");
+  return missing;
+}
+
+/** A DLT variable holds at most 30 characters and no line breaks; an order number is letters, digits and dashes. */
+export function smsOrderNumber(orderNumber: string): string | null {
+  const v = orderNumber.trim();
+  return /^[A-Za-z0-9-]{1,30}$/.test(v) ? v : null;
+}
+
+/** The approved text with the order number in place. Nothing else is variable: no name, address, amount or link with ids. */
+export function renderRiderAlertSms(template: string, orderNumber: string): string {
+  return template.split("{order}").join(orderNumber);
+}
+
+/** Sends one delivery-request SMS. Never logs or returns the key, the number or the message text. */
+export async function sendRiderAlertSms(cfg: RiderAlertSmsConfig, mobile: string, orderNumber: string, timeoutMs = 4000): Promise<ParkenResult> {
+  const order = smsOrderNumber(orderNumber);
+  if (!order) return { ok: false, code: null, reason: "Order number does not fit the SMS template variable" };
+  return sendParkenSms({ apiUrl: cfg.apiUrl, key: cfg.key, sender: cfg.sender, route: cfg.route, templateId: cfg.templateId, mobile, text: renderRiderAlertSms(cfg.template, order) }, timeoutMs);
 }

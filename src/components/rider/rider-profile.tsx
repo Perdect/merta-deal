@@ -2,13 +2,13 @@
 import * as React from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
-import { Bell, CheckCheck, LifeBuoy, LogOut, Phone, Mail, ShieldCheck, Languages, Pencil, MapPin, ChevronDown, Bike } from "lucide-react";
+import { Bell, CheckCheck, LifeBuoy, LogOut, Phone, Mail, ShieldCheck, Languages, Pencil, MapPin, ChevronDown, Bike, MessageSquareText } from "lucide-react";
 import type { DeliveryPartner, Notification } from "@/types/app";
-import { updateRiderProfileAction, markRiderNotificationsReadAction, type RiderFormResult } from "@/lib/actions/rider";
+import { updateRiderProfileAction, markRiderNotificationsReadAction, setRiderSmsAlertsAction, type RiderFormResult } from "@/lib/actions/rider";
 import { staffSignOutAction } from "@/lib/actions/auth";
 import { useNotifications } from "@/hooks/use-notifications";
 import { Button } from "@/components/ui/button";
-import { Input, Select } from "@/components/ui/input";
+import { Input, Select, Switch } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Alert, EmptyState } from "@/components/ui/states";
 import { Avatar, StarRating } from "@/components/ui/misc";
@@ -18,12 +18,16 @@ import { toast } from "@/components/ui/toast";
 import { cn, formatNumber, timeAgo } from "@/lib/utils";
 import { useRiderStore } from "./rider-store";
 import { InstallCard } from "./install-card";
-import { LangToggle, GpsIndicator } from "./rider-shell";
+import { LangToggle, GpsIndicator, riderNotificationText } from "./rider-shell";
 import { useT, type TKey } from "@/lib/rider-i18n";
+import { useAlertCopy } from "./alert-copy";
 import type { Enums } from "@/types/database";
 
 /** Restrained glass: translucent white over the mint band, a soft white edge, no heavy blur. */
 export const GLASS = "rounded-[20px] border border-white/70 bg-white/80 shadow-card backdrop-blur-md";
+
+/** What the server knows about SMS alerts for this rider: whether it can send any, the owner's switch, the rider's own choice, and the number. */
+export type RiderSmsState = { configured: boolean; enabled: boolean; optedIn: boolean; phone: string | null };
 
 type ProfileUser = { id: string; name: string | null; phone: string | null; email: string | null; avatarUrl: string | null };
 const STATUS_TONE = { active: "success", pending: "warning", suspended: "danger" } as const;
@@ -38,8 +42,11 @@ const VEHICLES: { value: Enums<"vehicle_type">; label: TKey }[] = [
  * language; the installable app; notifications; support and sign out. Long explanations sit behind
  * "Learn more" toggles. Every save still goes through updateRiderProfileAction (own row, RLS).
  */
-export function RiderProfile({ user, rider: initialRider, notifications, push }: { user: ProfileUser; rider: DeliveryPartner; notifications: Notification[]; push: PushConfig }) {
+const SMS_UNKNOWN: RiderSmsState = { configured: false, enabled: true, optedIn: false, phone: null };
+
+export function RiderProfile({ user, rider: initialRider, notifications, push, sms = SMS_UNKNOWN }: { user: ProfileUser; rider: DeliveryPartner; notifications: Notification[]; push: PushConfig; /** Left out (fixture previews): shown as not set up, which is what an unconfigured server is. */ sms?: RiderSmsState }) {
   const { t } = useT();
+  const alertCopy = useAlertCopy();
   const rider = useRiderStore((s) => s.rider) ?? initialRider;
 
   return (
@@ -62,7 +69,8 @@ export function RiderProfile({ user, rider: initialRider, notifications, push }:
       <section id="alerts" className={cn(GLASS, "p-4")} aria-labelledby="rider-alerts-title">
         <h2 id="rider-alerts-title" className="flex items-center gap-2 font-display text-[16px] font-extrabold text-ink"><Bell className="h-4 w-4 text-brand-700" aria-hidden />{t("alerts.title")}</h2>
         <p className="mb-3 mt-0.5 text-xs text-ink-3">{t("alerts.body")}</p>
-        <AlertSetup portal="rider" push={push} compact moreLabel={t("alerts.more")} />
+        <AlertSetup portal="rider" push={push} compact moreLabel={t("alerts.more")} copy={alertCopy} />
+        <SmsAlerts sms={sms} />
       </section>
 
       <VehicleSection rider={rider} />
@@ -82,6 +90,39 @@ export function RiderProfile({ user, rider: initialRider, notifications, push }:
         <Link href="/account/support" className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-card px-4 text-sm font-semibold text-ink shadow-card active:scale-[0.98]"><LifeBuoy className="h-5 w-5 text-brand-600" /> {t("profile.support")}</Link>
         <form action={staffSignOutAction} className="contents"><input type="hidden" name="portal" value="rider" /><SignOutButton /></form>
       </div>
+    </div>
+  );
+}
+
+/**
+ * The rider's own SMS switch, under the push and sound rows. It can only be turned on when the server
+ * really can send a delivery SMS (an approved template is configured and the owner has not switched rider
+ * SMS off) and the profile has a mobile number; otherwise it sits off and disabled with the reason beside
+ * it. The choice is saved on the rider's profile and read by the database before every SMS.
+ */
+function SmsAlerts({ sms }: { sms: RiderSmsState }) {
+  const { t } = useT();
+  const [on, setOn] = React.useState(sms.optedIn);
+  const [busy, setBusy] = React.useState(false);
+  const [seen, setSeen] = React.useState(sms.optedIn);
+  if (seen !== sms.optedIn) { setSeen(sms.optedIn); setOn(sms.optedIn); }
+  const available = sms.configured && sms.enabled && Boolean(sms.phone);
+  const why = !sms.configured ? t("sms.notConfigured") : !sms.enabled ? t("sms.switchedOff") : !sms.phone ? t("sms.noPhone") : t("sms.goesTo", { phone: sms.phone });
+  const change = async (next: boolean) => {
+    if (busy || !available) return;
+    setBusy(true);
+    try {
+      const r = await setRiderSmsAlertsAction(next);
+      if (!r.ok) { toast.error(t("sms.saveFailed"), r.error); return; }
+      setOn(r.data.on);
+      toast.success(r.data.on ? t("sms.savedOn") : t("sms.savedOff"));
+    } catch { toast.error(t("sms.saveFailed"), t("common.noConnectionRetry")); }
+    finally { setBusy(false); }
+  };
+  return (
+    <div className="mt-4 rounded-xl bg-surface-2 px-3.5 py-3">
+      <p className="flex items-center gap-2 text-sm font-semibold text-ink"><MessageSquareText className="h-4 w-4 text-brand-700" aria-hidden />{t("sms.title")}</p>
+      <Switch className="mt-1" checked={available && on} onChange={change} disabled={busy || !available} label={t("sms.switch")} description={why} />
     </div>
   );
 }
@@ -223,16 +264,16 @@ function NotificationsSection({ userId, initial }: { userId: string; initial: No
       {items.length === 0 ? <EmptyState compact title={t("notif.emptyTitle")} description={t("notif.emptyBody")} /> : (
         <>
           <ul className="divide-y divide-line">
-            {shown.map(({ key, latest: n, count, unread: isUnread }) => (
+            {shown.map(({ key, latest: n, count, unread: isUnread }) => { const text = riderNotificationText(n, t); return (
               <li key={key} className={cn("flex gap-3 px-4 py-3", isUnread && "bg-brand-50/60")}>
                 <span className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", isUnread ? "bg-brand-600" : "bg-transparent")} aria-hidden />
                 <div className="min-w-0 flex-1">
-                  <p className={cn("flex items-center gap-2 text-sm text-ink", isUnread && "font-semibold")}><span className="min-w-0 truncate">{n.title}</span>{count > 1 ? <Badge tone="neutral" size="xs" title={`${count}×`}>×{count}</Badge> : null}</p>
-                  <p className="line-clamp-2 text-xs text-ink-2">{n.body}</p>
+                  <p className={cn("flex items-center gap-2 text-sm text-ink", isUnread && "font-semibold")}><span className="min-w-0 truncate">{text.title}</span>{count > 1 ? <Badge tone="neutral" size="xs" title={`${count}×`}>×{count}</Badge> : null}</p>
+                  <p className="line-clamp-2 text-xs text-ink-2">{text.body}</p>
                   <p className="mt-0.5 text-[11px] text-ink-3">{count > 1 ? `${t("notif.latest")} ${timeAgo(n.created_at)}` : timeAgo(n.created_at)}</p>
                 </div>
               </li>
-            ))}
+            ); })}
           </ul>
           {groups.length > PREVIEW ? (
             <button type="button" onClick={() => setAll((v) => !v)} className="flex min-h-11 w-full items-center justify-center gap-1 border-t border-line text-sm font-semibold text-brand-700 focus-visible:outline-2 focus-visible:outline-brand-600">

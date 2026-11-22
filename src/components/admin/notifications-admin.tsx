@@ -2,7 +2,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, BellOff, Check, CheckCheck, Send } from "lucide-react";
+import { Bell, BellOff, Check, CheckCheck, Send, Smartphone, MessageSquareText, RefreshCw } from "lucide-react";
 import { Panel, EmptyBlock, IconAction } from "@/components/admin/kit";
 import { Input, Select, Textarea } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/overlay";
@@ -10,6 +10,8 @@ import { toast } from "@/components/ui/toast";
 import { btn } from "@/components/admin/care/shared";
 import { useNotifications, notificationHref } from "@/hooks/use-notifications";
 import { broadcastAction, markAdminNotificationsReadAction } from "@/lib/actions/admin";
+import { deliverRiderAlertsAction } from "@/lib/actions/alerts";
+import { Badge, type BadgeTone } from "@/components/ui/badge";
 import type { Notification } from "@/types/app";
 import { cn, formatDateTime, timeAgo } from "@/lib/utils";
 import { audienceOf, AUDIENCE_LABEL } from "@/lib/alerts/audience";
@@ -129,5 +131,124 @@ export function BroadcastForm() {
         onConfirm={send}
         description={<span className="block space-y-2"><span className="block">This notifies {audience === "user" ? email.trim() : aud.who} immediately and can&apos;t be recalled.</span><span className="block rounded-lg border border-line bg-surface p-3"><strong className="block text-ink">{title.trim()}</strong><span className="mt-1 block whitespace-pre-wrap text-ink-2">{body.trim()}</span></span></span>} />
     </Panel>
+  );
+}
+
+/* ------------------------------------------------------------------------------------------------
+ * Rider alerts (0058): what really happened to each delivery request and "no longer yours" notice.
+ * ---------------------------------------------------------------------------------------------- */
+
+export type RiderAlertChannelRow = {
+  channel: "push" | "sms"; configured: boolean;
+  /** Names of the server settings still missing when not configured. */
+  needs: string[];
+  last_status: string | null; last_at: string | null; last_error: string | null;
+  sent_24h: number; failed_24h: number; skipped_24h: number; no_device_24h: number;
+};
+export type RiderAlertEvent = {
+  notification_id: string; event_key: string; kind: "offer" | "released"; at: string; order_id: string | null; order_number: string | null; rider: string | null;
+  /** False for an earlier offer of the same order to the same rider (the row has since been re-offered). */
+  current: boolean;
+  deliveries: { channel: string; status: string; attempts: number; error: string | null; provider_id: string | null; updated_at: string }[];
+};
+
+const RIDER_CHANNEL: Record<RiderAlertChannelRow["channel"], { label: string; icon: React.ReactNode; how: string }> = {
+  push: { label: "Push to the rider app", icon: <Smartphone className="h-4 w-4" aria-hidden />, how: "Each rider enables notifications once per phone on their Profile tab. On iPhone the rider app must be on the Home Screen first." },
+  sms: { label: "SMS", icon: <MessageSquareText className="h-4 w-4" aria-hidden />, how: "Sent for delivery requests only, to riders who switched SMS on in their Profile tab, on the approved delivery-alert template. Each SMS is charged by the panel." },
+};
+const RIDER_STATUS: Record<string, { label: string; tone: BadgeTone }> = {
+  sent: { label: "Accepted by provider", tone: "success" },
+  delivered: { label: "Delivered", tone: "success" },
+  failed: { label: "Failed", tone: "danger" },
+  queued: { label: "Sending", tone: "info" },
+  no_recipient: { label: "No device / number", tone: "warning" },
+  unavailable: { label: "Not configured", tone: "neutral" },
+  skipped: { label: "Not sent", tone: "neutral" },
+};
+
+/**
+ * Status of rider alerts for admins. Nothing here is inferred: "Accepted by provider" means the push
+ * service or the SMS panel took the message, "Not sent" carries the database's reason (the request had
+ * expired, another rider took it, the rider has SMS off, …) and "Failed" carries the provider's answer
+ * and how many times it was tried. "Send waiting alerts now" runs the same sweep the scheduler runs.
+ */
+export function RiderAlertStatus({ available, channels, recent }: { available: boolean; channels: RiderAlertChannelRow[]; recent: RiderAlertEvent[] }) {
+  const router = useRouter();
+  const [busy, setBusy] = React.useState(false);
+  const run = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const r = await deliverRiderAlertsAction();
+      if (!r.ok) { toast.error("Could not run rider alerts", r.error); return; }
+      const { push, sms } = r.data.channels;
+      const held = Object.entries(r.data.refusals).map(([why, n]) => `${n} ${why.replace(/_/g, " ")}`).join(", ");
+      toast.info(`Checked ${r.data.notifications} waiting alert${r.data.notifications === 1 ? "" : "s"}`,
+        `Push: ${push.sent} sent, ${push.failed} failed, ${push.no_recipient} with no device. SMS: ${sms.sent} sent, ${sms.failed} failed.${held ? ` Not sent: ${held}.` : ""}`);
+      router.refresh();
+    } finally { setBusy(false); }
+  };
+
+  if (!available) {
+    return <p className="rounded-md bg-warning-50 px-3 py-2 text-sm text-ink">Rider alert tracking is not switched on in the database yet (migration 0058). Until it is, delivery requests still reach riders in the app and through the older push sweep, without the per-rider record shown here.</p>;
+  }
+  return (
+    <div className="space-y-4">
+      <ul className="divide-y divide-line rounded-lg border border-line">
+        {channels.map((c) => {
+          const m = RIDER_CHANNEL[c.channel]; const st = c.last_status ? RIDER_STATUS[c.last_status] ?? { label: c.last_status, tone: "neutral" as BadgeTone } : null;
+          return (
+            <li key={c.channel} className="flex flex-col gap-1.5 px-3 py-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <p className="flex items-center gap-2 text-sm font-semibold text-ink">{m.icon}{m.label}
+                  {c.configured ? <Badge tone="success" size="xs">Configured</Badge> : <Badge tone="neutral" size="xs">Not configured</Badge>}
+                </p>
+                <p className="mt-0.5 text-xs text-ink-3">{c.configured ? m.how : `Nothing is sent on this channel. Needs ${c.needs.join(", ")} on the server.`}</p>
+                {c.last_error && c.last_status === "failed" ? <p className="mt-0.5 text-xs text-danger">Last failure: {c.last_error}</p> : null}
+              </div>
+              <div className="shrink-0 text-left sm:text-right">
+                {st ? <Badge tone={st.tone} size="xs">{st.label}</Badge> : <Badge tone="neutral" size="xs">No alerts yet</Badge>}
+                <p className="mt-1 text-[11px] text-ink-3">{c.last_at ? <span title={formatDateTime(c.last_at)}>{timeAgo(c.last_at)}</span> : "—"} · 24 h: {c.sent_24h} sent, {c.failed_24h} failed, {c.skipped_24h} not sent{c.no_device_24h ? `, ${c.no_device_24h} no device` : ""}</p>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      <button type="button" className={cn(btn.secondary, btn.small)} disabled={busy} onClick={run}><RefreshCw className="h-3.5 w-3.5" aria-hidden />{busy ? "Sending…" : "Send waiting alerts now"}</button>
+      <div>
+        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-ink-3">Recent rider alerts</p>
+        {recent.length === 0 ? <p className="text-sm text-ink-3">No delivery request has been recorded yet.</p> : (
+          <ul className="divide-y divide-line rounded-lg border border-line">
+            {recent.map((e) => (
+              <li key={`${e.notification_id}:${e.event_key}`} className="px-3 py-2.5">
+                <p className="flex flex-wrap items-center justify-between gap-x-2 text-sm">
+                  <span className="min-w-0">
+                    {e.order_id ? <Link href={`/admin/orders/${e.order_id}`} className="font-semibold text-brand-700 hover:underline">{e.order_number ?? "Order"}</Link> : <span className="font-semibold text-ink">{e.order_number ?? "Order"}</span>}
+                    <span className="text-ink-2"> · {e.kind === "offer" ? "Request" : "No longer theirs"} · {e.rider ?? "Rider"}</span>
+                    {!e.current ? <span className="text-ink-3"> · earlier offer</span> : null}
+                  </span>
+                  <span className="text-xs text-ink-3" title={formatDateTime(e.at)}>{timeAgo(e.at)}</span>
+                </p>
+                {e.deliveries.length === 0 ? <p className="mt-1 text-xs text-ink-3">In the rider&apos;s app only so far: push and SMS have not been attempted yet.</p> : (
+                  <ul className="mt-1 space-y-1">
+                    {e.deliveries.map((d) => {
+                      const st = RIDER_STATUS[d.status] ?? { label: d.status, tone: "neutral" as BadgeTone };
+                      const answer = d.status === "sent" || d.status === "delivered" ? d.provider_id : d.error;
+                      return (
+                        <li key={d.channel} className="flex flex-wrap items-baseline gap-x-2 text-xs text-ink-2">
+                          <Badge tone={st.tone} size="xs">{d.channel === "sms" ? "SMS" : "Push"}: {st.label}</Badge>
+                          {d.attempts > 0 ? <span className="text-ink-3">{d.attempts} attempt{d.attempts === 1 ? "" : "s"}</span> : null}
+                          {answer ? <span className={cn("min-w-0 break-words", d.status === "failed" && "text-danger")}>{answer}</span> : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
   );
 }

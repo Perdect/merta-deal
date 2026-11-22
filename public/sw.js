@@ -1,6 +1,6 @@
 /* Merta Deal service worker: offline page for navigations, static build assets kept for offline, web push.
    One worker serves the three installed apps (shop "/", rider "/rider", admin "/admin"). */
-const VERSION = "md-v12";
+const VERSION = "md-v13";
 const STATIC_CACHE = `${VERSION}-static`;
 const OFFLINE_URL = "/offline.html";
 /* The admin app's own offline page (blue, no data in it): shown when an /admin page cannot be loaded. */
@@ -85,7 +85,9 @@ self.addEventListener("fetch", (event) => {
 /* Alerts (a new order for staff, a delivery request for a rider) stay on screen until dismissed and buzz
    longer; one notification per order so retries replace rather than pile up. Bodies never carry a
    customer's name, phone or address. A closed browser or a locked phone shows them only as long as the
-   platform delivers push at all: there is no continuous ringing without a native app. */
+   platform delivers push at all: there is no continuous ringing without a native app.
+   Rider alerts (0058) come with their own tag (one per order, so "no longer yours" replaces the request it
+   is about) and say themselves whether they should stay on screen (`sticky`). */
 const ALERT_TYPES = ["new_order", "delivery_offer", "order_unattended", "dispatch_no_rider", "order_exception", "delivery_cancelled"];
 self.addEventListener("push", (event) => {
   let data = {};
@@ -93,12 +95,13 @@ self.addEventListener("push", (event) => {
   const title = data.title || "Merta Deal";
   const inner = data.data || {};
   const alert = ALERT_TYPES.includes(data.type);
+  const sticky = typeof data.sticky === "boolean" ? data.sticky : alert;
   const tag = data.tag || (inner.order_id ? `${data.type || "n"}-${inner.order_id}` : undefined);
   const options = {
     body: data.body || "", icon: "/icons/icon-192.png", badge: "/icons/icon-192.png",
     data: { url: data.url || "/", type: data.type || "" }, tag, renotify: Boolean(tag),
-    requireInteraction: alert, vibrate: alert ? [300, 120, 300, 120, 300] : [80, 40, 80],
-    actions: alert ? [{ action: "open", title: data.type === "delivery_offer" ? "Open request" : "View order" }] : [],
+    requireInteraction: sticky, vibrate: sticky ? [300, 120, 300, 120, 300] : [80, 40, 80],
+    actions: alert ? [{ action: "open", title: data.type === "delivery_offer" ? "Open request" : data.type === "delivery_cancelled" ? "Open app" : "View order" }] : [],
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });
@@ -106,11 +109,38 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = (event.notification.data && event.notification.data.url) || "/";
-  // Prefer a window already in the same app (admin / rider / shop) so an open dashboard is reused.
+  // Prefer a window already in the same app (admin / rider / shop) so an open dashboard is reused. A window
+  // this worker does not control cannot be navigated; then, or when none is open, a new one is opened.
+  // A signed-out rider lands on the rider sign-in, which returns to this same address afterwards.
   const area = url.startsWith("/admin") ? "/admin" : url.startsWith("/rider") ? "/rider" : "";
-  event.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
-    const same = list.find((c) => area && new URL(c.url).pathname.startsWith(area)) || list[0];
-    if (same && "focus" in same) { same.navigate(url); return same.focus(); }
+  event.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(async (list) => {
+    const same = list.find((c) => area && new URL(c.url).pathname.startsWith(area)) || (area ? null : list[0]);
+    if (same && "focus" in same) {
+      try {
+        const focused = await same.focus();
+        await (focused || same).navigate(url);
+        return;
+      } catch { /* not controllable from here: open it instead */ }
+    }
     return self.clients.openWindow(url);
   }));
+});
+
+/* The browser replaced this device's push subscription (it does so from time to time). Without this the
+   server would keep the dead one and alerts would silently stop until the app was next opened and
+   re-enabled. Subscribes again with the same key and stores it through the signed-in session; when the
+   session has ended the request is refused and the app re-registers at the next sign-in. Nothing is cached. */
+self.addEventListener("pushsubscriptionchange", (event) => {
+  const options = (event.oldSubscription && event.oldSubscription.options) || null;
+  event.waitUntil((async () => {
+    try {
+      const sub = event.newSubscription
+        || (options && options.applicationServerKey ? await self.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: options.applicationServerKey }) : null)
+        || await self.registration.pushManager.getSubscription();
+      if (!sub) return;
+      const json = sub.toJSON();
+      if (!json.endpoint || !json.keys || !json.keys.p256dh || !json.keys.auth) return;
+      await fetch("/api/push/subscribe", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth } }) });
+    } catch { /* offline or signed out: the app re-registers when it is next opened */ }
+  })());
 });

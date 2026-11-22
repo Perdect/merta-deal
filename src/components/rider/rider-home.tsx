@@ -1,7 +1,8 @@
 "use client";
 import * as React from "react";
 import Link from "next/link";
-import { RefreshCw, BellRing, Inbox, ChevronRight, CircleDollarSign } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { RefreshCw, BellRing, Inbox, ChevronRight, CircleDollarSign, CircleSlash } from "lucide-react";
 import type { RiderAssignment } from "@/types/app";
 import { refreshRiderHomeAction, type RiderHomeData } from "@/lib/actions/rider";
 import { ErrorState } from "@/components/ui/states";
@@ -18,7 +19,7 @@ import { useT } from "@/lib/rider-i18n";
  * lives in the top bar. Requests are not listed here: the ringing popup is the single request card, and a
  * minimised request shows as a button in the waiting card.
  */
-export function RiderHome({ initial }: { initial: RiderHomeData }) {
+export function RiderHome({ initial, focus = null }: { initial: RiderHomeData; /** Assignment id from a notification link (`/rider?a=`). */ focus?: string | null }) {
   const { t } = useT();
   const storeStats = useRiderStore((s) => s.stats);
   const setStats = useRiderStore((s) => s.setStats);
@@ -56,6 +57,7 @@ export function RiderHome({ initial }: { initial: RiderHomeData }) {
 
   return (
     <div className="space-y-4">
+      <OpenedFromAlert focus={focus} initial={initial} />
       <section aria-labelledby="rider-today">
         {stats ? (
           <div className="rounded-[20px] bg-card p-4 shadow-card">
@@ -86,6 +88,39 @@ export function RiderHome({ initial }: { initial: RiderHomeData }) {
           : <WaitingCard />}
       </section>
     </div>
+  );
+}
+
+/**
+ * The app was opened from a notification about one delivery. An open request is already on screen (the
+ * ringing sheet; a minimised one is brought back) and an accepted delivery is the card below, so those need
+ * nothing here. Only a delivery that is no longer this rider's gets a line saying so, once; the address is
+ * then cleaned so a refresh does not repeat it. Decided from the server's own lists, never from the link.
+ */
+function OpenedFromAlert({ focus, initial }: { focus: string | null; initial: RiderHomeData }) {
+  const { t } = useT();
+  const router = useRouter();
+  const setOffers = useRiderStore((s) => s.setOffers);
+  const [handled, setHandled] = React.useState<string | null>(null);
+  const isOffer = Boolean(focus && initial.offers.some((o) => o.id === focus));
+  const isActive = Boolean(focus && initial.active.some((o) => o.id === focus));
+  const gone = Boolean(focus) && !isOffer && !isActive;
+  React.useEffect(() => {
+    if (!focus) return;
+    if (isOffer) setOffers({ collapsed: false });
+    if (isOffer || isActive) router.replace("/rider", { scroll: false });
+  }, [focus, isOffer, isActive, setOffers, router]);
+  if (!gone || handled === focus) return null;
+  const dismiss = () => { setHandled(focus); router.replace("/rider", { scroll: false }); };
+  return (
+    <section role="status" className="flex items-start gap-3 rounded-[20px] bg-card p-4 shadow-card ring-1 ring-line animate-slide-up">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-2 text-ink-3" aria-hidden><CircleSlash className="h-5 w-5" /></span>
+      <div className="min-w-0 flex-1">
+        <p className="font-display text-[15px] font-extrabold text-ink">{t("link.goneTitle")}</p>
+        <p className="mt-0.5 text-[13px] text-ink-3">{t("link.goneBody")}</p>
+      </div>
+      <Button size="sm" variant="outline" className="h-10 shrink-0 rounded-xl" onClick={dismiss}>{t("link.dismiss")}</Button>
+    </section>
   );
 }
 

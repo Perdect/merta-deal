@@ -2,9 +2,11 @@
 import { randomInt } from "node:crypto";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { adminRpc } from "@/lib/data/admin";
+import { deliverRiderAlerts } from "@/lib/notifications/rider-alerts";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { friendlyError, slugify } from "@/lib/utils";
 import { env } from "@/lib/env";
@@ -283,6 +285,8 @@ export async function assignRiderAction(orderId: string, riderId: string): Promi
     const supabase = await requireAdmin();
     const { data, error } = await supabase.rpc("admin_assign_rider", { p_order_id: orderId, p_rider_id: riderId });
     if (error) return fail(error);
+    // The chosen rider's push / SMS, and the "request closed" notice for riders whose open request this replaced (0058).
+    after(() => deliverRiderAlerts({ orderId }).catch(() => undefined));
     revalidate(`/admin/orders/${orderId}`, "/admin/orders", "/admin");
     return { ok: true, data: { assignmentId: String(data) } };
   } catch (e) { return fail(e); }
@@ -299,6 +303,8 @@ export async function unassignRiderAction(orderId: string, note?: string): Promi
       return { ok: false, error: m ? m[2] : friendlyError(error) };
     }
     revalidate(`/admin/orders/${orderId}`, "/admin/orders", "/admin");
+    // The unassigned rider's "no longer yours" notice and the next riders' requests (0058).
+    after(() => deliverRiderAlerts({ orderId }).catch(() => undefined));
     const res = data as { reassigned_to?: string | null } | null;
     return { ok: true, data: { reassignedTo: res?.reassigned_to ?? null } };
   } catch (e) { return fail(e); }
@@ -311,6 +317,7 @@ export async function redispatchAction(orderId: string): Promise<ActionResult<{ 
     const { data, error } = await supabase.rpc("auto_dispatch", { p_order_id: orderId });
     if (error) return fail(error);
     await audit("dispatch.rerun", "orders", orderId, null, { assignment_id: data ?? null });
+    after(() => deliverRiderAlerts({ orderId }).catch(() => undefined));
     revalidate(`/admin/orders/${orderId}`, "/admin");
     return { ok: true, data: { assignmentId: (data as string | null) ?? null } };
   } catch (e) { return fail(e); }

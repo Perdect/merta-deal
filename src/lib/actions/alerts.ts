@@ -3,7 +3,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { friendlyError } from "@/lib/utils";
-import { deliverPendingPush, type DeliverSummary } from "@/lib/notifications/deliver";
+import { deliverRiderAlertsAndPush, type DeliverSummary } from "@/lib/notifications/deliver";
+import { deliverRiderAlerts, type RiderAlertSummary } from "@/lib/notifications/rider-alerts";
+import { pushProvider } from "@/lib/notifications/providers/push";
 import { deliverOrderAlerts, type OrderAlertSummary } from "@/lib/notifications/order-alerts";
 import { dispatchNotification, channelStatus } from "@/lib/notifications/dispatch";
 import type { ActionResult } from "./cart";
@@ -46,7 +48,42 @@ export async function deliverPendingPushAction(): Promise<ActionResult<DeliverSu
     const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
     if (!profile || !["admin", "super_admin", "rider"].includes(profile.role)) return { ok: false, error: "Staff only." };
     if (profile.role !== "rider") await deliverOrderAlerts({ limit: 50 }).catch(() => undefined);
-    return { ok: true, data: await deliverPendingPush(50) };
+    return { ok: true, data: await deliverRiderAlertsAndPush(50) };
+  } catch (e) { return { ok: false, error: friendlyError(e) }; }
+}
+
+/** Admin: run the rider alert sweep now (requests and "no longer yours" notices) and report what each channel did. */
+export async function deliverRiderAlertsAction(): Promise<ActionResult<RiderAlertSummary>> {
+  try {
+    const supabase = await createClient();
+    const { data: isAdmin } = await supabase.rpc("is_admin");
+    if (!isAdmin) return { ok: false, error: "Admins only." };
+    const r = await deliverRiderAlerts({ limit: 50 });
+    if (!r.ok) return { ok: false, error: r.reason === "not_migrated" ? "Rider alert delivery is not switched on in the database yet (migration 0058)." : r.detail ?? "Could not run rider alert delivery." };
+    return { ok: true, data: r };
+  } catch (e) { return { ok: false, error: friendlyError(e) }; }
+}
+
+export type TestPushResult = { devices: number };
+/**
+ * Sends one real push to the signed-in person's own devices and returns what the push service answered.
+ * It goes to nobody else, writes no notification row, and reports failure as failure: "sent" here means
+ * the push service accepted it for that many devices, not that a phone has shown it.
+ */
+export async function sendMyTestPushAction(portal: "admin" | "rider" = "rider"): Promise<ActionResult<TestPushResult>> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { ok: false, error: "Sign in again." };
+    if (!pushProvider.isConfigured()) return { ok: false, error: "Push is not set up on the server yet." };
+    const rider = portal === "rider";
+    const res = await pushProvider.send({
+      userId: user.id, type: "alert_test", title: rider ? "Merta Deal Rider: test alert" : "Merta Deal: test alert",
+      body: rider ? "Push works on this phone. Delivery requests will arrive like this." : "Push works on this device. New orders will arrive like this.",
+      url: rider ? "/rider/profile#alerts" : "/admin/notifications#alerts", tag: "alert-test", sticky: false, ttlSeconds: 120,
+    });
+    if (res.sent) return { ok: true, data: { devices: res.count } };
+    return { ok: false, error: res.reason === "no_recipient" ? "No device is registered for push on this account. Tap Enable first." : res.detail ?? "The push service refused the message." };
   } catch (e) { return { ok: false, error: friendlyError(e) }; }
 }
 

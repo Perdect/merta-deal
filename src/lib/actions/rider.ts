@@ -1,11 +1,14 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { friendlyError } from "@/lib/utils";
 import { getRiderAssignments, getRiderStats, type AssignmentStatus } from "@/lib/data/rider";
+import { deliverRiderAlerts } from "@/lib/notifications/rider-alerts";
 import type { ActionResult } from "./cart";
-import type { Enums } from "@/types/database";
+import type { Enums, Json } from "@/types/database";
+import { indianMobile, riderAlertSmsMissing } from "@/lib/sms/otp-sms";
 import type { DeliveryPartner, RiderAssignment, RiderStats } from "@/types/app";
 
 export type RiderFormResult = { ok: false; error: string; fieldErrors?: Record<string, string> } | { ok: true; message?: string };
@@ -81,6 +84,8 @@ export async function setOnlineAction(online: boolean, coords?: { lat: number; l
   const { data, error } = await supabase.rpc("rider_set_online", online ? { p_online: true, p_lat: coords!.lat, p_lng: coords!.lng } : { p_online: false });
   if (error) return { ok: false, error: friendlyError(error) };
   revalidatePath("/rider");
+  // Going online or offline re-offers waiting orders (dispatch_pending): the riders they went to are alerted once this answer is out.
+  after(() => deliverRiderAlerts().catch(() => undefined));
   return { ok: true, data: { is_online: Boolean((data as { is_online?: boolean })?.is_online) } };
 }
 
@@ -102,6 +107,9 @@ export async function respondAssignmentAction(assignmentId: string, accept: bool
   }
   const res = data as { ok?: boolean; status?: string; error?: string; reassigned_to?: string | null; already?: boolean };
   revalidatePath("/rider");
+  // An accept closes the other riders' requests and a decline offers the order to the next rider: their alerts
+  // go out after this rider has the answer. Each one is re-checked in the database before it is sent.
+  after(() => deliverRiderAlerts().catch(() => undefined));
   if (res.ok === false) {
     const code = res.error ?? "OFFER_EXPIRED";
     return { ok: false, error: friendlyError({ message: code }), outcome: code === "OFFER_TAKEN" ? "taken" : "expired" };
@@ -194,6 +202,30 @@ export async function setRiderLanguageAction(lang: "en" | "hi"): Promise<ActionR
   const { error } = await supabase.from("profiles").update({ preferences: { ...existing, language: lang } }).eq("id", user.id);
   if (error) return { ok: false, error: friendlyError(error) };
   return { ok: true, data: undefined };
+}
+
+/**
+ * Rider's own choice: also get an SMS for each delivery request. Kept on their profile
+ * (`preferences.rider_sms_alerts`, own row); the database reads it before every SMS (`rider_alert_claim`).
+ * Switching it on needs a mobile number on the profile, and is refused while the server has no approved
+ * SMS template, so the switch never promises a message that cannot be sent.
+ */
+export async function setRiderSmsAlertsAction(on: boolean): Promise<ActionResult<{ on: boolean }>> {
+  if (typeof on !== "boolean") return { ok: false, error: "Invalid choice" };
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Please sign in to continue." };
+  const { data: profile, error: readError } = await supabase.from("profiles").select("preferences, phone").eq("id", user.id).maybeSingle();
+  if (readError) return { ok: false, error: friendlyError(readError) };
+  if (on) {
+    if (riderAlertSmsMissing().length > 0) return { ok: false, error: "SMS alerts are not set up yet." };
+    if (!indianMobile(profile?.phone ?? "")) return { ok: false, error: "Add your mobile number to your profile first." };
+  }
+  const existing = (profile?.preferences && typeof profile.preferences === "object" && !Array.isArray(profile.preferences) ? profile.preferences : {}) as Record<string, unknown>;
+  const { error } = await supabase.from("profiles").update({ preferences: { ...existing, rider_sms_alerts: on } as Json }).eq("id", user.id);
+  if (error) return { ok: false, error: friendlyError(error) };
+  revalidatePath("/rider/profile");
+  return { ok: true, data: { on } };
 }
 
 export type FailedDeliveryReason = "customer_unreachable" | "address_problem" | "customer_refused" | "other";

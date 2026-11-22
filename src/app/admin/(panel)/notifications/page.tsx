@@ -3,12 +3,12 @@ import { Megaphone } from "lucide-react";
 import { getSessionUser } from "@/lib/supabase/server";
 import { getAdminNotifications, getRecentBroadcasts } from "@/lib/data/admin";
 import { toBroadcastLog } from "@/lib/data/admin-care";
-import { AdminNotificationList, BroadcastForm } from "@/components/admin/notifications-admin";
+import { AdminNotificationList, BroadcastForm, RiderAlertStatus } from "@/components/admin/notifications-admin";
 import { AdminPageHeader, Panel, EmptyBlock, ErrorBlock } from "@/components/admin/kit";
 import { formatDateTime, formatNumber, timeAgo } from "@/lib/utils";
 import { AlertSetup } from "@/components/alerts/alert-setup";
 import { ChannelStatus } from "@/components/admin/alerts/channel-status";
-import { getAlertChannelStatus } from "@/lib/data/alerts";
+import { getAlertChannelStatus, getRiderAlertStatus } from "@/lib/data/alerts";
 import { env, isPushConfigured } from "@/lib/env";
 
 export const metadata: Metadata = { title: "Notifications" };
@@ -17,7 +17,7 @@ const LIMIT = 60;
 const AUDIENCE_LABEL: Record<string, string> = { customers: "All customers", riders: "All riders", all: "Everyone", user: "One user" };
 
 export default async function AdminNotificationsPage() {
-  const [user, { items }, raw, alerts] = await Promise.all([getSessionUser(), getAdminNotifications(LIMIT), getRecentBroadcasts(), getAlertChannelStatus()]);
+  const [user, { items }, raw, alerts, riderAlerts] = await Promise.all([getSessionUser(), getAdminNotifications(LIMIT), getRecentBroadcasts(), getAlertChannelStatus(), getRiderAlertStatus()]);
   const broadcasts = raw.map(toBroadcastLog);
   return (
     <>
@@ -30,6 +30,9 @@ export default async function AdminNotificationsPage() {
           </Panel>
           <Panel id="channels" title="New-order alerts off this screen" description="Push, WhatsApp and email to every admin when an order is placed. Each channel reports what its provider really answered.">
             <ChannelStatus channels={alerts.channels} recent={alerts.recent} cronHint={alerts.cronHint} />
+          </Panel>
+          <Panel id="rider-alerts" title="Rider alerts" description="Delivery requests and “no longer yours” notices sent to riders' phones. Each line is what the push service or the SMS panel really answered.">
+            <RiderAlertStatus available={riderAlerts.available} channels={riderAlerts.channels} recent={riderAlerts.recent} />
           </Panel>
           <BroadcastForm />
           <Panel title="Recent broadcasts" description="Last 10, from the audit log" flush>

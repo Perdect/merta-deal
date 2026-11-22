@@ -13,6 +13,12 @@ export type NotificationPayload = {
   data?: Record<string, unknown>;
   /** Notification type key, e.g. order_status. Defaults to "general". */
   type?: string;
+  /** Push only: one notification per tag on the device, so a later message replaces an earlier one. */
+  tag?: string;
+  /** Push only: stay on screen until dismissed (true) or behave like ordinary news (false). Unset = the service worker decides by type. */
+  sticky?: boolean;
+  /** Push only: how long the push service may hold the message for an offline device. Default one hour. */
+  ttlSeconds?: number;
 };
 
 export type SendResult =

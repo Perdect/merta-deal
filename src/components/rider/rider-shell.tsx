@@ -2,12 +2,14 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Satellite, SatelliteDish, ShieldAlert, Clock, Wifi, WifiOff, MapPinOff, Home, Bike, Wallet, User } from "lucide-react";
+import { Satellite, SatelliteDish, ShieldAlert, Clock, Wifi, WifiOff, MapPinOff, Home, Bike, Wallet, User, RefreshCw } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { refreshRiderStatsAction, setRiderLanguageAction } from "@/lib/actions/rider";
-import { useNotifications, notificationHref } from "@/hooks/use-notifications";
+import { useNotifications } from "@/hooks/use-notifications";
 import { useKeyboardOpen } from "@/hooks/use-keyboard-open";
 import { PwaClient } from "@/components/pwa/pwa-client";
+import { UpdatePrompt } from "@/components/pwa/update-prompt";
+import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/states";
 import { toast } from "@/components/ui/toast";
 import type { DeliveryPartner, Notification } from "@/types/app";
@@ -20,8 +22,28 @@ import { OfferAlert } from "./offer-alert";
 import { OnlineSwitch } from "./online-toggle";
 import { AlertBanner, type PushConfig } from "@/components/alerts/alert-setup";
 import { useRiderLang, useT, RIDER_LANGS, type RiderLang } from "@/lib/rider-i18n";
+import { useAlertCopy } from "./alert-copy";
 
 const EMPTY_NOTIFICATIONS: Notification[] = [];
+
+/**
+ * A "request closed" notice (0058) in the rider's language. The database writes notification text in
+ * English; these three carry their reason as data, so the app can word them itself. Anything else is
+ * shown as stored.
+ */
+export function riderNotificationText(n: Notification, t: ReturnType<typeof useT>["t"]): { title: string; body: string } {
+  const d = (n.data ?? {}) as { reason?: unknown; order_number?: unknown };
+  if (n.type === "delivery_cancelled" && typeof d.order_number === "string" && (d.reason === "taken" || d.reason === "withdrawn" || d.reason === "order_cancelled")) {
+    return { title: t("notice.closedTitle", { order: d.order_number }), body: t(d.reason === "taken" ? "notice.taken" : d.reason === "withdrawn" ? "notice.withdrawn" : "notice.orderCancelled") };
+  }
+  return { title: n.title, body: n.body };
+}
+
+/** Where a rider notification leads: the delivery it is about when it names one (ids only), else the home tab. */
+export function riderNotificationHref(n: Notification): string {
+  const id = (n.data as { assignment_id?: unknown } | null)?.assignment_id;
+  return typeof id === "string" && /^[0-9a-f-]{36}$/i.test(id) && (n.type === "delivery_offer" || n.type === "delivery_cancelled") ? `/rider?a=${id}` : "/rider";
+}
 
 type ShellUser = { id: string; name: string | null };
 
@@ -80,6 +102,7 @@ export function RiderShell({ user, rider, initialActive, push, initialLang, chil
   const seenRef = React.useRef<Set<string> | null>(null);
   const toastedRef = React.useRef<Map<string, number>>(new Map());
   const { t } = useT();
+  const alertCopy = useAlertCopy();
   React.useEffect(() => {
     if (!seenRef.current) { seenRef.current = new Set(items.map((n) => n.id)); return; }
     const seen = seenRef.current;
@@ -90,7 +113,8 @@ export function RiderShell({ user, rider, initialActive, push, initialLang, chil
     const key = `${latest.type}:${(latest.data as { order_id?: string } | null)?.order_id ?? latest.id}`;
     if (Date.now() - (toastedRef.current.get(key) ?? 0) < 60_000) return;
     toastedRef.current.set(key, Date.now());
-    toast.custom({ title: latest.title, description: latest.body, tone: latest.type.includes("cancel") || latest.type === "rider_offline" ? "warning" : "info", action: { label: t("common.open"), onClick: () => { window.location.href = notificationHref(latest, "rider"); } } });
+    const text = riderNotificationText(latest, t);
+    toast.custom({ title: text.title, description: text.body, tone: latest.type.includes("cancel") || latest.type === "rider_offline" ? "warning" : "info", action: { label: t("common.open"), onClick: () => { window.location.href = riderNotificationHref(latest); } } });
   }, [items, t]);
 
   const gpsOn = current.status === "active" && (isOnline || activeDelivery);
@@ -102,13 +126,15 @@ export function RiderShell({ user, rider, initialActive, push, initialLang, chil
       <RiderTopBar name={user.name} rider={current} isOnline={isOnline} gpsOn={gpsOn} />
       <main className="mx-auto w-full max-w-lg flex-1 px-4 pt-4" style={{ paddingBottom: "calc(var(--bottom-nav-h) + var(--safe-bottom) + 28px)" }}>
         <OfflineBanner />
+        <UpdatedBanner />
         <RiderStatusBanner status={current.status} />
-        {current.status === "active" ? <AlertBanner portal="rider" push={push} href="/rider/profile#alerts" /> : null}
+        {current.status === "active" ? <AlertBanner portal="rider" push={push} href="/rider/profile#alerts" copy={alertCopy} /> : null}
         {children}
       </main>
       <RiderBottomNav />
       {current.status === "active" ? <OfferAlert push={push} /> : null}
       <PwaClient appName="MD Rider" />
+      <UpdatePrompt />
     </div>
   );
 }
@@ -240,6 +266,30 @@ function OfflineBanner() {
   const online = useNetworkOnline();
   if (online) return null;
   return <Alert tone="danger" icon={<WifiOff className="h-4 w-4" />} title={t("offline.title")} className="mb-3">{t("offline.body")}</Alert>;
+}
+
+/**
+ * The shared UpdatePrompt activates a new service worker quietly and never reloads the page. A rider app
+ * stays open for a whole shift, so once the new worker has taken over this says so and offers the reload;
+ * the rider picks the moment (never forced, so an OTP being typed is not lost). Shown only when a worker
+ * was already in charge at load, so the very first install does not look like an update.
+ */
+function UpdatedBanner() {
+  const { t } = useT();
+  const [updated, setUpdated] = React.useState(false);
+  React.useEffect(() => {
+    if (!("serviceWorker" in navigator) || !navigator.serviceWorker.controller) return;
+    const onChange = () => setUpdated(true);
+    navigator.serviceWorker.addEventListener("controllerchange", onChange);
+    return () => navigator.serviceWorker.removeEventListener("controllerchange", onChange);
+  }, []);
+  if (!updated) return null;
+  return (
+    <Alert tone="info" icon={<RefreshCw className="h-4 w-4" />} title={t("update.title")} className="mb-3">
+      <p>{t("update.body")}</p>
+      <div className="mt-2"><Button size="sm" className="h-10 rounded-xl" onClick={() => window.location.reload()}><RefreshCw className="h-4 w-4" aria-hidden /> {t("update.button")}</Button></div>
+    </Alert>
+  );
 }
 
 const NAV = [

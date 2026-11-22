@@ -34,11 +34,15 @@ export const pushProvider: NotificationProvider = {
     if (error) return { sent: false, reason: "error", detail: error.message };
     if (!subs?.length) return { sent: false, reason: "no_recipient", detail: "User has no push subscriptions." };
 
-    const message = JSON.stringify({ title: payload.title, body: payload.body, url: payload.url ?? "/account/notifications", data: payload.data ?? {}, type: payload.type ?? "general" });
+    const message = JSON.stringify({
+      title: payload.title, body: payload.body, url: payload.url ?? "/account/notifications", data: payload.data ?? {}, type: payload.type ?? "general",
+      ...(payload.tag ? { tag: payload.tag } : {}), ...(payload.sticky === undefined ? {} : { sticky: payload.sticky }),
+    });
+    const ttl = Math.max(0, Math.round(payload.ttlSeconds ?? 60 * 60));
     let count = 0; const dead: string[] = []; const errors: string[] = [];
     await Promise.all(subs.map(async (s) => {
       try {
-        await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, message, { TTL: 60 * 60, urgency: "high" });
+        await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, message, { TTL: ttl, urgency: "high" });
         count++;
       } catch (err) {
         if (err instanceof WebPushError && (err.statusCode === 404 || err.statusCode === 410)) dead.push(s.id);

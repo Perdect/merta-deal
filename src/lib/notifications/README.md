@@ -33,6 +33,34 @@ from the admin's "Deliver pending now" tap, and from the staff courier that alre
 order number, total, payment method, item count and the admin order link only. Admin → Notifications shows each
 channel's configuration, latest outcome and the recent orders' per-admin results, with "Send me a test alert".
 
+## Rider alerts (0058)
+
+A delivery request (`delivery_offer`) and a "no longer yours" notice (`delivery_cancelled`) are written by the
+database when the assignment changes; `rider-alerts.ts` (`deliverRiderAlerts`) sends them to the rider's phone by
+push and, for requests only, by SMS. The loop itself is `rider-alerts-core.ts` (no server imports, so
+`scripts/test-rider-alerts.mjs` runs it against PGlite with stub providers).
+
+- **Who is alerted is decided in the database, at the last moment.** Before every send the loop calls
+  `rider_alert_claim(notification, channel)`, which locks the row, re-reads the assignment and the order, and
+  answers `send: false` with a reason when the delivery is no longer that rider's (expired, taken by another rider,
+  withdrawn, order cancelled, already accepted, given back to them). That refusal is stored as `skipped` with the
+  reason. Only a `send: true` grant is sent, and the grant carries the order number and ids, nothing else.
+- **One send per event and channel.** One `delivery_offer` row is refreshed for every re-offer (0051), so outcomes
+  are keyed by `event_key` (`offer:<assignment>` / `released:<assignment>`) under the unique index
+  `notification_deliveries_one_per_event_idx`. A second claim while one is out is refused (`in_flight`), sent is
+  final, failures stop at the setting `rider_alert_max_attempts`, an SMS claim that never reported back is closed
+  rather than repeated, and an unconfigured channel is recorded once as `unavailable`.
+- **SMS** needs its own DLT-approved template (`PARKEN_RIDER_ALERT_TEMPLATE_ID`, `PARKEN_RIDER_ALERT_TEMPLATE` with
+  `{order}`, `PARKEN_RIDER_ALERT_ROUTE`, plus the panel key and sender), the setting `rider_sms_alerts_enabled`, and
+  the rider's own switch (`profiles.preferences.rider_sms_alerts`, Profile tab). The login OTP template cannot be
+  used and is refused as configuration. The `providers/sms.ts` MSG91 stub is unrelated and still sends nothing.
+- **Where it runs:** `/api/cron/notifications` (also called at once through pg_net when a rider alert is written,
+  once the cron URL and secret are set), `after()` in the rider's answer / online actions and the admin's assign /
+  unassign / re-dispatch actions, and the open staff apps' courier. The older push sweep skips rider alert rows
+  once 0058 is applied; before that it sends them as it always did.
+- **Seen by staff** under Admin → Notifications → Rider alerts (`admin_rider_alert_summary`,
+  `admin_recent_rider_alerts`): channel, state, attempts and the provider's answer or the skip reason.
+
 ## In-app vs push
 
 Most in-app rows are created by Postgres triggers when orders change (see `supabase/migrations`). Those rows carry
@@ -67,7 +95,8 @@ NEXT_PUBLIC_VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT   pnpm push:key
 SUPABASE_SERVICE_ROLE_KEY                                           reading push_subscriptions, inserting notifications
 WHATSAPP_ACCESS_TOKEN / WHATSAPP_PHONE_NUMBER_ID                    WhatsApp sends
 WHATSAPP_NOTIFY_TEMPLATE / WHATSAPP_TEMPLATE_LANG                   approved template with {{1}} title, {{2}} body (optional)
-MSG91_AUTH_KEY / MSG91_SENDER_ID / MSG91_TEMPLATE_ID                future SMS transport
+MSG91_AUTH_KEY / MSG91_SENDER_ID / MSG91_TEMPLATE_ID                future SMS transport (stub; unused)
+PARKEN_RIDER_ALERT_TEMPLATE_ID / _TEMPLATE / _ROUTE (/ _SENDER)     rider SMS alerts (with PARKEN_SMS_KEY); own DLT template
 RESEND_API_KEY / EMAIL_FROM                                         email (Resend REST; EMAIL_FROM on a verified domain)
 CRON_SECRET                                                         protects /api/cron/*
 ```
