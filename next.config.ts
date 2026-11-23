@@ -13,12 +13,11 @@ const RETIRED_CATEGORIES: Record<string, string> = {
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   images: {
-    // Pictures are served as stored, not through Vercel's image optimizer. On 22 Nov 2026 the plan's monthly
-    // optimisation allowance ran out and every size not already cached came back 402, so product photos
-    // went missing on the live shop. Sources are already web-sized WebP (product photos <= 1200 px,
-    // see the image rules), so this costs a little bandwidth and can never fail that way again.
-    // To turn the optimizer back on (a paid Vercel plan), delete this line.
-    unoptimized: true,
+    // Pictures are resized by the app's own /api/img route (src/lib/image-loader.ts), cached by the CDN for
+    // a year per width. Not Vercel's metered optimizer: on 22 Nov 2026 its monthly allowance ran out and
+    // photos came back 402. Not `unoptimized` either: that sent full-size uploads (some over 3 MB) to phones.
+    loader: "custom",
+    loaderFile: "./src/lib/image-loader.ts",
     formats: ["image/avif", "image/webp"],
     remotePatterns: [
       ...(supabaseHost ? [{ protocol: "https" as const, hostname: supabaseHost, pathname: "/storage/v1/object/public/**" }] : []),
