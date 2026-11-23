@@ -58,14 +58,15 @@ export function ProductImage({ image, src, imageAlt, alt, brand, productName, pa
   return <ProductImageFallback brand={brand} productName={name} packSize={packSize} className={cn(rounded, className)} label={label} />;
 }
 
-/** Neutral "photo coming soon" tile. Deliberately plain so it never reads as fake packaging. */
+/** Neutral "photo coming soon" tile. Deliberately plain so it never reads as fake packaging. The words sit
+ *  under the pack size with room below, because a product card lays its delivery-time pill along the bottom edge. */
 export function ProductImageFallback({ brand, productName, packSize, className, label }: { brand?: string | null; productName?: string | null; packSize?: string | null; className?: string; label?: string }) {
   const title = brand?.trim() || (productName ?? "").split(/[\s(]/)[0] || "MD";
   return (
-    <div className={cn("@container relative flex flex-col items-center justify-center overflow-hidden bg-[#F3F3EF] text-center", className)} role="img" aria-label={label ?? productImageAlt({ brand, productName, packSize })}>
+    <div className={cn("@container relative flex flex-col items-center justify-center overflow-hidden bg-[#F3F3EF] pb-[10%] text-center", className)} role="img" aria-label={label ?? productImageAlt({ brand, productName, packSize })}>
       <span className="flex h-[38%] w-[62%] items-center justify-center rounded-[14%] border border-line bg-white/80 px-2 text-[clamp(10px,9cqw,20px)] font-bold uppercase tracking-wide text-ink-3 line-clamp-1">{title}</span>
       {packSize ? <span className="mt-[6%] hidden text-[clamp(9px,7cqw,14px)] font-semibold text-ink-4 @min-[96px]:block">{packSize}</span> : null}
-      <span className="absolute bottom-[6%] hidden text-[clamp(8px,5cqw,11px)] text-ink-4 @min-[120px]:block">Photo coming soon</span>
+      <span className="mt-[3%] hidden text-[clamp(8px,5cqw,11px)] text-ink-4 @min-[120px]:block">Photo coming soon</span>
     </div>
   );
 }
