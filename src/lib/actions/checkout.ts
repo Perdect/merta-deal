@@ -35,7 +35,7 @@ export type AddressInput = z.input<typeof addressSchema>;
 
 /**
  * Saves an address for the signed-in (or newly started guest) user. The delivery zone is decided here,
- * by `find_zone` (pin first, then pincode): an address outside every zone is refused with
+ * by `find_zone` (by the pin when there is one, otherwise by pincode): an address outside every zone is refused with
  * `outsideArea`, never stored, so no client-side check can let one through. The zone lookup and the
  * "is there a default yet" count run in parallel; one round trip each instead of a chain.
  */
@@ -56,15 +56,21 @@ export async function saveAddressAction(input: AddressInput): Promise<ActionResu
     user = anon.user;
   }
   const { id, ...rest } = parsed.data;
+  const hasPin = rest.lat != null && rest.lng != null;
   const [{ data: zone }, defaults] = await Promise.all([
-    supabase.rpc("find_zone", { p_pincode: rest.pincode, p_lat: rest.lat ?? undefined, p_lng: rest.lng ?? undefined }),
+    // A pin, when there is one, decides on its own. The form fills the pincode in for everyone, and find_zone
+    // accepts a matching pincode even when the pin is elsewhere, so sending both let a pin 100 km away through
+    // (the GPS shortcut used by someone ordering from another town). Without a pin, the pincode decides.
+    supabase.rpc("find_zone", hasPin ? { p_lat: rest.lat as number, p_lng: rest.lng as number } : { p_pincode: rest.pincode }),
     // No checkbox in the form: the first saved address becomes the default; later ones only when chosen under Saved addresses.
     !rest.is_default && !id ? supabase.from("addresses").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("is_default", true) : Promise.resolve({ count: null as number | null }),
   ]);
   const zoneRow = zone as unknown as { id: string | null } | null;
   if (!zoneRow?.id) {
     const brand = String((await getPublicSettings()).brand_name ?? "Merta Deal");
-    return { ok: false, outsideArea: true, error: `Sorry, ${brand} doesn't deliver to this ${rest.lat != null && rest.lng != null ? "location" : "pincode"} yet.` };
+    return { ok: false, outsideArea: true, error: hasPin
+      ? `The pin is outside ${brand}'s delivery area. Move the pin to the delivery address, or remove it and type the area instead.`
+      : `Sorry, ${brand} doesn't deliver to this pincode yet.` };
   }
   const payload = { ...rest, user_id: user.id, zone_id: zoneRow.id, lat: rest.lat ?? null, lng: rest.lng ?? null, landmark: rest.landmark ?? null, label: rest.label ?? null };
   if (!payload.is_default && !id && !defaults.count) payload.is_default = true;
