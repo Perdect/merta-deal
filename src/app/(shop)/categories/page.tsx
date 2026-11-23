@@ -7,13 +7,29 @@ import { CategoryBrowser } from "@/components/shop/category-browser";
 export const metadata: Metadata = { title: "Shop by Category – Grocery, Sweets, Cakes & Dry Fruits in Merta City", description: "Browse every MertaDeal category — grocery and kirana staples, sweets, cakes, bakery items and dry fruits — with home delivery in Merta City.", alternates: { canonical: "/categories" } };
 export const dynamic = "force-dynamic";
 
+const PAGE = 60;
+const MAX_PAGES = 5;
+/** All listed products of one line, most popular first. */
+async function wholeLine(slug: string) {
+  const first = await searchProducts({ category: slug, sort: "popular", pageSize: PAGE });
+  let items = first.items;
+  for (let page = 2; items.length < first.total && page <= MAX_PAGES; page++) {
+    const next = await searchProducts({ category: slug, sort: "popular", pageSize: PAGE, page });
+    if (!next.items.length) break;
+    items = [...items, ...next.items];
+  }
+  return { items, total: first.total };
+}
+
 /** Compact quick-commerce style category screen: tabs → sub-category tiles, or products for leaf categories. */
 export default async function CategoriesPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const [{ tab }, tabs] = await Promise.all([searchParams, getCategoryTabs()]);
   // Categories without sub-categories show their products right on this screen.
   const leaf = tabs.filter((t) => t.tiles.length === 0);
-  const lists = await Promise.all(leaf.map((t) => searchProducts({ category: t.slug, sort: "popular", pageSize: 12 })));
-  const products = Object.fromEntries(leaf.map((t, i) => [t.slug, { items: lists[i].items, total: lists[i].total }]));
+  // Every product of the line is shown here (the owner asked for no "See all" step): search_products gives at
+  // most 60 a page, so a longer line is read page by page, up to MAX_PAGES.
+  const lists = await Promise.all(leaf.map((t) => wholeLine(t.slug)));
+  const products = Object.fromEntries(leaf.map((t, i) => [t.slug, lists[i]]));
   return (
     <div className="bg-card px-4 pb-6 pt-1 sm:rounded-2xl sm:px-5 lg:mt-4 lg:border lg:border-line lg:py-5">
       {/* No gap under the bar: the category band sits flush against it, as it does on the home. */}

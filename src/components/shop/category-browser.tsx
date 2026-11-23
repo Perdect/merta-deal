@@ -99,7 +99,7 @@ export function CategoryBrowser({ tabs, initial, products, signedIn }: { tabs: C
           <section key={t.slug} role="tabpanel" id={`panel-${t.slug}`} aria-labelledby={`tab-${t.slug}`} hidden={t.slug !== active} className={cn("pt-2.5", switched && "motion-safe:animate-fade-in")}>
             <div className="mb-1.5 flex items-center justify-between gap-3">
               <h2 className="min-w-0 font-display text-lg font-bold leading-tight text-ink">{t.tiles.length ? `Shop ${t.name.toLowerCase()} by type` : t.name}</h2>
-              {t.count > 0 ? <Link href={`/c/${t.slug}`} className="inline-flex min-h-11 shrink-0 items-center gap-0.5 text-sm font-semibold text-brand-700 hover:underline focus-visible:outline-2 focus-visible:outline-brand-600">See all {t.count}<ChevronRight className="h-4 w-4" strokeWidth={2} aria-hidden /></Link> : null}
+              {t.count > 0 ? <Link href={`/c/${t.slug}`} className="inline-flex min-h-11 shrink-0 items-center gap-0.5 text-sm font-semibold text-brand-700 hover:underline focus-visible:outline-2 focus-visible:outline-brand-600">{t.tiles.length ? `See all ${t.count}` : "Sort & filter"}<ChevronRight className="h-4 w-4" strokeWidth={2} aria-hidden /></Link> : null}
             </div>
             {t.tiles.length ? (
               <ul className="grid grid-cols-3 gap-x-2.5 gap-y-3.5 min-[430px]:gap-x-3.5 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8">
@@ -117,7 +117,7 @@ export function CategoryBrowser({ tabs, initial, products, signedIn }: { tabs: C
             ) : listed && listed.items.length ? (
               <>
                 <ProductGrid products={listed.items} signedIn={signedIn} priorityCount={t.slug === active ? 4 : 0} />
-                {/* Only when there is more than this screen shows; a line shown in full needs nothing under it. */}
+                {/* The page loads the whole line, so this appears only for a line longer than the page's own cap. */}
                 {listed.total > listed.items.length ? (
                   <Link href={`/c/${t.slug}`} className="mt-4 flex min-h-12 items-center justify-center gap-1 rounded-xl border border-brand-200 bg-brand-50 text-sm font-bold text-brand-800 transition-colors hover:bg-brand-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 motion-reduce:transition-none">See all {listed.total} in {t.name} <ChevronRight className="h-4 w-4" strokeWidth={2} aria-hidden /></Link>
                 ) : null}
