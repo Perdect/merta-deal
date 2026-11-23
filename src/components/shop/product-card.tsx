@@ -6,6 +6,7 @@ import { ProductImage } from "./product-image";
 import { AddToCart } from "./add-to-cart";
 import { PackSelector } from "./pack-selector";
 import { EtaPill } from "./eta-pill";
+import { cardSize, sizeName, sizeSoldOut } from "@/lib/pack";
 
 /**
  * Compact product card, read top to bottom the way a shopper decides:
@@ -17,25 +18,30 @@ import { EtaPill } from "./eta-pill";
  *   price (bold) over the struck MRP, and the ADD button, which becomes the quantity stepper
  *
  * Every figure is the listing's own: the badge is `discount_pct` and appears only with a real gap between
- * price and MRP, the stock line is `stock_qty`, the photo is `products.image_url` / `images`. A product that
- * comes in several sizes hands the lower half to `PackSelector`, where the chosen size sets the price.
+ * price and MRP, the stock line is `stock_qty`, the photo is `products.image_url` / `images`.
+ *
+ * A product that comes in several sizes is still one card. It names one size (`cardSize`) and shows that
+ * size's price, MRP, saving and stock; its button reads "ADD · N options" and opens the size sheet
+ * (`PackSelector`) instead of adding anything.
  */
 export function ProductCard({ product, signedIn, className, priority }: { product: ProductCardType; signedIn?: boolean; className?: string; priority?: boolean; showStore?: boolean }) {
-  const price = Number(product.selling_price ?? product.base_mrp);
-  const mrp = Number(product.mrp ?? product.base_mrp);
-  const soldOut = !product.inventory_id || product.stock_status === "out_of_stock";
-  const lowStock = !soldOut && product.stock_status === "low_stock" && Number(product.stock_qty ?? 0) > 0;
   const href = `/p/${product.slug}`;
-  // Several sizes (500 g / 1 kg, 5 kg / 10 kg…): one card; the size is chosen on it.
+  // Several sizes (500 g / 1 kg, 5 kg / 10 kg…): one card; the size is chosen in the sheet its button opens.
   const options = (product.variants ?? []).filter((v) => v.inventory_id);
   const single = options.length < 2;
-  // With sizes to choose from the price on the card changes with the choice, so no single badge is true.
-  const pct = single && !soldOut && mrp > price ? Math.round(Number(product.discount_pct ?? 0)) : 0;
+  // The size the card speaks for: the product's own row, or (several sizes, this one sold out) one that can be added.
+  const size = single ? product : cardSize(product.id, options);
+  const price = Number(size.selling_price ?? product.base_mrp);
+  const mrp = Number(size.mrp ?? (single ? product.base_mrp : price));
+  const soldOut = single ? !product.inventory_id || product.stock_status === "out_of_stock" : sizeSoldOut(size);
+  const lowStock = !soldOut && size.stock_status === "low_stock" && Number(size.stock_qty ?? 0) > 0;
+  const packLabel = single ? product.pack_label : sizeName(size);
+  const pct = !soldOut && mrp > price ? Math.round(Number(size.discount_pct ?? 0)) : 0;
   return (
     <article className={cn("group relative flex flex-col rounded-[14px] border border-line bg-card p-2 transition-[border-color,box-shadow] duration-200 hover:border-line-2 hover:shadow-card motion-reduce:transition-none", className)}>
       <div className="relative">
         <Link href={href} aria-label={product.name} className="block rounded-[10px] focus-visible:outline-2 focus-visible:outline-brand-600">
-          <ProductImage image={product.image_url} brand={product.brand_name} productName={product.name} packSize={product.pack_label} fallbackImage={product.images?.[0] ?? null} className={cn("aspect-square w-full", soldOut && single && "opacity-55 grayscale-[35%]")} rounded="rounded-[10px]" priority={priority} sizes="(max-width: 640px) 45vw, (max-width: 1280px) 22vw, 180px" />
+          <ProductImage image={product.image_url} brand={product.brand_name} productName={product.name} packSize={product.pack_label} fallbackImage={product.images?.[0] ?? null} className={cn("aspect-square w-full", soldOut && "opacity-55 grayscale-[35%]")} rounded="rounded-[10px]" priority={priority} sizes="(max-width: 640px) 45vw, (max-width: 1280px) 22vw, 180px" />
         </Link>
         {/* Corner marks never take the tap: the whole photo stays one link to the product. */}
         {pct > 0 ? <DiscountBadge pct={pct} className="pointer-events-none absolute left-0 top-0 rounded-none rounded-br-[10px] rounded-tl-[10px] px-2 py-1" /> : null}
@@ -48,23 +54,19 @@ export function ProductCard({ product, signedIn, className, priority }: { produc
 
       <div className="flex flex-1 flex-col px-0.5 pt-2">
         <Link href={href} className="tap line-clamp-2 text-[13px] font-semibold leading-[1.25] text-ink hover:text-brand-800">{product.name}</Link>
-        {single ? (
-          <>
-            {product.pack_label ? <p className="mt-1 max-w-full self-start truncate rounded-md bg-surface-2 px-1.5 py-0.5 text-[11px] font-semibold leading-tight text-ink-2">{product.pack_label}</p> : null}
-            {lowStock ? <p className="mt-1 text-[11px] font-semibold leading-tight text-saffron-700">Only {product.stock_qty} left</p> : null}
-            {/* If the price and the control ever cannot share a line (a four-figure price beside the stepper
-                on a narrow card), the control drops under the price instead of covering it. */}
-            <div className="mt-auto flex flex-wrap items-end justify-between gap-x-1.5 gap-y-1.5 pt-2">
-              <p className="min-w-0 leading-tight tabular">
-                <span className={cn("block text-[15px] font-bold", soldOut ? "text-ink-3" : "text-ink")}>{formatINR(price)}</span>
-                {mrp > price ? <span className="block text-[11px] text-ink-3 line-through"><span className="sr-only">MRP </span>{formatINR(mrp)}</span> : null}
-              </p>
-              <AddToCart inventoryId={product.inventory_id} maxQty={product.max_order_qty} stockQty={product.stock_qty} size="sm" signedIn={signedIn} className="ml-auto h-9 rounded-lg px-3 text-xs font-extrabold" stepperClassName="ml-auto h-9 rounded-lg [&>button]:h-full" />
-            </div>
-          </>
-        ) : (
-          <PackSelector product={product} options={options} signedIn={signedIn} />
-        )}
+        {packLabel ? <p className="mt-1 max-w-full self-start truncate rounded-md bg-surface-2 px-1.5 py-0.5 text-[11px] font-semibold leading-tight text-ink-2">{packLabel}</p> : null}
+        {lowStock ? <p className="mt-1 text-[11px] font-semibold leading-tight text-saffron-700">Only {size.stock_qty} left</p> : null}
+        {/* If the price and the control ever cannot share a line (a four-figure price beside the stepper
+            on a narrow card), the control drops under the price instead of covering it. */}
+        <div className="mt-auto flex flex-wrap items-end justify-between gap-x-1.5 gap-y-1.5 pt-2">
+          <p className="min-w-0 leading-tight tabular">
+            <span className={cn("block text-[15px] font-bold", soldOut ? "text-ink-3" : "text-ink")}>{formatINR(price)}</span>
+            {mrp > price ? <span className="block text-[11px] text-ink-3 line-through"><span className="sr-only">MRP </span>{formatINR(mrp)}</span> : null}
+          </p>
+          {single
+            ? <AddToCart inventoryId={product.inventory_id} maxQty={product.max_order_qty} stockQty={product.stock_qty} size="sm" signedIn={signedIn} className="ml-auto h-9 rounded-lg px-3 text-xs font-extrabold" stepperClassName="ml-auto h-9 rounded-lg [&>button]:h-full" />
+            : <PackSelector name={product.name} options={options} signedIn={signedIn} className="ml-auto" />}
+        </div>
       </div>
     </article>
   );

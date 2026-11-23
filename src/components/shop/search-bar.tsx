@@ -8,11 +8,14 @@ import type { SearchSuggest } from "@/types/app";
 import { cn, formatINR } from "@/lib/utils";
 import { ProductImage } from "./product-image";
 
-/** Zepto-style rotating hint: Search "milk" → "atta" → … (CSS only, no timers). */
-const HINTS = ["milk", "atta", "chips", "dal"];
+/* The rotating hint ("Maggi", "Kaju Katli" → …; with the word Search in front from `sm` up) is CSS only, no timers. Its words are real product
+   names handed in by the shop layout (`hints`, from getSearchHints); the keyframes step through four rows,
+   so a shorter list is repeated to fill them. Without any, the box shows a plain prompt, never made-up words. */
+const HINT_ROWS = 4;
 
 /** `scope` keeps typeahead and results inside one category (search opened from a category page). */
-export function SearchBar({ className, autoFocus, initial = "", compact, scope }: { className?: string; autoFocus?: boolean; initial?: string; compact?: boolean; scope?: { slug: string; name: string } }) {
+export function SearchBar({ className, autoFocus, initial = "", compact, scope, hints }: { className?: string; autoFocus?: boolean; initial?: string; compact?: boolean; scope?: { slug: string; name: string }; /** Pairs of real product names for the rotating hint. */ hints?: string[][] }) {
+  const hintRows = hints?.length ? Array.from({ length: HINT_ROWS }, (_, i) => hints[i % hints.length]) : [];
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
@@ -76,10 +79,14 @@ export function SearchBar({ className, autoFocus, initial = "", compact, scope }
           className={cn("w-full pl-11 pr-20 text-base text-ink placeholder:text-ink-3 sm:text-[15px] focus:outline-none focus:ring-2 focus:ring-brand-100 [&::-webkit-search-cancel-button]:hidden", compact ? "h-12 rounded-2xl border border-transparent bg-surface-2 focus:border-brand-300 focus:bg-card" : "h-12 rounded-md border border-line-2 bg-card shadow-card focus:border-brand-500")} />
         {!q ? (
           <span aria-hidden className={cn("pointer-events-none absolute left-11 right-20 top-1/2 flex -translate-y-1/2 items-center overflow-hidden whitespace-nowrap text-base leading-6 text-ink-3 sm:text-[15px]", compact ? "h-6" : "h-6")}>
-            {scope ? <span className="truncate">Search in {scope.name}</span> : <>Search&nbsp;
-            <span className="relative inline-block h-6 overflow-hidden align-top">
-              <span className="flex flex-col motion-safe:animate-[search-hint_7.5s_cubic-bezier(0.65,0,0.35,1)_infinite]">
-                {[...HINTS, HINTS[0]].map((h, i) => <span key={i} className="h-6 font-medium text-ink-2">&ldquo;{h}&rdquo;</span>)}
+            {scope ? <span className="truncate">Search in {scope.name}</span> : !hintRows.length ? <span className="truncate">Search for products</span> : <><span className="max-sm:hidden">Search&nbsp;</span>
+            <span className="relative inline-block h-6 min-w-0 overflow-hidden align-top">
+              <span className={cn("flex flex-col", hints && hints.length > 1 && "motion-safe:animate-[search-hint_7.5s_cubic-bezier(0.65,0,0.35,1)_infinite]")}>
+                {[...hintRows, hintRows[0]].map((pair, i) => (
+                  <span key={i} className="h-6 truncate">
+                    {pair.map((name, n) => <React.Fragment key={name}>{n ? ", " : null}<span className="font-medium text-ink-2">&ldquo;{name}&rdquo;</span></React.Fragment>)}
+                  </span>
+                ))}
               </span>
             </span></>}
           </span>

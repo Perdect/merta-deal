@@ -1,5 +1,5 @@
 import { isRazorpayConfigured } from "@/lib/env";
-import { getActiveCategorySlugs, getPublicSettings } from "@/lib/data/catalog";
+import { getActiveCategorySlugs, getPublicSettings, getSearchHints } from "@/lib/data/catalog";
 import { Header } from "@/components/shop/header";
 import { BottomNav } from "@/components/shop/bottom-nav";
 import { ChromePart, NavHistory, NavSpacer } from "@/components/shop/app-view";
@@ -20,7 +20,7 @@ import { ReferralCapture } from "@/components/account/referral-capture";
  */
 export default async function ShopLayout({ children }: { children: React.ReactNode }) {
   // Delivery ETA is a business rule: it comes from the `settings` table, never the markup.
-  const [settings, activeCategories] = await Promise.all([getPublicSettings(), getActiveCategorySlugs()]);
+  const [settings, activeCategories, searchHints] = await Promise.all([getPublicSettings(), getActiveCategorySlugs(), getSearchHints()]);
   const num = (k: string, d: number) => { const v = Number(settings[k]); return Number.isFinite(v) && v > 0 ? v : d; };
   const defaultEta = { min: num("delivery_eta_min_minutes", 30), max: num("delivery_eta_max_minutes", 60) };
   const slots = Array.isArray(settings.scheduled_slots) ? (settings.scheduled_slots as string[]) : [];
@@ -28,7 +28,7 @@ export default async function ShopLayout({ children }: { children: React.ReactNo
     <MeProvider>
       <ReferralCapture />
       <NavHistory />
-      <ChromePart part="header"><Header defaultEta={defaultEta} /></ChromePart>
+      <ChromePart part="header"><Header defaultEta={defaultEta} searchHints={searchHints} /></ChromePart>
       <main className="mx-auto w-full max-w-6xl flex-1 pb-2 sm:px-6 md:pb-10">{children}</main>
       <ChromePart part="footer"><Footer social={socialLinks(settings)} categories={[...activeCategories]} /></ChromePart>
       <ChromePart part="cartBar"><StickyCartBar /></ChromePart>

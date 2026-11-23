@@ -27,6 +27,43 @@ const cachedCategories = unstable_cache(async (): Promise<Category[]> => {
 }, ["categories"], { tags: [CATALOGUE_TAG], revalidate: PUBLIC_TTL });
 export const getCategories = cache(() => cachedCategories());
 
+/**
+ * Words for the search box's rotating hint, taken from what is really on sale: the brand of each of the
+ * most popular in-stock products, or the last two words of an unbranded one ("Kaju Katli"). Returned in
+ * pairs, so the box can read: "Maggi", "Kaju Katli". Nothing is suggested that the shop does not
+ * stock; with an empty or unreachable catalogue the list is empty and the box shows a plain prompt.
+ */
+const cachedSearchHints = unstable_cache(async (): Promise<string[][]> => {
+  const supabase = createPublicClient();
+  const { data, error } = await supabase.from("v_product_cards").select("name, brand_name, stock_status, popularity_score")
+    .not("inventory_id", "is", null).order("popularity_score", { ascending: false }).limit(80);
+  if (error || !data) return [];
+  const terms: string[] = []; const seen = new Set<string>();
+  for (const p of data as { name: string | null; brand_name: string | null; stock_status: string | null }[]) {
+    if (p.stock_status === "out_of_stock" || !p.name) continue;
+    const brand = p.brand_name?.trim();
+    // An unbranded name ends in what the thing is ("Yummy & Testy Pineapple Cake" → "Pineapple Cake"), so the
+    // hint takes its last two words; pack details after a comma, bar or bracket are dropped first.
+    const words = p.name.split(/[|,(]/)[0].trim().split(/\s+/).filter((w) => /^\p{L}[\p{L}'’.-]*$/u.test(w));
+    const tail = words.slice(-2).join(" ");
+    const term = brand && brand.length <= 14 ? brand : tail.length <= 18 ? tail : words[words.length - 1] ?? "";
+    const key = term.toLowerCase();
+    if (term.length < 3 || seen.has(key)) continue;
+    seen.add(key); terms.push(term);
+    if (terms.length >= 8) break;
+  }
+  // Two names per hint when both fit the box on a phone; otherwise one.
+  const pairs: string[][] = []; const left = [...terms];
+  while (left.length) {
+    const a = left.shift() as string;
+    // A phone's search box holds about twenty letters of names beside the icons: pair `a` with the next name that fits.
+    const at = left.findIndex((b) => a.length + b.length <= 20);
+    pairs.push(at >= 0 ? [a, left.splice(at, 1)[0]] : [a]);
+  }
+  return pairs.slice(0, 4);
+}, ["search-hints"], { tags: [CATALOGUE_TAG], revalidate: PUBLIC_TTL });
+export const getSearchHints = cache(() => cachedSearchHints().catch((): string[][] => []));
+
 /** Slugs of the categories customers can shop right now (switched-off ones are missing). */
 export const getActiveCategorySlugs = cache(async (): Promise<Set<string>> => new Set((await getCategories()).map((c) => c.slug)));
 
