@@ -6,7 +6,6 @@ import type { RiderAssignment } from "@/types/app";
 import { getRiderAssignmentsAction, respondAssignmentAction } from "@/lib/actions/rider";
 import { deliverPendingPushAction } from "@/lib/actions/alerts";
 import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/ui/overlay";
 import { toast } from "@/components/ui/toast";
 import { useRinger } from "@/lib/alerts/use-ringer";
 import { SoundChip, type PushConfig } from "@/components/alerts/alert-setup";
@@ -81,6 +80,9 @@ export function OfferAlert({ push }: { push: PushConfig }) {
   React.useEffect(() => { if (expiredCount > 0) { const tm = setTimeout(load, 800); return () => clearTimeout(tm); } }, [expiredCount, load]);
 
   const snooze = (id: string) => { const next = new Set(snoozed); if (next.has(id)) next.delete(id); else next.add(id); writeSnoozed(next); setSnoozed(next); };
+
+  // An armed Decline goes back to normal if it is not confirmed within a few seconds.
+  React.useEffect(() => { if (!confirmReject) return; const tm = setTimeout(() => setConfirmReject(false), 4000); return () => clearTimeout(tm); }, [confirmReject]);
 
   const respond = async (offer: RiderAssignment, accept: boolean) => {
     if (busy) return;
@@ -181,11 +183,13 @@ export function OfferAlertView(p: OfferAlertViewProps) {
 
         <div className="grid grid-cols-3 gap-2 px-4 pb-4 pt-2">
           <Button size="lg" className="col-span-3 h-14 rounded-2xl text-lg" loading={busy === "accept"} disabled={busy !== null || msLeft <= 0} onClick={() => respond(o, true)}>{busy === "accept" ? t("offer.confirming") : t("offer.accept")}</Button>
-          <Button size="lg" variant="outline" className="col-span-2 h-12 rounded-2xl" disabled={busy !== null || msLeft <= 0} onClick={() => setConfirmReject(true)}>{t("offer.decline")}</Button>
+          {/* Decline is two taps on the same button: the first arms it for a few seconds, the second sends it. (It used to open a
+              confirm dialog, which was drawn behind this popup, so Decline appeared to do nothing and no decline was ever recorded.) */}
+          <Button size="lg" variant={confirmReject ? "danger" : "outline"} className="col-span-2 h-12 rounded-2xl" loading={busy === "reject"} disabled={busy !== null || msLeft <= 0}
+            onClick={() => { if (confirmReject) void respond(o, false); else setConfirmReject(true); }}>{confirmReject ? t("offer.declineConfirmTitle") : t("offer.decline")}</Button>
           <Button size="lg" variant="outline" className="h-12 rounded-2xl" onClick={() => snooze(o.id)} aria-pressed={muted} aria-label={muted ? t("offer.unmute") : t("offer.mute")}>{muted ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}</Button>
         </div>
       </div>
-      <ConfirmDialog open={confirmReject} onClose={() => setConfirmReject(false)} onConfirm={() => respond(o, false)} title={t("offer.declineConfirmTitle")} description={t("offer.declineConfirmBody")} confirmLabel={t("offer.decline")} tone="danger" loading={busy === "reject"} />
     </div>
   );
 }

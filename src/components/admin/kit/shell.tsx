@@ -184,11 +184,13 @@ function SidebarNav({ active, collapsed, counts }: { active: string | null; coll
   );
 }
 
+/* Navigation links do not prefetch: with ~25 of them the frame fired 35-45 server requests on every page load
+   (measured 23 Nov 2026), each one a function call competing with the page the admin actually opened. */
 function NavLink({ item, active, collapsed, count = 0 }: { item: AdminNavItem; active: boolean; collapsed: boolean; count?: number }) {
   const Icon = item.icon;
   return (
     <li>
-      <Link href={item.href} aria-current={active ? "page" : undefined} aria-label={collapsed ? (count ? `${item.label}, ${count}` : item.label) : undefined}
+      <Link href={item.href} prefetch={false} aria-current={active ? "page" : undefined} aria-label={collapsed ? (count ? `${item.label}, ${count}` : item.label) : undefined}
         className={cn("group relative flex h-9 items-center gap-3 rounded-md px-3 text-[13.5px] font-medium transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-brand-600 pointer-coarse:h-11",
           collapsed && "justify-center px-0",
           // The current page: tinted row with a short accent bar on its leading edge.
@@ -214,7 +216,7 @@ function MobileBar({ active, counts, onMenu }: { active: string | null; counts: 
           const Icon = i.icon; const on = active === i.href; const count = i.badge && counts ? counts[i.badge] : 0;
           return (
             <li key={i.href} className="min-w-0">
-              <Link href={i.href} aria-current={on ? "page" : undefined} className={cn("relative flex h-full flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors duration-150", on ? "font-semibold text-brand-700 before:absolute before:inset-x-5 before:top-0 before:h-[3px] before:rounded-b-full before:bg-brand-600" : "text-ink-3")}>
+              <Link href={i.href} prefetch={false} aria-current={on ? "page" : undefined} className={cn("relative flex h-full flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors duration-150", on ? "font-semibold text-brand-700 before:absolute before:inset-x-5 before:top-0 before:h-[3px] before:rounded-b-full before:bg-brand-600" : "text-ink-3")}>
                 <span className="relative"><Icon className="h-5 w-5" strokeWidth={on ? 2.2 : 1.9} aria-hidden />{count > 0 ? <span className="absolute -right-2.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-saffron-500 px-1 text-[10px] font-bold leading-none text-ink">{count > 99 ? "99+" : count}</span> : null}</span>
                 <span className="truncate">{i.label === "Service requests" ? "Requests" : i.label === "Scan & pack" ? "Scan" : i.label}</span>
               </Link>
