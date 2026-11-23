@@ -174,6 +174,17 @@ export function friendlyError(err: unknown): string {
     NO_RIDER_ACCEPTED: "No delivery partner has accepted this order yet.",
     ALREADY_ASSIGNED: "A delivery partner is already on this order.",
     PACK_INCOMPLETE: "Scanning shows items still missing. Finish packing in the Scan section.",
+    // Delivery code at the door (0059). None of these says how close a wrong code was.
+    OTP_INCORRECT: "That code is not right. Ask the customer to check it and try again.",
+    OTP_EXPIRED: "That delivery code is no longer valid. Send a new one, or ask the customer to open their order screen for a code.",
+    OTP_NOT_ISSUED: "No delivery code has been issued yet. Ask the customer to open their order screen for a code.",
+    OTP_LOCKED: "Too many wrong codes. Call Merta Deal support to complete this delivery.",
+    OTP_NOT_ARRIVED: "Mark that you have reached the customer first.",
+    OTP_RESEND_WAIT: "Please wait a little before asking for another code.",
+    OTP_RESEND_LIMIT: "No more codes can be sent by SMS for this delivery. Ask the customer to open their order screen for a code.",
+    OTP_SEND_IN_PROGRESS: "A code is already being sent. Give it a few seconds.",
+    OTP_SMS_UNAVAILABLE: "SMS is not set up for delivery codes. Ask the customer to open their order screen for the code.",
+    OTP_RESEND_REFUSED: "A new code could not be requested. Ask the customer to open their order screen for a code.",
   };
   for (const [code, msg] of Object.entries(map)) {
     if (raw.startsWith(code)) return msg;

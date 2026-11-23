@@ -31,6 +31,8 @@ const one = async (sql, params) => (await q(sql, params))[0];
 const ok = (name, cond, detail = "") => { if (cond) { pass++; console.log(`  ok   ${name}`); } else { fail++; console.log(`  FAIL ${name} ${detail}`); } };
 await db.query(`update settings set value = '{"open":"00:00","close":"23:59"}'::jsonb where key = 'business_hours'`);
 const as = async (uid) => db.query(`select set_config('request.jwt.claim.sub', $1, false)`, [uid]);
+// 0059: no delivery code is stored in plain text. The customer opens one on their own order screen, as the app does; the caller's identity is put back afterwards.
+const doorCode = async (o) => { const me = (await db.query(`select current_setting('request.jwt.claim.sub', true) s`)).rows[0].s; await db.query(`select set_config('request.jwt.claim.sub', (select user_id::text from orders where id = $1), false)`, [o]); try { return (await db.query(`select public.customer_delivery_code($1::uuid, true) ->> 'code' as c`, [o])).rows[0].c; } finally { await db.query(`select set_config('request.jwt.claim.sub', $1, false)`, [me ?? ""]); } };
 const err = async (sql, params) => { try { await db.query(sql, params); return null; } catch (e) { return e.message; } };
 // Run a query as the 'authenticated' DB role so RLS applies (the harness user is a superuser).
 const rls = async (uid, sql, params) => { await as(uid); await db.exec(`set role authenticated`); try { return (await db.query(sql, params)).rows; } finally { await db.exec(`reset role`); } };
@@ -116,8 +118,8 @@ ok("other rider cannot read the assignment", (await rls(otherRider, `select id f
 ok("other rider cannot read the customer's addresses", (await rls(otherRider, `select id from addresses where user_id = $1`, [CUST])).length === 0);
 ok("other rider cannot pick up", /./.test((await as(otherRider), await err(`select public.rider_pickup($1::uuid)`, [asg])) ?? ""));
 await as(riderUser); await q(`select public.rider_pickup($1::uuid)`, [asg]);
-const otp = (await one(`select delivery_otp from order_secrets where order_id = $1`, [order])).delivery_otp;
-ok("rider cannot read the OTP table", (await rls(riderUser, `select delivery_otp from order_secrets where order_id = $1`, [order])).length === 0);
+const otp = await doorCode(order);
+ok("rider cannot read the OTP table", await rls(riderUser, `select * from order_secrets where order_id = $1`, [order]).then((r) => r.length === 0, (e) => /permission denied/.test(e.message)));
 ok("other rider cannot complete with the right OTP", /./.test((await as(otherRider), await err(`select public.verify_delivery_otp($1::uuid, $2, true)`, [asg, otp])) ?? "") );
 await as(riderUser);
 ok("COD needs cash confirmation", (await one(`select public.verify_delivery_otp($1::uuid, $2, false) r`, [asg, otp])).r.ok === false);
@@ -266,7 +268,7 @@ await as(fUser);
 const st0 = await one(`select status from delivery_assignments where id = $1`, [newAsg]);
 if (st0.status === 'offered') await q(`select public.rider_respond_assignment($1::uuid, true)`, [newAsg]);
 await q(`select public.rider_pickup($1::uuid)`, [newAsg]);
-const otpF = (await one(`select delivery_otp from order_secrets where order_id = $1`, [F.o])).delivery_otp;
+const otpF = await doorCode(F.o);
 ok("second attempt delivers", (await one(`select public.verify_delivery_otp($1::uuid, $2, true) r`, [newAsg, otpF])).r.ok === true);
 const cod = Number((await one(`select total from orders where id = $1`, [F.o])).total);
 const statsAfter = (await one(`select public.rider_dashboard_stats() r`)).r;
@@ -374,7 +376,7 @@ ok("rider going online receives the waiting order", Boolean(a6));
 // Complete it: accept → pickup → OTP + cash → delivered, earning credited once.
 await q(`select public.rider_respond_assignment($1::uuid, true)`, [a6.id]);
 await q(`select public.rider_pickup($1::uuid)`, [a6.id]);
-const otp6 = (await one(`select delivery_otp from order_secrets where order_id = $1`, [Q6.order_id])).delivery_otp;
+const otp6 = await doorCode(Q6.order_id);
 const wrong6 = String((Number(otp6) + 1) % 10000).padStart(4, '0');
 ok("wrong OTP does not deliver", (await one(`select public.verify_delivery_otp($1::uuid, $2, true) r`, [a6.id, wrong6])).r.ok === false);
 ok("COD needs the cash confirmation", (await one(`select public.verify_delivery_otp($1::uuid, $2, false) r`, [a6.id, otp6])).r.needs_cash === true);

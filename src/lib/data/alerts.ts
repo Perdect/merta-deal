@@ -2,7 +2,8 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { channelStatus } from "@/lib/notifications/dispatch";
 import type { ChannelRow, RecentAlert } from "@/components/admin/alerts/channel-status";
-import type { RiderAlertChannelRow, RiderAlertEvent } from "@/components/admin/notifications-admin";
+import type { DeliveryCodeEvent, DeliveryCodeStatusData, RiderAlertChannelRow, RiderAlertEvent } from "@/components/admin/notifications-admin";
+import { deliveryCodeSmsStatus } from "@/lib/notifications/delivery-code";
 import { pushProvider } from "@/lib/notifications/providers/push";
 import { riderSmsStatus } from "@/lib/notifications/rider-alerts";
 
@@ -59,4 +60,24 @@ export async function getRiderAlertStatus(): Promise<{ available: boolean; chann
       sent_24h: Number(row.sent_24h ?? 0), failed_24h: Number(row.failed_24h ?? 0), skipped_24h: Number(row.skipped_24h ?? 0), no_device_24h: Number(row.no_device_24h ?? 0) };
   });
   return { available: summary !== null, channels, recent };
+}
+
+type DeliveryCodeLog = { summary?: { last_status?: string | null; last_at?: string | null; last_error?: string | null; sent_24h?: number; failed_24h?: number; not_sent_24h?: number } | null; recent?: DeliveryCodeEvent[] | null };
+
+/**
+ * Delivery code SMS status for Admin → Notifications (0059): whether the server can send at all (and the
+ * names of what is missing), the latest real outcome, the day's counts, and the recent requests with what
+ * the SMS panel answered. `available` is false until migration 0059 is applied (or for a non-admin), and
+ * the screen says so. Nothing here carries a code, a phone number or a customer's name.
+ */
+export async function getDeliveryCodeStatus(): Promise<DeliveryCodeStatusData> {
+  const supabase = await createClient();
+  const log = await supabase.rpc("admin_delivery_code_log" as never, { p_limit: 12 } as never).then((r) => (r.error ? null : ((r.data ?? {}) as unknown as DeliveryCodeLog)), () => null);
+  const sms = deliveryCodeSmsStatus();
+  const s = log?.summary ?? {};
+  return {
+    available: log !== null, configured: sms.configured, needs: sms.missing,
+    summary: { last_status: s.last_status ?? null, last_at: s.last_at ?? null, last_error: s.last_error ?? null, sent_24h: Number(s.sent_24h ?? 0), failed_24h: Number(s.failed_24h ?? 0), not_sent_24h: Number(s.not_sent_24h ?? 0) },
+    recent: log?.recent ?? [],
+  };
 }

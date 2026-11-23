@@ -93,18 +93,17 @@ select pg_temp.check('admin dashboard counts today''s order', (select (admin_das
 -- ---------------- rider ----------------
 select pg_temp.as_user((select v from t where k='rider_user'));
 select pg_temp.check('rider sees offer', (select jsonb_array_length(rider_assignments(array['offered'])) >= 1));
-select pg_temp.check('rider cannot see OTP', (select count(*) = 0 from public.order_secrets where order_id = (select v::uuid from t where k='order')));
+select pg_temp.check('rider cannot see OTP', (select not has_table_privilege('authenticated', 'public.order_secrets', 'select')));
 select pg_temp.check('rider accepts', (select (rider_respond_assignment((select v::uuid from t where k='assignment'), true) ->> 'status') = 'accepted'));
 select pg_temp.check('order -> rider_assigned', (select status = 'rider_assigned' from public.orders where id = (select v::uuid from t where k='order')));
 select pg_temp.check('rider location recorded', (select (record_rider_location(26.6491, 74.0341, 5, 90, 4.2) ->> 'tracked_assignments')::int = 1));
 select pg_temp.check('rider pickup', (select (rider_pickup((select v::uuid from t where k='assignment')) ->> 'status') = 'picked_up'));
 select pg_temp.check('order -> out_for_delivery', (select status = 'out_for_delivery' from public.orders where id = (select v::uuid from t where k='order')));
-reset role;
-insert into t select 'otp', delivery_otp from public.order_secrets where order_id = (select v::uuid from t where k='order');
-insert into t select 'wrong_otp', lpad(((v::int + 1) % 10000)::text, 4, '0') from t where k = 'otp';
-set local role authenticated;
+-- 0059: no code is stored in plain text; the customer opens one on their own order screen.
 select pg_temp.as_user('30000000-0000-4000-8000-000000000001');
-select pg_temp.check('customer sees OTP once out for delivery', (select (order_tracking((select v::uuid from t where k='order')) ->> 'delivery_otp') = (select v from t where k='otp')));
+insert into t select 'otp', customer_delivery_code((select v::uuid from t where k='order'), true) ->> 'code';
+insert into t select 'wrong_otp', lpad(((v::int + 1) % 10000)::text, 4, '0') from t where k = 'otp';
+select pg_temp.check('customer gets a delivery code on their own order screen, not with the tracking read', (select (select v from t where k='otp') ~ '^[0-9]{4}$' and (order_tracking((select v::uuid from t where k='order')) ->> 'delivery_otp') is null));
 select pg_temp.as_user('10000000-0000-4000-8000-000000000001');
 select pg_temp.check('admin does not receive the OTP', (select (order_tracking((select v::uuid from t where k='order')) ->> 'delivery_otp') is null));
 select pg_temp.as_user((select v from t where k='rider_user'));

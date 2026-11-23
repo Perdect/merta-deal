@@ -11,6 +11,7 @@ import { btn } from "@/components/admin/care/shared";
 import { useNotifications, notificationHref } from "@/hooks/use-notifications";
 import { broadcastAction, markAdminNotificationsReadAction } from "@/lib/actions/admin";
 import { deliverRiderAlertsAction } from "@/lib/actions/alerts";
+import { getDeliveryCodeStatusAction } from "@/lib/notifications/delivery-code-actions";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import type { Notification } from "@/types/app";
 import { cn, formatDateTime, timeAgo } from "@/lib/utils";
@@ -190,7 +191,12 @@ export function RiderAlertStatus({ available, channels, recent }: { available: b
   };
 
   if (!available) {
-    return <p className="rounded-md bg-warning-50 px-3 py-2 text-sm text-ink">Rider alert tracking is not switched on in the database yet (migration 0058). Until it is, delivery requests still reach riders in the app and through the older push sweep, without the per-rider record shown here.</p>;
+    return (
+      <div className="space-y-4">
+        <p className="rounded-md bg-warning-50 px-3 py-2 text-sm text-ink">Rider alert tracking is not switched on in the database yet (migration 0058). Until it is, delivery requests still reach riders in the app and through the older push sweep, without the per-rider record shown here.</p>
+        <DeliveryCodeStatus />
+      </div>
+    );
   }
   return (
     <div className="space-y-4">
@@ -249,6 +255,95 @@ export function RiderAlertStatus({ available, channels, recent }: { available: b
           </ul>
         )}
       </div>
+      <DeliveryCodeStatus />
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------------------------------------
+ * Delivery codes (0059): the SMS a customer gets when the rider reaches them, request by request.
+ * ---------------------------------------------------------------------------------------------- */
+
+export type DeliveryCodeEvent = {
+  notification_id: string; at: string; kind: "arrival" | "resend"; order_id: string | null; order_number: string | null;
+  /** Null: the request was written but the server has not attempted it. */
+  status: string | null; attempts: number; error: string | null; provider_id: string | null; updated_at: string | null;
+};
+export type DeliveryCodeStatusData = {
+  /** False until migration 0059 is applied. */
+  available: boolean; configured: boolean;
+  /** Names of the server settings still missing when not configured. */
+  needs: string[];
+  summary: { last_status: string | null; last_at: string | null; last_error: string | null; sent_24h: number; failed_24h: number; not_sent_24h: number };
+  recent: DeliveryCodeEvent[];
+};
+
+/**
+ * Delivery code SMS for admins: whether the server can send them, and what the SMS panel really answered
+ * for each request (the one when the rider reached the customer, and each resend). "Accepted by provider"
+ * appears only when the panel took the message. There is no code here to show: only its hash is ever stored.
+ */
+function DeliveryCodeStatus() {
+  const [data, setData] = React.useState<DeliveryCodeStatusData | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+  const [busy, setBusy] = React.useState(false);
+  const load = React.useCallback(async () => {
+    setBusy(true);
+    try {
+      const r = await getDeliveryCodeStatusAction();
+      if (r.ok) { setData(r.data); setError(null); } else setError(r.error);
+    } catch { setError("Could not load the delivery code status. Check your connection and refresh."); }
+    finally { setBusy(false); }
+  }, []);
+  React.useEffect(() => { const t = setTimeout(() => void load(), 0); return () => clearTimeout(t); }, [load]);
+
+  const last = data?.summary.last_status ? RIDER_STATUS[data.summary.last_status] ?? { label: data.summary.last_status, tone: "neutral" as BadgeTone } : null;
+  return (
+    <div id="delivery-codes" className="border-t border-line pt-4">
+      <div className="flex items-start justify-between gap-2">
+        <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-ink"><MessageSquareText className="h-4 w-4" aria-hidden />Delivery codes to customers (SMS)
+          {data ? (data.configured ? <Badge tone="success" size="xs">Configured</Badge> : <Badge tone="neutral" size="xs">Not configured</Badge>) : null}
+        </p>
+        <button type="button" className={cn(btn.secondary, btn.small)} disabled={busy} onClick={() => void load()}><RefreshCw className="h-3.5 w-3.5" aria-hidden />{busy ? "Loading…" : "Refresh"}</button>
+      </div>
+      {error ? <p className="mt-1.5 text-sm text-danger">{error}</p> : null}
+      {!data ? (error ? null : <p className="mt-1.5 text-sm text-ink-3">Loading…</p>) : !data.available ? (
+        <p className="mt-1.5 rounded-md bg-warning-50 px-3 py-2 text-sm text-ink">Delivery codes at the door are not switched on in the database yet (migration 0059). Until it is, the customer sees the delivery code in their order as before, and nothing is sent by SMS.</p>
+      ) : (
+        <>
+          <p className="mt-0.5 text-xs text-ink-3">{data.configured
+            ? "When a rider marks that they have reached the customer, a one-time code goes to the customer by SMS on the approved delivery-code template. The customer can also open a code on their own order screen. Each SMS is charged by the panel."
+            : `No delivery code SMS is sent: the customer reads the code on their own order screen, and the rider app tells the rider so. Needs ${data.needs.join(", ")} on the server.`}</p>
+          <p className="mt-1 text-[11px] text-ink-3">{last ? <Badge tone={last.tone} size="xs">{last.label}</Badge> : <Badge tone="neutral" size="xs">No requests yet</Badge>}{" "}
+            {data.summary.last_at ? <span title={formatDateTime(data.summary.last_at)}>{timeAgo(data.summary.last_at)}</span> : "—"} · 24 h: {data.summary.sent_24h} sent, {data.summary.failed_24h} failed, {data.summary.not_sent_24h} not sent</p>
+          {data.summary.last_error && data.summary.last_status === "failed" ? <p className="mt-0.5 text-xs text-danger">Last failure: {data.summary.last_error}</p> : null}
+          <p className="mb-1.5 mt-3 text-xs font-semibold uppercase tracking-wide text-ink-3">Recent delivery code requests</p>
+          {data.recent.length === 0 ? <p className="text-sm text-ink-3">No rider has reached a customer since this was switched on.</p> : (
+            <ul className="divide-y divide-line rounded-lg border border-line">
+              {data.recent.map((e) => {
+                const st = e.status ? RIDER_STATUS[e.status] ?? { label: e.status, tone: "neutral" as BadgeTone } : { label: "Not attempted yet", tone: "neutral" as BadgeTone };
+                const answer = e.status === "sent" || e.status === "delivered" ? e.provider_id : e.error;
+                return (
+                  <li key={e.notification_id} className="px-3 py-2.5">
+                    <p className="flex flex-wrap items-center justify-between gap-x-2 text-sm">
+                      <span className="min-w-0">
+                        {e.order_id ? <Link href={`/admin/orders/${e.order_id}`} className="font-semibold text-brand-700 hover:underline">{e.order_number ?? "Order"}</Link> : <span className="font-semibold text-ink">{e.order_number ?? "Order"}</span>}
+                        <span className="text-ink-2"> · {e.kind === "resend" ? "Resend asked by the rider" : "Rider reached the customer"}</span>
+                      </span>
+                      <span className="text-xs text-ink-3" title={formatDateTime(e.at)}>{timeAgo(e.at)}</span>
+                    </p>
+                    <p className="mt-1 flex flex-wrap items-baseline gap-x-2 text-xs text-ink-2">
+                      <Badge tone={st.tone} size="xs">SMS: {st.label}</Badge>
+                      {e.attempts > 0 ? <span className="text-ink-3">{e.attempts} attempt{e.attempts === 1 ? "" : "s"}</span> : null}
+                      {answer ? <span className={cn("min-w-0 break-words", e.status === "failed" && "text-danger")}>{answer}</span> : null}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </>
+      )}
     </div>
   );
 }

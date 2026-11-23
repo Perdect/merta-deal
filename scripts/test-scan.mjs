@@ -29,6 +29,8 @@ const q = async (sql, params) => (await db.query(sql, params)).rows;
 const one = async (sql, params) => (await q(sql, params))[0];
 const ok = (name, cond, detail = "") => { if (cond) { pass++; console.log(`  ok   ${name}`); } else { fail++; console.log(`  FAIL ${name} ${detail}`); } };
 const as = async (uid) => db.query(`select set_config('request.jwt.claim.sub', $1, false)`, [uid]);
+// 0059: no delivery code is stored in plain text. The customer opens one on their own order screen, as the app does; the caller's identity is put back afterwards.
+const doorCode = async (o) => { const me = (await db.query(`select current_setting('request.jwt.claim.sub', true) s`)).rows[0].s; await db.query(`select set_config('request.jwt.claim.sub', (select user_id::text from orders where id = $1), false)`, [o]); try { return (await db.query(`select public.customer_delivery_code($1::uuid, true) ->> 'code' as c`, [o])).rows[0].c; } finally { await db.query(`select set_config('request.jwt.claim.sub', $1, false)`, [me ?? ""]); } };
 const err = async (sql, params) => { try { await db.query(sql, params); return null; } catch (e) { return e.message; } };
 const rls = async (uid, sql, params) => { await as(uid); await db.exec(`set role authenticated`); try { return (await db.query(sql, params)).rows; } finally { await db.exec(`reset role`); } };
 const CUST = "30000000-0000-4000-8000-000000000002", ADMIN = "10000000-0000-4000-8000-000000000001";
@@ -237,7 +239,7 @@ ok("a scan does not deliver", (await one(`select status from orders where id = $
 await as(R.user_id);
 ok("rider pickup scan after dispatch is harmless", (await fnv(`public.rider_scan_pickup($1::uuid)`, [mixed])).already === true);
 ok("wrong OTP does not deliver", (await fnv(`public.verify_delivery_otp($1::uuid, '0000', true)`, [asg])).ok === false);
-const otp = (await one(`select delivery_otp from order_secrets where order_id = $1`, [mixed])).delivery_otp;
+const otp = await doorCode(mixed);
 ok("COD needs cash confirmed", (await fnv(`public.verify_delivery_otp($1::uuid, $2, false)`, [asg, otp])).needs_cash === true);
 ok("no cash entry before collection", (await one(`select count(*)::int n from cod_collections where order_id = $1`, [mixed])).n === 0);
 const dl = await fnv(`public.verify_delivery_otp($1::uuid, $2, true)`, [asg, otp]);

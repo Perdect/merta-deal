@@ -4,11 +4,13 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * Login OTP by SMS through the Parken panel (sms.par-ken.com), called by Supabase Auth's Send SMS hook.
  * Supabase still creates, stores and checks the code; this only carries it to the phone.
  *
- * The same panel also carries delivery-request SMS to riders (0058, bottom of this file), on a separate
- * approved template: the two never share a template or its ID.
+ * The same panel also carries delivery-request SMS to riders (0058) and the delivery code to the customer
+ * at the door (0059), each on its own approved template (bottom of this file): no two of the three ever
+ * share a template or its ID.
  *
  * Nothing here is imported by client code. It has no `server-only` marker and no path aliases on purpose,
- * so `scripts/test-sms-hook.mjs` and `scripts/test-rider-alerts.mjs` can load it directly under Node.
+ * so `scripts/test-sms-hook.mjs`, `scripts/test-rider-alerts.mjs` and `scripts/test-delivery-otp.mjs` can
+ * load it directly under Node.
  */
 
 export type OtpSmsConfig = {
@@ -211,4 +213,61 @@ export async function sendRiderAlertSms(cfg: RiderAlertSmsConfig, mobile: string
   const order = smsOrderNumber(orderNumber);
   if (!order) return { ok: false, code: null, reason: "Order number does not fit the SMS template variable" };
   return sendParkenSms({ apiUrl: cfg.apiUrl, key: cfg.key, sender: cfg.sender, route: cfg.route, templateId: cfg.templateId, mobile, text: renderRiderAlertSms(cfg.template, order) }, timeoutMs);
+}
+
+/* ------------------------------------------------------------------------------------------------
+ * Delivery code SMS to the customer at the door (0059).
+ *
+ * The login template above says "login OTP" and "do not share it with anyone": the wrong words for a
+ * code the customer is meant to read out to the delivery partner, and operators refuse any other text
+ * under its ID. The delivery code therefore needs its OWN DLT-approved template with its own ID and the
+ * panel route that template was approved for. Until those are set here nothing is sent, the request is
+ * recorded as "not configured", and the customer reads the code on their own order screen instead.
+ * ---------------------------------------------------------------------------------------------- */
+
+export type DeliveryOtpSmsConfig = { apiUrl: string; key: string; sender: string; templateId: string; template: string; route: string };
+
+/** `PARKEN_SMS_KEY` is the panel account's key (shared); the sender falls back to the login header when the delivery template was approved under the same one. */
+export const DELIVERY_OTP_SMS_ENV = ["PARKEN_SMS_KEY", "PARKEN_DELIVERY_OTP_TEMPLATE_ID", "PARKEN_DELIVERY_OTP_TEMPLATE", "PARKEN_DELIVERY_OTP_ROUTE"] as const;
+
+export function deliveryOtpSmsConfig(e: Record<string, string | undefined> = process.env): DeliveryOtpSmsConfig {
+  return {
+    apiUrl: e.PARKEN_SMS_API_URL || "https://sms.par-ken.com/api/smsapi",
+    key: (e.PARKEN_SMS_KEY ?? "").trim(),
+    sender: (e.PARKEN_DELIVERY_OTP_SENDER ?? e.PARKEN_SMS_SENDER ?? "").trim(),
+    templateId: (e.PARKEN_DELIVERY_OTP_TEMPLATE_ID ?? "").trim(),
+    template: e.PARKEN_DELIVERY_OTP_TEMPLATE ?? "",
+    // No default: the route a template may use is set by its DLT approval.
+    route: (e.PARKEN_DELIVERY_OTP_ROUTE ?? "").trim(),
+  };
+}
+
+/** Names of what is still missing for the delivery code SMS (names only, never values). Empty = configured. */
+export function deliveryOtpSmsMissing(e: Record<string, string | undefined> = process.env): string[] {
+  const missing: string[] = DELIVERY_OTP_SMS_ENV.filter((k) => !(e[k] ?? "").trim());
+  if (!(e.PARKEN_DELIVERY_OTP_SENDER ?? e.PARKEN_SMS_SENDER ?? "").trim()) missing.push("PARKEN_DELIVERY_OTP_SENDER (or PARKEN_SMS_SENDER)");
+  const template = e.PARKEN_DELIVERY_OTP_TEMPLATE ?? "";
+  if (template.trim() && !template.includes("{otp}")) missing.push("PARKEN_DELIVERY_OTP_TEMPLATE (must contain {otp})");
+  // The login template cannot be reused: the same ID or the same words means it is the login template.
+  const id = (e.PARKEN_DELIVERY_OTP_TEMPLATE_ID ?? "").trim();
+  if (id && id === (e.PARKEN_SMS_TEMPLATE_ID ?? "").trim()) missing.push("PARKEN_DELIVERY_OTP_TEMPLATE_ID (same as the login OTP template ID; the delivery code needs its own approved template)");
+  if (template.trim() && (template.trim() === (e.PARKEN_SMS_TEMPLATE ?? "").trim() || /\blog\s?-?in\b/i.test(template))) missing.push("PARKEN_DELIVERY_OTP_TEMPLATE (this is the login template; the delivery code needs its own approved wording)");
+  if (id && id === (e.PARKEN_RIDER_ALERT_TEMPLATE_ID ?? "").trim()) missing.push("PARKEN_DELIVERY_OTP_TEMPLATE_ID (same as the rider alert template ID)");
+  return missing;
+}
+
+/** A delivery code is digits only, 4 to 8 of them. Anything else is never put into an SMS. */
+export function smsDeliveryCode(code: string): string | null {
+  return /^\d{4,8}$/.test(code) ? code : null;
+}
+
+/**
+ * Sends one delivery code. The text is the approved template with the code in place: the template's own
+ * words (which name the shop) and the code, nothing about the order, the address or anyone's number.
+ * Never logs or returns the key, the number, the code or the message text.
+ */
+export async function sendDeliveryOtpSms(cfg: DeliveryOtpSmsConfig, mobile: string, code: string, timeoutMs = 4000): Promise<ParkenResult> {
+  const otp = smsDeliveryCode(code);
+  if (!otp) return { ok: false, code: null, reason: "The delivery code does not fit the SMS template variable" };
+  return sendParkenSms({ apiUrl: cfg.apiUrl, key: cfg.key, sender: cfg.sender, route: cfg.route, templateId: cfg.templateId, mobile, text: renderOtpSms(cfg.template, otp) }, timeoutMs);
 }

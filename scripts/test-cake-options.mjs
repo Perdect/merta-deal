@@ -28,6 +28,8 @@ const q = async (sql, params) => (await db.query(sql, params)).rows;
 const one = async (sql, params) => (await q(sql, params))[0];
 const ok = (name, cond, detail = "") => { if (cond) { pass++; console.log(`  ok   ${name}`); } else { fail++; console.log(`  FAIL ${name} ${detail}`); } };
 const as = async (uid, role) => { await db.query(`select set_config('request.jwt.claim.sub', $1, false)`, [uid ?? ""]); await db.query(`select set_config('request.jwt.claim.role', $1, false)`, [role ?? (uid ? "authenticated" : "anon")]); };
+// 0059: no delivery code is stored in plain text. The customer opens one on their own order screen, as the app does; the caller's identity is put back afterwards.
+const doorCode = async (o) => { const me = (await db.query(`select current_setting('request.jwt.claim.sub', true) s`)).rows[0].s; await db.query(`select set_config('request.jwt.claim.sub', (select user_id::text from orders where id = $1), false)`, [o]); try { return (await db.query(`select public.customer_delivery_code($1::uuid, true) ->> 'code' as c`, [o])).rows[0].c; } finally { await db.query(`select set_config('request.jwt.claim.sub', $1, false)`, [me ?? ""]); } };
 const err = async (sql, params) => { try { await db.query(sql, params); return null; } catch (e) { return e.message; } };
 const fnv = async (sql, params) => (await one(`select ${sql} as r`, params)).r;
 const ADMIN = "10000000-0000-4000-8000-000000000001", CUST = "30000000-0000-4000-8000-000000000002", RIDER1 = "40000000-0000-4000-8000-000000000001";
@@ -114,7 +116,7 @@ const offer = (await fnv(`public.rider_assignments(array['offered'])`)).find((x)
 const ri = offer?.items.find((i) => i.name === "Chocolate Truffle Cake");
 ok("the rider's item list carries the options too", Boolean(ri) && ri.eggless === true && ri.cake_message === "Hi there");
 await q(`select public.rider_respond_assignment($1::uuid, true)`, [offer.id]); await q(`select public.rider_pickup($1::uuid)`, [offer.id]);
-const otp = (await one(`select delivery_otp from order_secrets where order_id = $1`, [placed.order_id])).delivery_otp;
+const otp = await doorCode(placed.order_id);
 await q(`select public.verify_delivery_otp($1::uuid, $2, true, false)`, [offer.id, otp]);
 ok("delivered: the reservation is finalised", (await one(`select status, stock_state from orders where id = $1`, [placed.order_id])).stock_state === "finalised");
 

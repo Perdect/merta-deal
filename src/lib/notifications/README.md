@@ -61,6 +61,33 @@ push and, for requests only, by SMS. The loop itself is `rider-alerts-core.ts` (
 - **Seen by staff** under Admin → Notifications → Rider alerts (`admin_rider_alert_summary`,
   `admin_recent_rider_alerts`): channel, state, attempts and the provider's answer or the skip reason.
 
+## Delivery code at the door (0059)
+
+When the assigned rider marks "reached the customer" (`rider_mark_arrived`), the database asks for one delivery
+code SMS for that assignment and writes the customer a `delivery_code` notification with no code in it.
+`delivery-code.ts` (`deliverDeliveryCode`) then runs from `after()` in `riderArrivedAction`, and inline from the
+rider's resend. The step itself is `delivery-code-core.ts` (no server imports, so `scripts/test-delivery-otp.mjs`
+runs it against PGlite with a stand-in for the SMS panel).
+
+- **The code exists nowhere in plain text.** `delivery_otp_claim` (service role only) mints it under locks on the
+  assignment, the order and the code row, stores `sha256(salt:code)` and returns the code once, for one SMS. The
+  sender holds it in one local variable; it is not returned, logged or put into a recorded error. `order_secrets`
+  is readable by security-definer functions only.
+- **One SMS per request.** A request is `pending` until claimed, `queued` until the panel answers, then `sent`
+  (the panel accepted it), `failed` (its refusal or a timeout) or `unavailable`. A second claim is refused
+  (`in_flight` / `nothing_pending`); marking arrived again asks for nothing; a resend is the rider's explicit
+  request (`rider_resend_delivery_otp`: cooldown and cap from settings) and withdraws the earlier SMS code.
+- **Not configured is the normal state until the owner has a template.** It needs its own DLT-approved template
+  (`PARKEN_DELIVERY_OTP_TEMPLATE_ID`, `PARKEN_DELIVERY_OTP_TEMPLATE` with `{otp}`, `PARKEN_DELIVERY_OTP_ROUTE`, plus
+  the panel key and sender) and the setting `delivery_otp_sms_enabled`. The login OTP template is refused as
+  configuration (same ID, same text, or the word "login"). Without it no claim is made, the request is recorded
+  `unavailable`, and the customer opens a code on their own order screen (`customer_delivery_code`), which works
+  alongside any SMS code.
+- **Recorded through the same pipeline:** each request's outcome goes through `record_notification_delivery`
+  (channel `sms`) against its `delivery_code` notification. Admin → Notifications → Delivery codes reads
+  `admin_delivery_code_log`: order number, request kind, state, attempts and the panel's answer. No code, number
+  or name.
+
 ## In-app vs push
 
 Most in-app rows are created by Postgres triggers when orders change (see `supabase/migrations`). Those rows carry
@@ -97,6 +124,7 @@ WHATSAPP_ACCESS_TOKEN / WHATSAPP_PHONE_NUMBER_ID                    WhatsApp sen
 WHATSAPP_NOTIFY_TEMPLATE / WHATSAPP_TEMPLATE_LANG                   approved template with {{1}} title, {{2}} body (optional)
 MSG91_AUTH_KEY / MSG91_SENDER_ID / MSG91_TEMPLATE_ID                future SMS transport (stub; unused)
 PARKEN_RIDER_ALERT_TEMPLATE_ID / _TEMPLATE / _ROUTE (/ _SENDER)     rider SMS alerts (with PARKEN_SMS_KEY); own DLT template
+PARKEN_DELIVERY_OTP_TEMPLATE_ID / _TEMPLATE / _ROUTE (/ _SENDER)    delivery code SMS (with PARKEN_SMS_KEY); own DLT template
 RESEND_API_KEY / EMAIL_FROM                                         email (Resend REST; EMAIL_FROM on a verified domain)
 CRON_SECRET                                                         protects /api/cron/*
 ```

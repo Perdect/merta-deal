@@ -9,7 +9,8 @@ import { deliverRiderAlerts } from "@/lib/notifications/rider-alerts";
 import type { ActionResult } from "./cart";
 import type { Enums, Json } from "@/types/database";
 import { indianMobile, riderAlertSmsMissing } from "@/lib/sms/otp-sms";
-import type { DeliveryPartner, RiderAssignment, RiderStats } from "@/types/app";
+import { deliverDeliveryCode, deliveryCodeSmsStatus } from "@/lib/notifications/delivery-code";
+import type { DeliveryPartner, RiderAssignment, RiderDeliveryCodeState, RiderStats } from "@/types/app";
 
 export type RiderFormResult = { ok: false; error: string; fieldErrors?: Record<string, string> } | { ok: true; message?: string };
 
@@ -117,12 +118,55 @@ export async function respondAssignmentAction(assignmentId: string, accept: bool
   return { ok: true, data: { status: res.status ?? (accept ? "accepted" : "rejected"), reassigned_to: res.reassigned_to ?? null, already: Boolean(res.already) } };
 }
 
-/** Records "I've reached the pickup point / the customer" on the assignment (idempotent; admins are told once for the store). */
+/**
+ * Records "I've reached the pickup point / the customer" on the assignment (idempotent; admins are told once for the store).
+ * Reaching the customer is also the moment the delivery code goes to the customer by SMS (0059): the database
+ * asks for one code per assignment however often this is called, and the send runs once this answer is out.
+ * What happened to it is read back from the database (`rider_delivery_otp_state`), never assumed here.
+ */
 export async function riderArrivedAction(assignmentId: string, where: "pickup" | "customer"): Promise<ActionResult> {
   const supabase = await createClient();
   const { error } = await supabase.rpc("rider_mark_arrived", { p_assignment_id: assignmentId, p_where: where });
   if (error) return { ok: false, error: friendlyError(error) };
+  // Only after the database accepted this rider as the assignee at the customer's door.
+  if (where === "customer") after(() => deliverDeliveryCode(assignmentId).then(() => undefined, () => undefined));
   return { ok: true, data: undefined };
+}
+
+export type DeliveryCodeResend = {
+  /** False when the server has no approved delivery-code SMS template: the customer reads the code from their order screen. */
+  sms_configured: boolean;
+  /** `sent` only when the SMS panel accepted the message. */
+  outcome: "sent" | "failed" | "unavailable" | "held";
+  state: RiderDeliveryCodeState | null;
+};
+export type DeliveryCodeResendResult = ActionResult<DeliveryCodeResend> | { ok: false; error: string; code: string; retry_in_seconds?: number };
+
+/**
+ * The rider asks for a new delivery code SMS. The database decides whether that is allowed (assignee, at the
+ * customer, cooldown, cap, not locked) and withdraws the earlier SMS code; the SMS is then sent and the SMS
+ * panel's real answer comes back. Nothing here ever holds the code for the rider to see.
+ */
+export async function resendDeliveryCodeAction(assignmentId: string): Promise<DeliveryCodeResendResult> {
+  if (!/^[0-9a-f-]{36}$/.test(assignmentId)) return { ok: false, error: "Invalid delivery" };
+  const sms = deliveryCodeSmsStatus();
+  // Without an approved template a resend could only add another "not sent" line: nothing new is asked for. A request
+  // from the arrival that is still waiting is answered as not configured, so the rider's screen stops saying "sending".
+  const supabase = await createClient();
+  if (!sms.configured) {
+    // Only for the rider on this delivery: the database answers this read for the assignee and nobody else.
+    const { error: notMine } = await supabase.rpc("rider_delivery_otp_state" as never, { p_assignment_id: assignmentId } as never);
+    if (notMine) return { ok: false, error: friendlyError(notMine) };
+    await deliverDeliveryCode(assignmentId);
+    return { ok: false, code: "OTP_SMS_UNAVAILABLE", error: friendlyError({ message: "OTP_SMS_UNAVAILABLE" }) };
+  }
+  const { data, error } = await supabase.rpc("rider_resend_delivery_otp" as never, { p_assignment_id: assignmentId } as never);
+  if (error) return { ok: false, error: friendlyError(error) };
+  const res = data as unknown as { ok: boolean; code?: string; retry_in_seconds?: number };
+  if (!res.ok) return { ok: false, code: res.code ?? "OTP_RESEND_REFUSED", error: friendlyError({ message: res.code ?? "OTP_RESEND_REFUSED" }), retry_in_seconds: res.retry_in_seconds };
+  const out = await deliverDeliveryCode(assignmentId);
+  const { data: state } = await supabase.rpc("rider_delivery_otp_state" as never, { p_assignment_id: assignmentId } as never);
+  return { ok: true, data: { sms_configured: true, outcome: out.status, state: (state as unknown as RiderDeliveryCodeState | null) ?? null } };
 }
 
 export async function pickupAction(assignmentId: string): Promise<ActionResult> {
@@ -136,12 +180,17 @@ export async function pickupAction(assignmentId: string): Promise<ActionResult> 
   return { ok: true, data: undefined };
 }
 
-export type OtpResult = { ok: true; status: "delivered"; reward_points: number; already?: boolean } | { ok: false; reason: string; attempts_left?: number; locked?: boolean; needs_cash?: boolean };
+/** Why a code was not accepted (0059): OTP_INCORRECT | OTP_EXPIRED | OTP_NOT_ISSUED | OTP_LOCKED. Absent before that migration. */
+export type OtpFailCode = "OTP_INCORRECT" | "OTP_EXPIRED" | "OTP_NOT_ISSUED" | "OTP_LOCKED";
+const OTP_FAIL_CODES: readonly OtpFailCode[] = ["OTP_INCORRECT", "OTP_EXPIRED", "OTP_NOT_ISSUED", "OTP_LOCKED"];
+export type OtpResult = { ok: true; status: "delivered"; reward_points: number; already?: boolean } | { ok: false; reason: string; code?: OtpFailCode; attempts_left?: number; locked?: boolean; needs_cash?: boolean };
 
 /**
- * Verifies the customer's 4-digit OTP (and, for Cash on Delivery, the rider's confirmation that the
- * full amount was collected). A wrong OTP is a normal response (`data.ok === false`), not an error.
- * Safe to retry: a repeat after success returns `already: true`.
+ * Verifies the customer's 4-digit delivery code (and, for Cash on Delivery, the rider's confirmation that
+ * the full amount was collected). The database checks it: only the assigned rider, only a picked-up delivery,
+ * only a live code made for this assignment. A wrong, expired or locked code is a normal response
+ * (`data.ok === false` with a `code`), not an error, and leaves the order undelivered.
+ * Safe to retry: a repeat after success returns `already: true`. The code is sent in the request body only.
  */
 export async function verifyOtpAction(assignmentId: string, otp: string, cashCollected = false, upiCollected = false): Promise<ActionResult<OtpResult>> {
   const digits = otp.replace(/\D/g, "");
@@ -149,10 +198,11 @@ export async function verifyOtpAction(assignmentId: string, otp: string, cashCol
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("verify_delivery_otp", { p_assignment_id: assignmentId, p_otp: digits, p_cash_collected: cashCollected, ...(upiCollected ? { p_upi_collected: true } : {}) } as never);
   if (error) return { ok: false, error: friendlyError(error) };
-  const res = data as { ok: boolean; reason?: string; attempts_left?: number; reward_points?: number; locked?: boolean; needs_cash?: boolean; already?: boolean };
+  const res = data as { ok: boolean; reason?: string; code?: string; attempts_left?: number; reward_points?: number; locked?: boolean; needs_cash?: boolean; already?: boolean };
   revalidatePath("/rider", "layout");
   if (res.ok) return { ok: true, data: { ok: true, status: "delivered", reward_points: Number(res.reward_points ?? 0), already: Boolean(res.already) } };
-  return { ok: true, data: { ok: false, reason: res.reason ?? "Incorrect OTP", attempts_left: typeof res.attempts_left === "number" ? res.attempts_left : undefined, locked: Boolean(res.locked), needs_cash: Boolean(res.needs_cash) } };
+  const code = OTP_FAIL_CODES.find((c) => c === res.code);
+  return { ok: true, data: { ok: false, reason: code ? friendlyError({ message: code }) : res.reason ?? "Incorrect OTP", code, attempts_left: typeof res.attempts_left === "number" ? res.attempts_left : undefined, locked: Boolean(res.locked), needs_cash: Boolean(res.needs_cash) } };
 }
 
 export type RiderHomeData = { stats: RiderStats | null; offers: RiderAssignment[]; active: RiderAssignment[] };

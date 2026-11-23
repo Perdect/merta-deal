@@ -2,9 +2,12 @@
 import * as React from "react";
 import dynamic from "next/dynamic";
 import { lineOptionsText } from "@/lib/cake";
-import { Check, Phone, Navigation, Store as StoreIcon, Home, Package, ShieldCheck, Banknote, MessageSquareText, ChevronRight, Map as MapIcon, Clock, Route } from "lucide-react";
-import type { RiderAssignment } from "@/types/app";
-import { pickupAction, verifyOtpAction, reportFailedDeliveryAction, riderArrivedAction, type OtpResult, type FailedDeliveryReason } from "@/lib/actions/rider";
+import { Check, Phone, Navigation, Store as StoreIcon, Home, Package, ShieldCheck, Banknote, MessageSquareText, ChevronRight, Map as MapIcon, Clock, Route, WifiOff } from "lucide-react";
+import type { RiderAssignment, RiderDeliveryCodeState } from "@/types/app";
+import { pickupAction, verifyOtpAction, reportFailedDeliveryAction, riderArrivedAction, resendDeliveryCodeAction, type OtpResult, type OtpFailCode, type FailedDeliveryReason } from "@/lib/actions/rider";
+import { createClient } from "@/lib/supabase/client";
+import { useNetworkOnline } from "./rider-shell";
+import { useNow } from "./use-now";
 import { PickupScan } from "./pickup-scan";
 import { BottomSheet } from "@/components/ui/overlay";
 import { Textarea } from "@/components/ui/input";
@@ -29,6 +32,8 @@ const LiveMap = dynamic(() => import("@/components/shop/live-map").then((m) => m
  *   accepted  + arrived_pickup_at             → Collect the order   (rider_pickup / scan → picked_up)
  *   picked_up + not yet at the customer       → Go to customer
  *   picked_up + arrived_customer_at           → Complete with OTP   (verify_delivery_otp → delivered)
+ * Reaching the customer is also when the delivery code goes to the customer by SMS (0059); this app is told
+ * how that went and never the code.
  * The assignment status is the database's. "Reached" is recorded by rider_mark_arrived and read back from
  * the assignment (0051); until that migration is live the tap is also remembered on this phone.
  */
@@ -314,10 +319,112 @@ function GoToCustomer({ a, onReached }: { a: RiderAssignment; onReached: () => v
   );
 }
 
+/**
+ * What the database recorded about this delivery's code: how the SMS went, the tries left and the resend
+ * allowance. Read straight from `rider_delivery_otp_state` (the rider's own assignment only), every few
+ * seconds while an SMS is on its way and more slowly after. `state` stays null on a database without 0059,
+ * and the step then reads as it did before. The code itself is never part of it.
+ */
+function useDeliveryCodeState(assignmentId: string) {
+  const [got, setGot] = React.useState<{ state: RiderDeliveryCodeState; at: number } | null>(null);
+  const [loaded, setLoaded] = React.useState(false);
+  const [unsupported, setUnsupported] = React.useState(false);
+  const refresh = React.useCallback(async () => {
+    try {
+      const { data, error } = await createClient().rpc("rider_delivery_otp_state" as never, { p_assignment_id: assignmentId } as never);
+      if (error) { if (error.code === "PGRST202" || error.code === "42883") setUnsupported(true); }
+      else if (data) setGot({ state: data as unknown as RiderDeliveryCodeState, at: Date.now() });
+    } catch { /* offline: the last answer stays on screen */ }
+    finally { setLoaded(true); }
+  }, [assignmentId]);
+  const sms = got?.state.sms.status ?? null;
+  // Quick while something is about to change (the arrival being recorded, an SMS on its way), slow otherwise.
+  const settling = !got || sms === "pending" || sms === "queued" || (got.state.applies && !got.state.arrived);
+  React.useEffect(() => {
+    if (unsupported) return;
+    const first = setTimeout(() => void refresh(), 0);
+    const id = setInterval(() => { if (document.visibilityState === "visible" && navigator.onLine) void refresh(); }, settling ? 3000 : 12000);
+    return () => { clearTimeout(first); clearInterval(id); };
+  }, [refresh, settling, unsupported]);
+  const put = React.useCallback((state: RiderDeliveryCodeState) => setGot({ state, at: Date.now() }), []);
+  return { state: got?.state ?? null, at: got?.at ?? 0, loaded, refresh, put };
+}
+
+const RESEND_REFUSALS: Record<string, TKey> = { OTP_RESEND_LIMIT: "otp.resendNone", OTP_SEND_IN_PROGRESS: "otp.smsSending", OTP_SMS_UNAVAILABLE: "otp.smsNone", OTP_LOCKED: "otp.locked", OTP_NOT_ARRIVED: "otp.notArrived" };
+
+/**
+ * How the code reached the customer, as the server recorded it: sent (to the last two digits only), still
+ * sending, not sent, or never sent because SMS is not set up. "Sent" appears only when the SMS panel accepted
+ * the message. The resend button asks the server for a new SMS; its cooldown and cap are the database's.
+ */
+function CodeStatus({ a, code, online, disabled }: { a: RiderAssignment; code: ReturnType<typeof useDeliveryCodeState>; online: boolean; disabled: boolean }) {
+  const { t } = useT();
+  const now = useNow();
+  const [busy, setBusy] = React.useState(false);
+  const [note, setNote] = React.useState<{ tone: "success" | "warning"; text: string } | null>(null);
+  const [smsOff, setSmsOff] = React.useState(false);
+  const s = code.state;
+  if (!s) return code.loaded ? <p className="mt-2 text-xs text-ink-3">{t("otp.fromApp")}</p> : null;
+
+  const sms = s.sms.status;
+  const sending = sms === "pending" || sms === "queued";
+  const noSms = smsOff || sms === "unavailable" || sms === "no_recipient";
+  const wait = Math.max(0, s.resend.retry_in_seconds - Math.floor(((now || code.at) - code.at) / 1000));
+  const line = sms === "sent" ? (s.sms.live ? t("otp.smsSent", { tail: s.sms.phone_tail ?? "••" }) : t("otp.smsExpired"))
+    : sending ? t("otp.smsSending")
+    : sms === "failed" ? t("otp.smsFailed")
+    : sms === null ? t("otp.fromApp")
+    : t("otp.smsNone");
+  const tone = sms === "sent" && s.sms.live ? "success" : sending ? "info" : sms === "failed" || sms === "sent" ? "warning" : "neutral";
+
+  const resend = async () => {
+    if (busy || !online) return;
+    setBusy(true); setNote(null);
+    try {
+      const r = await resendDeliveryCodeAction(a.id);
+      if (r.ok) {
+        if (r.data.state) code.put(r.data.state); else void code.refresh();
+        if (r.data.outcome === "sent") setNote({ tone: "success", text: t("otp.resendSent", { tail: r.data.state?.sms.phone_tail ?? "••" }) });
+        else setNote({ tone: "warning", text: r.data.outcome === "unavailable" ? t("otp.smsNone") : t("otp.smsFailed") });
+      } else {
+        const refusal = "code" in r ? r.code : null;
+        if (refusal === "OTP_SMS_UNAVAILABLE") setSmsOff(true);
+        const secs = "retry_in_seconds" in r && typeof r.retry_in_seconds === "number" ? r.retry_in_seconds : null;
+        setNote({ tone: "warning", text: refusal === "OTP_RESEND_WAIT" && secs != null ? t("otp.resendWait", { s: secs }) : refusal && RESEND_REFUSALS[refusal] ? t(RESEND_REFUSALS[refusal]) : r.error });
+        void code.refresh();
+      }
+    } catch { setNote({ tone: "warning", text: t("common.noConnectionRetry") }); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="mt-3 space-y-2" aria-live="polite">
+      <Alert tone={tone} className="rounded-xl">
+        {line}
+        {s.customer_has_code ? <span className="mt-1 block font-semibold">{t("otp.customerHasCode")}</span> : null}
+      </Alert>
+      {note ? <Alert tone={note.tone} className="rounded-xl">{note.text}</Alert> : null}
+      {!noSms && !s.locked && s.arrived ? (
+        s.resend.left > 0 || sms === null ? (
+          <div>
+            <Button type="button" variant="outline" fullWidth className="min-h-12 rounded-xl" loading={busy} disabled={disabled || busy || !online || sending || wait > 0} onClick={resend}>
+              {busy ? t("otp.resending") : wait > 0 ? t("otp.resendIn", { s: wait }) : sms === null ? t("otp.sendSms") : t("otp.resend")}
+            </Button>
+            {sms !== null ? <p className="mt-1 text-center text-xs text-ink-3">{t("otp.resendsLeft", { n: s.resend.left })}</p> : null}
+          </div>
+        ) : <p className="text-xs text-ink-3">{t("otp.resendNone")}</p>
+      ) : null}
+      {!s.locked ? <p className="text-xs font-semibold text-ink-2">{t("otp.triesLeft", { n: s.attempts_left })}</p> : null}
+    </div>
+  );
+}
+
+const FAIL_TITLE: Record<OtpFailCode, TKey> = { OTP_INCORRECT: "otp.wrong", OTP_EXPIRED: "otp.expired", OTP_NOT_ISSUED: "otp.notIssued", OTP_LOCKED: "otp.lockedTitle" };
+
 function CompleteWithOtp({ a, verifying, setVerifying, onNotYet, onCompleted }: { a: RiderAssignment; verifying: boolean; setVerifying: (v: boolean) => void; onNotYet: () => void; onCompleted: (c: CompletedDelivery) => void }) {
   const { t } = useT();
   const [otp, setOtp] = React.useState("");
-  const [fail, setFail] = React.useState<{ reason: string; attempts_left?: number; locked?: boolean } | null>(null);
+  const [fail, setFail] = React.useState<{ reason: string; code?: OtpFailCode; attempts_left?: number; locked?: boolean } | null>(null);
   const [cash, setCash] = React.useState(false);
   const upi = useUpiDetails();
   const [mode, setMode] = React.useState<"cash" | "upi">("cash");
@@ -325,15 +432,31 @@ function CompleteWithOtp({ a, verifying, setVerifying, onNotYet, onCompleted }: 
   const [error, setError] = React.useState<string | null>(null);
   const cod = a.order.payment_method === "cod" && Number(a.cod_amount) > 0;
   const c = customerOf(a);
+  const online = useNetworkOnline();
+  const code = useDeliveryCodeState(a.id);
+  const locked = Boolean(fail?.locked) || Boolean(code.state?.locked);
+
+  // The "reached" tap could not be recorded (a dropped request): the code is only sent once the server knows,
+  // so it is tried again here, once, when the server has twice answered that it has no arrival for this delivery.
+  const missing = React.useRef(0);
+  const { state: codeState, refresh: refreshCode } = code;
+  React.useEffect(() => {
+    if (!codeState || codeState.arrived || !codeState.applies || !online) return;
+    missing.current += 1;
+    if (missing.current !== 2) return;
+    void riderArrivedAction(a.id, "customer").then(() => refreshCode(), () => undefined);
+  }, [codeState, online, a.id, refreshCode]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (otp.length !== 4 || verifying || (cod && !cash)) return;
+    // Nothing is kept to send later: without a connection the code is simply not checked.
+    if (!navigator.onLine) { setError(t("otp.offline")); return; }
     setVerifying(true); setFail(null); setError(null);
     try {
       const r = await verifyOtpAction(a.id, otp, cod && cash && !byUpi, cod && cash && byUpi);
       if (!r.ok) { setError(`${r.error} ${t("otp.retrySafe")}`); return; }
-      if (!r.data.ok) { setFail({ reason: r.data.reason, attempts_left: r.data.attempts_left, locked: r.data.locked }); setOtp(""); if ("vibrate" in navigator) navigator.vibrate?.([80, 40, 80]); return; }
+      if (!r.data.ok) { setFail({ reason: r.data.reason, code: r.data.code, attempts_left: r.data.attempts_left, locked: r.data.locked }); setOtp(""); void code.refresh(); if ("vibrate" in navigator) navigator.vibrate?.([80, 40, 80]); return; }
       writeReached(a.id, null);
       onCompleted({ assignment: a, result: r.data });
     } catch { setError(t("otp.noConnection")); }
@@ -359,15 +482,20 @@ function CompleteWithOtp({ a, verifying, setVerifying, onNotYet, onCompleted }: 
           </label>
         ) : null}
       </div>
+      <CodeStatus a={a} code={code} online={online} disabled={verifying} />
       <label htmlFor={`otp-${a.id}`} className="mt-4 flex items-center gap-2 text-sm font-semibold text-ink"><ShieldCheck className="h-4 w-4 text-brand-600" aria-hidden /> {t("otp.ask", { name: c.name })}</label>
-      <Input id={`otp-${a.id}`} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" pattern="[0-9]*" autoComplete="one-time-code" maxLength={4} placeholder="••••" aria-label={t("otp.label")}
-        className="mt-2 h-16 rounded-2xl text-center font-display text-3xl font-extrabold tracking-[0.5em]" wrapperClassName="mt-0" disabled={verifying || fail?.locked} autoFocus />
-      {fail ? <Alert tone="danger" className="mt-3" title={fail.reason}>
-        {fail.locked ? <>{t("otp.locked")} <a href={`tel:+${site.supportPhone.replace(/\D/g, "")}`} className="mt-2 inline-flex min-h-11 items-center font-bold underline">{t("otp.callSupport")}</a></>
+      <p className="mt-0.5 text-xs text-ink-3">{t("otp.onlyCustomer")}</p>
+      <Input id={`otp-${a.id}`} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" pattern="[0-9]*" autoComplete="off" maxLength={4} placeholder="••••" aria-label={t("otp.label")}
+        className="mt-2 h-16 rounded-2xl text-center font-display text-3xl font-extrabold tracking-[0.5em]" wrapperClassName="mt-0" disabled={verifying || locked} autoFocus />
+      {fail ? <Alert tone="danger" className="mt-3" title={fail.code ? t(FAIL_TITLE[fail.code]) : fail.reason}>
+        {fail.locked || fail.code === "OTP_LOCKED" ? <>{t("otp.locked")} <a href={`tel:+${site.supportPhone.replace(/\D/g, "")}`} className="mt-2 inline-flex min-h-11 items-center font-bold underline">{t("otp.callSupport")}</a></>
+          : fail.code === "OTP_EXPIRED" ? t("otp.expiredBody")
+          : fail.code === "OTP_NOT_ISSUED" ? t("otp.notIssuedBody")
           : typeof fail.attempts_left === "number" ? t("otp.attemptsLeft", { n: fail.attempts_left }) : null}
-      </Alert> : null}
+      </Alert> : locked ? <Alert tone="danger" className="mt-3" title={t("otp.lockedTitle")}>{t("otp.locked")} <a href={`tel:+${site.supportPhone.replace(/\D/g, "")}`} className="mt-2 inline-flex min-h-11 items-center font-bold underline">{t("otp.callSupport")}</a></Alert> : null}
+      {!online ? <Alert tone="danger" className="mt-3" icon={<WifiOff className="h-4 w-4" />}>{t("otp.offline")}</Alert> : null}
       {error ? <Alert tone="danger" className="mt-3">{error}</Alert> : null}
-      <Button type="submit" size="lg" fullWidth className="mt-3 h-14 rounded-2xl text-base" loading={verifying} disabled={otp.length !== 4 || (cod && !cash) || Boolean(fail?.locked)}>{verifying ? t("otp.verifying") : t("otp.verify")}</Button>
+      <Button type="submit" size="lg" fullWidth className="mt-3 h-14 rounded-2xl text-base" loading={verifying} disabled={otp.length !== 4 || (cod && !cash) || locked || !online}>{verifying ? t("otp.verifying") : t("otp.verify")}</Button>
       <button type="button" onClick={onNotYet} disabled={verifying} className="mt-2 flex min-h-11 w-full items-center justify-center text-sm font-semibold text-ink-3 underline-offset-2 hover:underline disabled:opacity-50">{t("step.notThereYet")}</button>
     </form>
   );

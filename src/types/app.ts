@@ -102,11 +102,31 @@ export type OrderTracking = {
   upi_claim?: { reference: string | null; claimed_at: string | null; checked_at: string | null } | null;
   assignment: { id: string; status: Enums<"assignment_status">; accepted_at: string | null; picked_up_at: string | null; delivered_at: string | null; distance_km: number | null; earning: number | null; cod_amount: number; expires_at: string; rider: TrackingRider; last_location: TrackingLocation | null } | null;
   customer: { name: string; phone: string } | null;
-  /** Only for the customer, only while out for delivery. */ delivery_otp: string | null;
+  /** Always null once migration 0059 is applied (no plain code is stored); before it, the customer's code while out for delivery. The customer's screen reads `customer_delivery_code` instead. */ delivery_otp: string | null;
   /** Too many wrong OTP attempts: the handover must go through support. */ otp_locked?: boolean | null;
   can_review: boolean;
   reviews: { target: Enums<"review_target">; product_id: string | null; rating: number; status: Enums<"review_status"> }[];
   viewer: "admin" | "customer" | "rider";
+};
+
+/** How the delivery code SMS for one request went (0059). `pending` / `queued`: asked for, the SMS panel has not answered yet. */
+export type DeliveryCodeSmsStatus = "pending" | "queued" | "sent" | "failed" | "unavailable" | "no_recipient";
+
+/** `rider_delivery_otp_state`: what the rider app may know about the code for its own assignment. Never the code. */
+export type RiderDeliveryCodeState = {
+  applies: boolean; arrived: boolean; locked: boolean; attempts_left: number; max_attempts: number; expiry_minutes: number;
+  sms: { status: DeliveryCodeSmsStatus | null; at: string | null; /** Last two digits of the number it went to. */ phone_tail: string | null; live: boolean; expires_at: string | null };
+  /** The customer has a code open on their own order screen right now. */
+  customer_has_code: boolean;
+  resend: { left: number; max: number; cooldown_seconds: number; retry_in_seconds: number };
+};
+
+/** `customer_delivery_code`: the customer's own view. `code` is present only in the answer to a reveal. */
+export type CustomerDeliveryCode = {
+  available: boolean; arrived?: boolean; locked?: boolean; expiry_minutes?: number;
+  sms?: { status: DeliveryCodeSmsStatus | null; at: string | null; phone_tail: string | null; live: boolean };
+  app?: { live: boolean; issued_at: string | null; expires_at: string | null };
+  code?: string | null;
 };
 
 export type RiderAssignment = {

@@ -195,7 +195,8 @@ export function TrackingScreen({ t, rider, trail, now, connected, offline, synce
             customer={pin} rider={live ? rider : null} trail={live ? trail : []} riderAssigned={live} stage={stage} now={now} offline={offline} />
         ) : null}
 
-        {o.status === "out_for_delivery" ? <DeliveryOtpStrip otp={t.delivery_otp} locked={t.otp_locked} /> : null}
+        {/* The code is read by the card itself, for this customer's own order (0059); `syncedAt` moves on every refresh. */}
+        {o.status === "out_for_delivery" && (t.viewer === "customer" || t.otp_locked || t.delivery_otp) ? <DeliveryOtpStrip otp={t.delivery_otp} locked={t.otp_locked} orderId={t.viewer === "customer" ? o.id : undefined} refreshKey={syncedAt} /> : null}
 
         {placed && o.status !== "placed" && active ? <Alert tone="success" className="rounded-lg" icon={<CheckCircle2 className="h-4 w-4" />} title={`Order ${o.order_number} confirmed`}>{t.pickup.name} is packing it now{o.promised_at ? `, arriving by ${formatTime(o.promised_at)}` : ""}.{o.payment_method === "cod" ? ` Keep ${formatINR(o.total, { precise: true })} cash ready for the rider.` : ""}</Alert> : null}
         {placed && o.status === "placed" && paid ? <Alert tone="success" className="rounded-lg" icon={<CheckCircle2 className="h-4 w-4" />} title={`Order ${o.order_number} placed`}>We&apos;ve got it and will confirm it as soon as your payment is received.</Alert> : null}

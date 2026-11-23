@@ -30,6 +30,8 @@ const q = async (sql, params) => (await db.query(sql, params)).rows;
 const one = async (sql, params) => (await q(sql, params))[0];
 const ok = (name, cond, detail = "") => { if (cond) { pass++; console.log(`  ok   ${name}`); } else { fail++; console.log(`  FAIL ${name} ${detail}`); } };
 const as = async (uid, role) => { await db.query(`select set_config('request.jwt.claim.sub', $1, false)`, [uid ?? ""]); await db.query(`select set_config('request.jwt.claim.role', $1, false)`, [role ?? (uid ? "authenticated" : "")]); };
+// 0059: no delivery code is stored in plain text. The customer opens one on their own order screen, as the app does; the caller's identity is put back afterwards.
+const doorCode = async (o) => { const me = (await db.query(`select current_setting('request.jwt.claim.sub', true) s`)).rows[0].s; await db.query(`select set_config('request.jwt.claim.sub', (select user_id::text from orders where id = $1), false)`, [o]); try { return (await db.query(`select public.customer_delivery_code($1::uuid, true) ->> 'code' as c`, [o])).rows[0].c; } finally { await db.query(`select set_config('request.jwt.claim.sub', $1, false)`, [me ?? ""]); } };
 const err = async (sql, params) => { try { await db.query(sql, params); return null; } catch (e) { return e.message; } };
 const fnv = async (sql, params) => (await one(`select ${sql} as r`, params)).r;
 const near = (a, b, eps = 0.01) => Math.abs(Number(a) - Number(b)) <= eps;
@@ -160,7 +162,7 @@ const a2 = await one(`select earning, quoted_breakdown, rate_card_id from delive
 ok("the quote is frozen on the assignment at accept, with the card", near(acc.earning, quote.amount) && near(a2.earning, quote.amount) && a2.rate_card_id === card.id && a2.quoted_breakdown.lines.length >= 1);
 await as(ADMIN); await q(`select public.admin_save_rate_card('Later card', $1::jsonb, null, true)`, [JSON.stringify({ base: 99, per_km: 0 })]);
 await as(RIDER1); await q(`select public.rider_pickup($1::uuid)`, [offer.id]);
-const otp = (await one(`select delivery_otp from order_secrets where order_id = $1`, [o2])).delivery_otp;
+const otp = await doorCode(o2);
 await q(`select public.verify_delivery_otp($1::uuid, $2, true)`, [offer.id, otp]);
 const e2 = await q(`select kind, amount, status, rate_card_id from rider_earnings where assignment_id = $1`, [offer.id]);
 ok("the earning uses the frozen quote, not the card changed mid-delivery", e2.length === 1 && near(e2[0].amount, quote.amount) && e2[0].rate_card_id === card.id && e2[0].status === "pending");
