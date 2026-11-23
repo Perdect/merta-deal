@@ -109,6 +109,27 @@ const cachedSearch = unstable_cache(async (p: SearchParams): Promise<SearchResul
 /** Listing results are public and identical for every visitor, so they come from the data cache. */
 export const searchProducts = (p: SearchParams) => cachedSearch(p);
 
+const ALL_PAGE = 60;      // the most search_products gives in one call
+const ALL_MAX_PAGES = 10; // 600 products: far beyond one line of this shop
+/**
+ * A whole listing in one go, for the screens that show every product without a "Load more" step
+ * (Categories, a category page, search; the owner asked for this on 24 Nov 2026). Read page by page from
+ * the same cached search, and returned as a single first page with nothing more to load. A listing longer
+ * than the cap is cut there and logged, with `total` still the real count.
+ */
+export async function searchAllProducts(p: Omit<SearchParams, "page" | "pageSize">): Promise<SearchResult> {
+  const first = await cachedSearch({ ...p, page: 1, pageSize: ALL_PAGE });
+  if (first.error) return first;
+  let items = first.items;
+  for (let page = 2; items.length < first.total && page <= ALL_MAX_PAGES; page++) {
+    const next = await cachedSearch({ ...p, page, pageSize: ALL_PAGE });
+    if (next.error || !next.items.length) break;
+    items = [...items, ...next.items];
+  }
+  if (items.length < first.total) console.error("searchAllProducts: listing cut at", items.length, "of", first.total);
+  return { ...first, items, page: 1, page_size: items.length, has_more: false };
+}
+
 /** Public and identical for every visitor (the RPC's `in_wishlist` is not used), so it comes from the data cache. */
 const cachedProductDetail = unstable_cache(async (slug: string): Promise<ProductDetail | null> => {
   const { data, error } = await createPublicClient().rpc("product_detail", { p_slug: slug });

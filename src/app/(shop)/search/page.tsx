@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { X } from "lucide-react";
-import { getBrands, getCategories, getCategoryTabs, searchProducts } from "@/lib/data/catalog";
+import { getBrands, getCategories, getCategoryTabs, searchAllProducts } from "@/lib/data/catalog";
 import { parseListingParams } from "@/lib/listing-params";
 import { ProductListing } from "@/components/shop/product-listing";
 import { SearchBar } from "@/components/shop/search-bar";
@@ -18,7 +18,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 export default async function SearchPage({ searchParams }: Props) {
   const sp = await searchParams;
   const params = parseListingParams(sp);
-  const [result, brands, categories, lines] = await Promise.all([searchProducts(params), getBrands(), getCategories(), getCategoryTabs()]);
+  const [result, brands, categories, lines] = await Promise.all([searchAllProducts(params), getBrands(), getCategories(), getCategoryTabs()]);
   const q = params.q ?? "";
   // Search started from a category page stays inside that category (one slug or a grouped list).
   const scopeSlugs = params.category?.split(",").map((x) => x.trim()).filter(Boolean) ?? [];

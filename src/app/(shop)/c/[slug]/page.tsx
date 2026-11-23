@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getBrands, getCategoryBySlug, getCategoryTabs, getPublicSettings, searchProducts, type CategoryTab } from "@/lib/data/catalog";
+import { getBrands, getCategoryBySlug, getCategoryTabs, getPublicSettings, searchAllProducts, type CategoryTab } from "@/lib/data/catalog";
 import { paymentPhrase } from "@/lib/seo-copy";
 import { parseListingParams } from "@/lib/listing-params";
 import { ProductListing } from "@/components/shop/product-listing";
@@ -52,7 +52,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const listingParams = parseListingParams(sp, { category: scopeCategory });
   // A brand-new category with nothing listed yet and no filters applied reads as "coming soon", not "no products found".
   const fresh = !LISTING_FILTER_KEYS.some((k) => sp[k] != null && sp[k] !== "");
-  const [result, brands, lines] = await Promise.all([searchProducts(listingParams), getBrands(), getCategoryTabs()]);
+  const [result, brands, lines] = await Promise.all([searchAllProducts(listingParams), getBrands(), getCategoryTabs()]);
   const seo = CATEGORY_SEO[slug];
   const crumbs = [{ name: "Home", url: `${site.url}/` }, ...(parent ? [{ name: parent.name, url: `${site.url}/c/${parent.slug}` }] : []), { name: category.name, url: `${site.url}/c/${slug}` }];
   const jsonLd = {
