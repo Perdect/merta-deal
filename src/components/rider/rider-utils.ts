@@ -87,6 +87,7 @@ export function mmss(msLeft: number) {
 }
 
 type Snapshot = { full_name?: string; phone?: string; house?: string; street?: string; area?: string; landmark?: string | null; city?: string; pincode?: string; lat?: number | null; lng?: number | null };
+const clean = (v: unknown) => (typeof v === "string" ? v.trim() : "");
 
 /** One-line address from the order's address snapshot. */
 export function addressLine(address: RiderAssignment["order"]["address"] | null | undefined) {
@@ -94,8 +95,42 @@ export function addressLine(address: RiderAssignment["order"]["address"] | null 
   return [a.house, a.street, a.area, a.landmark ? `near ${a.landmark}` : null, a.pincode].filter(Boolean).join(", ");
 }
 
+/**
+ * The same address as separate lines for a screen read outdoors: house and street, the area, the landmark
+ * (worded by the caller, so it reads in the rider's language), then city and pincode. Empty parts are left out.
+ */
+export function addressLines(address: RiderAssignment["order"]["address"] | null | undefined, near: (landmark: string) => string): string[] {
+  const a = (address ?? {}) as Snapshot;
+  return [
+    [clean(a.house), clean(a.street)].filter(Boolean).join(", "),
+    clean(a.area),
+    clean(a.landmark) ? near(clean(a.landmark)) : "",
+    [clean(a.city), clean(a.pincode)].filter(Boolean).join(" "),
+  ].filter(Boolean);
+}
+
 export function customerOf(a: RiderAssignment) {
   const s = (a.order.address ?? {}) as Snapshot;
   const lat = a.drop_lat ?? s.lat ?? null; const lng = a.drop_lng ?? s.lng ?? null;
   return { name: s.full_name ?? "Customer", phone: s.phone ?? null, area: s.area ?? "", point: lat != null && lng != null ? { lat, lng } : null };
+}
+
+/**
+ * What an open request may show of where it goes. `rider_assignments()` gives an offered row only the area,
+ * city and pincode of the address and the drop point rounded to about 100 m; the house, the name and the
+ * phone arrive once the rider has accepted. A street or landmark is shown if the server ever sends one, and
+ * the name, phone and house are never read here.
+ */
+export function requestDestination(a: RiderAssignment) {
+  const s = (a.order.address ?? {}) as Snapshot;
+  return {
+    area: clean(s.area), street: clean(s.street), landmark: clean(s.landmark),
+    place: [clean(s.city), clean(s.pincode)].filter(Boolean).join(" "),
+    point: a.drop_lat != null && a.drop_lng != null ? { lat: Number(a.drop_lat), lng: Number(a.drop_lng) } : null,
+  };
+}
+
+/** Google Maps opened at a point (no directions, no API key): used for a request's approximate drop area. */
+export function mapPointUrl(lat: number, lng: number) {
+  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
 }

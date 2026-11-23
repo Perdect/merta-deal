@@ -3,6 +3,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Satellite, SatelliteDish, ShieldAlert, Clock, Wifi, WifiOff, MapPinOff, Home, Bike, Wallet, User, RefreshCw } from "lucide-react";
+import type { ComponentProps } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { refreshRiderStatsAction, setRiderLanguageAction } from "@/lib/actions/rider";
 import { useNotifications } from "@/hooks/use-notifications";
@@ -18,7 +19,8 @@ import { useRiderStore, GPS_STALE_MS, type RealtimeState } from "./rider-store";
 import { useRiderGps, useWakeLock } from "./use-rider-gps";
 import { useNow } from "./use-now";
 import { realtimeTopic } from "@/lib/realtime-topic";
-import { OfferAlert } from "./offer-alert";
+import { RequestsProvider, useRequests } from "./offer-alert";
+import { RiderFrame } from "./rider-frame";
 import { OnlineSwitch } from "./online-toggle";
 import { AlertBanner, type PushConfig } from "@/components/alerts/alert-setup";
 import { useRiderLang, useT, RIDER_LANGS, type RiderLang } from "@/lib/rider-i18n";
@@ -48,13 +50,14 @@ export function riderNotificationHref(n: Notification): string {
 type ShellUser = { id: string; name: string | null };
 
 /**
- * Phone-app frame for the rider PWA: "Hello <name>" with the online switch and the honest
- * connection + GPS line on top; the page; an icon-only tab bar at the bottom. Owns the cross-page
- * plumbing: one Realtime channel on this rider's assignments and own row (reconciled on reconnect,
- * tab resume and network return), GPS streaming while online or on a delivery, notification toasts,
- * and the language.
+ * The rider app's frame (see `RiderFrame` for the phone-width column on wide screens): a compact green top
+ * bar with "Hello <name>", the online switch and the honest connection + GPS line; the screen; a tab bar with
+ * an icon and a word under it. Owns the cross-page plumbing: one Realtime channel on this rider's assignments
+ * and own row (reconciled on reconnect, tab resume and network return), GPS streaming while online or on a
+ * delivery, the open delivery requests (`RequestsProvider`), notification toasts, and the language.
  */
-export function RiderShell({ user, rider, initialActive, push, initialLang, children }: { user: ShellUser; rider: DeliveryPartner; initialActive: boolean; push: PushConfig; initialLang: RiderLang; children: React.ReactNode }) {
+type RequestsDemo = Pick<ComponentProps<typeof RequestsProvider>, "source" | "answer" | "home">;
+export function RiderShell({ user, rider, initialActive, push, initialLang, children, demo }: { user: ShellUser; rider: DeliveryPartner; initialActive: boolean; push: PushConfig; initialLang: RiderLang; children: React.ReactNode; /** Development preview only: fixture requests instead of the server's. */ demo?: RequestsDemo }) {
   const hydrate = useRiderStore((s) => s.hydrate);
   const setRider = useRiderStore((s) => s.setRider);
   const setStats = useRiderStore((s) => s.setStats);
@@ -121,50 +124,39 @@ export function RiderShell({ user, rider, initialActive, push, initialLang, chil
   useRiderGps(gpsOn);
   useWakeLock(activeDelivery);
 
+  const pathname = usePathname();
   return (
-    <div lang={lang === "hi" ? "hi" : "en-IN"} className={cn("flex min-h-dvh flex-col bg-surface", lang === "hi" && "font-hindi")}>
-      <RiderTopBar name={user.name} rider={current} isOnline={isOnline} gpsOn={gpsOn} />
-      <main className="mx-auto w-full max-w-lg flex-1 px-4 pt-4" style={{ paddingBottom: "calc(var(--bottom-nav-h) + var(--safe-bottom) + 28px)" }}>
-        <OfflineBanner />
-        <UpdatedBanner />
-        <RiderStatusBanner status={current.status} />
-        {current.status === "active" ? <AlertBanner portal="rider" push={push} href="/rider/profile#alerts" copy={alertCopy} /> : null}
-        {children}
-      </main>
-      <RiderBottomNav />
-      {current.status === "active" ? <OfferAlert push={push} /> : null}
+    <RiderFrame lang={lang === "hi" ? "hi" : "en-IN"} className={cn("flex min-h-dvh flex-col bg-surface", lang === "hi" && "font-hindi")} style={{ "--bottom-nav-h": "66px" } as React.CSSProperties}>
+      <RequestsProvider push={push} enabled={current.status === "active"} {...demo}>
+        <RiderTopBar name={user.name} rider={current} gpsOn={gpsOn} />
+        <main className="w-full flex-1 px-4 pt-4" style={{ paddingBottom: "calc(var(--bottom-nav-h) + var(--safe-bottom) + 28px)" }}>
+          <OfflineBanner />
+          <UpdatedBanner />
+          <RiderStatusBanner status={current.status} />
+          {current.status === "active" ? <AlertBanner portal="rider" push={push} href="/rider/profile#alerts" copy={alertCopy} /> : null}
+          {/* A new screen comes in with a short fade, like an app screen; nothing moves for a rider who has asked for less motion. */}
+          <div key={pathname} className="motion-safe:animate-fade-in">{children}</div>
+        </main>
+        <RiderBottomNav />
+      </RequestsProvider>
       <PwaClient appName="MD Rider" />
       <UpdatePrompt />
-    </div>
+    </RiderFrame>
   );
 }
 
-/** Solid green app header: the date, "Hello Kayyum", the online switch, and the state line in a pill. */
-function RiderTopBar({ name, rider, isOnline, gpsOn }: { name: string | null; rider: DeliveryPartner; isOnline: boolean; gpsOn: boolean }) {
+/** Compact green app bar: "Hello Kayyum" and the online switch on one row, the connection and GPS state under it. */
+function RiderTopBar({ name, rider, gpsOn }: { name: string | null; rider: DeliveryPartner; gpsOn: boolean }) {
   const { t } = useT();
-  const lang = useRiderLang((s) => s.lang);
-  const now = useNow();
   const first = (name ?? "").trim().split(/\s+/)[0] || t("rider.partner");
-  const date = now ? new Intl.DateTimeFormat(lang === "hi" ? "hi-IN" : "en-IN", { weekday: "long", day: "numeric", month: "short", timeZone: "Asia/Kolkata" }).format(now) : "";
-  const statusLabel = rider.status !== "active" ? (rider.status === "pending" ? t("status.pending") : t("status.suspended")) : isOnline ? t("status.online") : t("status.offline");
   return (
-    <header className="sticky top-0 z-30 rounded-b-[24px] bg-brand-700 text-white shadow-[0_6px_20px_rgb(21_128_61/0.25)]" style={{ paddingTop: "var(--safe-top)" }}>
-      <div className="mx-auto w-full max-w-lg px-5 pb-4 pt-3">
-        <div className="flex items-end justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[12px] font-semibold text-white/70">{date}</p>
-            <h1 className="truncate font-display text-[26px] font-extrabold leading-tight">{t("home.hello", { name: first })}</h1>
-          </div>
-          {rider.status === "active" ? <OnlineSwitch tone="light" className="mb-1" /> : null}
+    <header className="sticky top-0 z-30 bg-brand-700 text-white shadow-[0_4px_16px_rgb(21_128_61/0.22)]" style={{ paddingTop: "var(--safe-top)" }}>
+      <div className="px-4 pb-2.5 pt-2.5">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="min-w-0 truncate font-display text-[22px] font-extrabold leading-tight">{t("home.hello", { name: first })}</h1>
+          {rider.status === "active" ? <OnlineSwitch /> : <span className="shrink-0 rounded-full bg-white/15 px-3 py-1.5 text-[14px] font-bold">{rider.status === "pending" ? t("status.pending") : t("status.suspended")}</span>}
         </div>
-        <div className="mt-3 inline-flex max-w-full items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-bold">
-          <span className="inline-flex shrink-0 items-center gap-1.5">
-            <span className={cn("h-2 w-2 rounded-full", rider.status !== "active" ? "bg-white/50" : isOnline ? "bg-[#86efac] animate-pulse-soft" : "bg-white/50")} />
-            {statusLabel}
-          </span>
-          <span className="text-white/40" aria-hidden>·</span>
-          <StateLine gpsOn={gpsOn} dark />
-        </div>
+        <div className="mt-1.5"><StateLine gpsOn={gpsOn} dark /></div>
       </div>
     </header>
   );
@@ -176,10 +168,10 @@ export function LangToggle({ className }: { className?: string }) {
   const setLang = useRiderLang((s) => s.setLang);
   const pick = (l: RiderLang) => { if (l === lang) return; setLang(l, true); void setRiderLanguageAction(l); };
   return (
-    <div role="group" aria-label="Language / भाषा" className={cn("flex h-9 shrink-0 items-center rounded-full bg-surface-2 p-0.5", className)}>
+    <div role="group" aria-label="Language / भाषा" className={cn("flex h-[52px] shrink-0 items-center rounded-full bg-surface-2 p-1", className)}>
       {RIDER_LANGS.map((l) => (
         <button key={l.value} type="button" onClick={() => pick(l.value)} aria-pressed={lang === l.value} lang={l.value}
-          className={cn("flex h-8 min-w-9 items-center justify-center rounded-full px-2 text-[12px] font-bold transition-colors", lang === l.value ? "bg-card text-ink shadow-sm" : "text-ink-3")}>{l.short}</button>
+          className={cn("flex h-11 min-w-12 items-center justify-center rounded-full px-3 text-[15px] font-bold transition-colors duration-200 motion-reduce:transition-none", lang === l.value ? "bg-card text-ink shadow-sm" : "text-ink-3")}>{l.short}</button>
       ))}
     </div>
   );
@@ -193,8 +185,8 @@ function StateLine({ gpsOn, dark }: { gpsOn: boolean; dark?: boolean }) {
   const tones = dark ? DARK_TONES : LIGHT_TONES;
   const conn = !network ? { label: t("conn.noInternet"), tone: tones.danger, Icon: WifiOff } : realtime === "live" ? { label: t("conn.live"), tone: tones.ok, Icon: Wifi } : realtime === "connecting" ? { label: t("conn.connecting"), tone: tones.muted, Icon: WifiOff } : { label: t("conn.reconnecting"), tone: tones.warn, Icon: WifiOff };
   return (
-    <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px] font-semibold leading-tight" role="status">
-      <span className={cn("inline-flex shrink-0 items-center gap-1", conn.tone)}><conn.Icon className="h-3 w-3" aria-hidden />{conn.label}</span>
+    <p className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px] font-semibold leading-tight" role="status">
+      <span className={cn("inline-flex shrink-0 items-center gap-1", conn.tone)}><conn.Icon className="h-3.5 w-3.5" aria-hidden />{conn.label}</span>
       {gpsOn ? <GpsIndicator dark={dark} /> : null}
     </p>
   );
@@ -204,8 +196,8 @@ function StateLine({ gpsOn, dark }: { gpsOn: boolean; dark?: boolean }) {
 const LIGHT_TONES = { ok: "text-success", warn: "text-[#8a6300]", danger: "text-danger", muted: "text-ink-3" };
 const DARK_TONES = { ok: "text-white", warn: "text-amber-200", danger: "text-red-200", muted: "text-white/70" };
 
-/** "GPS 3 s ago · ±12 m": only real fixes and their real age; an old fix reads stale, never live. */
-export function GpsIndicator({ className, dark }: { className?: string; dark?: boolean }) {
+/** "Location on · 3 s ago": only real fixes and their real age; an old fix reads old, never on. `detail` adds the accuracy (Profile). */
+export function GpsIndicator({ className, dark, detail }: { className?: string; dark?: boolean; detail?: boolean }) {
   const { t } = useT();
   const gps = useRiderStore((s) => s.gps);
   const now = useNow();
@@ -215,13 +207,13 @@ export function GpsIndicator({ className, dark }: { className?: string; dark?: b
   const tones = dark ? DARK_TONES : LIGHT_TONES;
   const tone = blocked ? tones.danger : stale || gps.sendError || (gps.status === "error" && !gps.fix) ? tones.warn : gps.status === "watching" && gps.fix ? tones.ok : tones.muted;
   const label = blocked ? (gps.status === "denied" ? t("gps.blocked") : t("gps.none"))
-    : !gps.fix ? (gps.status === "error" ? t("gps.noSignal") : t("gps.finding"))
-    : stale ? t("gps.stale", { ago: agoLabel(fixAge!, t) })
-    : `${t("gps.live", { ago: agoLabel(fixAge!, t) })}${gps.fix.accuracy != null ? ` · ±${Math.round(gps.fix.accuracy)} m` : ""}${gps.sendError ? ` · ${t("gps.notSyncing")}` : ""}`;
+    : !gps.fix || fixAge == null ? (gps.status === "error" ? t("gps.noSignal") : t("gps.finding"))
+    : stale ? t("gps.stale", { ago: agoLabel(fixAge, t) })
+    : `${t("gps.live", { ago: agoLabel(fixAge, t) })}${detail && gps.fix.accuracy != null ? ` · ±${Math.round(gps.fix.accuracy)} m` : ""}${gps.sendError ? ` · ${t("gps.notSyncing")}` : ""}`;
   const Icon = blocked ? MapPinOff : gps.status === "watching" && !stale ? SatelliteDish : Satellite;
   return (
     <span className={cn("inline-flex min-w-0 items-center gap-1", tone, className)}>
-      <Icon className="h-3 w-3 shrink-0" aria-hidden />
+      <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
       <span className="truncate">{label}</span>
     </span>
   );
@@ -237,16 +229,17 @@ function agoLabel(ms: number, t: ReturnType<typeof useT>["t"]) {
 function RiderStatusBanner({ status }: { status: DeliveryPartner["status"] }) {
   const { t } = useT();
   if (status === "active") return null;
+  const link = "mt-2 flex min-h-12 items-center justify-center rounded-xl bg-card px-3 text-[16px] font-bold text-ink ring-1 ring-line-2";
   if (status === "pending") {
     return (
-      <Alert tone="warning" icon={<Clock className="h-4 w-4" />} title={t("banner.pendingTitle")} className="mb-3">
-        {t("banner.pendingBody")} <Link href="/rider/profile" className="font-semibold underline">{t("nav.profile")}</Link>
+      <Alert tone="warning" icon={<Clock className="h-4 w-4" />} title={t("banner.pendingTitle")} className="mb-3 rounded-2xl text-[15px]">
+        {t("banner.pendingBody")} <Link href="/rider/profile" className={link}>{t("nav.profile")}</Link>
       </Alert>
     );
   }
   return (
-    <Alert tone="danger" icon={<ShieldAlert className="h-4 w-4" />} title={t("banner.suspendedTitle")} className="mb-3">
-      {t("banner.suspendedBody")} <Link href="/account/support" className="font-semibold underline">{t("profile.support")}</Link>
+    <Alert tone="danger" icon={<ShieldAlert className="h-4 w-4" />} title={t("banner.suspendedTitle")} className="mb-3 rounded-2xl text-[15px]">
+      {t("banner.suspendedBody")} <Link href="/account/support" className={link}>{t("profile.support")}</Link>
     </Alert>
   );
 }
@@ -265,7 +258,7 @@ function OfflineBanner() {
   const { t } = useT();
   const online = useNetworkOnline();
   if (online) return null;
-  return <Alert tone="danger" icon={<WifiOff className="h-4 w-4" />} title={t("offline.title")} className="mb-3">{t("offline.body")}</Alert>;
+  return <Alert tone="danger" icon={<WifiOff className="h-4 w-4" />} title={t("offline.title")} className="mb-3 rounded-2xl text-[15px]">{t("offline.body")}</Alert>;
 }
 
 /**
@@ -285,9 +278,9 @@ function UpdatedBanner() {
   }, []);
   if (!updated) return null;
   return (
-    <Alert tone="info" icon={<RefreshCw className="h-4 w-4" />} title={t("update.title")} className="mb-3">
+    <Alert tone="info" icon={<RefreshCw className="h-4 w-4" />} title={t("update.title")} className="mb-3 rounded-2xl text-[15px]">
       <p>{t("update.body")}</p>
-      <div className="mt-2"><Button size="sm" className="h-10 rounded-xl" onClick={() => window.location.reload()}><RefreshCw className="h-4 w-4" aria-hidden /> {t("update.button")}</Button></div>
+      <div className="mt-2"><Button className="h-12 rounded-xl text-[16px]" onClick={() => window.location.reload()}><RefreshCw className="h-4 w-4" aria-hidden /> {t("update.button")}</Button></div>
     </Alert>
   );
 }
@@ -299,26 +292,26 @@ const NAV = [
   { href: "/rider/profile", key: "nav.profile", Icon: User },
 ] as const;
 
-/** Icon-only tab bar above the home indicator; the active tab is filled green. Hidden while the keyboard is up. */
+/** Tab bar: an icon with its word under it, the tab you are on in green. Hidden while the keyboard is up. */
 function RiderBottomNav() {
   const { t } = useT();
   const pathname = usePathname();
-  const newRequests = useRiderStore((s) => s.offers.live);
+  const { open: newRequests } = useRequests();
   const active = useRiderStore((s) => s.activeDelivery);
   const keyboard = useKeyboardOpen();
   if (keyboard) return null;
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 bg-card shadow-[0_-4px_20px_rgb(21_128_61/0.08)]" style={{ paddingBottom: "var(--safe-bottom)" }} aria-label={t("nav.label")}>
-      <ul className="mx-auto grid max-w-lg grid-cols-4" style={{ height: "var(--bottom-nav-h)" }}>
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-card shadow-[0_-4px_20px_rgb(21_128_61/0.08)]" style={{ paddingBottom: "var(--safe-bottom)" }} aria-label={t("nav.label")}>
+      <ul className="grid grid-cols-4" style={{ height: "var(--bottom-nav-h)" }}>
         {NAV.map((item) => {
           const isActive = item.href === "/rider" ? pathname === "/rider" : pathname.startsWith(item.href);
           const badge = item.href === "/rider" ? (active ? "•" : newRequests > 0 ? String(newRequests) : null) : null;
           return (
             <li key={item.href}>
-              <Link href={item.href} aria-current={isActive ? "page" : undefined} aria-label={t(item.key)} className="relative flex h-full flex-col items-center justify-center">
-                <span className={cn("flex h-11 w-11 items-center justify-center rounded-2xl transition-colors", isActive ? "bg-brand-50 text-brand-700" : "text-ink-3")}><item.Icon className="h-6 w-6" strokeWidth={isActive ? 2.4 : 2} /></span>
-                <span className={cn("mt-0.5 h-1 w-1 rounded-full", isActive ? "bg-brand-700" : "bg-transparent")} aria-hidden />
-                {badge ? <span className={cn("absolute right-[26%] top-2 flex h-4.5 min-w-4.5 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white animate-pop", active ? "bg-brand-600" : "bg-saffron-500 text-ink")} aria-hidden>{badge}</span> : null}
+              <Link href={item.href} aria-current={isActive ? "page" : undefined} className="relative flex h-full select-none flex-col items-center justify-center gap-0.5 active:bg-surface-2">
+                <span className={cn("flex h-8 w-14 items-center justify-center rounded-full transition-colors duration-200 motion-reduce:transition-none", isActive ? "bg-brand-50 text-brand-700" : "text-ink-3")}><item.Icon className="h-6 w-6" strokeWidth={isActive ? 2.4 : 2} aria-hidden /></span>
+                <span className={cn("text-[12px] leading-none", isActive ? "font-bold text-brand-800" : "font-semibold text-ink-3")}>{t(item.key)}</span>
+                {badge ? <span className={cn("absolute left-1/2 top-1.5 ml-3 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-bold motion-safe:animate-pop", active ? "bg-brand-600 text-white" : "bg-saffron-500 text-ink")} aria-hidden>{badge}</span> : null}
                 {badge ? <span className="sr-only">{active ? t("nav.deliveryInProgress") : t("nav.newRequests", { n: newRequests })}</span> : null}
               </Link>
             </li>

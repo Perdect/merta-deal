@@ -2,7 +2,7 @@
 import * as React from "react";
 import dynamic from "next/dynamic";
 import { lineOptionsText } from "@/lib/cake";
-import { Check, Phone, Navigation, Store as StoreIcon, Home, Package, ShieldCheck, Banknote, MessageSquareText, ChevronRight, Map as MapIcon, Clock, Route, WifiOff } from "lucide-react";
+import { Check, Phone, Navigation, Store as StoreIcon, Home, ShieldCheck, Banknote, MessageSquareText, ChevronRight, Map as MapIcon, Clock, WifiOff, IndianRupee } from "lucide-react";
 import type { RiderAssignment, RiderDeliveryCodeState } from "@/types/app";
 import { pickupAction, verifyOtpAction, reportFailedDeliveryAction, riderArrivedAction, resendDeliveryCodeAction, type OtpResult, type OtpFailCode, type FailedDeliveryReason } from "@/lib/actions/rider";
 import { createClient } from "@/lib/supabase/client";
@@ -12,13 +12,12 @@ import { PickupScan } from "./pickup-scan";
 import { BottomSheet } from "@/components/ui/overlay";
 import { Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/states";
 import { toast } from "@/components/ui/toast";
 import { cn, formatINR, formatTime } from "@/lib/utils";
 import { site } from "@/config/site";
 import { useRiderStore, fixToTrackingLocation } from "./rider-store";
-import { addressLine, customerOf, formatKm, navigateUrl } from "./rider-utils";
+import { addressLines, customerOf, navigateUrl } from "./rider-utils";
 import { UpiQr } from "@/components/shared/upi-qr";
 import { useUpiDetails } from "@/hooks/use-upi-details";
 import { useT, type TKey } from "@/lib/rider-i18n";
@@ -38,11 +37,11 @@ const LiveMap = dynamic(() => import("@/components/shop/live-map").then((m) => m
  * the assignment (0051); until that migration is live the tap is also remembered on this phone.
  */
 type Step = "to_pickup" | "collect" | "to_customer" | "otp";
-const STEPS: { key: Step; label: TKey; short: TKey; Icon: typeof StoreIcon }[] = [
-  { key: "to_pickup", label: "step.toPickup", short: "step.toPickupShort", Icon: StoreIcon },
-  { key: "collect", label: "step.collect", short: "step.collectShort", Icon: Package },
-  { key: "to_customer", label: "step.toCustomer", short: "step.toCustomerShort", Icon: Home },
-  { key: "otp", label: "step.otp", short: "step.otpShort", Icon: ShieldCheck },
+const STEPS: { key: Step; label: TKey }[] = [
+  { key: "to_pickup", label: "step.toPickup" },
+  { key: "collect", label: "step.collect" },
+  { key: "to_customer", label: "step.toCustomer" },
+  { key: "otp", label: "step.otp" },
 ];
 type Reached = "pickup" | "customer";
 const reachedKey = (id: string) => `md_rider_reached:${id}`;
@@ -54,6 +53,12 @@ function useRememberedReached(id: string): Reached | null {
 }
 
 export type CompletedDelivery = { assignment: RiderAssignment; result: Extract<OtpResult, { ok: true }> };
+type CodeFail = { reason: string; code?: OtpFailCode; attempts_left?: number; locked?: boolean };
+/**
+ * Development preview only (`/dev-preview/rider`): a fixed answer for the delivery-code state and for the last
+ * check, so the code step can be drawn in each of its states without a real delivery. With it nothing is sent.
+ */
+export type ActiveDeliveryDemo = { code?: RiderDeliveryCodeState | null; fail?: CodeFail | null };
 
 export function currentStep(a: RiderAssignment, remembered: Reached | null, local: { key: string; reached: Reached } | null): Step {
   if (a.status === "picked_up") {
@@ -64,7 +69,12 @@ export function currentStep(a: RiderAssignment, remembered: Reached | null, loca
   return reached ? "collect" : "to_pickup";
 }
 
-export function ActiveDelivery({ assignment: a, onChanged, onCompleted }: { assignment: RiderAssignment; onChanged: () => void; onCompleted: (c: CompletedDelivery) => void }) {
+/**
+ * The one delivery the rider is on: which step it is ("Step 2 of 4") in plain words, what to do, and one
+ * large button for the next step. Navigate and Call are the two secondary buttons; "Can't complete this
+ * delivery?" stays at the bottom, quiet.
+ */
+export function ActiveDelivery({ assignment: a, onChanged, onCompleted, demo }: { assignment: RiderAssignment; onChanged: () => void; onCompleted: (c: CompletedDelivery) => void; demo?: ActiveDeliveryDemo }) {
   const { t } = useT();
   const leg = a.status === "picked_up" ? "customer" : "store";
   const remembered = useRememberedReached(a.id);
@@ -76,83 +86,47 @@ export function ActiveDelivery({ assignment: a, onChanged, onCompleted }: { assi
 
   const reached = async (where: Reached) => {
     writeReached(a.id, where); setUndone(null); setLocal({ key: `${a.id}:${leg}`, reached: where });
+    if (demo) return;
     const r = await riderArrivedAction(a.id, where);
     if (!r.ok) toast.warning(t("step.arrivedNotSent"), t("step.arrivedNotSentBody"));
   };
   const notYet = () => { writeReached(a.id, null); setLocal(null); setUndone(`${a.id}:${leg}`); };
 
   return (
-    <section className="overflow-hidden rounded-[20px] bg-card shadow-card" aria-label={t("active.label")}>
-      <header className="bg-surface-2 px-4 pt-3.5 pb-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-ink-3">{t("active.label")} · {a.order.order_number}</p>
-            <h2 className="mt-0.5 font-display text-[20px] font-extrabold leading-tight text-ink">{t(STEPS[idx].label)}</h2>
-          </div>
-          {Number(a.earning) > 0 ? <span className="shrink-0 font-display text-[15px] font-extrabold tabular text-brand-700">{formatINR(a.earning)}</span> : null}
+    <section className="overflow-hidden rounded-[24px] bg-card shadow-card ring-1 ring-line" aria-label={t("active.label")}>
+      <header className="px-4 pt-4">
+        <div className="flex items-center justify-between gap-3">
+          <span className="shrink-0 rounded-full bg-brand-50 px-3 py-1.5 text-[14px] font-bold leading-none text-brand-800">{t("active.stepOf", { n: idx + 1, total: STEPS.length })}</span>
+          <span className="min-w-0 truncate text-[14px] font-semibold text-ink-3">{t("req.order", { number: a.order.order_number })}</span>
         </div>
-        <RouteLine a={a} leg={leg} />
+        <h2 className="mt-2.5 font-display text-[26px] font-extrabold leading-tight text-ink">{t(STEPS[idx].label)}</h2>
         <Journey current={idx} />
-        <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-ink-2">
-          <span>{t("active.stepOf", { n: idx + 1, total: STEPS.length })}</span>
-          {a.order.promised_at ? <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" aria-hidden />{t("active.promisedBy", { time: formatTime(a.order.promised_at) })}</span> : null}
-          {a.distance_km != null && Number(a.distance_km) > 0 ? <span className="inline-flex items-center gap-1"><Route className="h-3 w-3" aria-hidden />{formatKm(a.distance_km)}</span> : null}
-          <span className="ml-auto font-semibold text-saffron-700">{t("active.ongoing")}</span>
-        </p>
+        {a.order.promised_at || Number(a.earning) > 0 ? (
+          <p className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[14px] text-ink-2">
+            {a.order.promised_at ? <span className="inline-flex items-center gap-1.5"><Clock className="h-4 w-4 text-ink-3" aria-hidden />{t("active.promisedBy", { time: formatTime(a.order.promised_at) })}</span> : null}
+            {Number(a.earning) > 0 ? <span className="inline-flex items-center gap-1 font-semibold text-brand-800"><IndianRupee className="h-4 w-4" aria-hidden />{t("req.youEarn", { amount: formatINR(a.earning) })}</span> : null}
+          </p>
+        ) : null}
       </header>
-      <div className="px-4 pb-4 pt-3">
+      <div className="px-4 pb-4 pt-4">
         {step === "to_pickup" ? <GoToPickup a={a} onReached={() => reached("pickup")} /> : null}
-        {step === "collect" ? <Collect a={a} onNotYet={notYet} onChanged={onChanged} /> : null}
+        {step === "collect" ? <Collect a={a} onNotYet={notYet} onChanged={onChanged} demo={Boolean(demo)} /> : null}
         {step === "to_customer" ? <GoToCustomer a={a} onReached={() => reached("customer")} /> : null}
-        {step === "otp" ? <CompleteWithOtp a={a} verifying={verifying} setVerifying={setVerifying} onNotYet={notYet} onCompleted={onCompleted} /> : null}
+        {step === "otp" ? <CompleteWithOtp a={a} verifying={verifying} setVerifying={setVerifying} onNotYet={notYet} onCompleted={onCompleted} demo={demo} /> : null}
         {!verifying ? <CantDeliver a={a} onReported={onChanged} /> : null}
       </div>
     </section>
   );
 }
 
-/** Four icon pills in a row; done ones ticked, the current one solid. */
+/** Four bars: the steps done and the one in hand are green. The words are in the heading above. */
 function Journey({ current }: { current: number }) {
   const { t } = useT();
   return (
     <ol className="mt-3 grid grid-cols-4 gap-1.5" aria-label={t("active.stepOf", { n: current + 1, total: STEPS.length })}>
-      {STEPS.map((s, i) => {
-        const done = i < current; const active = i === current;
-        return (
-          <li key={s.key} className="min-w-0 text-center">
-            <span className={cn("mx-auto flex h-8 w-8 items-center justify-center rounded-full", done ? "bg-brand-600 text-white" : active ? "bg-brand-600 text-white ring-4 ring-brand-200" : "bg-card text-ink-4 ring-1 ring-line")} aria-hidden>
-              {done ? <Check className="h-4 w-4" strokeWidth={3} /> : <s.Icon className="h-4 w-4" />}
-            </span>
-            <span className={cn("mt-1 block truncate text-[11px] font-semibold leading-tight", active ? "text-brand-800" : done ? "text-ink-2" : "text-ink-4")}>{t(s.short)}</span>
-            <span className="sr-only">{t(s.label)}{done ? ` (${t("common.done")})` : active ? ` (${t("common.current")})` : ""}</span>
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
-
-/** Pick up → Deliver at, joined by a dotted line; the leg the rider is on is in green. */
-function RouteLine({ a, leg }: { a: RiderAssignment; leg: "store" | "customer" }) {
-  const { t } = useT();
-  const pickup = [a.pickup.name, a.pickup.address_line1 ?? a.pickup.area].filter(Boolean).join(", ");
-  const drop = addressLine(a.order.address) || customerOf(a).area;
-  const rows = [
-    { key: "pickup", label: t("active.pickUp"), text: pickup, on: leg === "store", done: leg === "customer" },
-    { key: "drop", label: t("active.deliverAt"), text: drop, on: leg === "customer", done: false },
-  ];
-  return (
-    <ol className="mt-3 space-y-0">
-      {rows.map((r, i) => (
-        <li key={r.key} className="relative flex gap-3 pb-3 last:pb-0">
-          <span className="flex w-4 shrink-0 flex-col items-center" aria-hidden>
-            <span className={cn("mt-1 h-2.5 w-2.5 rounded-full ring-2", r.on ? "bg-brand-600 ring-brand-200" : r.done ? "bg-brand-600 ring-transparent" : "bg-card ring-brand-600")} />
-            {i < rows.length - 1 ? <span className="mt-1 w-0 flex-1 border-l-2 border-dotted border-brand-300" /> : null}
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[10px] font-bold uppercase tracking-wide text-ink-3">{r.label}</span>
-            <span className={cn("block truncate text-[13px] font-semibold", r.on ? "text-ink" : "text-ink-2")}>{r.text || "—"}</span>
-          </span>
+      {STEPS.map((s, i) => (
+        <li key={s.key} className={cn("h-2 rounded-full", i < current ? "bg-brand-600" : i === current ? "bg-brand-600 ring-2 ring-brand-200" : "bg-line-2")}>
+          <span className="sr-only">{t(s.label)}{i < current ? ` (${t("common.done")})` : i === current ? ` (${t("common.current")})` : ""}</span>
         </li>
       ))}
     </ol>
@@ -188,29 +162,29 @@ function CantDeliver({ a, onReported }: { a: RiderAssignment; onReported: () => 
   };
   return (
     <>
-      <button type="button" onClick={() => { setOpen(true); setError(null); }} className="mt-3 flex min-h-11 w-full items-center justify-center rounded-md text-sm font-semibold text-ink-3 underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-brand-600">
+      <button type="button" onClick={() => { setOpen(true); setError(null); }} className="mt-4 flex min-h-12 w-full items-center justify-center rounded-xl text-[15px] font-semibold text-ink-3 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-brand-600">
         {t("fail.link")}
       </button>
       <BottomSheet open={open} onClose={() => (busy ? undefined : setOpen(false))} title={t("fail.title")} description={t("fail.description", { order: a.order.order_number })}
-        footer={<Button fullWidth size="lg" variant="danger" loading={busy} disabled={!valid} onClick={submit}>{busy ? t("fail.reporting") : t("fail.submit")}</Button>}>
+        footer={<Button fullWidth size="lg" variant="danger" className="h-14 rounded-2xl text-[17px]" loading={busy} disabled={!valid} onClick={submit}>{busy ? t("fail.reporting") : t("fail.submit")}</Button>}>
         <fieldset className="space-y-2">
           <legend className="sr-only">{t("fail.whatWentWrong")}</legend>
           {FAIL_REASONS.map((r) => (
-            <label key={r.value} className={cn("flex min-h-12 cursor-pointer items-start gap-3 rounded-xl border px-3 py-2.5", reason === r.value ? "border-brand-600 bg-brand-50" : "border-line-2")}>
-              <input type="radio" name="fail-reason" value={r.value} checked={reason === r.value} onChange={() => setReason(r.value)} className="mt-1 h-4 w-4 accent-brand-600" />
-              <span><span className="block text-sm font-semibold text-ink">{t(r.label)}</span><span className="block text-xs text-ink-3">{t(r.hint)}</span></span>
+            <label key={r.value} className={cn("flex min-h-14 cursor-pointer items-center gap-3 rounded-2xl border-2 px-3.5 py-2.5", reason === r.value ? "border-brand-600 bg-brand-50" : "border-line-2")}>
+              <input type="radio" name="fail-reason" value={r.value} checked={reason === r.value} onChange={() => setReason(r.value)} className="h-5 w-5 shrink-0 accent-brand-600" />
+              <span><span className="block text-[16px] font-semibold text-ink">{t(r.label)}</span><span className="block text-[13px] text-ink-3">{t(r.hint)}</span></span>
             </label>
           ))}
         </fieldset>
         <div className="mt-3"><Textarea label={noteNeeded ? t("fail.whatHappened") : t("fail.noteOptional")} required={noteNeeded} value={note} onChange={(e) => setNote(e.target.value)} className="min-h-16" maxLength={300} placeholder={t("fail.notePlaceholder")} /></div>
-        {a.order.payment_method === "cod" ? <p className="mt-2 text-xs text-ink-3">{t("fail.codNote")}</p> : null}
+        {a.order.payment_method === "cod" ? <p className="mt-2 text-[14px] text-ink-2">{t("fail.codNote")}</p> : null}
         {error ? <Alert tone="danger" className="mt-3">{error}</Alert> : null}
       </BottomSheet>
     </>
   );
 }
 
-/** The map stays folded until asked for, so the destination and the two actions lead. */
+/** The map stays folded until asked for, so the address and the two actions lead. */
 function FoldedMap({ a, leg }: { a: RiderAssignment; leg: "store" | "customer" }) {
   const { t } = useT();
   const [open, setOpen] = React.useState(false);
@@ -218,61 +192,81 @@ function FoldedMap({ a, leg }: { a: RiderAssignment; leg: "store" | "customer" }
   const customer = customerOf(a);
   return (
     <div className="mt-2">
-      <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-surface text-sm font-semibold text-ink-2 active:scale-[0.99]">
-        <MapIcon className="h-4 w-4" aria-hidden />{open ? t("map.hide") : t("map.show")}
+      <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl text-[15px] font-semibold text-ink-2 active:bg-surface-2">
+        <MapIcon className="h-5 w-5" aria-hidden />{open ? t("map.hide") : t("map.show")}
       </button>
       {open ? <LiveMap store={{ lat: a.pickup_lat ?? a.pickup.lat, lng: a.pickup_lng ?? a.pickup.lng, name: a.pickup.name }} customer={leg === "customer" ? customer.point : null} rider={fixToTrackingLocation(fix)} trail={[]} showRoute={leg === "customer"} className="mt-2" /> : null}
     </div>
   );
 }
 
-const anchorBtn = "inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-3 text-[15px] font-semibold select-none active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600";
+const secondaryBtn = "inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-card px-3 text-[16px] font-bold text-ink ring-1 ring-line-2 select-none active:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600";
+const secondaryOff = "inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-surface-2 px-3 text-[15px] font-semibold text-ink-4";
 
-/** Call + Navigate: plain anchors (tel: / Google Maps directions deep link, no API key needed). */
-function ActionRow({ phone, dest, phoneLabel }: { phone: string | null; dest: { lat: number; lng: number } | null; phoneLabel: string }) {
+/** Navigate + Call, side by side: plain anchors (Google Maps directions deep link and tel:, no API key needed). */
+function ActionRow({ phone, dest, phoneTitle }: { phone: string | null; dest: { lat: number; lng: number } | null; /** Who the call goes to, for a screen reader; the button itself says "Call". */ phoneTitle: string }) {
   const { t } = useT();
   return (
-    <div className="mt-3 grid grid-cols-2 gap-2">
-      {phone ? <a href={`tel:${phone}`} className={cn(anchorBtn, "bg-surface text-ink ring-1 ring-line")}><Phone className="h-5 w-5" aria-hidden /> {phoneLabel}</a> : <Button variant="outline" size="lg" disabled className="rounded-xl"><Phone className="h-5 w-5" /> {t("action.noNumber")}</Button>}
-      {dest ? <a href={navigateUrl(dest.lat, dest.lng)} target="_blank" rel="noreferrer" className={cn(anchorBtn, "bg-info text-white")}><Navigation className="h-5 w-5" aria-hidden /> {t("action.navigate")}</a> : <Button size="lg" disabled className="rounded-xl"><Navigation className="h-5 w-5" /> {t("action.noLocation")}</Button>}
+    <div className="mt-4 grid grid-cols-2 gap-2.5">
+      {dest ? <a href={navigateUrl(dest.lat, dest.lng)} target="_blank" rel="noreferrer" className={secondaryBtn}><Navigation className="h-5 w-5 text-info" aria-hidden /> {t("action.navigate")}</a> : <span className={secondaryOff}><Navigation className="h-5 w-5" aria-hidden /> {t("action.noLocation")}</span>}
+      {phone ? <a href={`tel:${phone}`} aria-label={phoneTitle} className={secondaryBtn}><Phone className="h-5 w-5 text-brand-700" aria-hidden /> {t("action.call")}</a> : <span className={secondaryOff}><Phone className="h-5 w-5" aria-hidden /> {t("action.noNumber")}</span>}
     </div>
   );
 }
 
-function Place({ icon, tone, title, line, children }: { icon: React.ReactNode; tone: "brand" | "info"; title: string; line: string; children?: React.ReactNode }) {
+/** A place written large: who or what it is, then each part of the address on its own line. */
+function Place({ icon, tone, label, title, lines, children }: { icon: React.ReactNode; tone: "brand" | "info"; label: string; title: string; lines: string[]; children?: React.ReactNode }) {
   return (
     <div className="flex items-start gap-3">
-      <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-full", tone === "brand" ? "bg-brand-50 text-brand-700" : "bg-info-50 text-info")}>{icon}</span>
+      <span className={cn("mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full", tone === "brand" ? "bg-brand-50 text-brand-700" : "bg-info-50 text-info")} aria-hidden>{icon}</span>
       <div className="min-w-0 flex-1">
-        <p className="font-display text-[16px] font-extrabold text-ink">{title}</p>
-        <p className="text-sm text-ink-2">{line}</p>
+        <p className="text-[13px] font-semibold text-ink-3">{label}</p>
+        <p className="break-words font-display text-[20px] font-extrabold leading-snug text-ink">{title}</p>
+        <address className="mt-0.5 not-italic">
+          {lines.map((line, i) => <span key={i} className="block break-words text-[17px] font-semibold leading-snug text-ink-2">{line}</span>)}
+        </address>
         {children}
       </div>
     </div>
   );
 }
 
+/** Cash to collect in amber, or "already paid" in green: the same line on every step that needs it. */
+function CashLine({ a, later }: { a: RiderAssignment; /** At the shop: the money is taken from the customer, not here. */ later?: boolean }) {
+  const { t } = useT();
+  const cod = a.order.payment_method === "cod" && Number(a.cod_amount) > 0;
+  return (
+    <p className={cn("mt-4 flex items-center gap-2.5 rounded-2xl px-3.5 py-3 text-[17px] font-bold", cod ? "bg-saffron-50 text-saffron-700" : "bg-success-50 text-success")}>
+      <Banknote className="h-6 w-6 shrink-0" aria-hidden />
+      <span>{cod ? t(later ? "collect.cashLater" : "req.collectCash", { amount: formatINR(a.cod_amount) }) : t("req.prepaid")}</span>
+    </p>
+  );
+}
+
+const nextBtn = "mt-4 h-16 rounded-2xl text-[19px]";
+const backLink = "mt-2 flex min-h-12 w-full items-center justify-center rounded-xl text-[15px] font-semibold text-ink-3 underline underline-offset-4 disabled:opacity-50";
+
 function GoToPickup({ a, onReached }: { a: RiderAssignment; onReached: () => void }) {
   const { t } = useT();
+  const lines = [[a.pickup.address_line1, a.pickup.area].filter(Boolean).join(", ")].filter(Boolean);
   return (
     <div>
-      <Place icon={<StoreIcon className="h-5 w-5" aria-hidden />} tone="brand" title={a.pickup.name} line={[a.pickup.address_line1, a.pickup.area].filter(Boolean).join(", ") || t("pickup.point")}>
-        <p className="mt-0.5 text-xs text-ink-3">{a.order.item_count === 1 ? t("pickup.oneItemToCollect") : t("pickup.itemsToCollect", { n: a.order.item_count })}</p>
+      <Place icon={<StoreIcon className="h-6 w-6" />} tone="brand" label={t("addr.shop")} title={a.pickup.name} lines={lines}>
+        <p className="mt-1 text-[15px] text-ink-3">{a.order.item_count === 1 ? t("pickup.oneItemToCollect") : t("pickup.itemsToCollect", { n: a.order.item_count })}</p>
       </Place>
-      <ActionRow phone={a.pickup.phone} dest={{ lat: a.pickup_lat ?? a.pickup.lat, lng: a.pickup_lng ?? a.pickup.lng }} phoneLabel={t("action.callShop")} />
+      <ActionRow phone={a.pickup.phone} dest={{ lat: a.pickup_lat ?? a.pickup.lat, lng: a.pickup_lng ?? a.pickup.lng }} phoneTitle={t("action.callShop")} />
       <FoldedMap a={a} leg="store" />
-      <Button size="lg" fullWidth className="mt-3 h-14 rounded-2xl text-base" onClick={onReached}>{t("pickup.reached")} <ChevronRight className="h-5 w-5" /></Button>
+      <Button size="lg" fullWidth className={nextBtn} onClick={onReached}>{t("pickup.reached")} <ChevronRight className="h-6 w-6" aria-hidden /></Button>
     </div>
   );
 }
 
-function Collect({ a, onNotYet, onChanged }: { a: RiderAssignment; onNotYet: () => void; onChanged: () => void }) {
+function Collect({ a, onNotYet, onChanged, demo }: { a: RiderAssignment; onNotYet: () => void; onChanged: () => void; demo: boolean }) {
   const { t } = useT();
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const cod = a.order.payment_method === "cod" && Number(a.cod_amount) > 0;
   const confirm = async () => {
-    if (busy) return;
+    if (busy || demo) return;
     setBusy(true); setError(null);
     try {
       const r = await pickupAction(a.id);
@@ -284,22 +278,20 @@ function Collect({ a, onNotYet, onChanged }: { a: RiderAssignment; onNotYet: () 
   };
   return (
     <div>
-      <div className="flex items-center gap-2 text-sm text-ink-2"><Package className="h-4 w-4 text-ink-3" aria-hidden /> {t("collect.heading", { n: a.order.item_count })} <span className="font-semibold text-ink">{a.order.order_number}</span></div>
-      <ul className="mt-2 divide-y divide-line overflow-hidden rounded-xl bg-surface">
+      <p className="text-[15px] font-semibold text-ink-2">{a.order.item_count === 1 ? t("pickup.oneItemToCollect") : t("pickup.itemsToCollect", { n: a.order.item_count })}</p>
+      <ul className="mt-2 divide-y divide-line overflow-hidden rounded-2xl bg-surface-2">
         {a.items.map((it, i) => (
-          <li key={`${it.name}-${i}`} className="flex items-center gap-3 px-3 py-2.5 text-sm">
-            <span className="flex h-7 min-w-7 items-center justify-center rounded-md bg-card px-1.5 text-xs font-bold tabular text-ink shadow-sm">× {it.quantity}</span>
-            <span className="min-w-0 flex-1"><span className="line-clamp-2 font-medium text-ink">{it.name}</span>{it.pack_label ? <span className="text-xs text-ink-3">{it.pack_label}</span> : null}{lineOptionsText(it) ? <span className="block text-xs font-semibold text-saffron-700">{lineOptionsText(it)}</span> : null}</span>
+          <li key={`${it.name}-${i}`} className="flex items-center gap-3 px-3.5 py-3">
+            <span className="flex h-9 min-w-11 items-center justify-center rounded-xl bg-card px-2 text-[16px] font-extrabold tabular text-ink shadow-sm">× {it.quantity}</span>
+            <span className="min-w-0 flex-1"><span className="block break-words text-[16px] font-semibold leading-snug text-ink">{it.name}</span>{it.pack_label ? <span className="block text-[14px] text-ink-3">{it.pack_label}</span> : null}{lineOptionsText(it) ? <span className="block text-[14px] font-semibold text-saffron-700">{lineOptionsText(it)}</span> : null}</span>
           </li>
         ))}
       </ul>
-      <Alert tone={cod ? "warning" : "success"} icon={<Banknote className="h-4 w-4" />} className="mt-3">
-        {cod ? t("collect.codNote", { amount: formatINR(a.cod_amount) }) : t("collect.prepaidNote")}
-      </Alert>
-      {error ? <Alert tone="danger" className="mt-3">{error}</Alert> : null}
+      <CashLine a={a} later />
+      {error ? <Alert tone="danger" className="mt-3 rounded-2xl text-[15px]">{error}</Alert> : null}
+      <Button size="lg" fullWidth className={nextBtn} loading={busy} onClick={confirm}>{busy ? t("collect.confirming") : <><Check className="h-6 w-6" aria-hidden /> {t("collect.pickedUpAll")}</>}</Button>
       <PickupScan a={a} onChanged={onChanged} />
-      <Button size="lg" fullWidth className="mt-3 h-14 rounded-2xl text-base" loading={busy} onClick={confirm}><Check className="h-5 w-5" /> {busy ? t("collect.confirming") : t("collect.pickedUpAll")}</Button>
-      <button type="button" onClick={onNotYet} className="mt-2 flex min-h-11 w-full items-center justify-center text-sm font-semibold text-ink-3 underline-offset-2 hover:underline">{t("step.notThereYet")}</button>
+      <button type="button" onClick={onNotYet} className={backLink}>{t("step.notAtShop")}</button>
     </div>
   );
 }
@@ -307,14 +299,16 @@ function Collect({ a, onNotYet, onChanged }: { a: RiderAssignment; onNotYet: () 
 function GoToCustomer({ a, onReached }: { a: RiderAssignment; onReached: () => void }) {
   const { t } = useT();
   const c = customerOf(a);
+  const lines = addressLines(a.order.address, (landmark) => t("addr.near", { landmark }));
   return (
     <div>
-      <Place icon={<Home className="h-5 w-5" aria-hidden />} tone="info" title={c.name} line={addressLine(a.order.address) || t("customer.noAddress")}>
-        {a.order.delivery_instructions ? <p className="mt-1.5 flex items-start gap-1.5 rounded-lg bg-saffron-50 px-2 py-1.5 text-xs text-ink-2"><MessageSquareText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-saffron-700" aria-hidden />{a.order.delivery_instructions}</p> : null}
+      <Place icon={<Home className="h-6 w-6" />} tone="info" label={t("req.deliverTo")} title={c.name} lines={lines.length ? lines : [t("customer.noAddress")]}>
+        {a.order.delivery_instructions ? <p className="mt-2 flex items-start gap-2 rounded-xl bg-surface-2 px-3 py-2.5 text-[15px] text-ink"><MessageSquareText className="mt-0.5 h-4.5 w-4.5 shrink-0 text-ink-3" aria-hidden /><span className="min-w-0 break-words"><span className="block text-[13px] font-semibold text-ink-3">{t("addr.note")}</span>{a.order.delivery_instructions}</span></p> : null}
       </Place>
-      <ActionRow phone={c.phone} dest={c.point} phoneLabel={t("action.callCustomer")} />
+      <CashLine a={a} />
+      <ActionRow phone={c.phone} dest={c.point} phoneTitle={t("action.callCustomer")} />
       <FoldedMap a={a} leg="customer" />
-      <Button size="lg" fullWidth className="mt-3 h-14 rounded-2xl text-base" onClick={onReached}>{t("customer.reached")} <ChevronRight className="h-5 w-5" /></Button>
+      <Button size="lg" fullWidth className={nextBtn} onClick={onReached}>{t("customer.reached")} <ChevronRight className="h-6 w-6" aria-hidden /></Button>
     </div>
   );
 }
@@ -325,29 +319,31 @@ function GoToCustomer({ a, onReached }: { a: RiderAssignment; onReached: () => v
  * seconds while an SMS is on its way and more slowly after. `state` stays null on a database without 0059,
  * and the step then reads as it did before. The code itself is never part of it.
  */
-function useDeliveryCodeState(assignmentId: string) {
-  const [got, setGot] = React.useState<{ state: RiderDeliveryCodeState; at: number } | null>(null);
-  const [loaded, setLoaded] = React.useState(false);
+function useDeliveryCodeState(assignmentId: string, fixed?: RiderDeliveryCodeState | null) {
+  const demo = fixed !== undefined;
+  const [got, setGot] = React.useState<{ state: RiderDeliveryCodeState; at: number } | null>(() => (fixed ? { state: fixed, at: Date.now() } : null));
+  const [loaded, setLoaded] = React.useState(demo);
   const [unsupported, setUnsupported] = React.useState(false);
   const refresh = React.useCallback(async () => {
+    if (demo) return;
     try {
       const { data, error } = await createClient().rpc("rider_delivery_otp_state" as never, { p_assignment_id: assignmentId } as never);
       if (error) { if (error.code === "PGRST202" || error.code === "42883") setUnsupported(true); }
       else if (data) setGot({ state: data as unknown as RiderDeliveryCodeState, at: Date.now() });
     } catch { /* offline: the last answer stays on screen */ }
     finally { setLoaded(true); }
-  }, [assignmentId]);
+  }, [assignmentId, demo]);
   const sms = got?.state.sms.status ?? null;
   // Quick while something is about to change (the arrival being recorded, an SMS on its way), slow otherwise.
   const settling = !got || sms === "pending" || sms === "queued" || (got.state.applies && !got.state.arrived);
   React.useEffect(() => {
-    if (unsupported) return;
+    if (unsupported || demo) return;
     const first = setTimeout(() => void refresh(), 0);
     const id = setInterval(() => { if (document.visibilityState === "visible" && navigator.onLine) void refresh(); }, settling ? 3000 : 12000);
     return () => { clearTimeout(first); clearInterval(id); };
-  }, [refresh, settling, unsupported]);
+  }, [refresh, settling, unsupported, demo]);
   const put = React.useCallback((state: RiderDeliveryCodeState) => setGot({ state, at: Date.now() }), []);
-  return { state: got?.state ?? null, at: got?.at ?? 0, loaded, refresh, put };
+  return { state: got?.state ?? null, at: got?.at ?? 0, loaded, refresh, put, demo };
 }
 
 const RESEND_REFUSALS: Record<string, TKey> = { OTP_RESEND_LIMIT: "otp.resendNone", OTP_SEND_IN_PROGRESS: "otp.smsSending", OTP_SMS_UNAVAILABLE: "otp.smsNone", OTP_LOCKED: "otp.locked", OTP_NOT_ARRIVED: "otp.notArrived" };
@@ -355,30 +351,29 @@ const RESEND_REFUSALS: Record<string, TKey> = { OTP_RESEND_LIMIT: "otp.resendNon
 /**
  * How the code reached the customer, as the server recorded it: sent (to the last two digits only), still
  * sending, not sent, or never sent because SMS is not set up. "Sent" appears only when the SMS panel accepted
- * the message. The resend button asks the server for a new SMS; its cooldown and cap are the database's.
+ * the message. Asking for a new SMS goes to the server; its cooldown and cap are the database's.
  */
-function CodeStatus({ a, code, online, disabled }: { a: RiderAssignment; code: ReturnType<typeof useDeliveryCodeState>; online: boolean; disabled: boolean }) {
+function useCodeSend(a: RiderAssignment, code: ReturnType<typeof useDeliveryCodeState>, online: boolean) {
   const { t } = useT();
   const now = useNow();
   const [busy, setBusy] = React.useState(false);
   const [note, setNote] = React.useState<{ tone: "success" | "warning"; text: string } | null>(null);
   const [smsOff, setSmsOff] = React.useState(false);
   const s = code.state;
-  if (!s) return code.loaded ? <p className="mt-2 text-xs text-ink-3">{t("otp.fromApp")}</p> : null;
-
-  const sms = s.sms.status;
+  const sms = s?.sms.status ?? null;
   const sending = sms === "pending" || sms === "queued";
   const noSms = smsOff || sms === "unavailable" || sms === "no_recipient";
-  const wait = Math.max(0, s.resend.retry_in_seconds - Math.floor(((now || code.at) - code.at) / 1000));
-  const line = sms === "sent" ? (s.sms.live ? t("otp.smsSent", { tail: s.sms.phone_tail ?? "••" }) : t("otp.smsExpired"))
+  const wait = s ? Math.max(0, s.resend.retry_in_seconds - Math.floor(((now || code.at) - code.at) / 1000)) : 0;
+  const line = !s ? (code.loaded ? t("otp.fromApp") : null)
+    : sms === "sent" ? (s.sms.live ? t("otp.smsSent", { tail: s.sms.phone_tail ?? "••" }) : t("otp.smsExpired"))
     : sending ? t("otp.smsSending")
     : sms === "failed" ? t("otp.smsFailed")
     : sms === null ? t("otp.fromApp")
     : t("otp.smsNone");
-  const tone = sms === "sent" && s.sms.live ? "success" : sending ? "info" : sms === "failed" || sms === "sent" ? "warning" : "neutral";
+  const tone: "success" | "info" | "warning" | "neutral" = !s ? "neutral" : sms === "sent" && s.sms.live ? "success" : sending ? "info" : sms === "failed" || sms === "sent" ? "warning" : "neutral";
 
   const resend = async () => {
-    if (busy || !online) return;
+    if (busy || !online || code.demo) return;
     setBusy(true); setNote(null);
     try {
       const r = await resendDeliveryCodeAction(a.id);
@@ -396,35 +391,40 @@ function CodeStatus({ a, code, online, disabled }: { a: RiderAssignment; code: R
     } catch { setNote({ tone: "warning", text: t("common.noConnectionRetry") }); }
     finally { setBusy(false); }
   };
+  /** Whether a new SMS can be asked for at all, and if so whether any are left. */
+  const canAsk = Boolean(s) && !noSms && !s!.locked && s!.arrived;
+  return { state: s, sms, line, tone, note, busy, sending, wait, canAsk, resend };
+}
 
+const FAIL_TITLE: Record<OtpFailCode, TKey> = { OTP_INCORRECT: "otp.wrong", OTP_EXPIRED: "otp.expired", OTP_NOT_ISSUED: "otp.notIssued", OTP_LOCKED: "otp.lockedTitle" };
+const CODE_LENGTH = 4;
+
+/**
+ * Four large boxes for the code. One real number field lies over them (invisible, 16 px so iOS does not zoom),
+ * so the phone's number pad, paste and the backspace key all behave as in any field; the boxes only draw it.
+ */
+function CodeBoxes({ id, value, onChange, disabled, invalid, label, autoFocus }: { id: string; value: string; onChange: (v: string) => void; disabled: boolean; invalid: boolean; label: string; autoFocus?: boolean }) {
+  const [focused, setFocused] = React.useState(false);
+  const at = Math.min(value.length, CODE_LENGTH - 1);
   return (
-    <div className="mt-3 space-y-2" aria-live="polite">
-      <Alert tone={tone} className="rounded-xl">
-        {line}
-        {s.customer_has_code ? <span className="mt-1 block font-semibold">{t("otp.customerHasCode")}</span> : null}
-      </Alert>
-      {note ? <Alert tone={note.tone} className="rounded-xl">{note.text}</Alert> : null}
-      {!noSms && !s.locked && s.arrived ? (
-        s.resend.left > 0 || sms === null ? (
-          <div>
-            <Button type="button" variant="outline" fullWidth className="min-h-12 rounded-xl" loading={busy} disabled={disabled || busy || !online || sending || wait > 0} onClick={resend}>
-              {busy ? t("otp.resending") : wait > 0 ? t("otp.resendIn", { s: wait }) : sms === null ? t("otp.sendSms") : t("otp.resend")}
-            </Button>
-            {sms !== null ? <p className="mt-1 text-center text-xs text-ink-3">{t("otp.resendsLeft", { n: s.resend.left })}</p> : null}
-          </div>
-        ) : <p className="text-xs text-ink-3">{t("otp.resendNone")}</p>
-      ) : null}
-      {!s.locked ? <p className="text-xs font-semibold text-ink-2">{t("otp.triesLeft", { n: s.attempts_left })}</p> : null}
+    <div className="relative mt-3">
+      <div className="grid grid-cols-4 gap-2.5" aria-hidden>
+        {Array.from({ length: CODE_LENGTH }, (_, i) => (
+          <span key={i} className={cn("flex h-[72px] items-center justify-center rounded-2xl border-2 bg-card font-display text-[36px] font-extrabold tabular text-ink transition-colors duration-150 motion-reduce:transition-none",
+            invalid ? "border-danger bg-danger-50" : focused && i === at ? "border-brand-600 ring-4 ring-brand-100" : value[i] ? "border-brand-600" : "border-line-2", disabled && "opacity-50")}>{value[i] ?? ""}</span>
+        ))}
+      </div>
+      <input id={id} value={value} onChange={(e) => onChange(e.target.value.replace(/\D/g, "").slice(0, CODE_LENGTH))} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
+        type="text" inputMode="numeric" pattern="[0-9]*" autoComplete="off" maxLength={CODE_LENGTH} aria-label={label} aria-invalid={invalid} disabled={disabled} autoFocus={autoFocus}
+        className="absolute inset-0 h-full w-full cursor-pointer rounded-2xl bg-transparent text-[16px] text-transparent caret-transparent opacity-0 disabled:cursor-not-allowed" />
     </div>
   );
 }
 
-const FAIL_TITLE: Record<OtpFailCode, TKey> = { OTP_INCORRECT: "otp.wrong", OTP_EXPIRED: "otp.expired", OTP_NOT_ISSUED: "otp.notIssued", OTP_LOCKED: "otp.lockedTitle" };
-
-function CompleteWithOtp({ a, verifying, setVerifying, onNotYet, onCompleted }: { a: RiderAssignment; verifying: boolean; setVerifying: (v: boolean) => void; onNotYet: () => void; onCompleted: (c: CompletedDelivery) => void }) {
+function CompleteWithOtp({ a, verifying, setVerifying, onNotYet, onCompleted, demo }: { a: RiderAssignment; verifying: boolean; setVerifying: (v: boolean) => void; onNotYet: () => void; onCompleted: (c: CompletedDelivery) => void; demo?: ActiveDeliveryDemo }) {
   const { t } = useT();
   const [otp, setOtp] = React.useState("");
-  const [fail, setFail] = React.useState<{ reason: string; code?: OtpFailCode; attempts_left?: number; locked?: boolean } | null>(null);
+  const [fail, setFail] = React.useState<CodeFail | null>(demo?.fail ?? null);
   const [cash, setCash] = React.useState(false);
   const upi = useUpiDetails();
   const [mode, setMode] = React.useState<"cash" | "upi">("cash");
@@ -433,7 +433,7 @@ function CompleteWithOtp({ a, verifying, setVerifying, onNotYet, onCompleted }: 
   const cod = a.order.payment_method === "cod" && Number(a.cod_amount) > 0;
   const c = customerOf(a);
   const online = useNetworkOnline();
-  const code = useDeliveryCodeState(a.id);
+  const code = useDeliveryCodeState(a.id, demo ? demo.code ?? null : undefined);
   const locked = Boolean(fail?.locked) || Boolean(code.state?.locked);
 
   // The "reached" tap could not be recorded (a dropped request): the code is only sent once the server knows,
@@ -441,15 +441,15 @@ function CompleteWithOtp({ a, verifying, setVerifying, onNotYet, onCompleted }: 
   const missing = React.useRef(0);
   const { state: codeState, refresh: refreshCode } = code;
   React.useEffect(() => {
-    if (!codeState || codeState.arrived || !codeState.applies || !online) return;
+    if (demo || !codeState || codeState.arrived || !codeState.applies || !online) return;
     missing.current += 1;
     if (missing.current !== 2) return;
     void riderArrivedAction(a.id, "customer").then(() => refreshCode(), () => undefined);
-  }, [codeState, online, a.id, refreshCode]);
+  }, [codeState, online, a.id, refreshCode, demo]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (otp.length !== 4 || verifying || (cod && !cash)) return;
+    if (otp.length !== CODE_LENGTH || verifying || (cod && !cash) || demo) return;
     // Nothing is kept to send later: without a connection the code is simply not checked.
     if (!navigator.onLine) { setError(t("otp.offline")); return; }
     setVerifying(true); setFail(null); setError(null);
@@ -463,59 +463,92 @@ function CompleteWithOtp({ a, verifying, setVerifying, onNotYet, onCompleted }: 
     finally { setVerifying(false); }
   };
 
+  const send = useCodeSend(a, code, online);
+  const support = <a href={`tel:+${site.supportPhone.replace(/\D/g, "")}`} className="mt-2 flex min-h-12 items-center justify-center gap-2 rounded-xl bg-card px-3 text-[16px] font-bold text-danger ring-1 ring-danger/30"><Phone className="h-5 w-5" aria-hidden />{t("otp.callSupport")}</a>;
+  const triesLeft = !locked && code.state ? code.state.attempts_left : null;
+  // Why the big button is not ready yet, in one line, so a greyed button is never a puzzle.
+  const waitingFor = locked || !online ? null : cod && !cash ? t("otp.tickCashFirst") : otp.length !== CODE_LENGTH ? t("otp.enterAll") : null;
+
   return (
     <form onSubmit={submit}>
-      <div className={cn("rounded-2xl p-3", cod ? "bg-saffron-50" : "bg-success-50")}>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-3">{cod ? (byUpi ? t("otp.collectByUpi") : t("otp.collectCash")) : t("otp.payment")}</p>
-        <p className="font-display text-2xl font-extrabold tabular text-ink">{cod ? formatINR(a.cod_amount) : t("otp.prepaid")}</p>
-        <p className="text-xs text-ink-2">{cod ? t("otp.collectBefore", { name: c.name }) : t("otp.nothingToCollect")}</p>
-        {cod && upi ? (
-          <div className="mt-3 grid grid-cols-2 gap-2" role="group" aria-label={t("otp.howPaying")}>
-            {(["cash", "upi"] as const).map((m) => <button key={m} type="button" aria-pressed={mode === m} disabled={verifying} onClick={() => { setMode(m); setCash(false); }} className={cn("min-h-11 rounded-xl border text-sm font-semibold", mode === m ? "border-brand-600 bg-brand-50 text-brand-700" : "border-line bg-card text-ink-2")}>{m === "cash" ? t("otp.cash") : "UPI"}</button>)}
-          </div>
-        ) : null}
-        {cod && byUpi && upi ? <div className="mt-3 rounded-xl bg-card p-3"><UpiQr upi={upi} amount={Number(a.cod_amount)} note={a.order.order_number} /></div> : null}
-        {cod ? (
-          <label className="mt-3 flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-saffron-300 bg-card px-3 py-2 text-sm font-semibold text-ink">
-            <input type="checkbox" checked={cash} onChange={(e) => setCash(e.target.checked)} className="h-5 w-5 accent-brand-600" disabled={verifying} />
-            {byUpi ? t("otp.sawUpi", { amount: formatINR(a.cod_amount), name: c.name }) : t("otp.collectedCash", { amount: formatINR(a.cod_amount), name: c.name })}
+      {cod ? (
+        <div className="rounded-2xl bg-saffron-50 p-3.5">
+          <p className="text-[14px] font-bold text-saffron-700">{byUpi ? t("otp.collectByUpi") : t("otp.collectCash")}</p>
+          <p className="font-display text-[34px] font-extrabold leading-tight tabular text-ink">{formatINR(a.cod_amount)}</p>
+          <p className="text-[15px] text-ink-2">{t("otp.collectBefore", { name: c.name })}</p>
+          {upi ? (
+            <div className="mt-3 grid grid-cols-2 gap-2" role="group" aria-label={t("otp.howPaying")}>
+              {(["cash", "upi"] as const).map((m) => <button key={m} type="button" aria-pressed={mode === m} disabled={verifying} onClick={() => { setMode(m); setCash(false); }} className={cn("min-h-12 rounded-xl border-2 text-[16px] font-bold", mode === m ? "border-brand-600 bg-brand-50 text-brand-800" : "border-line-2 bg-card text-ink-2")}>{m === "cash" ? t("otp.cash") : "UPI"}</button>)}
+            </div>
+          ) : null}
+          {byUpi && upi ? <div className="mt-3 rounded-xl bg-card p-3"><UpiQr upi={upi} amount={Number(a.cod_amount)} note={a.order.order_number} /></div> : null}
+          <label className={cn("mt-3 flex min-h-14 cursor-pointer items-center gap-3 rounded-2xl border-2 bg-card px-3.5 py-2.5 text-[16px] font-bold leading-snug text-ink", cash ? "border-brand-600" : "border-saffron-300")}>
+            <input type="checkbox" checked={cash} onChange={(e) => setCash(e.target.checked)} className="h-6 w-6 shrink-0 accent-brand-600" disabled={verifying} />
+            <span>{byUpi ? t("otp.sawUpi", { amount: formatINR(a.cod_amount), name: c.name }) : t("otp.collectedCash", { amount: formatINR(a.cod_amount), name: c.name })}</span>
           </label>
+        </div>
+      ) : (
+        <p className="flex items-center gap-2.5 rounded-2xl bg-success-50 px-3.5 py-3 text-[17px] font-bold text-success"><Banknote className="h-6 w-6 shrink-0" aria-hidden /><span>{t("req.prepaid")}</span></p>
+      )}
+
+      {/* How the code reached the customer, before the rider asks for it. */}
+      <div className="mt-4 space-y-2" aria-live="polite">
+        {send.line ? (
+          <Alert tone={send.tone} className="rounded-2xl text-[15px]">
+            {send.line}
+            {send.state?.customer_has_code ? <span className="mt-1 block font-bold">{t("otp.customerHasCode")}</span> : null}
+          </Alert>
         ) : null}
+        {send.note ? <Alert tone={send.note.tone} className="rounded-2xl text-[15px]">{send.note.text}</Alert> : null}
       </div>
-      <CodeStatus a={a} code={code} online={online} disabled={verifying} />
-      <label htmlFor={`otp-${a.id}`} className="mt-4 flex items-center gap-2 text-sm font-semibold text-ink"><ShieldCheck className="h-4 w-4 text-brand-600" aria-hidden /> {t("otp.ask", { name: c.name })}</label>
-      <p className="mt-0.5 text-xs text-ink-3">{t("otp.onlyCustomer")}</p>
-      <Input id={`otp-${a.id}`} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" pattern="[0-9]*" autoComplete="off" maxLength={4} placeholder="••••" aria-label={t("otp.label")}
-        className="mt-2 h-16 rounded-2xl text-center font-display text-3xl font-extrabold tracking-[0.5em]" wrapperClassName="mt-0" disabled={verifying || locked} autoFocus />
-      {fail ? <Alert tone="danger" className="mt-3" title={fail.code ? t(FAIL_TITLE[fail.code]) : fail.reason}>
-        {fail.locked || fail.code === "OTP_LOCKED" ? <>{t("otp.locked")} <a href={`tel:+${site.supportPhone.replace(/\D/g, "")}`} className="mt-2 inline-flex min-h-11 items-center font-bold underline">{t("otp.callSupport")}</a></>
+
+      <label htmlFor={`otp-${a.id}`} className="mt-4 flex items-start gap-2 text-[18px] font-extrabold leading-snug text-ink"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-brand-600" aria-hidden /> {t("otp.ask", { name: c.name })}</label>
+      <p className="mt-0.5 text-[14px] text-ink-3">{t("otp.onlyCustomer")}</p>
+      <CodeBoxes id={`otp-${a.id}`} value={otp} onChange={setOtp} disabled={verifying || locked} invalid={Boolean(fail) && !locked && otp.length === 0} label={t("otp.label")} autoFocus={!cod} />
+      {triesLeft != null ? <p className="mt-2 text-center text-[14px] font-semibold text-ink-2">{t("otp.triesLeft", { n: triesLeft })}</p> : null}
+
+      {fail ? <Alert tone="danger" className="mt-3 rounded-2xl text-[15px]" title={fail.code ? t(FAIL_TITLE[fail.code]) : fail.reason}>
+        {fail.locked || fail.code === "OTP_LOCKED" ? <>{t("otp.locked")}{support}</>
           : fail.code === "OTP_EXPIRED" ? t("otp.expiredBody")
           : fail.code === "OTP_NOT_ISSUED" ? t("otp.notIssuedBody")
           : typeof fail.attempts_left === "number" ? t("otp.attemptsLeft", { n: fail.attempts_left }) : null}
-      </Alert> : locked ? <Alert tone="danger" className="mt-3" title={t("otp.lockedTitle")}>{t("otp.locked")} <a href={`tel:+${site.supportPhone.replace(/\D/g, "")}`} className="mt-2 inline-flex min-h-11 items-center font-bold underline">{t("otp.callSupport")}</a></Alert> : null}
-      {!online ? <Alert tone="danger" className="mt-3" icon={<WifiOff className="h-4 w-4" />}>{t("otp.offline")}</Alert> : null}
-      {error ? <Alert tone="danger" className="mt-3">{error}</Alert> : null}
-      <Button type="submit" size="lg" fullWidth className="mt-3 h-14 rounded-2xl text-base" loading={verifying} disabled={otp.length !== 4 || (cod && !cash) || locked || !online}>{verifying ? t("otp.verifying") : t("otp.verify")}</Button>
-      <button type="button" onClick={onNotYet} disabled={verifying} className="mt-2 flex min-h-11 w-full items-center justify-center text-sm font-semibold text-ink-3 underline-offset-2 hover:underline disabled:opacity-50">{t("step.notThereYet")}</button>
+      </Alert> : locked ? <Alert tone="danger" className="mt-3 rounded-2xl text-[15px]" title={t("otp.lockedTitle")}>{t("otp.locked")}{support}</Alert> : null}
+      {!online ? <Alert tone="danger" className="mt-3 rounded-2xl text-[15px]" icon={<WifiOff className="h-4 w-4" />}>{t("otp.offline")}</Alert> : null}
+      {error ? <Alert tone="danger" className="mt-3 rounded-2xl text-[15px]">{error}</Alert> : null}
+
+      <Button type="submit" size="lg" fullWidth className={nextBtn} loading={verifying} disabled={otp.length !== CODE_LENGTH || (cod && !cash) || locked || !online}>{verifying ? t("otp.verifying") : <><Check className="h-6 w-6" aria-hidden /> {t("otp.verify")}</>}</Button>
+      {waitingFor ? <p className="mt-2 text-center text-[14px] text-ink-3">{waitingFor}</p> : null}
+
+      {send.canAsk && send.state ? (
+        send.state.resend.left > 0 || send.sms === null ? (
+          <div className="mt-3">
+            <Button type="button" variant="outline" fullWidth className="min-h-12 rounded-2xl text-[16px]" loading={send.busy} disabled={verifying || send.busy || !online || send.sending || send.wait > 0} onClick={send.resend}>
+              {send.busy ? t("otp.resending") : send.wait > 0 ? t("otp.resendIn", { s: send.wait }) : send.sms === null ? t("otp.sendSms") : t("otp.resend")}
+            </Button>
+            {send.sms !== null ? <p className="mt-1 text-center text-[13px] text-ink-3">{t("otp.resendsLeft", { n: send.state.resend.left })}</p> : null}
+          </div>
+        ) : <p className="mt-3 text-center text-[14px] text-ink-3">{t("otp.resendNone")}</p>
+      ) : null}
+      <button type="button" onClick={onNotYet} disabled={verifying} className={backLink}>{t("step.notAtCustomer")}</button>
     </form>
   );
 }
 
-/** Shown after a successful OTP check until the rider taps "Back to home". */
+/** Shown after a successful code check until the rider taps "Back to home". */
 export function DeliveryComplete({ completed, onDone }: { completed: CompletedDelivery; onDone: () => void }) {
   const { t } = useT();
   const { assignment: a } = completed;
   const cod = a.order.payment_method === "cod" && Number(a.cod_amount) > 0;
   return (
-    <section className="rounded-[20px] bg-card p-6 text-center shadow-card ring-1 ring-success/30 animate-pop" role="status">
-      <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success text-white"><Check className="h-8 w-8" strokeWidth={3} /></span>
-      <h2 className="mt-3 font-display text-xl font-extrabold text-ink">{t("done.title")}</h2>
-      <p className="text-sm text-ink-3">{a.order.order_number}</p>
-      <p className="mt-4 text-[11px] font-semibold uppercase tracking-wide text-ink-3">{t("done.addedToEarnings")}</p>
-      <p className="font-display text-4xl font-extrabold tabular text-brand-700">{formatINR(a.earning)}</p>
-      <p className="text-xs text-ink-3">{t("done.payoutPending")}</p>
-      {cod ? <p className="mt-2 text-sm text-ink-2">{t("done.cashCollected", { amount: formatINR(a.cod_amount) })}</p> : null}
-      <Button size="lg" fullWidth className="mt-5 h-13 rounded-2xl" onClick={onDone}>{t("done.backHome")}</Button>
+    <section className="rounded-[24px] bg-card px-5 py-8 text-center shadow-card ring-1 ring-success/30 motion-safe:animate-pop" role="status">
+      <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-success text-white"><Check className="h-10 w-10" strokeWidth={3} aria-hidden /></span>
+      <h2 className="mt-4 font-display text-[28px] font-extrabold leading-tight text-ink">{t("done.title")}</h2>
+      <p className="text-[15px] text-ink-3">{t("req.order", { number: a.order.order_number })}</p>
+      <p className="mt-5 text-[14px] font-semibold text-ink-3">{t("done.addedToEarnings")}</p>
+      <p className="font-display text-[40px] font-extrabold leading-tight tabular text-brand-700">{formatINR(a.earning)}</p>
+      <p className="text-[14px] text-ink-3">{t("done.payoutPending")}</p>
+      {cod ? <p className="mt-3 rounded-2xl bg-saffron-50 px-3.5 py-3 text-[16px] font-bold text-saffron-700">{t("done.cashCollected", { amount: formatINR(a.cod_amount) })}</p> : null}
+      <Button size="lg" fullWidth className="mt-6 h-16 rounded-2xl text-[19px]" onClick={onDone}>{t("done.backHome")}</Button>
     </section>
   );
 }

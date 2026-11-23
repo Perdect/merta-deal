@@ -2,7 +2,7 @@
 import * as React from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
-import { Bell, CheckCheck, LifeBuoy, LogOut, Phone, Mail, ShieldCheck, Languages, Pencil, MapPin, ChevronDown, Bike, MessageSquareText } from "lucide-react";
+import { Bell, CheckCheck, LifeBuoy, LogOut, Phone, Mail, ShieldCheck, Languages, Pencil, MapPin, ChevronRight, Bike, MessageSquareText, Smartphone } from "lucide-react";
 import type { DeliveryPartner, Notification } from "@/types/app";
 import { updateRiderProfileAction, markRiderNotificationsReadAction, setRiderSmsAlertsAction, type RiderFormResult } from "@/lib/actions/rider";
 import { staffSignOutAction } from "@/lib/actions/auth";
@@ -23,9 +23,6 @@ import { useT, type TKey } from "@/lib/rider-i18n";
 import { useAlertCopy } from "./alert-copy";
 import type { Enums } from "@/types/database";
 
-/** Restrained glass: translucent white over the mint band, a soft white edge, no heavy blur. */
-export const GLASS = "rounded-[20px] border border-white/70 bg-white/80 shadow-card backdrop-blur-md";
-
 /** What the server knows about SMS alerts for this rider: whether it can send any, the owner's switch, the rider's own choice, and the number. */
 export type RiderSmsState = { configured: boolean; enabled: boolean; optedIn: boolean; phone: string | null };
 
@@ -37,61 +34,106 @@ const VEHICLES: { value: Enums<"vehicle_type">; label: TKey }[] = [
 ];
 
 /**
- * Rider profile, top to bottom: who you are and your status; alerts (sound + push, honest); vehicle and
- * documents shown read-only with one Edit that opens the form in a sheet; location (what GPS really does);
- * language; the installable app; notifications; support and sign out. Long explanations sit behind
- * "Learn more" toggles. Every save still goes through updateRiderProfileAction (own row, RLS).
+ * Rider profile as an app settings screen: who you are; the alerts card (sound + notifications + SMS, honest
+ * about what is and is not set up), which stays open because a phone that cannot ring earns nothing; then one
+ * list of large rows. Vehicle and documents, location, the installable app and notifications each open in a
+ * sheet that rises from the bottom; language is switched on its row; support and sign out end the list.
+ * Every save still goes through updateRiderProfileAction (own row, RLS).
  */
 const SMS_UNKNOWN: RiderSmsState = { configured: false, enabled: true, optedIn: false, phone: null };
+const CARD = "overflow-hidden rounded-[20px] bg-card shadow-card ring-1 ring-line";
+type Panel = "vehicle" | "location" | "install" | "notifications" | null;
 
 export function RiderProfile({ user, rider: initialRider, notifications, push, sms = SMS_UNKNOWN }: { user: ProfileUser; rider: DeliveryPartner; notifications: Notification[]; push: PushConfig; /** Left out (fixture previews): shown as not set up, which is what an unconfigured server is. */ sms?: RiderSmsState }) {
   const { t } = useT();
   const alertCopy = useAlertCopy();
   const rider = useRiderStore((s) => s.rider) ?? initialRider;
+  const [panel, setPanel] = React.useState<Panel>(null);
+  const close = React.useCallback(() => setPanel(null), []);
+  const { items, unread, setItems } = useNotifications(user.id, notifications, { toastNew: false });
+  const vehicle = VEHICLES.find((v) => v.value === rider.vehicle_type);
+  const isOnline = useRiderStore((s) => s.isOnline);
+  const onDelivery = useRiderStore((s) => s.activeDelivery);
+  const gpsOn = rider.status === "active" && (isOnline || onDelivery);
 
   return (
-    <div className="relative space-y-3">
-      <span aria-hidden className="pointer-events-none absolute -inset-x-4 -top-4 -z-10 h-72 bg-[linear-gradient(180deg,#dcefe2_0%,#eef7f1_55%,transparent_100%)]" />
-      <section className={cn(GLASS, "p-4")} aria-label={t("profile.account")}>
-        <div className="flex items-center gap-3">
-          <Avatar name={user.name} src={user.avatarUrl} size={56} />
+    <div className="space-y-4">
+      <section className={cn(CARD, "p-4")} aria-label={t("profile.account")}>
+        <div className="flex items-center gap-3.5">
+          <Avatar name={user.name} src={user.avatarUrl} size={60} />
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2"><h1 className="truncate font-display text-[18px] font-extrabold text-ink">{user.name ?? t("rider.partner")}</h1><Badge tone={STATUS_TONE[rider.status]} size="xs">{t(STATUS_KEY[rider.status])}</Badge></div>
-            <p className="mt-1 flex items-center gap-2 text-xs text-ink-2"><StarRating value={rider.rating_avg} count={rider.rating_count} /><span>· {formatNumber(rider.total_deliveries)} {t("profile.deliveries")}</span></p>
+            <div className="flex flex-wrap items-center gap-2"><h1 className="min-w-0 break-words font-display text-[20px] font-extrabold leading-tight text-ink">{user.name ?? t("rider.partner")}</h1><Badge tone={STATUS_TONE[rider.status]} size="sm">{t(STATUS_KEY[rider.status])}</Badge></div>
+            <p className="mt-1 flex flex-wrap items-center gap-x-2 text-[14px] text-ink-2"><StarRating value={rider.rating_avg} count={rider.rating_count} /><span>{formatNumber(rider.total_deliveries)} {t("profile.deliveries")}</span></p>
           </div>
         </div>
-        <dl className="mt-3 grid grid-cols-2 gap-2 text-[13px]">
-          {user.phone ? <div className="flex items-center gap-2 rounded-xl bg-surface-2 px-3 py-2"><Phone className="h-4 w-4 shrink-0 text-brand-700" aria-hidden /><dd className="truncate font-semibold text-ink">{user.phone}</dd></div> : null}
-          {user.email ? <div className="flex min-w-0 items-center gap-2 rounded-xl bg-surface-2 px-3 py-2"><Mail className="h-4 w-4 shrink-0 text-brand-700" aria-hidden /><dd className="truncate font-semibold text-ink">{user.email}</dd></div> : null}
-        </dl>
+        {user.phone || user.email ? (
+          <dl className="mt-3 space-y-1.5 text-[15px]">
+            {user.phone ? <div className="flex items-center gap-2.5"><dt><Phone className="h-4.5 w-4.5 text-ink-3" aria-hidden /><span className="sr-only">{t("profile.phone")}</span></dt><dd className="font-semibold text-ink">{user.phone}</dd></div> : null}
+            {user.email ? <div className="flex min-w-0 items-center gap-2.5"><dt><Mail className="h-4.5 w-4.5 text-ink-3" aria-hidden /><span className="sr-only">{t("profile.email")}</span></dt><dd className="min-w-0 truncate text-ink-2">{user.email}</dd></div> : null}
+          </dl>
+        ) : null}
       </section>
 
-      <section id="alerts" className={cn(GLASS, "p-4")} aria-labelledby="rider-alerts-title">
-        <h2 id="rider-alerts-title" className="flex items-center gap-2 font-display text-[16px] font-extrabold text-ink"><Bell className="h-4 w-4 text-brand-700" aria-hidden />{t("alerts.title")}</h2>
-        <p className="mb-3 mt-0.5 text-xs text-ink-3">{t("alerts.body")}</p>
+      <section id="alerts" className={cn(CARD, "scroll-mt-28 p-4")} aria-labelledby="rider-alerts-title">
+        <h2 id="rider-alerts-title" className="flex items-center gap-2 font-display text-[18px] font-extrabold text-ink"><Bell className="h-5 w-5 text-brand-700" aria-hidden />{t("alerts.title")}</h2>
+        <p className="mb-3 mt-0.5 text-[14px] text-ink-3">{t("alerts.body")}</p>
         <AlertSetup portal="rider" push={push} compact moreLabel={t("alerts.more")} copy={alertCopy} />
         <SmsAlerts sms={sms} />
       </section>
 
-      <VehicleSection rider={rider} />
+      <nav className={cn(CARD, "divide-y divide-line")} aria-label={t("profile.settings")}>
+        <Row icon={<Bike className="h-5 w-5" />} title={t("profile.vehicleDocs")} value={[vehicle ? t(vehicle.label) : null, rider.vehicle_number].filter(Boolean).join(" · ") || t("profile.notAdded")} onClick={() => setPanel("vehicle")} />
+        <Row icon={<MapPin className="h-5 w-5" />} title={t("profile.locationTitle")} value={gpsOn ? <GpsIndicator detail /> : t("profile.locationOffShort")} onClick={() => setPanel("location")} />
+        <div className="flex min-h-[64px] items-center gap-3 px-4 py-2">
+          <RowIcon><Languages className="h-5 w-5" /></RowIcon>
+          <p className="min-w-0 flex-1 text-[16px] font-semibold text-ink">{t("lang.title")}</p>
+          <LangToggle />
+        </div>
+        <Row icon={<Smartphone className="h-5 w-5" />} title={t("install.title")} onClick={() => setPanel("install")} />
+        <Row icon={<Bell className="h-5 w-5" />} title={t("notif.title")} value={unread ? t("notif.newCount", { n: unread }) : undefined} hot={unread > 0} onClick={() => setPanel("notifications")} />
+        <Row icon={<LifeBuoy className="h-5 w-5" />} title={t("profile.support")} href="/account/support" />
+        <form action={staffSignOutAction}><input type="hidden" name="portal" value="rider" /><SignOutRow /></form>
+      </nav>
 
-      <LocationSection />
-
-      <section className={cn(GLASS, "flex items-center justify-between gap-3 p-4")}>
-        <div className="min-w-0"><p className="flex items-center gap-2 font-display text-[16px] font-extrabold text-ink"><Languages className="h-4 w-4 text-brand-700" aria-hidden />{t("lang.title")}</p><p className="text-xs text-ink-3">{t("lang.body")}</p></div>
-        <LangToggle />
-      </section>
-
-      <InstallCard />
-
-      <NotificationsSection userId={user.id} initial={notifications} />
-
-      <div className="grid grid-cols-2 gap-2 pb-2">
-        <Link href="/account/support" className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-card px-4 text-sm font-semibold text-ink shadow-card active:scale-[0.98]"><LifeBuoy className="h-5 w-5 text-brand-600" /> {t("profile.support")}</Link>
-        <form action={staffSignOutAction} className="contents"><input type="hidden" name="portal" value="rider" /><SignOutButton /></form>
-      </div>
+      <BottomSheet open={panel === "vehicle"} onClose={close} title={t("profile.vehicleDocs")}>
+        <VehiclePanel rider={rider} onSaved={close} />
+      </BottomSheet>
+      <BottomSheet open={panel === "location"} onClose={close} title={t("profile.locationTitle")}>
+        <div className="space-y-3 pb-2 pt-1">
+          <p className="flex items-center gap-2 rounded-2xl bg-surface-2 px-3.5 py-3 text-[15px] font-semibold text-ink">{gpsOn ? <GpsIndicator detail /> : <><MapPin className="h-4.5 w-4.5 shrink-0 text-ink-3" aria-hidden />{t("profile.locationOff")}</>}</p>
+          <p className="text-[15px] text-ink-2">{t("profile.locationOn")}</p>
+          <p className="text-[15px] text-ink-2">{t("profile.gpsBody")}</p>
+          <p className="text-[14px] text-ink-3">{t("profile.gpsTip")}</p>
+        </div>
+      </BottomSheet>
+      <BottomSheet open={panel === "install"} onClose={close} title={t("install.title")}>
+        <div className="pb-2 pt-1"><InstallCard bare /></div>
+      </BottomSheet>
+      <BottomSheet open={panel === "notifications"} onClose={close} title={t("notif.title")}>
+        <NotificationsList items={items} unread={unread} setItems={setItems} />
+      </BottomSheet>
     </div>
   );
+}
+
+function RowIcon({ children, danger }: { children: React.ReactNode; danger?: boolean }) {
+  return <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-full", danger ? "bg-danger-50 text-danger" : "bg-brand-50 text-brand-700")} aria-hidden>{children}</span>;
+}
+
+/** One large touch row of the settings list: icon, title, a short current value, and a chevron. A link when it leads to a page. */
+function Row({ icon, title, value, onClick, href, hot }: { icon: React.ReactNode; title: string; value?: React.ReactNode; onClick?: () => void; href?: string; hot?: boolean }) {
+  const inner = (
+    <>
+      <RowIcon>{icon}</RowIcon>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[16px] font-semibold text-ink">{title}</span>
+        {value ? <span className={cn("block truncate text-[14px]", hot ? "font-bold text-saffron-700" : "text-ink-3")}>{value}</span> : null}
+      </span>
+      <ChevronRight className="h-5 w-5 shrink-0 text-ink-4" aria-hidden />
+    </>
+  );
+  const cls = "flex min-h-[64px] w-full select-none items-center gap-3 px-4 py-2 text-left active:bg-surface-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-600";
+  return href ? <Link href={href} className={cls}>{inner}</Link> : <button type="button" onClick={onClick} className={cls}>{inner}</button>;
 }
 
 /**
@@ -120,44 +162,39 @@ function SmsAlerts({ sms }: { sms: RiderSmsState }) {
     finally { setBusy(false); }
   };
   return (
-    <div className="mt-4 rounded-xl bg-surface-2 px-3.5 py-3">
-      <p className="flex items-center gap-2 text-sm font-semibold text-ink"><MessageSquareText className="h-4 w-4 text-brand-700" aria-hidden />{t("sms.title")}</p>
+    <div className="mt-4 rounded-2xl bg-surface-2 px-3.5 py-3">
+      <p className="flex items-center gap-2 text-[15px] font-bold text-ink"><MessageSquareText className="h-4.5 w-4.5 text-brand-700" aria-hidden />{t("sms.title")}</p>
       <Switch className="mt-1" checked={available && on} onChange={change} disabled={busy || !available} label={t("sms.switch")} description={why} />
     </div>
   );
 }
 
-/** Saved vehicle and document details, read-only; Edit opens the compact form in a sheet. */
-function VehicleSection({ rider }: { rider: DeliveryPartner }) {
+/** Saved vehicle and document details, read-only, with one Edit button that swaps in the form inside the same sheet. */
+function VehiclePanel({ rider, onSaved }: { rider: DeliveryPartner; onSaved: () => void }) {
   const { t } = useT();
-  const [open, setOpen] = React.useState(false);
+  const [editing, setEditing] = React.useState(false);
   const vehicle = VEHICLES.find((v) => v.value === rider.vehicle_type);
   const none = <span className="text-ink-4">{t("profile.notAdded")}</span>;
   const rows: { label: string; value: React.ReactNode }[] = [
     { label: t("profile.vehicleType"), value: vehicle ? t(vehicle.label) : none },
     { label: t("profile.vehicleNumber"), value: rider.vehicle_number || none },
     { label: t("profile.licence"), value: rider.license_number || none },
-    { label: t("profile.aadhaarShort"), value: rider.aadhaar_last4 ? <span className="inline-flex items-center gap-1"><ShieldCheck className="h-3.5 w-3.5 text-brand-600" aria-hidden />•••• {rider.aadhaar_last4}</span> : none },
+    { label: t("profile.aadhaarShort"), value: rider.aadhaar_last4 ? <span className="inline-flex items-center gap-1"><ShieldCheck className="h-4 w-4 text-brand-600" aria-hidden />•••• {rider.aadhaar_last4}</span> : none },
     { label: t("profile.emergencyShort"), value: rider.emergency_contact || none },
   ];
+  if (editing) return <VehicleForm rider={rider} onSaved={onSaved} />;
   return (
-    <section className={cn(GLASS, "p-4")} aria-labelledby="vehicle-head">
-      <div className="flex items-center justify-between gap-3">
-        <h2 id="vehicle-head" className="flex items-center gap-2 font-display text-[16px] font-extrabold text-ink"><Bike className="h-4 w-4 text-brand-700" aria-hidden />{t("profile.vehicleDocs")}</h2>
-        <Button variant="outline" size="sm" className="h-9 rounded-full" onClick={() => setOpen(true)}><Pencil className="h-3.5 w-3.5" aria-hidden /> {t("profile.edit")}</Button>
-      </div>
-      <dl className="mt-3 divide-y divide-line">
+    <div className="pb-2 pt-1">
+      <dl className="divide-y divide-line">
         {rows.map((r) => (
-          <div key={r.label} className="flex items-center justify-between gap-3 py-2 text-[13px]">
+          <div key={r.label} className="flex min-h-12 items-center justify-between gap-3 py-2 text-[15px]">
             <dt className="text-ink-3">{r.label}</dt>
             <dd className="text-right font-semibold text-ink">{r.value}</dd>
           </div>
         ))}
       </dl>
-      <BottomSheet open={open} onClose={() => setOpen(false)} title={t("profile.editVehicle")}>
-        <VehicleForm rider={rider} onSaved={() => setOpen(false)} />
-      </BottomSheet>
-    </section>
+      <Button size="lg" variant="outline" fullWidth className="mt-3 h-13 rounded-2xl text-[16px]" onClick={() => setEditing(true)}><Pencil className="h-4.5 w-4.5" aria-hidden /> {t("profile.edit")}</Button>
+    </div>
   );
 }
 
@@ -182,40 +219,22 @@ function VehicleForm({ rider, onSaved }: { rider: DeliveryPartner; onSaved: () =
         <Input name="emergency_contact" label={t("profile.emergency")} defaultValue={rider.emergency_contact ?? ""} inputMode="numeric" pattern="[6-9][0-9]{9}" maxLength={10} placeholder="98290 12345" error={fe.emergency_contact} />
       </div>
       {state && !state.ok ? <Alert tone="danger">{state.error}</Alert> : null}
-      <Button type="submit" size="lg" fullWidth className="h-12 rounded-xl" loading={pending}>{t("common.saveChanges")}</Button>
+      <Button type="submit" size="lg" fullWidth className="h-14 rounded-2xl text-[17px]" loading={pending}>{t("common.saveChanges")}</Button>
       <p className="text-[11px] text-ink-3">{t("profile.managedNote")}</p>
     </form>
   );
 }
 
-/** What GPS is doing right now, from the live fix, with the long explanation behind Learn more. */
-function LocationSection() {
-  const { t } = useT();
-  const isOnline = useRiderStore((s) => s.isOnline);
-  const active = useRiderStore((s) => s.activeDelivery);
-  const status = useRiderStore((s) => s.rider?.status ?? "active");
-  const on = status === "active" && (isOnline || active);
-  return (
-    <section className={cn(GLASS, "p-4")} aria-labelledby="loc-head">
-      <div className="flex items-center justify-between gap-3">
-        <h2 id="loc-head" className="flex items-center gap-2 font-display text-[16px] font-extrabold text-ink"><MapPin className="h-4 w-4 text-brand-700" aria-hidden />{t("profile.locationTitle")}</h2>
-        {on ? <GpsIndicator className="text-[12px] font-semibold" /> : <span className="text-[12px] font-semibold text-ink-3">{t("status.offline")}</span>}
-      </div>
-      <p className="mt-1.5 text-xs text-ink-3">{on ? t("profile.locationOn") : t("profile.locationOff")}</p>
-      <details className="group mt-2">
-        <summary className="flex min-h-8 cursor-pointer list-none items-center gap-1 text-xs font-semibold text-brand-700 focus-visible:outline-2 focus-visible:outline-brand-600">{t("profile.learnMore")}<ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" aria-hidden /></summary>
-        <p className="mt-1.5 text-xs text-ink-2">{t("profile.gpsBody")}</p>
-        <p className="mt-1.5 text-xs text-ink-3">{t("profile.gpsTip")}</p>
-      </details>
-    </section>
-  );
-}
-
-/** Submit button for the sign-out form: shows the pending state so a second tap can't fire the action twice. */
-function SignOutButton() {
+/** Sign out as the last row of the list: shows the pending state so a second tap can't fire the action twice. */
+function SignOutRow() {
   const { t } = useT();
   const { pending } = useFormStatus();
-  return <Button type="submit" variant="outline" size="lg" className="h-12 rounded-xl text-danger" loading={pending}><LogOut className="h-5 w-5" /> {pending ? t("profile.signingOut") : t("profile.signOut")}</Button>;
+  return (
+    <button type="submit" disabled={pending} className="flex min-h-[64px] w-full select-none items-center gap-3 px-4 py-2 text-left active:bg-danger-50 disabled:opacity-60 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-danger">
+      <RowIcon danger><LogOut className="h-5 w-5" /></RowIcon>
+      <span className="min-w-0 flex-1 text-[16px] font-semibold text-danger">{pending ? t("profile.signingOut") : t("profile.signOut")}</span>
+    </button>
+  );
 }
 
 type NotificationGroup = { key: string; latest: Notification; count: number; unread: boolean };
@@ -238,15 +257,11 @@ export function groupNotifications(items: Notification[]): NotificationGroup[] {
   return [...groups.values()].sort((a, b) => (a.latest.created_at < b.latest.created_at ? 1 : -1));
 }
 
-const PREVIEW = 5;
-
-function NotificationsSection({ userId, initial }: { userId: string; initial: Notification[] }) {
+/** The rider's notifications inside their sheet: one row per order and kind, newest first, with Mark all read. */
+function NotificationsList({ items, unread, setItems }: { items: Notification[]; unread: number; setItems: React.Dispatch<React.SetStateAction<Notification[]>> }) {
   const { t } = useT();
-  const { items, unread, setItems } = useNotifications(userId, initial, { toastNew: false });
   const groups = React.useMemo(() => groupNotifications(items), [items]);
   const [busy, setBusy] = React.useState(false);
-  const [all, setAll] = React.useState(false);
-  const shown = all ? groups.slice(0, 20) : groups.slice(0, PREVIEW);
   const markAll = async () => {
     if (busy) return;
     setBusy(true);
@@ -255,33 +270,22 @@ function NotificationsSection({ userId, initial }: { userId: string; initial: No
     if (!r.ok) { toast.error(r.error); return; }
     setItems((cur) => cur.map((n) => ({ ...n, is_read: true })));
   };
+  if (items.length === 0) return <EmptyState compact title={t("notif.emptyTitle")} description={t("notif.emptyBody")} />;
   return (
-    <section className={cn(GLASS, "overflow-hidden")} aria-labelledby="notif-head">
-      <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-2">
-        <h2 id="notif-head" className="flex items-center gap-2 font-display text-[16px] font-extrabold text-ink"><Bell className="h-4 w-4 text-brand-700" aria-hidden /> {t("notif.title")}{unread ? <Badge tone="saffron" size="xs">{t("notif.newCount", { n: unread })}</Badge> : null}</h2>
-        {unread ? <Button variant="ghost" size="xs" onClick={markAll} loading={busy}><CheckCheck className="h-4 w-4" /> {t("notif.markAllRead")}</Button> : null}
-      </div>
-      {items.length === 0 ? <EmptyState compact title={t("notif.emptyTitle")} description={t("notif.emptyBody")} /> : (
-        <>
-          <ul className="divide-y divide-line">
-            {shown.map(({ key, latest: n, count, unread: isUnread }) => { const text = riderNotificationText(n, t); return (
-              <li key={key} className={cn("flex gap-3 px-4 py-3", isUnread && "bg-brand-50/60")}>
-                <span className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", isUnread ? "bg-brand-600" : "bg-transparent")} aria-hidden />
-                <div className="min-w-0 flex-1">
-                  <p className={cn("flex items-center gap-2 text-sm text-ink", isUnread && "font-semibold")}><span className="min-w-0 truncate">{text.title}</span>{count > 1 ? <Badge tone="neutral" size="xs" title={`${count}×`}>×{count}</Badge> : null}</p>
-                  <p className="line-clamp-2 text-xs text-ink-2">{text.body}</p>
-                  <p className="mt-0.5 text-[11px] text-ink-3">{count > 1 ? `${t("notif.latest")} ${timeAgo(n.created_at)}` : timeAgo(n.created_at)}</p>
-                </div>
-              </li>
-            ); })}
-          </ul>
-          {groups.length > PREVIEW ? (
-            <button type="button" onClick={() => setAll((v) => !v)} className="flex min-h-11 w-full items-center justify-center gap-1 border-t border-line text-sm font-semibold text-brand-700 focus-visible:outline-2 focus-visible:outline-brand-600">
-              {all ? t("notif.showLess") : t("notif.showAll", { n: Math.min(groups.length, 20) })}<ChevronDown className={cn("h-4 w-4 transition-transform", all && "rotate-180")} aria-hidden />
-            </button>
-          ) : null}
-        </>
-      )}
-    </section>
+    <div className="pb-2">
+      {unread ? <Button variant="outline" fullWidth className="mb-2 h-12 rounded-2xl text-[15px]" onClick={markAll} loading={busy}><CheckCheck className="h-5 w-5" aria-hidden /> {t("notif.markAllRead")}</Button> : null}
+      <ul className="-mx-5 divide-y divide-line">
+        {groups.slice(0, 20).map(({ key, latest: n, count, unread: isUnread }) => { const text = riderNotificationText(n, t); return (
+          <li key={key} className={cn("flex gap-3 px-5 py-3", isUnread && "bg-brand-50/60")}>
+            <span className={cn("mt-2 h-2.5 w-2.5 shrink-0 rounded-full", isUnread ? "bg-brand-600" : "bg-transparent")} aria-hidden />
+            <div className="min-w-0 flex-1">
+              <p className={cn("flex items-center gap-2 text-[16px] text-ink", isUnread ? "font-bold" : "font-semibold")}><span className="min-w-0 break-words">{text.title}</span>{count > 1 ? <Badge tone="neutral" size="xs" title={`${count}×`}>×{count}</Badge> : null}</p>
+              {text.body ? <p className="text-[14px] text-ink-2">{text.body}</p> : null}
+              <p className="mt-0.5 text-[13px] text-ink-3">{count > 1 ? `${t("notif.latest")} ${timeAgo(n.created_at)}` : timeAgo(n.created_at)}</p>
+            </div>
+          </li>
+        ); })}
+      </ul>
+    </div>
   );
 }

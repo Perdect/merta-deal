@@ -217,5 +217,63 @@ await as(RIDER1);
 ok("the cancelled order leaves the rider's active list", (await fnv(`public.rider_assignments(array['accepted','picked_up'])`)).every((a) => a.order.id !== o5));
 ok("the rider was told", (await notifs(RIDER1, "delivery_cancelled")).length >= 2);
 
+// The rider app's request list (23 Nov 2026): several orders waiting at once, what an open request may show of
+// the destination, what a decline and an accept do to the rest of the list, and what a re-offer looks like to the app.
+console.log("Several requests waiting for one rider");
+await as(null);
+await q(`update delivery_assignments set status = 'cancelled' where status in ('offered','accepted','picked_up')`);
+await q(`update orders set status = 'cancelled' where status not in ('delivered','completed','cancelled','rejected')`);
+await q(`update delivery_partners set is_online = false`);
+await q(`update settings set value = '180'::jsonb where key = 'dispatch_offer_timeout_seconds'`);
+const w1 = await packedOrder(), w2 = await packedOrder(), w3 = await packedOrder();
+// One address has a map pin and no area written (allowed since 20 Nov): what does the rider get for it?
+await as(null); await q(`update orders set address_snapshot = address_snapshot || '{"area":""}'::jsonb where id = $1`, [w3]);
+await online(RIDER1, 26.648, 74.0325);
+const listOffers = await offersOf(RIDER1);
+const listRow = (id) => listOffers.find((a) => a.order.id === id);
+ok("a free rider coming online is offered every packed order that is waiting, one request each", listOffers.length === 3 && Boolean(listRow(w1) && listRow(w2) && listRow(w3)));
+const listSnap = (await one(`select address_snapshot from orders where id = $1`, [w1])).address_snapshot;
+const openRow = listRow(w1);
+ok("an open request shows the area, city and pincode of the address and nothing else of it",
+  openRow && Object.keys(openRow.order.address).every((k) => ["area", "city", "pincode"].includes(k)) && openRow.order.address.area === listSnap.area && openRow.order.address.pincode === listSnap.pincode,
+  JSON.stringify(openRow?.order.address));
+ok("no name, phone, house, street or landmark before acceptance, and no delivery instructions",
+  openRow && ["full_name", "phone", "house", "street", "landmark"].every((k) => !(k in openRow.order.address)) && openRow.order.delivery_instructions == null);
+ok("the drop point of an open request is rounded to three decimals (about 100 m), enough for an area map",
+  openRow && openRow.drop_lat != null && Math.abs(openRow.drop_lat * 1000 - Math.round(openRow.drop_lat * 1000)) < 1e-6 && Math.abs(openRow.drop_lng * 1000 - Math.round(openRow.drop_lng * 1000)) < 1e-6);
+ok("it names the pickup point with its position, the items, the distance, the cash to collect and the earning",
+  openRow && Boolean(openRow.pickup.name) && Number.isFinite(openRow.pickup.lat) && Number.isFinite(openRow.pickup.lng) && openRow.items.length > 0 && Boolean(openRow.items[0].name)
+  && Number(openRow.distance_km) >= 0 && Number(openRow.cod_amount) > 0 && Number(openRow.earning) >= 0 && openRow.order.item_count > 0, JSON.stringify({ p: openRow?.pickup, d: openRow?.distance_km }));
+ok("it carries the order number, when the order was placed and a time limit in the future",
+  openRow && /^MD/.test(openRow.order.order_number) && Boolean(openRow.order.created_at) && new Date(openRow.expires_at).getTime() > Date.now());
+const pinOnly = listRow(w3);
+ok("an address with a pin and no area gives the rider an empty area, the city, the pincode and the rounded point",
+  pinOnly && pinOnly.order.address.area === "" && Boolean(pinOnly.order.address.city) && Boolean(pinOnly.order.address.pincode) && pinOnly.drop_lat != null, JSON.stringify(pinOnly?.order.address));
+
+console.log("Declining and accepting from the list");
+await as(RIDER1);
+const listDecline = await fnv(`public.rider_respond_assignment($1::uuid, false)`, [listRow(w2).id]);
+ok("a decline is recorded", listDecline.ok === true && listDecline.status === "rejected");
+const afterDecline = await offersOf(RIDER1);
+ok("the declined order leaves the list and the other two stay", afterDecline.length === 2 && afterDecline.every((a) => a.order.id !== w2));
+await as(null); await q(`update delivery_assignments set expires_at = now() - interval '1 second' where rider_id = $1 and status = 'offered'`, [rider1Id]);
+const reoffered = await offersOf(RIDER1);
+ok("when the time runs out, the next poll offers the same orders again under new request ids",
+  reoffered.length === 2 && reoffered.every((a) => [w1, w3].includes(a.order.id)) && reoffered.every((a) => !listOffers.some((b) => b.id === a.id)));
+ok("a declined order is not offered to the same rider again", reoffered.every((a) => a.order.id !== w2) && (await one(`select count(*)::int n from delivery_assignments where order_id = $1 and rider_id = $2 and status = 'offered'`, [w2, rider1Id])).n === 0);
+const again1 = await offerRows(RIDER1, w1);
+ok("the re-offer refreshed the rider's one notification for that order and counted it", again1.length === 1 && again1[0].offers === 2 && again1[0].assignment_id === reoffered.find((a) => a.order.id === w1).id);
+await as(RIDER1);
+const listTake = await fnv(`public.rider_respond_assignment($1::uuid, true)`, [reoffered.find((a) => a.order.id === w1).id]);
+ok("accepting one request from the list works", listTake.ok === true && listTake.status === "accepted");
+const fullRow = (await fnv(`public.rider_assignments(array['accepted','picked_up'])`)).find((a) => a.order.id === w1);
+ok("the full address, the customer's name and phone arrive with the acceptance", fullRow && Boolean(fullRow.order.address.house) && Boolean(fullRow.order.address.phone) && Boolean(fullRow.order.address.full_name));
+const otherOpen = reoffered.find((a) => a.order.id === w3);
+ok("a second accept while on a delivery is refused", /ALREADY_ON_DELIVERY/.test((await err(`select public.rider_respond_assignment($1::uuid, true)`, [otherOpen.id])) ?? ""));
+ok("the other request stays open until its time runs out", (await assignment(otherOpen.id)).status === "offered");
+await as(null); await q(`update delivery_assignments set expires_at = now() - interval '1 second' where id = $1`, [otherOpen.id]);
+ok("and a rider who is on a delivery is not offered it again", (await offersOf(RIDER1)).length === 0);
+ok("with nobody free, the waiting order is flagged for the admin", (await order(w3)).exception === "no_rider");
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

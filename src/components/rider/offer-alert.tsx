@@ -1,95 +1,174 @@
 "use client";
 import * as React from "react";
-import { useRouter } from "next/navigation";
-import { BellRing, MapPin, Package, Route, Store as StoreIcon, Timer, Banknote, VolumeX, Volume2, ChevronDown, IndianRupee } from "lucide-react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { BellRing, MapPin, Package, Store as StoreIcon, Timer, Banknote, VolumeX, Volume2, IndianRupee, ChevronRight, Map as MapIcon } from "lucide-react";
 import type { RiderAssignment } from "@/types/app";
-import { getRiderAssignmentsAction, respondAssignmentAction } from "@/lib/actions/rider";
+import { getRiderAssignmentsAction, respondAssignmentAction, type RespondResult } from "@/lib/actions/rider";
 import { deliverPendingPushAction } from "@/lib/actions/alerts";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import { useRinger } from "@/lib/alerts/use-ringer";
-import { SoundChip, type PushConfig } from "@/components/alerts/alert-setup";
-import { useRiderStore } from "./rider-store";
+import type { PushConfig } from "@/components/alerts/alert-setup";
+import { useKeyboardOpen } from "@/hooks/use-keyboard-open";
+import { useRiderStore, GPS_STALE_MS } from "./rider-store";
 import { useNow } from "./use-now";
-import { customerOf, formatKm, mmss } from "./rider-utils";
-import { cn, formatINR } from "@/lib/utils";
+import { formatKm, mapPointUrl, mmss, requestDestination } from "./rider-utils";
+import { cn, formatINR, haversineKm } from "@/lib/utils";
 import { useT } from "@/lib/rider-i18n";
 
-const SNOOZE_KEY = "md-offer-alert-snoozed";
-function readSnoozed(): Set<string> { try { return new Set(JSON.parse(sessionStorage.getItem(SNOOZE_KEY) ?? "[]") as string[]); } catch { return new Set(); } }
-function writeSnoozed(s: Set<string>) { try { sessionStorage.setItem(SNOOZE_KEY, JSON.stringify([...s])); } catch { /* private mode */ } }
+/** How long the phone rings the first time it sees an order. After that the request waits in the list, silently. */
+export const RING_MS = 30_000;
+/** An order that is offered again gets one short tone, and not more often than this. */
+const REMIND_GAP_MS = 120_000;
+/** A card stays for a moment after its time runs out, while the server is asked whether the order is offered again. */
+const GRACE_MS = 5_000;
+
+const SEEN_KEY = "md-rider-seen-orders";
+const SEEN_KEEP_MS = 48 * 3_600_000;
+/** Orders this phone has already rung for, with when; kept for two days so a reload or a re-offer never rings twice. */
+function readSeen(): Map<string, number> {
+  try {
+    const raw = JSON.parse(localStorage.getItem(SEEN_KEY) ?? "{}") as Record<string, number>;
+    const cutoff = Date.now() - SEEN_KEEP_MS;
+    return new Map(Object.entries(raw).filter(([, at]) => typeof at === "number" && at > cutoff));
+  } catch { return new Map(); }
+}
+function writeSeen(seen: Map<string, number>) { try { localStorage.setItem(SEEN_KEY, JSON.stringify(Object.fromEntries([...seen].slice(-200)))); } catch { /* private mode: it rings again after a reload, nothing else */ } }
+const expiry = (o: RiderAssignment) => new Date(o.expires_at).getTime();
+/** Vibrates when the phone can. Browsers refuse (and log) a vibration before the first tap on the page, so it is not asked for then. */
+const vibrate = (pattern: number | number[]) => {
+  try {
+    if (typeof navigator === "undefined" || !("vibrate" in navigator)) return;
+    const activation = (navigator as Navigator & { userActivation?: { hasBeenActive: boolean } }).userActivation;
+    if (activation && !activation.hasBeenActive) return;
+    navigator.vibrate(pattern);
+  } catch { /* unsupported */ }
+};
+
+type Sound = { state: ReturnType<typeof useRinger>["sound"]; leader: boolean; muted: boolean };
+type Requests = {
+  /** Requests to show, oldest order first: the open ones, plus one whose time has just run out while the server is asked again. */
+  shown: RiderAssignment[];
+  /** How many of them can still be answered. */
+  open: number;
+  loaded: boolean;
+  /** The phone is ringing for a new request right now. */
+  ringing: boolean;
+  sound: Sound;
+  busy: { id: string; kind: "accept" | "reject" } | null;
+  /** The request whose Decline has been tapped once and is waiting for the second tap. */
+  armed: string | null;
+  now: number;
+  accept: (o: RiderAssignment) => void;
+  decline: (o: RiderAssignment) => void;
+  stopRinging: () => void;
+  setMuted: (v: boolean) => void;
+  unlock: () => void;
+  claim: () => void;
+};
+const RequestsContext = React.createContext<Requests | null>(null);
+const NONE: Requests = { shown: [], open: 0, loaded: false, ringing: false, sound: { state: "unknown", leader: true, muted: false }, busy: null, armed: null, now: 0, accept: () => {}, decline: () => {}, stopRinging: () => {}, setMuted: () => {}, unlock: () => {}, claim: () => {} };
+/** The rider's open delivery requests, as the shell holds them. Empty outside the shell. */
+export function useRequests(): Requests { return React.useContext(RequestsContext) ?? NONE; }
+
+type Source = () => Promise<{ ok: true; data: RiderAssignment[] } | { ok: false; error: string }>;
+type Answer = (assignmentId: string, accept: boolean) => Promise<RespondResult>;
+const fromServer: Source = () => getRiderAssignmentsAction(["offered"]);
 
 /**
- * The one delivery-request card of the rider app: a ringing sheet over every page. Offers come from the
- * server (`rider_assignments`, which also expires stale ones), re-read on every Realtime change to this
- * rider's assignments, after a reconnect or a return to the foreground, and on a slow timer (fast only
- * while Realtime is down). Ringing stops when the offer is accepted, declined, expired, withdrawn by an
- * admin assignment, or the order is cancelled, because each of those removes it from the server list.
- * Mute only silences. Accept and Decline report success only once the database has confirmed them.
+ * Holds the rider's open delivery requests for every page of the app. They come from the server
+ * (`rider_assignments`, which also expires stale ones), re-read on every Realtime change to this rider's
+ * assignments, after a reconnect or a return to the foreground, and on a slow timer (fast only while
+ * Realtime is down). The home screen lists them; other tabs get a strip that leads there.
+ *
+ * Ringing: the phone rings once for an order it has not seen before, for at most `RING_MS`, and stops as
+ * soon as the rider answers it or taps Stop. An order that is offered again (the server re-offers a packed
+ * order every few minutes until someone takes it) does not ring a second time: it gets one short tone and
+ * waits in the list. Mute silences everything. Accept and Decline report only what the database answered.
+ *
+ * `source`, `answer` and `home` exist so the development preview can show fixture requests; the app never passes them.
  */
-export function OfferAlert({ push }: { push: PushConfig }) {
+export function RequestsProvider({ push, enabled, children, source = fromServer, answer = respondAssignmentAction, home = "/rider" }: { push: PushConfig; enabled: boolean; children: React.ReactNode; source?: Source; answer?: Answer; /** Where the request list is shown (the preview's own address in development). */ home?: string }) {
   const { t } = useT();
   const router = useRouter();
   const ringer = useRinger();
-  const { setRinging, courier } = ringer;
+  const { setRinging, courier, ping } = ringer;
   const now = useNow();
   const version = useRiderStore((s) => s.assignmentsVersion);
   const realtime = useRiderStore((s) => s.realtime);
   const bump = useRiderStore((s) => s.bumpAssignments);
-  const setOffersMeta = useRiderStore((s) => s.setOffers);
-  const riderStatus = useRiderStore((s) => s.rider?.status);
+  const onDelivery = useRiderStore((s) => s.activeDelivery);
+  const isOnline = useRiderStore((s) => s.isOnline);
   const [offers, setOffers] = React.useState<RiderAssignment[]>([]);
-  const [snoozed, setSnoozed] = React.useState<Set<string>>(() => new Set());
-  const [collapsed, setCollapsed] = React.useState(false);
-  const [busy, setBusy] = React.useState<"accept" | "reject" | null>(null);
-  const [confirmReject, setConfirmReject] = React.useState(false);
-  const seenRef = React.useRef<Set<string>>(new Set());
+  const [loaded, setLoaded] = React.useState(false);
+  const [ring, setRing] = React.useState<Record<string, number>>({});
+  const [busy, setBusy] = React.useState<Requests["busy"]>(null);
+  const [armed, setArmed] = React.useState<string | null>(null);
+  const seenRef = React.useRef<Map<string, number> | null>(null);
+  const knownRef = React.useRef<Set<string>>(new Set());
+  const loadedOnce = React.useRef(false);
+  const remindedAt = React.useRef(0);
+  const pingRef = React.useRef(ping);
+  React.useEffect(() => { pingRef.current = ping; }, [ping]);
 
   const load = React.useCallback(async () => {
     try {
-      const r = await getRiderAssignmentsAction(["offered"]);
+      const r = await source();
       if (!r.ok) return;
-      setOffers(r.data);
-      const fresh = r.data.filter((o) => !seenRef.current.has(o.id));
-      fresh.forEach((o) => seenRef.current.add(o.id));
+      setOffers(r.data); setLoaded(true);
+      const first = !loadedOnce.current; loadedOnce.current = true;
+      const added = r.data.filter((o) => !knownRef.current.has(o.id));
+      if (!added.length) return;
+      added.forEach((o) => knownRef.current.add(o.id));
+      const seen = (seenRef.current ??= readSeen());
+      const at = Date.now();
+      const fresh = added.filter((o) => !seen.has(o.order.id));
+      const busyNow = useRiderStore.getState().activeDelivery;
       if (fresh.length) {
-        setCollapsed(false);
-        if (push.configured && courier) void deliverPendingPushAction();
-        try { if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate([300, 120, 300]); } catch { /* unsupported */ }
+        fresh.forEach((o) => seen.set(o.order.id, at)); writeSeen(seen);
+        setRing((cur) => ({ ...cur, ...Object.fromEntries(fresh.map((o) => [o.order.id, at + RING_MS])) }));
+        if (!busyNow) vibrate([300, 120, 300]);
+      } else if (!first && !busyNow && at - remindedAt.current > REMIND_GAP_MS) {
+        // The same order, offered again: one short tone, never a second ring.
+        remindedAt.current = at; pingRef.current(); vibrate(150);
       }
+      if (push.configured && courier) void deliverPendingPushAction();
     } catch { /* offline: the next bump or poll retries */ }
-  }, [push.configured, courier]);
+  }, [source, push.configured, courier]);
 
-  React.useEffect(() => { const tm = setTimeout(() => setSnoozed(readSnoozed()), 0); return () => clearTimeout(tm); }, []);
   React.useEffect(() => {
-    if (riderStatus && riderStatus !== "active") return;
+    if (!enabled) return;
     const first = setTimeout(load, 0);
     const id = setInterval(load, realtime === "live" ? 90_000 : 20_000);
     return () => { clearTimeout(first); clearInterval(id); };
-  }, [load, riderStatus, realtime]);
+  }, [load, enabled, realtime]);
   const firstRef = React.useRef(true);
-  React.useEffect(() => { if (firstRef.current) { firstRef.current = false; return; } void load(); }, [version, load]);
+  React.useEffect(() => { if (firstRef.current) { firstRef.current = false; return; } if (!enabled) return; const tm = setTimeout(load, 0); return () => clearTimeout(tm); }, [version, load, enabled]);
 
-  const live = now ? offers.filter((o) => now < new Date(o.expires_at).getTime()) : [];
-  const ringing = live.some((o) => !snoozed.has(o.id));
+  const shown = React.useMemo(() => (now && enabled ? offers.filter((o) => now < expiry(o) + GRACE_MS) : [])
+    .sort((a, b) => (a.order.created_at === b.order.created_at ? a.order.order_number.localeCompare(b.order.order_number) : a.order.created_at < b.order.created_at ? -1 : 1)), [offers, now, enabled]);
+  const openList = shown.filter((o) => now < expiry(o));
+  const open = openList.length;
+  const ringing = !onDelivery && isOnline && openList.some((o) => (ring[o.order.id] ?? 0) > now);
   React.useEffect(() => { setRinging(ringing); }, [ringing, setRinging]);
   React.useEffect(() => () => setRinging(false), [setRinging]);
-  React.useEffect(() => { setOffersMeta({ live: live.length, collapsed }); }, [live.length, collapsed, setOffersMeta]);
-  React.useEffect(() => () => setOffersMeta({ live: 0, collapsed: false }), [setOffersMeta]);
-  const expiredCount = now ? offers.length - live.length : 0;
+  // A request whose time has run out is asked about once more: the server records the expiry and, if the order is still waiting, offers it again.
+  const expiredCount = now ? offers.filter((o) => now >= expiry(o)).length : 0;
   React.useEffect(() => { if (expiredCount > 0) { const tm = setTimeout(load, 800); return () => clearTimeout(tm); } }, [expiredCount, load]);
 
-  const snooze = (id: string) => { const next = new Set(snoozed); if (next.has(id)) next.delete(id); else next.add(id); writeSnoozed(next); setSnoozed(next); };
-
   // An armed Decline goes back to normal if it is not confirmed within a few seconds.
-  React.useEffect(() => { if (!confirmReject) return; const tm = setTimeout(() => setConfirmReject(false), 4000); return () => clearTimeout(tm); }, [confirmReject]);
+  React.useEffect(() => { if (!armed) return; const tm = setTimeout(() => setArmed(null), 4000); return () => clearTimeout(tm); }, [armed]);
 
-  const respond = async (offer: RiderAssignment, accept: boolean) => {
-    if (busy) return;
-    setBusy(accept ? "accept" : "reject");
+  const busyRef = React.useRef(false);
+  const respond = React.useCallback(async (offer: RiderAssignment, accept: boolean) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setBusy({ id: offer.id, kind: accept ? "accept" : "reject" });
+    setRing((cur) => { const next = { ...cur }; delete next[offer.order.id]; return next; });
     try {
-      const r = await respondAssignmentAction(offer.id, accept);
-      setConfirmReject(false);
+      const r = await answer(offer.id, accept);
+      setArmed(null);
       if (!r.ok) {
         if ("outcome" in r) {
           if (r.outcome === "taken") toast.warning(t("offer.takenTitle"), t("offer.takenBody"));
@@ -105,91 +184,223 @@ export function OfferAlert({ push }: { push: PushConfig }) {
       setOffers((cur) => cur.filter((x) => x.id !== offer.id));
       bump(); router.refresh();
     } catch { toast.error(t("offer.noConnectionTitle"), t("offer.noConnectionBody")); }
-    finally { setBusy(null); }
-  };
+    finally { busyRef.current = false; setBusy(null); }
+  }, [answer, bump, router, t]);
 
-  if (!live.length) return null;
-  const o = live[0]!;
-  const msLeft = now ? new Date(o.expires_at).getTime() - now : 0;
-  const urgent = msLeft > 0 && msLeft < 30_000;
-  const customer = customerOf(o);
-  const cod = o.order.payment_method === "cod" && Number(o.cod_amount) > 0;
-  const earns = Number(o.earning) > 0;
-  const km = o.distance_km != null && Number(o.distance_km) > 0;
-  const muted = snoozed.has(o.id);
+  const accept = React.useCallback((o: RiderAssignment) => { void respond(o, true); }, [respond]);
+  // Decline is two taps on the same button: the first arms it for a few seconds, the second sends it. (It once opened a
+  // confirm dialog that was drawn behind the request, so Decline appeared to do nothing and no decline was ever recorded.)
+  const decline = React.useCallback((o: RiderAssignment) => { if (armed === o.id) void respond(o, false); else setArmed(o.id); }, [armed, respond]);
+  const stopRinging = React.useCallback(() => setRing({}), []);
+  const { setMuted, unlock: unlockSound, claim, sound: soundState, leader, muted } = ringer;
+  const unlock = React.useCallback(() => { void unlockSound(); }, [unlockSound]);
 
-  return <OfferAlertView collapsed={collapsed} setCollapsed={setCollapsed} live={live} o={o} now={now} msLeft={msLeft} urgent={urgent} customerArea={customer.area} cod={cod} earns={earns} km={km} muted={muted} ringing={ringing}
-    ringer={ringer} busy={busy} respond={respond} confirmReject={confirmReject} setConfirmReject={setConfirmReject} snooze={snooze} />;
+  const value = React.useMemo<Requests>(() => ({ shown, open, loaded, ringing, sound: { state: soundState, leader, muted }, busy, armed, now, accept, decline, stopRinging, setMuted, unlock, claim }),
+    [shown, open, loaded, ringing, soundState, leader, muted, busy, armed, now, accept, decline, stopRinging, setMuted, unlock, claim]);
+
+  return <RequestsContext.Provider value={value}>{children}{enabled ? <RequestStrip home={home} /> : null}</RequestsContext.Provider>;
 }
 
-export type OfferAlertViewProps = {
-  collapsed: boolean; setCollapsed: (v: boolean) => void; live: RiderAssignment[]; o: RiderAssignment; now: number; msLeft: number; urgent: boolean; customerArea: string;
-  cod: boolean; earns: boolean; km: boolean; muted: boolean; ringing: boolean;
-  ringer: { sound: ReturnType<typeof useRinger>["sound"]; leader: boolean; muted: boolean; unlock: () => Promise<boolean>; claim: () => void };
-  busy: "accept" | "reject" | null; respond: (o: RiderAssignment, accept: boolean) => void | Promise<void>; confirmReject: boolean; setConfirmReject: (v: boolean) => void; snooze: (id: string) => void;
+/** On the other tabs: a bar above the tab bar saying requests are waiting, which leads to the home screen where they are listed. */
+function RequestStrip({ home }: { home: string }) {
+  const { t } = useT();
+  const pathname = usePathname();
+  const { open, ringing } = useRequests();
+  const onDelivery = useRiderStore((s) => s.activeDelivery);
+  const isOnline = useRiderStore((s) => s.isOnline);
+  const keyboard = useKeyboardOpen();
+  if (pathname === home || open === 0 || onDelivery || !isOnline || keyboard) return null;
+  return (
+    <Link href="/rider" className="fixed inset-x-3 z-[45] mx-auto flex min-h-14 max-w-lg items-center gap-3 rounded-2xl bg-brand-700 px-4 py-2.5 text-white shadow-float motion-safe:animate-slide-up" style={{ bottom: "calc(var(--bottom-nav-h) + var(--safe-bottom) + 10px)" }}>
+      <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/20">
+        {ringing ? <span className="absolute inset-0 rounded-full bg-white/30 motion-safe:animate-ping" aria-hidden /> : null}
+        <BellRing className="relative h-5 w-5" aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1 text-[16px] font-bold leading-tight">{open === 1 ? t("req.titleOne") : t("req.titleMany", { n: open })}</span>
+      <span className="inline-flex shrink-0 items-center gap-0.5 text-[15px] font-bold">{t("req.see")}<ChevronRight className="h-5 w-5" aria-hidden /></span>
+    </Link>
+  );
+}
+
+/** The home screen's list of open requests: a heading that says how many, the sound line, then one card each. */
+export function RequestList() {
+  const { t } = useT();
+  const r = useRequests();
+  const fix = useRiderStore((s) => s.gps.fix);
+  if (!r.shown.length) return null;
+  const near = fix && r.now && r.now - fix.at < GPS_STALE_MS ? { lat: fix.lat, lng: fix.lng } : null;
+  const many = r.shown.length > 1;
+  const pickupOf = (o: RiderAssignment) => ({ name: o.pickup.name, line: [o.pickup.address_line1, o.pickup.area].filter(Boolean).join(", ") });
+  const firstPickup = pickupOf(r.shown[0]!);
+  const shared = many && r.shown.every((o) => { const p = pickupOf(o); return p.name === firstPickup.name && p.line === firstPickup.line; }) ? firstPickup : null;
+  const quiet = r.sound.state === "ready" && r.sound.leader && !r.sound.muted && !r.ringing;
+  return (
+    <section aria-labelledby="req-title" className="space-y-3">
+      <div className="flex items-start justify-between gap-3 px-1">
+        <div className="min-w-0">
+          <h2 id="req-title" className="font-display text-[22px] font-extrabold leading-tight text-ink" aria-live="polite">{many ? t("req.titleMany", { n: r.shown.length }) : t("req.titleOne")}</h2>
+          {many ? <p className="mt-0.5 text-[15px] text-ink-2">{t("req.hintMany")}</p> : null}
+        </div>
+        {/* Sound is on and nothing is ringing: the only thing left to offer is Mute, as one small button. */}
+        {quiet ? <button type="button" onClick={() => r.setMuted(true)} className="tap -mt-1 inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full bg-surface-2 px-3 text-[14px] font-bold text-ink-2"><Volume2 className="h-4 w-4 text-brand-700" aria-hidden />{t("req.mute")}</button> : null}
+      </div>
+      {quiet ? null : <SoundLine />}
+      {/* Several requests from the same shop: the shop and the note about the address are said once, not on every card. */}
+      {shared ? (
+        <div className="rounded-2xl bg-surface-2 px-4 py-3">
+          <p className="flex items-start gap-2.5 text-[15px] leading-snug text-ink-2"><StoreIcon className="mt-0.5 h-5 w-5 shrink-0 text-brand-700" aria-hidden /><span className="min-w-0 break-words">{t("req.pickup")}: <span className="font-bold text-ink">{shared.name}</span>{shared.line ? `, ${shared.line}` : ""}</span></p>
+          <p className="mt-1.5 pl-[30px] text-[13px] leading-snug text-ink-3">{t("req.afterAccept")}</p>
+        </div>
+      ) : null}
+      <ul className="space-y-3">
+        {r.shown.map((o) => (
+          <li key={o.order.id}>
+            <RequestCard o={o} now={r.now} busy={r.busy?.id === o.id ? r.busy.kind : null} locked={r.busy !== null} armed={r.armed === o.id} from={near} compact={Boolean(shared)} onAccept={() => r.accept(o)} onDecline={() => r.decline(o)} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** Where the sound stands when it needs a word, in one line with one button: ringing (Stop), sound off (Turn on), muted (Unmute), another tab (Ring here). */
+export function SoundLine() {
+  const { t } = useT();
+  const { ringing, sound, stopRinging, setMuted, unlock, claim } = useRequests();
+  if (!ringing && sound.state === "ready" && sound.leader && !sound.muted) return null;
+  const row = "flex min-h-12 items-center justify-between gap-3 rounded-2xl px-3.5 py-2 text-[15px] font-semibold";
+  const btn = "tap inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-xl px-3.5 text-[15px] font-bold";
+  if (sound.state === "unknown") return null;
+  if (sound.state === "unsupported") return <p className={cn(row, "bg-surface-2 text-ink-2")}><span className="flex items-center gap-2"><VolumeX className="h-5 w-5 shrink-0" aria-hidden />{t("req.noSound")}</span></p>;
+  if (sound.state === "locked") return (
+    <div className={cn(row, "bg-warning-50 text-ink")}>
+      <span className="flex min-w-0 items-center gap-2"><VolumeX className="h-5 w-5 shrink-0 text-[#8a6300]" aria-hidden />{t("req.soundOff")}</span>
+      <button type="button" onClick={unlock} className={cn(btn, "bg-card text-ink shadow-sm")}>{t("req.turnSoundOn")}</button>
+    </div>
+  );
+  if (sound.muted) return (
+    <div className={cn(row, "bg-warning-50 text-ink")}>
+      <span className="flex min-w-0 items-center gap-2"><VolumeX className="h-5 w-5 shrink-0 text-[#8a6300]" aria-hidden />{t("req.muted")}</span>
+      <button type="button" onClick={() => setMuted(false)} className={cn(btn, "bg-card text-ink shadow-sm")}><Volume2 className="h-4 w-4" aria-hidden />{t("req.unmute")}</button>
+    </div>
+  );
+  if (!sound.leader) return (
+    <div className={cn(row, "bg-surface-2 text-ink-2")}>
+      <span className="flex min-w-0 items-center gap-2"><Volume2 className="h-5 w-5 shrink-0" aria-hidden />{t("req.otherTab")}</span>
+      <button type="button" onClick={claim} className={cn(btn, "bg-card text-ink shadow-sm")}>{t("req.ringHere")}</button>
+    </div>
+  );
+  if (ringing) return (
+    <div className={cn(row, "bg-brand-50 text-brand-800")} role="status">
+      <span className="flex min-w-0 items-center gap-2"><BellRing className="h-5 w-5 shrink-0 motion-safe:animate-pulse-soft" aria-hidden />{t("req.ringing")}</span>
+      <button type="button" onClick={stopRinging} className={cn(btn, "bg-card text-ink shadow-sm")}><VolumeX className="h-4 w-4" aria-hidden />{t("req.stopRinging")}</button>
+    </div>
+  );
+  return null;
+}
+
+export type RequestCardProps = {
+  o: RiderAssignment; now: number;
+  /** This card's own answer is on its way to the server. */
+  busy: "accept" | "reject" | null;
+  /** Another card's answer is on its way: nothing else can be tapped until it is back. */
+  locked: boolean;
+  /** Decline has been tapped once. */
+  armed: boolean;
+  /** The rider's own fresh GPS fix, when there is one: used only for the straight-line distance to the shop. */
+  from: { lat: number; lng: number } | null;
+  /** One of several from the same shop: the list has already named the shop and said when the full address shows. */
+  compact?: boolean;
+  onAccept: () => void; onDecline: () => void;
 };
 
-/** The request sheet itself, free of data fetching so it can be rendered with fixture data. */
-export function OfferAlertView(p: OfferAlertViewProps) {
+/**
+ * One delivery request, free of data fetching so it can be drawn with fixture data. Everything on it is what
+ * the server sent for an open request: the order number, the pickup point, the area / city / pincode of the
+ * address and its drop point rounded to about 100 m, the straight-line distance, the items, the cash to
+ * collect and the earning. The house, the customer's name and the phone are not sent until it is accepted,
+ * and the card says so.
+ */
+export function RequestCard({ o, now, busy, locked, armed, from, compact = false, onAccept, onDecline }: RequestCardProps) {
   const { t } = useT();
-  const { collapsed, setCollapsed, live, o, now, msLeft, urgent, customerArea, cod, earns, km, muted, ringing, ringer, busy, respond, confirmReject, setConfirmReject, snooze } = p;
-  if (collapsed) {
-    return (
-      <button type="button" onClick={() => setCollapsed(false)} aria-label={t("offer.open")}
-        className="fixed right-4 z-[65] flex h-12 items-center gap-2 rounded-full bg-brand-600 pl-3 pr-4 text-sm font-bold text-white shadow-float animate-pop" style={{ bottom: "calc(var(--bottom-nav-h) + var(--safe-bottom) + 14px)" }}>
-        <span className="relative flex h-6 w-6 items-center justify-center"><span className={cn("absolute inset-0 rounded-full bg-white/30", ringing && "animate-ping")} /><BellRing className="relative h-4 w-4" aria-hidden /></span>
-        {t("offer.request")} · {now ? mmss(msLeft) : "--:--"}
-      </button>
-    );
-  }
-
+  const msLeft = now ? expiry(o) - now : 0;
+  const over = Boolean(now) && msLeft <= 0;
+  const urgent = msLeft > 0 && msLeft < 30_000;
+  const dest = requestDestination(o);
+  const cod = o.order.payment_method === "cod" && Number(o.cod_amount) > 0;
+  const earns = Number(o.earning) > 0;
+  const km = o.distance_km != null && Number(o.distance_km) > 0 ? formatKm(Number(o.distance_km)) : null;
+  const toShop = from && Number.isFinite(o.pickup.lat) && Number.isFinite(o.pickup.lng) ? haversineKm(from.lat, from.lng, o.pickup.lat, o.pickup.lng) : null;
+  const pickupLine = [o.pickup.address_line1, o.pickup.area].filter(Boolean).join(", ");
+  const items = o.items ?? [];
+  const named = items.slice(0, 3).map((it) => `${it.name} × ${it.quantity}`).join(", ");
+  const label = "text-[13px] font-semibold text-ink-3";
   return (
-    <div role="alertdialog" aria-labelledby="offer-alert-title" className="fixed inset-0 z-[65] flex items-end justify-center bg-ink/55 sm:items-center sm:p-4" style={{ paddingTop: "calc(var(--safe-top) + 12px)" }}>
-      <div className={cn("w-full max-w-md overflow-hidden rounded-t-[24px] bg-card shadow-float animate-slide-up sm:rounded-[24px]", urgent ? "ring-2 ring-danger" : "ring-2 ring-brand-500")} style={{ paddingBottom: "var(--safe-bottom)" }}>
-        <div className="flex items-center gap-2.5 px-4 pt-4 pb-2">
-          <span className="relative flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-brand-700">
-            {ringing && !muted ? <span className="absolute inset-0 rounded-full bg-brand-200 animate-ping" aria-hidden /> : null}
-            <BellRing className="relative h-5 w-5" aria-hidden />
-          </span>
+    <article className={cn("overflow-hidden rounded-[20px] bg-card shadow-card ring-1", urgent ? "ring-2 ring-danger/60" : "ring-line")} aria-label={t("req.order", { number: o.order.order_number })}>
+      <header className="flex items-center justify-between gap-3 bg-surface-2 px-4 py-2.5">
+        <p className="min-w-0 truncate text-[15px] font-bold text-ink">{t("req.order", { number: o.order.order_number })}</p>
+        <span className={cn("inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-[15px] font-bold tabular", over ? "bg-surface text-ink-3" : urgent ? "bg-danger-50 text-danger" : "bg-saffron-100 text-saffron-700")}
+          aria-label={over ? t("req.timeUp") : now ? t("offer.expiresIn", { time: mmss(msLeft) }) : t("offer.expiresSoon")}>
+          <Timer className="h-4 w-4" aria-hidden />{over ? "00:00" : now ? mmss(msLeft) : "--:--"}
+        </span>
+      </header>
+
+      <div className="space-y-3 px-4 pb-3 pt-3">
+        {compact ? null : (
+          <div className="flex gap-3">
+            <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700" aria-hidden><StoreIcon className="h-5 w-5" /></span>
+            <div className="min-w-0 flex-1">
+              <p className={label}>{t("req.pickup")}</p>
+              <p className="break-words text-[16px] leading-snug text-ink-2"><span className="font-bold text-ink">{o.pickup.name}</span>{pickupLine ? `, ${pickupLine}` : ""}</p>
+              {toShop != null ? <p className="text-[14px] leading-snug text-ink-3">{t("req.youToShop", { km: formatKm(toShop) })}</p> : null}
+            </div>
+          </div>
+        )}
+
+        <div className="flex gap-3">
+          <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-info-50 text-info" aria-hidden><MapPin className="h-5 w-5" /></span>
           <div className="min-w-0 flex-1">
-            <p id="offer-alert-title" className="font-display text-[17px] font-extrabold text-ink">{t("offer.title")}</p>
-            <p className="text-xs text-ink-3">{live.length > 1 ? t("offer.waitingCount", { n: live.length }) + " · " : ""}{t("offer.order")} {o.order.order_number}</p>
+            <p className={label}>{t("req.deliverTo")}</p>
+            <p className="break-words text-[20px] font-extrabold leading-snug text-ink">{dest.area || dest.place || t("req.areaUnknown")}</p>
+            {dest.street ? <p className="break-words text-[15px] leading-snug text-ink-2">{dest.street}</p> : null}
+            {dest.landmark ? <p className="break-words text-[15px] leading-snug text-ink-2">{t("addr.near", { landmark: dest.landmark })}</p> : null}
+            {dest.area && dest.place ? <p className="text-[15px] leading-snug text-ink-2">{dest.place}</p> : null}
+            {!dest.area ? <p className="text-[14px] leading-snug text-ink-3">{t("req.areaNotWritten")}</p> : null}
+            <p className="text-[14px] leading-snug text-ink-3">{km ? t("req.shopToCustomer", { km }) : t("req.noPin")}</p>
+            {compact ? null : <p className="mt-1 text-[13px] leading-snug text-ink-3">{t("req.afterAccept")}</p>}
           </div>
-          <span className={cn("inline-flex h-9 items-center gap-1 rounded-full px-3 text-base font-bold tabular", urgent ? "bg-danger-50 text-danger" : "bg-saffron-100 text-saffron-700")} aria-live="polite" aria-label={now ? t("offer.expiresIn", { time: mmss(msLeft) }) : t("offer.expiresSoon")}>
-            <Timer className="h-4 w-4" aria-hidden />{now ? mmss(msLeft) : "--:--"}
-          </span>
-          <button type="button" onClick={() => setCollapsed(true)} aria-label={t("offer.minimise")} className="tap flex h-9 w-9 items-center justify-center rounded-full text-ink-3 hover:bg-surface-2"><ChevronDown className="h-5 w-5" /></button>
+          {dest.point ? (
+            <a href={mapPointUrl(dest.point.lat, dest.point.lng)} target="_blank" rel="noreferrer" aria-label={t("req.seeOnMap")} className="tap mt-0.5 flex h-[60px] w-[68px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl bg-surface-2 text-[13px] font-bold leading-none text-brand-800">
+              <MapIcon className="h-5 w-5" aria-hidden />{t("req.areaMap")}
+            </a>
+          ) : null}
         </div>
 
-        <div className="space-y-3 px-4 py-2">
-          <div className="rounded-2xl bg-surface p-3">
-            <p className="flex items-start gap-2.5 text-[15px] text-ink-2"><StoreIcon className="mt-0.5 h-4.5 w-4.5 shrink-0 text-brand-700" aria-hidden /><span><span className="text-xs text-ink-3">{t("offer.pickUpAt")}</span><br /><span className="font-bold text-ink">{o.pickup.name}</span>{o.pickup.area ? <span className="text-ink-3"> · {o.pickup.area}</span> : null}</span></p>
-            <p className="mt-2.5 flex items-start gap-2.5 text-[15px] text-ink-2"><MapPin className="mt-0.5 h-4.5 w-4.5 shrink-0 text-info" aria-hidden /><span><span className="text-xs text-ink-3">{t("offer.deliverTo")}</span><br /><span className="font-bold text-ink">{customerArea || t("offer.customerArea")}</span></span></p>
-          </div>
-          <dl className="grid grid-cols-3 gap-2 text-center">
-            <div className="rounded-2xl bg-brand-50 px-2 py-2.5"><dt className="text-[10px] font-semibold uppercase tracking-wide text-brand-700"><IndianRupee className="mr-0.5 inline h-3 w-3" aria-hidden />{t("offer.youEarn")}</dt><dd className={cn("font-display font-extrabold tabular text-brand-800", earns ? "text-xl" : "text-xs leading-7")}>{earns ? formatINR(o.earning) : t("offer.notSet")}</dd></div>
-            <div className="rounded-2xl bg-surface px-2 py-2.5"><dt className="text-[10px] font-semibold uppercase tracking-wide text-ink-3"><Route className="mr-0.5 inline h-3 w-3" aria-hidden />{t("offer.distance")}</dt><dd className={cn("font-display font-extrabold tabular text-ink", km ? "text-xl" : "text-xs leading-7")}>{km ? formatKm(o.distance_km) : t("offer.noPin")}</dd></div>
-            <div className="rounded-2xl bg-surface px-2 py-2.5"><dt className="text-[10px] font-semibold uppercase tracking-wide text-ink-3"><Package className="mr-0.5 inline h-3 w-3" aria-hidden />{t("offer.items")}</dt><dd className="font-display text-xl font-extrabold tabular text-ink">{o.order.item_count}</dd></div>
-          </dl>
-          <p className={cn("flex items-center gap-2.5 rounded-2xl px-3 py-2.5 text-[15px] font-semibold", cod ? "bg-saffron-50 text-saffron-700" : "bg-success-50 text-success")}>
-            <Banknote className="h-5 w-5 shrink-0" aria-hidden />
-            {cod ? <span>{t("offer.collectCash", { amount: formatINR(o.cod_amount) })}</span> : <span>{t("offer.prepaid")}</span>}
+        <p className="flex items-start gap-3 text-[15px] leading-snug text-ink-2">
+          <span className="flex w-10 shrink-0 justify-center" aria-hidden><Package className="mt-0.5 h-5 w-5 text-ink-3" /></span>
+          <span className="min-w-0"><span className="font-bold text-ink">{o.order.item_count === 1 ? t("req.itemOne") : t("req.items", { n: o.order.item_count })}</span>{named ? <span className="break-words">{`: ${named}`}{items.length > 3 ? ` ${t("req.more", { n: items.length - 3 })}` : ""}</span> : null}</span>
+        </p>
+
+        <div className="overflow-hidden rounded-2xl">
+          <p className={cn("flex items-center gap-2.5 px-3.5 py-2.5 text-[17px] font-bold", cod ? "bg-saffron-50 text-saffron-700" : "bg-success-50 text-success")}>
+            <Banknote className="h-6 w-6 shrink-0" aria-hidden />
+            <span>{cod ? t("req.collectCash", { amount: formatINR(o.cod_amount) }) : t("req.prepaid")}</span>
           </p>
-          <div className="flex items-center justify-between gap-2">
-            <SoundChip sound={ringer.sound} leader={ringer.leader} muted={ringer.muted || muted} onClaim={ringer.claim} />
-            {ringer.sound === "locked" ? <button type="button" onClick={() => void ringer.unlock()} className="tap text-xs font-semibold text-[#8a6300] underline">{t("offer.turnSoundOn")}</button> : null}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2 px-4 pb-4 pt-2">
-          <Button size="lg" className="col-span-3 h-14 rounded-2xl text-lg" loading={busy === "accept"} disabled={busy !== null || msLeft <= 0} onClick={() => respond(o, true)}>{busy === "accept" ? t("offer.confirming") : t("offer.accept")}</Button>
-          {/* Decline is two taps on the same button: the first arms it for a few seconds, the second sends it. (It used to open a
-              confirm dialog, which was drawn behind this popup, so Decline appeared to do nothing and no decline was ever recorded.) */}
-          <Button size="lg" variant={confirmReject ? "danger" : "outline"} className="col-span-2 h-12 rounded-2xl" loading={busy === "reject"} disabled={busy !== null || msLeft <= 0}
-            onClick={() => { if (confirmReject) void respond(o, false); else setConfirmReject(true); }}>{confirmReject ? t("offer.declineConfirmTitle") : t("offer.decline")}</Button>
-          <Button size="lg" variant="outline" className="h-12 rounded-2xl" onClick={() => snooze(o.id)} aria-pressed={muted} aria-label={muted ? t("offer.unmute") : t("offer.mute")}>{muted ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}</Button>
+          <p className="flex items-center gap-2.5 border-t border-white bg-brand-50 px-3.5 py-2.5 text-[16px] font-bold text-brand-800">
+            <IndianRupee className="h-6 w-6 shrink-0 p-0.5" aria-hidden />
+            <span>{earns ? t("req.youEarn", { amount: formatINR(o.earning) }) : t("req.earnNotSet")}</span>
+          </p>
         </div>
       </div>
-    </div>
+
+      <div className="px-4 pb-4">
+        {over ? <p className="rounded-2xl bg-surface-2 px-3.5 py-3 text-center text-[15px] font-semibold text-ink-2" role="status">{t("req.timeUp")}</p> : (
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] gap-2.5">
+            <Button size="lg" variant={armed ? "danger" : "outline"} className="h-14 whitespace-normal rounded-2xl px-2 text-[16px] leading-tight" loading={busy === "reject"} disabled={locked} onClick={onDecline}>{busy === "reject" ? t("req.wait") : armed ? t("req.declineAgain") : t("req.decline")}</Button>
+            <Button size="lg" className="h-14 rounded-2xl px-2 text-[19px]" loading={busy === "accept"} disabled={locked} onClick={onAccept}>{busy === "accept" ? t("req.wait") : t("req.accept")}</Button>
+          </div>
+        )}
+      </div>
+    </article>
   );
 }

@@ -22,8 +22,10 @@ type RiderState = {
   assignmentsVersion: number;
   realtime: RealtimeState;
   gps: GpsState;
-  /** The request popup's view of the server's open offers: how many are live and whether the popup is minimised. */
-  offers: { live: number; collapsed: boolean };
+  /** The online switch is being changed (shared by the header switch and the home screen's big button, so a second tap waits). */
+  onlineBusy: boolean;
+  /** Why the last attempt to go online did not work, as a dictionary key; cleared by the next attempt. */
+  onlineError: string | null;
   hydrate: (rider: DeliveryPartner, activeDelivery: boolean) => void;
   setRider: (rider: DeliveryPartner) => void;
   setStats: (stats: RiderStats | null) => void;
@@ -32,7 +34,7 @@ type RiderState = {
   bumpAssignments: () => void;
   setRealtime: (v: RealtimeState) => void;
   setGps: (patch: Partial<GpsState>) => void;
-  setOffers: (patch: Partial<RiderState["offers"]>) => void;
+  setOnlineBusy: (busy: boolean, error?: string | null) => void;
 };
 
 const idleGps: GpsState = { status: "idle", fix: null, lastSentAt: null, sendError: null, error: null };
@@ -45,7 +47,8 @@ export const useRiderStore = create<RiderState>((set) => ({
   assignmentsVersion: 0,
   realtime: "connecting",
   gps: idleGps,
-  offers: { live: 0, collapsed: false },
+  onlineBusy: false,
+  onlineError: null,
   hydrate: (rider, activeDelivery) => set({ rider, isOnline: rider.is_online, activeDelivery }),
   setRider: (rider) => set({ rider, isOnline: rider.is_online }),
   setStats: (stats) => set((s) => ({ stats, activeDelivery: stats ? stats.active > 0 : s.activeDelivery, isOnline: stats ? stats.rider.is_online : s.isOnline, rider: stats ? stats.rider : s.rider })),
@@ -54,7 +57,7 @@ export const useRiderStore = create<RiderState>((set) => ({
   bumpAssignments: () => set((s) => ({ assignmentsVersion: s.assignmentsVersion + 1 })),
   setRealtime: (realtime) => set({ realtime }),
   setGps: (patch) => set((s) => ({ gps: { ...s.gps, ...patch } })),
-  setOffers: (patch) => set((s) => ({ offers: { ...s.offers, ...patch } })),
+  setOnlineBusy: (onlineBusy, error) => set((s) => ({ onlineBusy, onlineError: error === undefined ? s.onlineError : error })),
 }));
 
 /** Converts the latest browser fix into the shape `LiveMap` expects. */

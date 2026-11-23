@@ -5,12 +5,13 @@ import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/supabase/server";
 import { getMyRiderProfile, hasActiveDelivery } from "@/lib/data/rider";
 import { RiderShell } from "@/components/rider/rider-shell";
+import { RiderFrame } from "@/components/rider/rider-frame";
 import { RiderRegistration } from "@/components/rider/rider-registration";
 import { PortalTheme } from "@/components/shared/portal-theme";
 import { createClient } from "@/lib/supabase/server";
 import { env, isPushConfigured } from "@/lib/env";
 
-/** Orange address bar / title bar for the rider app (the shop keeps its green); the rest mirrors the root viewport. */
+/** Green address bar / title bar for the rider app; the rest mirrors the root viewport. */
 export const viewport: Viewport = { themeColor: "#15803d", width: "device-width", initialScale: 1, viewportFit: "cover", interactiveWidget: "resizes-content" };
 
 export const metadata: Metadata = {
@@ -23,8 +24,8 @@ export const metadata: Metadata = {
 };
 
 /**
- * Delivery partner PWA frame (orange theme). No DashboardShell here — this is a one-handed phone app:
- * compact top bar, page, floating dock. Signed-in customers without a delivery_partners row see the
+ * Delivery partner PWA frame (green theme). No DashboardShell here: this is a one-handed phone app with a
+ * compact top bar, the screen and a tab bar, shown as one phone-width column on wider screens (`RiderFrame`). Signed-in customers without a delivery_partners row see the
  * application form (from the "Deliver with Merta Deal" page); applicants see their pending status.
  * Guest sessions are sent to the delivery partner login. Data access is enforced by the rider RPCs.
  */
@@ -34,7 +35,7 @@ export default async function RiderLayout({ children }: { children: React.ReactN
   const { data: { user: authUser } } = await (await createClient()).auth.getUser();
   if (authUser?.is_anonymous) redirect("/rider/login");
   const rider = await getMyRiderProfile();
-  if (!rider) return <div className="theme-rider contents"><PortalTheme portal="rider" /><RiderRegistration name={user.fullName} /></div>;
+  if (!rider) return <div className="theme-rider contents"><PortalTheme portal="rider" /><RiderFrame><RiderRegistration name={user.fullName} /></RiderFrame></div>;
   const [active, profile] = await Promise.all([hasActiveDelivery(rider.id), getMyProfile()]);
   const prefs = (profile?.preferences && typeof profile.preferences === "object" && !Array.isArray(profile.preferences) ? profile.preferences : {}) as { language?: string };
   const initialLang: RiderLang = prefs.language === "hi" ? "hi" : "en";

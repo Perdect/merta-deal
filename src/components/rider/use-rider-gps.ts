@@ -87,13 +87,20 @@ export function useWakeLock(active: boolean) {
   }, [active]);
 }
 
-/** Resolves one real GPS fix (used when going online). Rejects with a human-readable message. */
+/** Why a fix could not be had; the caller words it in the rider's language (`gpsError.<code>`). */
+export type GpsFailure = "unsupported" | "denied" | "timeout" | "unavailable";
+export class GpsError extends Error {
+  code: GpsFailure;
+  constructor(code: GpsFailure) { super(code); this.code = code; }
+}
+
+/** Resolves one real GPS fix (used when going online). Rejects with a `GpsError` naming the reason. */
 export function getCurrentFix(): Promise<GpsFix> {
   return new Promise((resolve, reject) => {
-    if (typeof navigator === "undefined" || !("geolocation" in navigator)) { reject(new Error("This device or browser has no GPS support.")); return; }
+    if (typeof navigator === "undefined" || !("geolocation" in navigator)) { reject(new GpsError("unsupported")); return; }
     navigator.geolocation.getCurrentPosition(
       (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: num(pos.coords.accuracy), heading: num(pos.coords.heading), speed: num(pos.coords.speed), at: Date.now() }),
-      (err) => reject(new Error(err.code === err.PERMISSION_DENIED ? "Location access is blocked. Allow location for this site to go online." : err.code === err.TIMEOUT ? "Could not get a GPS fix in time. Move to an open area and retry." : "GPS is unavailable right now. Try again in a moment.")),
+      (err) => reject(new GpsError(err.code === err.PERMISSION_DENIED ? "denied" : err.code === err.TIMEOUT ? "timeout" : "unavailable")),
       { enableHighAccuracy: true, timeout: 15_000, maximumAge: 5_000 },
     );
   });
