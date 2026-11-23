@@ -27,9 +27,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           </p>
           <p className="mt-3 hidden max-w-[17rem] text-sm leading-relaxed text-ink-2 sm:block">Groceries, sweets and cakes from Merta&apos;s own shop, with a {site.deliveryWindow} delivery target.</p>
         </>}>
-          {/* Phones: the picture sits a little to the right, clear of the logo in the corner. */}
-          <LoginArt viewBox="-60 0 380 240" className="absolute inset-0 h-full w-full sm:hidden" />
-          <LoginArt className="absolute inset-0 hidden h-full w-full sm:block sm:rounded-b-[18px]" />
+          <LoginArt className="absolute inset-0 h-full w-full sm:rounded-b-[18px]" />
         </AuthHero>
 
         <div data-auth-sheet className="relative flex flex-1 flex-col bg-card px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] pt-6 sm:rounded-[20px] sm:px-8 sm:pb-7 sm:pt-10 sm:shadow-card">
